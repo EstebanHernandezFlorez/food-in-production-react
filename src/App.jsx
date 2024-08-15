@@ -1,17 +1,12 @@
-import { useState } from 'react'
-import { Layout } from 'antd'
-import Logo from './components/core/logo';
 
-const {Header, Sider}= Layout
-function App() {
+import 'bootstrap/dist/css/bootstrap.min.css';
+import Login from './Login';
+
+export default function App() {
+
   return (
-    <Layout>
-      <Sider className='sidebar'>Sidebar</Sider>
-      <Logo/>
-    </Layout>
-    
+    <>
+    <Login/>
+    </>
   )
 }
-
-
-export default App
