@@ -1,46 +1,48 @@
-import React, { Component } from 'react';
+import { Switch } from 'antd';
+import React, {Component} from 'react';
 import Container from 'react-bootstrap/Container';
 import Nav from 'react-bootstrap/Nav';
 import Navbar from 'react-bootstrap/Navbar';
+import {
+  createBrowserRouter,
+  RouterProvider,
+  Route,
+  Link,
+} from "react-router-dom";
+import Employee from '../../views/module/employee/formEmployee';
+import Owner from '../../views/module/owner/owner';
+import Roles from '../../views/module/roles/roles';
 
-function ColorSchemesExample() {
-  return (
-    <>
-      <Navbar bg="dark" data-bs-theme="dark">
-        <Container>
-          <Navbar.Brand href="#home">Navbar</Navbar.Brand>
-          <Nav className="me-auto">
-            <Nav.Link href="#home">Home</Nav.Link>
-            <Nav.Link href="#features">Features</Nav.Link>
-            <Nav.Link href="#pricing">Pricing</Nav.Link>
-          </Nav>
-        </Container>
-      </Navbar>
-      <br />
-      <Navbar bg="primary" data-bs-theme="dark">
-        <Container>
-          <Navbar.Brand href="#home">Navbar</Navbar.Brand>
-          <Nav className="me-auto">
-            <Nav.Link href="#home">Home</Nav.Link>
-            <Nav.Link href="#features">Features</Nav.Link>
-            <Nav.Link href="#pricing">Pricing</Nav.Link>
-          </Nav>
-        </Container>
-      </Navbar>
-
-      <br />
+export default class NavbarComp extends Component{
+  render(){
+    return(
+      <Router>
+      <div>
       <Navbar bg="light" data-bs-theme="light">
         <Container>
           <Navbar.Brand href="#home">Navbar</Navbar.Brand>
           <Nav className="me-auto">
-            <Nav.Link href="#home">Home</Nav.Link>
-            <Nav.Link href="#features">Features</Nav.Link>
-            <Nav.Link href="#pricing">Pricing</Nav.Link>
+            <Nav.Link as={Link} to={"/Employee"}>Employee</Nav.Link>
+            <Nav.Link as={Link} to={"/Owner"}>Owner</Nav.Link>
+            <Nav.Link as={Link} to={"/Roles"}>Roles</Nav.Link>
           </Nav>
         </Container>
       </Navbar>
-    </>
-  );
+      </div>
+      <div>
+        <Switch>
+          <Route path="/Employee">
+            <Employee/>
+          </Route>
+          <Route path="/Owner">
+            <Owner/>
+          </Route>
+          <Route path="/Roles">
+            <Roles/>
+          </Route>
+        </Switch>
+      </div>
+      </Router>
+    )
+  }
 }
-
-export default ColorSchemesExample;
