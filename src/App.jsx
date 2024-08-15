@@ -3,6 +3,7 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 import Login from './Login';
+import NavbarComp from '../src/components/navegation/navegation'
 
 export default function App() {
   return (
@@ -13,4 +14,11 @@ export default function App() {
       </Routes>
     </Router>
   );
+}
+    <>
+    <Login/>
+    <NavbarComp/>
+
+    </>
+  )
 }
