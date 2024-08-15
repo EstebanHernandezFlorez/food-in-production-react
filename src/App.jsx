@@ -19,6 +19,6 @@ export default function App() {
     <Login/>
     <NavbarComp/>
 
-    </>
+    </>git
   )
 }
