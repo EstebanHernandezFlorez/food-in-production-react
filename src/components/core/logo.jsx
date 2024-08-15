@@ -1,5 +1,5 @@
 import React from 'react'; 
-import { FireFilled } from '@ant-desing/icons';
+import { FireFilled } from '@ant-design/icons';
 
 const Logo = () => {
     return(
