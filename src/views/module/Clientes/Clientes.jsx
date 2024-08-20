@@ -1,10 +1,10 @@
 import React, {Component} from 'react'
 
-export default class Owner extends Component{
+export default class Clientes extends Component{
     render(){
         return(
             <div>
-                <h1>Owner</h1>
+                <h1>Clientes</h1>
             </div>
         )
     }
