@@ -9,7 +9,7 @@ import {
   Route,
   Link,
 } from "react-router-dom";
-import Employee from '../../views/module/employee/formEmployee';
+import Employee from '../../views/module/employee/indexEmploye';
 import Owner from '../../views/module/owner/owner';
 import Roles from '../../views/module/roles/roles';
 
@@ -43,6 +43,7 @@ export default class NavbarComp extends Component{
         </Switch>
       </div>
       </Router>
+
     )
   }
 }
