@@ -5,7 +5,7 @@
 }
 
 .sidebar{
-    color: #8C1616;
+    color: 222222;
 }
 
 .header{
@@ -26,6 +26,7 @@
     justify-content: center;
     color: #fff;
     padding: 10px;
+    background-color: #222222;
 }
 
 .logo-icon{
@@ -40,6 +41,7 @@
 }
 
 .menu-bar{
+    background-color: #222222;
     height: 90vh;
     margin-top: 2rem;
     display: flex;
@@ -65,5 +67,5 @@
 }
 
 .submenu{
-    background-color: #8C1616;
+    background-color:#222222;
 }

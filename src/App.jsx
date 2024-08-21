@@ -37,7 +37,7 @@ function App() {
       <Sider
         theme={darkTheme ? 'dark' : 'light'}
         style={{
-          backgroundColor: darkTheme ? '#4a0000' : '#fff',  // Vinotinto si darkTheme es true
+          backgroundColor: darkTheme ? 'dark' : '#fff',  // Vinotinto si darkTheme es true
         }}
         className="sidebar"
         collapsible

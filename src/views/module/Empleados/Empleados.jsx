@@ -1,20 +1,20 @@
 import React from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Table, Button, Container, Modal, ModalBody, ModalHeader, ModalFooter, FormGroup, Input } from 'reactstrap';
-import { FaEdit, FaTrashAlt } from 'react-icons/fa'; // Importar íconos de react-icons
-
-
+import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 
 const data = [
   {id:1, Nombre: "Carolina Guzman", Document:16514416, Cargo: "Aux Cocina", Empresa: "Colanta"},
   {id:2, Nombre: "Andra Torres", Document:18761919, Cargo: "Aux Cocina", Empresa: "Colanta"},
-  {id:3, Nombre: "Natalia Muriel", Document:1016177143, Cargo: "Jefe Cocina", Empresa: "Colanta"}
+  {id:3, Nombre: "Natalia Muriel", Document:1016177143, Cargo: "Jefe Cocina", Empresa: "Colanta"},
+  {id:4, Nombre: "Luis Pérez", Document:12345678, Cargo: "Aux Administrativo", Empresa: "Colanta"},
+  {id:5, Nombre: "María Gómez", Document:23456789, Cargo: "Jefe Administrativo", Empresa: "Colanta"},
+  {id:6, Nombre: "Pedro Martínez", Document:34567890, Cargo: "Aux Producción", Empresa: "Colanta"},
+  {id:7, Nombre: "Laura Fernández", Document:45678901, Cargo: "Aux Producción", Empresa: "Colanta"},
+  {id:8, Nombre: "Carlos Rodríguez", Document:56789012, Cargo: "Jefe Producción", Empresa: "Colanta"}
 ];
 
-
 class Empleados extends React.Component {
-
-  
   state = { 
     data: data,
     filteredData: data,
@@ -27,14 +27,17 @@ class Empleados extends React.Component {
     },
     modalInsertar: false,
     modalEditar: false,
-    searchText: ''
+    searchText: '',
+    currentPage: 1,
+    itemsPerPage: 7
   };
 
   handleChange = e => {
+    const { name, value } = e.target;
     this.setState({
       form: {
         ...this.state.form,
-        [e.target.name]: e.target.value,
+        [name]: value,
       }
     });
   }
@@ -69,44 +72,113 @@ class Empleados extends React.Component {
   }
 
   insertar = () => {
-    var valorNuevo = { ...this.state.form };
-    valorNuevo.id = this.state.data.length + 1;
-    var lista = this.state.data;
-    lista.push(valorNuevo);
-    this.setState({ data: lista, filteredData: lista, modalInsertar: false });
-  }
-
-  editar = (dato) => {
-    var contador = 0;
-    var lista = this.state.data;
-    lista.map((registro) => {
-      if (dato.id === registro.id) {
-        lista[contador].Nombre = dato.Nombre;
-        lista[contador].Document = dato.Document;
-        lista[contador].Cargo = dato.Cargo;
-        lista[contador].Empresa = dato.Empresa;
+    try {
+      const { Nombre, Document, Cargo, Empresa } = this.state.form;
+  
+      if (Nombre.trim() === '' || Document.trim() === '' || Cargo.trim() === '' || Empresa.trim() === '') {
+        alert("Por favor, ingrese todos los campos");
+        return;
       }
-      contador++;
-    });
-    this.setState({ data: lista, filteredData: lista, modalEditar: false });
-  }
-
-  eliminar = (dato) => {
-    var opcion = window.confirm("Realmente desea eliminar el registro " + dato.id);
-    if (opcion) {
-      var contador = 0;
-      var lista = this.state.data;
-      lista.map((registro) => {
-        if (registro.id === dato.id) {
-          lista.splice(contador, 1);
-        }
-        contador++;
+  
+      // Convertir Document a string para la comparación
+      const documentStr = Document.toString();
+      const empleadoExistente = this.state.data.find(registro => registro.Document.toString() === documentStr);
+      if (empleadoExistente) {
+        throw new Error("El empleado ya existe. Por favor, ingrese un documento de empleado diferente.");
+      }
+  
+      const nuevoEmpleado = { ...this.state.form, id: this.state.data.length + 1 };
+      const lista = [...this.state.data, nuevoEmpleado];
+      this.setState({ 
+        data: lista, 
+        filteredData: lista, // Asegúrate de actualizar filteredData también
+        modalInsertar: false 
       });
-      this.setState({ data: lista, filteredData: lista });
+      alert("Empleado agregado exitosamente");
+      this.clearForm(); // Limpiar formulario después de insertar
+    } catch (error) {
+      alert(`Error al insertar el empleado: ${error.message}`);
     }
   }
 
+  editar = () => {
+    try {
+      const { Nombre, Document, Cargo, Empresa } = this.state.form;
+
+      if (Nombre.trim() === '' || Document.trim() === '' || Cargo.trim() === '' || Empresa.trim() === '') {
+        alert("Por favor, ingrese todos los campos");
+        return;
+      }
+
+      // Convertir Document a string para la comparación
+      const documentStr = Document.toString();
+      const empleadoExistente = this.state.data.find(registro => 
+        registro.Document.toString() === documentStr && 
+        registro.id !== this.state.form.id
+      );
+      if (empleadoExistente) {
+        throw new Error("No puedes editar el empleado con el mismo documento. Por favor, ingresa un documento diferente.");
+      }
+
+      const lista = this.state.data.map((registro) => 
+        registro.id === this.state.form.id ? this.state.form : registro
+      );
+      this.setState({ 
+        data: lista, 
+        filteredData: lista, // Asegúrate de actualizar filteredData también
+        modalEditar: false 
+      });
+      alert("Empleado editado exitosamente");
+      this.clearForm(); // Limpiar formulario después de editar
+    } catch (error) {
+      alert(`Error al editar el empleado: ${error.message}`);
+    }
+  }
+
+  eliminar = (dato) => {
+    const opcion = window.confirm(`¿Realmente desea eliminar el registro ${dato.id}?`);
+    if (opcion) {
+      const lista = this.state.data.filter(registro => registro.id !== dato.id);
+      this.setState({ 
+        data: lista, 
+        filteredData: lista 
+      });
+    }
+  }
+
+  cambiarEstado = (id) => {
+    const lista = this.state.data.map((registro) => {
+      if (registro.id === id) {
+        registro.Estado = !registro.Estado;
+      }
+      return registro;
+    });
+
+    this.setState({ data: lista });
+  }
+
+  handlePageChange = (pageNumber) => {
+    this.setState({ 
+      currentPage: pageNumber,
+      form: { id: '', Nombre: '', Document: '', Cargo: '', Empresa: '' } // Limpiar formulario al cambiar de página
+    });
+  }
+
+  clearForm = () => {
+    this.setState({ form: { id: '', Nombre: '', Document: '', Cargo: '', Empresa: '' } });
+  }
+
   render() {
+    const { currentPage, itemsPerPage, filteredData } = this.state;
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
+    const pageNumbers = [];
+
+    for (let i = 1; i <= Math.ceil(filteredData.length / itemsPerPage); i++) {
+      pageNumbers.push(i);
+    }
+
     return (
       <>
         <Container>
@@ -130,25 +202,50 @@ class Empleados extends React.Component {
                 <th>Documento</th>
                 <th>Cargo</th>
                 <th>Empresa</th>
+                <th>Estado</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {this.state.filteredData.map((elemento) => (
+              {currentItems.map((elemento) => (
                 <tr key={elemento.id}>
                   <td>{elemento.id}</td>
                   <td>{elemento.Nombre}</td>
                   <td>{elemento.Document}</td>
                   <td>{elemento.Cargo}</td>
                   <td>{elemento.Empresa}</td>
+                  <td>{elemento.Estado ? "Activo" : "Inactivo"}</td> 
                   <td>
                     <Button color="primary" onClick={() => this.mostrarModalEditar(elemento)}><FaEdit /></Button>{' '}
-                    <Button color="danger" onClick={() => this.eliminar(elemento)}><FaTrashAlt /></Button>
+                    <Button color="danger" onClick={() => this.eliminar(elemento)}><FaTrashAlt /></Button>{' '}
+                    <Button 
+                      color={elemento.Estado ? "success" : "secondary"} 
+                      onClick={(e) => { e.stopPropagation(); this.cambiarEstado(elemento.id); }}
+                      size="sm"
+                      className="mr-1" // Asegura que el botón tenga el mismo margen
+                      style={{ padding: '0.375rem 0.75rem' }} // Ajusta el tamaño del botón
+                    >
+                      {elemento.Estado ? "On" : "Off"}
+                    </Button> 
                   </td>
                 </tr>
               ))}
             </tbody>
           </Table>
+
+          {/* Paginador */}
+          <div className="d-flex justify-content-center">
+            {pageNumbers.map(number => (
+              <Button
+                key={number}
+                color="info"
+                onClick={() => this.handlePageChange(number)}
+                className="mx-1"
+              >
+                {number}
+              </Button>
+            ))}
+          </div>
         </Container>
 
         <Modal isOpen={this.state.modalInsertar}>
@@ -223,17 +320,14 @@ class Empleados extends React.Component {
               <input className="form-control" name="Empresa" type="text" onChange={this.handleChange} value={this.state.form.Empresa} />
             </FormGroup>
             <ModalFooter>
-              <Button color="primary" onClick={() => this.editar(this.state.form)}>Editar</Button>
+              <Button color="primary" onClick={this.editar}>Editar</Button>
               <Button color="danger" onClick={this.ocultarModalEditar}>Cancelar</Button>
             </ModalFooter>
           </ModalBody>
         </Modal>
-
       </>
-    )
+    );
   }
 }
-
-
 
 export default Empleados;
