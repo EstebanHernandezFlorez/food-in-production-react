@@ -1,45 +1,58 @@
-import React from "react";
+import React from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Table, Button, Container, Modal, ModalBody, ModalHeader, ModalFooter, FormGroup, Input } from 'reactstrap';
-import { FaEdit, FaTrashAlt } from 'react-icons/fa'; // Importar íconos de react-icons
-
-
+import { Table, Button, Container, Modal, ModalBody, ModalHeader, ModalFooter, FormGroup, Input, Toast, ToastBody, ToastHeader } from 'reactstrap';
+import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 
 const data = [
-  {id:1, Nombre: "Angie Lopez", Distintivo:16514416, Categoria_Cliente: "...", Celular: "3105981162",Correo:"angi@gmail.com",Dirección:"calle 45#54-67"},
-  {id:2, Nombre: "Isabella Ramos", Distintivo:18761919, Categoria_Cliente: "...", Celular: "3223001452",Correo:"isa@gmail.com",Dirección:"calle 23#53-87"},
-  {id:3, Nombre: "Cristian Medina", Distintivo:1016177143, Categoria_Cliente: " ...", Celular: "30589741263",Correo:"criss@gmail.com",Dirección:"calle 55#78-86"}
+  { id: 1, Nombre: "Angie Lopez", Distintivo: 16514416, Categoria_Cliente: "Familiar", Celular: "3105981162", Correo: "angi@gmail.com", Dirección: "calle 45#54-67", Estado: true },
+  { id: 2, Nombre: "Isabella Ramos", Distintivo: 18761919, Categoria_Cliente: "Empresario", Celular: "3223001452", Correo: "isa@gmail.com", Dirección: "calle 23#53-87", Estado: true },
+  { id: 3, Nombre: "Cristian Medina", Distintivo: 1016177143, Categoria_Cliente: "Frecuente", Celular: "30589741263", Correo: "criss@gmail.com", Dirección: "calle 55#78-86", Estado: true }
 ];
 
-
 class Clientes extends React.Component {
-
-  
-  state = { 
+  state = {
     data: data,
     filteredData: data,
     form: {
-      id:'',
-      Nombre:'',
+      id: '',
+      Nombre: '',
       Distintivo: '',
       Categoria_Cliente: '',
       Celular: '',
       Correo: '',
-      Dirección: ''
+      Dirección: '',
+      Estado: true
     },
     modalInsertar: false,
     modalEditar: false,
-    searchText: ''
+    searchText: '',
+    currentPage: 1,
+    itemsPerPage: 7,
+    alert: {
+      visible: false,
+      message: '',
+      type: ''
+    }
   };
 
   handleChange = e => {
+    const { name, value } = e.target;
     this.setState({
       form: {
         ...this.state.form,
-        [e.target.name]: e.target.value,
+        [name]: value,
       }
     });
-  }
+  };
+
+  handleSwitchChange = e => {
+    this.setState({
+      form: {
+        ...this.state.form,
+        Estado: e.target.checked
+      }
+    });
+  };
 
   handleSearch = e => {
     const searchText = e.target.value.toLowerCase();
@@ -49,71 +62,115 @@ class Clientes extends React.Component {
         item.Nombre.toLowerCase().includes(searchText) ||
         item.Distintivo.toString().includes(searchText) ||
         item.Categoria_Cliente.toLowerCase().includes(searchText) ||
-        item.Celular.toLowerCase().includes(searchText)||
-        item.Correo.toLowerCase().includes(searchText)||
+        item.Celular.toLowerCase().includes(searchText) ||
+        item.Correo.toLowerCase().includes(searchText) ||
         item.Dirección.toLowerCase().includes(searchText)
-
       )
     });
-  }
+  };
 
   mostrarModalInsertar = () => {
-    this.setState({ modalInsertar: true });
-  }
+    this.setState({ modalInsertar: true, form: { ...this.state.form, id: this.state.data.length + 1 } });
+  };
 
   ocultarModalInsertar = () => {
     this.setState({ modalInsertar: false });
-  }
+  };
 
   mostrarModalEditar = (registro) => {
     this.setState({ modalEditar: true, form: registro });
-  }
+  };
 
   ocultarModalEditar = () => {
     this.setState({ modalEditar: false });
-  }
+  };
+
+  mostrarAlerta = (message, type) => {
+    this.setState({ alert: { visible: true, message, type } });
+    setTimeout(() => this.setState({ alert: { visible: false, message: '', type: '' } }), 3000);
+  };
+
+  verificarDuplicado = (dato) => {
+    return this.state.data.some(cliente =>
+      cliente.Distintivo === dato.Distintivo || cliente.Correo === dato.Correo
+    );
+  };
+
+  validarCampos = (form) => {
+    return Object.values(form).every(value => value !== '');
+  };
 
   insertar = () => {
-    var valorNuevo = { ...this.state.form };
-    valorNuevo.id = this.state.data.length + 1;
-    var lista = this.state.data;
-    lista.push(valorNuevo);
-    this.setState({ data: lista, filteredData: lista, modalInsertar: false });
-  }
+    const { form } = this.state;
+
+    if (!this.validarCampos(form)) {
+      this.mostrarAlerta('Todos los campos deben ser llenados.', 'danger');
+      return;
+    }
+
+    if (this.verificarDuplicado(form)) {
+      this.mostrarAlerta('Cliente duplicado, no se puede agregar.', 'danger');
+    } else {
+      const valorNuevo = { ...form };
+      valorNuevo.id = this.state.data.length + 1;
+      const lista = [...this.state.data, valorNuevo];
+      this.setState({ data: lista, filteredData: lista, modalInsertar: false });
+      this.mostrarAlerta('Cliente agregado con éxito.', 'success');
+    }
+  };
 
   editar = (dato) => {
-    var contador = 0;
-    var lista = this.state.data;
-    lista.map((registro) => {
-      if (dato.id === registro.id) {
-        lista[contador].Nombre = dato.Nombre;
-        lista[contador].Distintivo = dato.Distintivo;
-        lista[contador].Categoria_Cliente = dato.Categoria_Cliente;
-        lista[contador].Correo = dato.Correo;
-        lista[contador].Dirección = dato.Dirección;
+    const { form } = this.state;
 
-      }
-      contador++;
-    });
-    this.setState({ data: lista, filteredData: lista, modalEditar: false });
-  }
+    if (!this.validarCampos(form)) {
+      this.mostrarAlerta('Todos los campos deben ser llenados.', 'danger');
+      return;
+    }
+
+    if (this.verificarDuplicado(dato)) {
+      this.mostrarAlerta('Cliente duplicado, no se puede modificar.', 'danger');
+    } else {
+      const lista = this.state.data.map(registro => registro.id === dato.id ? dato : registro);
+      this.setState({ data: lista, filteredData: lista, modalEditar: false });
+      this.mostrarAlerta('Cliente editado con éxito.', 'success');
+    }
+  };
 
   eliminar = (dato) => {
-    var opcion = window.confirm("¿Realmente desea eliminar el cliente? " + dato.id);
+    const opcion = window.confirm("¿Realmente desea eliminar el cliente? ");
     if (opcion) {
-      var contador = 0;
-      var lista = this.state.data;
-      lista.map((registro) => {
-        if (registro.id === dato.id) {
-          lista.splice(contador, 1);
-        }
-        contador++;
-      });
+      const lista = this.state.data.filter(registro => registro.id !== dato.id);
       this.setState({ data: lista, filteredData: lista });
+      this.mostrarAlerta('Cliente eliminado con éxito.', 'success');
     }
-  }
+  };
+
+  cambiarEstado = (id) => {
+    const lista = this.state.data.map(registro => {
+      if (registro.id === id) {
+        registro.Estado = !registro.Estado;
+      }
+      return registro;
+    });
+    this.setState({ data: lista, filteredData: lista });
+  };
+
+  handlePageChange = (pageNumber) => {
+    this.setState({ 
+      currentPage: pageNumber
+    });
+  };
 
   render() {
+    const { currentPage, itemsPerPage, filteredData } = this.state;
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
+    const pageNumbers = [];
+    for (let i = 1; i <= Math.ceil(filteredData.length / itemsPerPage); i++) {
+      pageNumbers.push(i);
+    }
+
     return (
       <>
         <Container>
@@ -128,7 +185,18 @@ class Clientes extends React.Component {
             />
             <Button color="success" onClick={this.mostrarModalInsertar}>Agregar cliente</Button>
           </div>
-          
+
+          {this.state.alert.visible && (
+            <Toast className={`bg-${this.state.alert.type} text-white`}>
+              <ToastHeader icon={this.state.alert.type}>
+                {this.state.alert.type === 'success' ? 'Éxito' : 'Error'}
+              </ToastHeader>
+              <ToastBody>
+                {this.state.alert.message}
+              </ToastBody>
+            </Toast>
+          )}
+
           <Table className="table table-bordered">
             <thead>
               <tr>
@@ -139,20 +207,31 @@ class Clientes extends React.Component {
                 <th>Celular</th>
                 <th>Correo</th>
                 <th>Dirección</th>
+                <th>Estado</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {this.state.filteredData.map((elemento) => (
+              {currentItems.map((elemento) => (
                 <tr key={elemento.id}>
                   <td>{elemento.id}</td>
                   <td>{elemento.Nombre}</td>
                   <td>{elemento.Distintivo}</td>
                   <td>{elemento.Categoria_Cliente}</td>
                   <td>{elemento.Celular}</td>
-                  <td>{elemento.Correo }</td>
-                  <td>{elemento.Dirección }</td>
-
+                  <td>{elemento.Correo}</td>
+                  <td>{elemento.Dirección}</td>
+                  <td>
+                    <Button
+                      color={elemento.Estado ? "success" : "secondary"}
+                      onClick={() => this.cambiarEstado(elemento.id)}
+                      size="sm"
+                      className="mr-1"
+                      style={{ padding: '0.375rem 0.75rem' }}
+                    >
+                      {elemento.Estado ? "On" : "Off"}
+                    </Button>
+                  </td>
                   <td>
                     <Button color="primary" onClick={() => this.mostrarModalEditar(elemento)}><FaEdit /></Button>{' '}
                     <Button color="danger" onClick={() => this.eliminar(elemento)}><FaTrashAlt /></Button>
@@ -161,21 +240,30 @@ class Clientes extends React.Component {
               ))}
             </tbody>
           </Table>
+
+          {/* Paginador */}
+          <div className="d-flex justify-content-center">
+            {pageNumbers.map(number => (
+              <Button
+                key={number}
+                color="info"
+                onClick={() => this.handlePageChange(number)}
+                className="mx-1"
+              >
+                {number}
+              </Button>
+            ))}
+          </div>
         </Container>
 
         <Modal isOpen={this.state.modalInsertar}>
           <ModalHeader>
             <div>
-              <h3>Insertar registro</h3>
+              <h3>Insertar Cliente</h3>
             </div>
           </ModalHeader>
 
           <ModalBody>
-            <FormGroup>
-              <label>Id:</label>
-              <input className="form-control" readOnly type="text" value={this.state.data.length + 1} />
-            </FormGroup>
-
             <FormGroup>
               <label>Nombre Completo:</label>
               <input className="form-control" name="Nombre" type="text" onChange={this.handleChange} />
@@ -183,26 +271,39 @@ class Clientes extends React.Component {
 
             <FormGroup>
               <label>Distintivo:</label>
-              <input className="form-control" name="Document" type="number" onChange={this.handleChange} />
+              <input className="form-control" name="Distintivo" type="number" onChange={this.handleChange} />
             </FormGroup>
 
             <FormGroup>
-              <label>Categoria Cliente: </label>
-              <input className="form-control" name="Cargo" type="text" onChange={this.handleChange} />
+              <label>Categoria Cliente:</label>
+              <input className="form-control" name="Categoria_Cliente" type="text" onChange={this.handleChange} />
             </FormGroup>
 
             <FormGroup>
-              <label>Celular: </label>
-              <input className="form-control" name="Empresa" type="text" onChange={this.handleChange} />
+              <label>Celular:</label>
+              <input className="form-control" name="Celular" type="text" onChange={this.handleChange} />
             </FormGroup>
+
             <FormGroup>
-              <label>Correo: </label>
-              <input className="form-control" name="Empresa" type="text" onChange={this.handleChange} />
+              <label>Correo:</label>
+              <input className="form-control" name="Correo" type="email" onChange={this.handleChange} />
             </FormGroup>
+
             <FormGroup>
-              <label>Dirección: </label>
-              <input className="form-control" name="Empresa" type="text" onChange={this.handleChange} />
+              <label>Dirección:</label>
+              <input className="form-control" name="Dirección" type="text" onChange={this.handleChange} />
             </FormGroup>
+
+            <FormGroup>
+              <label>Estado:</label>
+              <Input
+                type="switch"
+                name="Estado"
+                checked={this.state.form.Estado}
+                onChange={this.handleSwitchChange}
+              />
+            </FormGroup>
+
             <ModalFooter>
               <Button color="primary" onClick={this.insertar}>Insertar</Button>
               <Button color="danger" onClick={this.ocultarModalInsertar}>Cancelar</Button>
@@ -213,16 +314,11 @@ class Clientes extends React.Component {
         <Modal isOpen={this.state.modalEditar}>
           <ModalHeader>
             <div>
-              <h3>Agregar Cliente</h3>
+              <h3>Editar Cliente</h3>
             </div>
           </ModalHeader>
 
           <ModalBody>
-            <FormGroup>
-              <label>Id:</label>
-              <input className="form-control" readOnly type="text" value={this.state.form.id} />
-            </FormGroup>
-
             <FormGroup>
               <label>Nombre Completo:</label>
               <input className="form-control" name="Nombre" type="text" onChange={this.handleChange} value={this.state.form.Nombre} />
@@ -230,39 +326,48 @@ class Clientes extends React.Component {
 
             <FormGroup>
               <label>Distintivo:</label>
-              <input className="form-control" name="Document" type="number" onChange={this.handleChange} value={this.state.form.Document} />
+              <input className="form-control" name="Distintivo" type="number" onChange={this.handleChange} value={this.state.form.Distintivo} />
             </FormGroup>
 
             <FormGroup>
-              <label>Categoria Cliente: </label>
-              <input className="form-control" name="Cargo" type="text" onChange={this.handleChange} value={this.state.form.Cargo} />
+              <label>Categoria Cliente:</label>
+              <input className="form-control" name="Categoria_Cliente" type="text" onChange={this.handleChange} value={this.state.form.Categoria_Cliente} />
             </FormGroup>
 
             <FormGroup>
-              <label>Celular: </label>
-              <input className="form-control" name="Empresa" type="text" onChange={this.handleChange} value={this.state.form.Empresa} />
+              <label>Celular:</label>
+              <input className="form-control" name="Celular" type="text" onChange={this.handleChange} value={this.state.form.Celular} />
             </FormGroup>
+
             <FormGroup>
-              <label>Correo: </label>
-              <input className="form-control" name="Empresa" type="text" onChange={this.handleChange} value={this.state.form.Empresa} />
+              <label>Correo:</label>
+              <input className="form-control" name="Correo" type="email" onChange={this.handleChange} value={this.state.form.Correo} />
             </FormGroup>
+
             <FormGroup>
-              <label>Dirección: </label>
-              <input className="form-control" name="Empresa" type="text" onChange={this.handleChange} value={this.state.form.Empresa} />
+              <label>Dirección:</label>
+              <input className="form-control" name="Dirección" type="text" onChange={this.handleChange} value={this.state.form.Dirección} />
             </FormGroup>
-            
+
+            <FormGroup>
+              <label>Estado:</label>
+              <Input
+                type="switch"
+                name="Estado"
+                checked={this.state.form.Estado}
+                onChange={this.handleSwitchChange}
+              />
+            </FormGroup>
+
             <ModalFooter>
               <Button color="primary" onClick={() => this.editar(this.state.form)}>Editar</Button>
               <Button color="danger" onClick={this.ocultarModalEditar}>Cancelar</Button>
             </ModalFooter>
           </ModalBody>
         </Modal>
-
       </>
-    )
+    );
   }
 }
-
-
 
 export default Clientes;
