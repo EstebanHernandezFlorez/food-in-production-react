@@ -7,7 +7,6 @@ import Logo from './views/module/Logo';
 import ToggleThemeButton from './views/module/ToggleThemeButton';
  // El componente para agregar empleado
 // Importa los componentes de página
-import FormularioEmpleado from './views/module/Empleados/FormularioEmpleado';
 import Dashboard from './views/module/Dashboard/dashboard'; // Asegúrate de que Dashboard esté definido y exportado
 import Roles from './views/module/roles/roles';
 import Usuarios from './views/module/usuarios/usuarios';
@@ -85,7 +84,6 @@ function App() {
               <Route path="/reservas" element={<Reservas />} />
               <Route path="/servicios" element={<Servicios />} />
               <Route path="/mano_de_obra" element={<ManoDeObra />} />
-              <Route path="/agregar-empleado" element={<FormularioEmpleado />} />
             </Routes>
           </Content>
         </Layout>
