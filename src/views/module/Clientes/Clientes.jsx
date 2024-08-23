@@ -187,14 +187,22 @@ class Clientes extends React.Component {
           </div>
 
           {this.state.alert.visible && (
-            <Toast className={`bg-${this.state.alert.type} text-white`}>
-              <ToastHeader icon={this.state.alert.type}>
-                {this.state.alert.type === 'success' ? 'Éxito' : 'Error'}
-              </ToastHeader>
-              <ToastBody>
-                {this.state.alert.message}
-              </ToastBody>
-            </Toast>
+            <div style={{ 
+              position: 'absolute', 
+              top: '50%', 
+              left: '50%', 
+              transform: 'translate(-50%, -50%)', 
+              zIndex: 1051 // Asegura que el toast aparezca sobre el modal
+            }}>
+              <Toast className={`bg-${this.state.alert.type} text-white`}>
+                <ToastHeader icon={this.state.alert.type}>
+                  {this.state.alert.type === 'success' ? 'Éxito' : 'Error'}
+                </ToastHeader>
+                <ToastBody>
+                  {this.state.alert.message}
+                </ToastBody>
+              </Toast>
+            </div>
           )}
 
           <Table className="table table-bordered">
@@ -227,13 +235,12 @@ class Clientes extends React.Component {
                       onClick={() => this.cambiarEstado(elemento.id)}
                       size="sm"
                       className="mr-1"
-                      style={{ padding: '0.375rem 0.75rem' }}
-                    >
-                      {elemento.Estado ? "On" : "Off"}
+                      style={{ width: "90px" }}>
+                      {elemento.Estado ? "Activo" : "Inactivo"}
                     </Button>
                   </td>
                   <td>
-                    <Button color="primary" onClick={() => this.mostrarModalEditar(elemento)}><FaEdit /></Button>{' '}
+                    <Button color="primary" onClick={() => this.mostrarModalEditar(elemento)}><FaEdit /></Button>{" "}
                     <Button color="danger" onClick={() => this.eliminar(elemento)}><FaTrashAlt /></Button>
                   </td>
                 </tr>
@@ -241,74 +248,112 @@ class Clientes extends React.Component {
             </tbody>
           </Table>
 
-          {/* Paginador */}
           <div className="d-flex justify-content-center">
-            {pageNumbers.map(number => (
-              <Button
-                key={number}
-                color="info"
-                onClick={() => this.handlePageChange(number)}
-                className="mx-1"
-              >
-                {number}
-              </Button>
-            ))}
+            <nav>
+              <ul className="pagination">
+                {pageNumbers.map(number => (
+                  <li key={number} className={`page-item ${currentPage === number ? 'active' : ''}`}>
+                    <a onClick={() => this.handlePageChange(number)} className="page-link">
+                      {number}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
           </div>
+
         </Container>
 
         <Modal isOpen={this.state.modalInsertar}>
           <ModalHeader>
             <div>
-              <h3>Insertar Cliente</h3>
+              <h3>Agregar Cliente</h3>
             </div>
           </ModalHeader>
 
           <ModalBody>
+
             <FormGroup>
               <label>Nombre Completo:</label>
-              <input className="form-control" name="Nombre" type="text" onChange={this.handleChange} />
+              <Input
+                className="form-control"
+                name="Nombre"
+                type="text"
+                onChange={this.handleChange}
+                value={this.state.form.Nombre}
+              />
             </FormGroup>
 
             <FormGroup>
               <label>Distintivo:</label>
-              <input className="form-control" name="Distintivo" type="number" onChange={this.handleChange} />
+              <Input
+                className="form-control"
+                name="Distintivo"
+                type="text"
+                onChange={this.handleChange}
+                value={this.state.form.Distintivo}
+              />
             </FormGroup>
 
             <FormGroup>
               <label>Categoria Cliente:</label>
-              <input className="form-control" name="Categoria_Cliente" type="text" onChange={this.handleChange} />
+              <Input
+                className="form-control"
+                name="Categoria_Cliente"
+                type="text"
+                onChange={this.handleChange}
+                value={this.state.form.Categoria_Cliente}
+              />
             </FormGroup>
 
             <FormGroup>
               <label>Celular:</label>
-              <input className="form-control" name="Celular" type="text" onChange={this.handleChange} />
+              <Input
+                className="form-control"
+                name="Celular"
+                type="text"
+                onChange={this.handleChange}
+                value={this.state.form.Celular}
+              />
             </FormGroup>
 
             <FormGroup>
               <label>Correo:</label>
-              <input className="form-control" name="Correo" type="email" onChange={this.handleChange} />
+              <Input
+                className="form-control"
+                name="Correo"
+                type="email"
+                onChange={this.handleChange}
+                value={this.state.form.Correo}
+              />
             </FormGroup>
 
             <FormGroup>
               <label>Dirección:</label>
-              <input className="form-control" name="Dirección" type="text" onChange={this.handleChange} />
+              <Input
+                className="form-control"
+                name="Dirección"
+                type="text"
+                onChange={this.handleChange}
+                value={this.state.form.Dirección}
+              />
             </FormGroup>
 
             <FormGroup>
               <label>Estado:</label>
               <Input
-                type="switch"
+                type="checkbox"
                 name="Estado"
                 checked={this.state.form.Estado}
                 onChange={this.handleSwitchChange}
               />
             </FormGroup>
-
-            <ModalFooter>
-              <Button color="primary" onClick={this.insertar}>Insertar</Button>
-              <Button color="danger" onClick={this.ocultarModalInsertar}>Cancelar</Button>
-            </ModalFooter>
           </ModalBody>
+
+          <ModalFooter>
+            <Button color="primary" onClick={() => this.insertar()}>Agregar</Button>
+            <Button color="danger" onClick={() => this.ocultarModalInsertar()}>Cancelar</Button>
+          </ModalFooter>
         </Modal>
 
         <Modal isOpen={this.state.modalEditar}>
@@ -319,51 +364,88 @@ class Clientes extends React.Component {
           </ModalHeader>
 
           <ModalBody>
+        
             <FormGroup>
               <label>Nombre Completo:</label>
-              <input className="form-control" name="Nombre" type="text" onChange={this.handleChange} value={this.state.form.Nombre} />
+              <Input
+                className="form-control"
+                name="Nombre"
+                type="text"
+                onChange={this.handleChange}
+                value={this.state.form.Nombre}
+              />
             </FormGroup>
 
             <FormGroup>
               <label>Distintivo:</label>
-              <input className="form-control" name="Distintivo" type="number" onChange={this.handleChange} value={this.state.form.Distintivo} />
+              <Input
+                className="form-control"
+                name="Distintivo"
+                type="text"
+                onChange={this.handleChange}
+                value={this.state.form.Distintivo}
+              />
             </FormGroup>
 
             <FormGroup>
               <label>Categoria Cliente:</label>
-              <input className="form-control" name="Categoria_Cliente" type="text" onChange={this.handleChange} value={this.state.form.Categoria_Cliente} />
+              <Input
+                className="form-control"
+                name="Categoria_Cliente"
+                type="text"
+                onChange={this.handleChange}
+                value={this.state.form.Categoria_Cliente}
+              />
             </FormGroup>
 
             <FormGroup>
               <label>Celular:</label>
-              <input className="form-control" name="Celular" type="text" onChange={this.handleChange} value={this.state.form.Celular} />
+              <Input
+                className="form-control"
+                name="Celular"
+                type="text"
+                onChange={this.handleChange}
+                value={this.state.form.Celular}
+              />
             </FormGroup>
 
             <FormGroup>
               <label>Correo:</label>
-              <input className="form-control" name="Correo" type="email" onChange={this.handleChange} value={this.state.form.Correo} />
+              <Input
+                className="form-control"
+                name="Correo"
+                type="email"
+                onChange={this.handleChange}
+                value={this.state.form.Correo}
+              />
             </FormGroup>
 
             <FormGroup>
               <label>Dirección:</label>
-              <input className="form-control" name="Dirección" type="text" onChange={this.handleChange} value={this.state.form.Dirección} />
+              <Input
+                className="form-control"
+                name="Dirección"
+                type="text"
+                onChange={this.handleChange}
+                value={this.state.form.Dirección}
+              />
             </FormGroup>
 
             <FormGroup>
               <label>Estado:</label>
               <Input
-                type="switch"
+                type="checkbox"
                 name="Estado"
                 checked={this.state.form.Estado}
                 onChange={this.handleSwitchChange}
               />
             </FormGroup>
-
-            <ModalFooter>
-              <Button color="primary" onClick={() => this.editar(this.state.form)}>Editar</Button>
-              <Button color="danger" onClick={this.ocultarModalEditar}>Cancelar</Button>
-            </ModalFooter>
           </ModalBody>
+
+          <ModalFooter>
+            <Button color="primary" onClick={() => this.editar(this.state.form)}>Editar</Button>
+            <Button color="danger" onClick={() => this.ocultarModalEditar()}>Cancelar</Button>
+          </ModalFooter>
         </Modal>
       </>
     );

@@ -1,7 +1,7 @@
 import React from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Table, Button, Container, Modal, ModalBody, ModalHeader, ModalFooter, FormGroup, Input, Alert } from 'reactstrap';
-import { FaEdit, FaTrashAlt } from 'react-icons/fa'; // Importar íconos de react-icons
+import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 
 const data = [
   { id: 1, Nombre: "Decoraciones", Estado: "Activo" }
@@ -208,6 +208,13 @@ class Servicios extends React.Component {
           </ModalHeader>
 
           <ModalBody>
+            {/* Mostrar alerta de validación dentro del modal */}
+            {this.state.alertMessage && (
+              <Alert color={this.state.alertType} toggle={() => this.setState({ alertMessage: '' })}>
+                {this.state.alertMessage}
+              </Alert>
+            )}
+
             <FormGroup>
               <label>Nombre:</label>
               <input 
@@ -234,6 +241,13 @@ class Servicios extends React.Component {
           </ModalHeader>
 
           <ModalBody>
+            {/* Mostrar alerta de validación dentro del modal */}
+            {this.state.alertMessage && (
+              <Alert color={this.state.alertType} toggle={() => this.setState({ alertMessage: '' })}>
+                {this.state.alertMessage}
+              </Alert>
+            )}
+
             <FormGroup>
               <label>Nombre:</label>
               <input 
