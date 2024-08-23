@@ -1,239 +1,206 @@
-import React from "react";
+import React, { useState } from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Table, Button, Container, Modal, ModalBody, ModalHeader, ModalFooter, FormGroup, Input } from 'reactstrap';
-import { FaEdit, FaTrashAlt } from 'react-icons/fa'; // Importar íconos de react-icons
+import { Table, Button, Container, Input, Row, Col } from 'reactstrap';
+import AgregarEmpleado from './AgregarEmpleado';
+import EditarEmpleado from './EditarEmpleado';
+import EliminarEmpleado from './EliminarEmpleado';
+import CambiarEstadoEmpleado from './CambiarEstadoEmpleado';
+import { Snackbar, Alert } from '@mui/material';
 
-
-
-const data = [
-  {id:1, Nombre: "Carolina Guzman", Document:16514416, Cargo: "Aux Cocina", Empresa: "Colanta"},
-  {id:2, Nombre: "Andra Torres", Document:18761919, Cargo: "Aux Cocina", Empresa: "Colanta"},
-  {id:3, Nombre: "Natalia Muriel", Document:1016177143, Cargo: "Jefe Cocina", Empresa: "Colanta"}
+const initialData = [
+  // Tu array de datos iniciales (si es necesario)
 ];
 
+const Empleados = () => {
+  const [data, setData] = useState(initialData);
+  const [form, setForm] = useState({
+    id: '',
+    Nombre: '',
+    Document: '',
+    FechaIni: '',
+    NumeroSS: '',
+    Direccion: '',
+    TipoContrato: '',
+    Estado: true
+  });
+  const [alert, setAlert] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [modalEditar, setModalEditar] = useState(false);
+  const [searchTextTable, setSearchTextTable] = useState('');
+  const [searchTextForm, setSearchTextForm] = useState('');
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+  const itemsPerPage = 5;
+  const [currentPage, setCurrentPage] = useState(1);
 
-class Empleados extends React.Component {
-
-  
-  state = { 
-    data: data,
-    filteredData: data,
-    form: {
-      id:'',
-      Nombre:'',
-      Document: '',
-      Cargo: '',
-      Empresa: ''
-    },
-    modalInsertar: false,
-    modalEditar: false,
-    searchText: ''
+  const handleSearchTable = e => {
+    setSearchTextTable(e.target.value.toLowerCase());
   };
 
-  handleChange = e => {
-    this.setState({
-      form: {
-        ...this.state.form,
-        [e.target.name]: e.target.value,
-      }
-    });
+  const handleSearchForm = e => {
+    setSearchTextForm(e.target.value.toLowerCase());
+  };
+
+  const filteredData = data.filter(item =>
+    item.Nombre.toLowerCase().includes(searchTextTable) ||
+    item.Document.toString().includes(searchTextTable) ||
+    item.FechaIni.toLowerCase().includes(searchTextTable) ||
+    item.NumeroSS.toString().includes(searchTextTable)
+  );
+
+  const filteredFormData = data.filter(item =>
+    item.Nombre.toLowerCase().includes(searchTextForm) ||
+    item.Document.toString().includes(searchTextForm) ||
+    item.FechaIni.toLowerCase().includes(searchTextForm) ||
+    item.NumeroSS.toString().includes(searchTextForm)
+  );
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
+  const pageNumbers = [];
+
+  for (let i = 1; i <= Math.ceil(filteredData.length / itemsPerPage); i++) {
+    pageNumbers.push(i);
   }
 
-  handleSearch = e => {
-    const searchText = e.target.value.toLowerCase();
-    this.setState({
-      searchText,
-      filteredData: this.state.data.filter(item =>
-        item.Nombre.toLowerCase().includes(searchText) ||
-        item.Document.toString().includes(searchText) ||
-        item.Cargo.toLowerCase().includes(searchText) ||
-        item.Empresa.toLowerCase().includes(searchText)
-      )
-    });
-  }
+  const openSnackbar = (message, severity) => {
+    setSnackbarMessage(message);
+    setSnackbarSeverity(severity);
+    setSnackbarOpen(true);
+  };
 
-  mostrarModalInsertar = () => {
-    this.setState({ modalInsertar: true });
-  }
+  const closeSnackbar = () => {
+    setSnackbarOpen(false);
+  };
 
-  ocultarModalInsertar = () => {
-    this.setState({ modalInsertar: false });
-  }
-
-  mostrarModalEditar = (registro) => {
-    this.setState({ modalEditar: true, form: registro });
-  }
-
-  ocultarModalEditar = () => {
-    this.setState({ modalEditar: false });
-  }
-
-  insertar = () => {
-    var valorNuevo = { ...this.state.form };
-    valorNuevo.id = this.state.data.length + 1;
-    var lista = this.state.data;
-    lista.push(valorNuevo);
-    this.setState({ data: lista, filteredData: lista, modalInsertar: false });
-  }
-
-  editar = (dato) => {
-    var contador = 0;
-    var lista = this.state.data;
-    lista.map((registro) => {
-      if (dato.id === registro.id) {
-        lista[contador].Nombre = dato.Nombre;
-        lista[contador].Document = dato.Document;
-        lista[contador].Cargo = dato.Cargo;
-        lista[contador].Empresa = dato.Empresa;
-      }
-      contador++;
-    });
-    this.setState({ data: lista, filteredData: lista, modalEditar: false });
-  }
-
-  eliminar = (dato) => {
-    var opcion = window.confirm("Realmente desea eliminar el registro " + dato.id);
-    if (opcion) {
-      var contador = 0;
-      var lista = this.state.data;
-      lista.map((registro) => {
-        if (registro.id === dato.id) {
-          lista.splice(contador, 1);
-        }
-        contador++;
-      });
-      this.setState({ data: lista, filteredData: lista });
-    }
-  }
-
-  render() {
-    return (
-      <>
-        <Container>
-          <br />
-          <div className="d-flex justify-content-between align-items-center mb-3">
+  return (
+    <Container>
+      <div className="d-flex justify-content-between align-items-center mt-3">
+        <Button color="primary" onClick={() => setShowForm(!showForm)}>
+          {showForm ? 'Cancelar' : 'Agregar Empleado'}
+        </Button>
+        {showForm && (
+          <div className="d-flex align-items-center">
             <Input
               type="text"
-              placeholder="Buscar empleado"
-              value={this.state.searchText}
-              onChange={this.handleSearch}
-              style={{ width: '300px' }}
+              placeholder="Buscar en el formulario..."
+              value={searchTextForm}
+              onChange={handleSearchForm}
+              className="me-3"
             />
-            <Button color="success" onClick={this.mostrarModalInsertar}>Agregar empleado</Button>
           </div>
-          
-          <Table className="table table-bordered">
+        )}
+      </div>
+      {showForm ? (
+        <AgregarEmpleado
+          form={form}
+          setForm={setForm}
+          setData={setData}
+          setAlert={setAlert}
+          setShowForm={setShowForm}
+          openSnackbar={openSnackbar}
+        />
+      ) : (
+        <>
+          <div className="d-flex justify-content-between align-items-center mt-3">
+            <Input
+              type="text"
+              placeholder="Buscar en la tabla..."
+              value={searchTextTable}
+              onChange={handleSearchTable}
+            />
+          </div>
+          <Table className="table table-bordered mt-3">
             <thead>
               <tr>
-                <th>Id</th>
+                <th>ID</th>
                 <th>Nombre Completo</th>
                 <th>Documento</th>
-                <th>Cargo</th>
-                <th>Empresa</th>
+                <th>Fecha Inicio</th>
+                <th>Numero SS</th>
+                <th>Dirección</th>
+                <th>Tipo Contrato</th>
+                <th>Estado</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {this.state.filteredData.map((elemento) => (
-                <tr key={elemento.id}>
-                  <td>{elemento.id}</td>
-                  <td>{elemento.Nombre}</td>
-                  <td>{elemento.Document}</td>
-                  <td>{elemento.Cargo}</td>
-                  <td>{elemento.Empresa}</td>
+              {currentItems.map(empleado => (
+                <tr key={empleado.id}>
+                  <td>{empleado.id}</td>
+                  <td>{empleado.Nombre}</td>
+                  <td>{empleado.Document}</td>
+                  <td>{empleado.FechaIni}</td>
+                  <td>{empleado.NumeroSS}</td>
+                  <td>{empleado.Direccion}</td>
+                  <td>{empleado.TipoContrato}</td>
+                  <td>{empleado.Estado ? "Activo" : "Inactivo"}</td>
                   <td>
-                    <Button color="primary" onClick={() => this.mostrarModalEditar(elemento)}><FaEdit /></Button>{' '}
-                    <Button color="danger" onClick={() => this.eliminar(elemento)}><FaTrashAlt /></Button>
+                    <Button color="primary" onClick={() => {
+                      setForm(empleado);
+                      setModalEditar(true);
+                    }}>Editar</Button>{' '}
+                    <EliminarEmpleado 
+                      empleado={empleado}
+                      setData={setData}
+                      openSnackbar={openSnackbar}
+                    />{' '}
+                    <CambiarEstadoEmpleado 
+                      empleado={empleado}
+                      setData={setData}
+                      openSnackbar={openSnackbar}
+                    />
                   </td>
                 </tr>
               ))}
             </tbody>
           </Table>
-        </Container>
-
-        <Modal isOpen={this.state.modalInsertar}>
-          <ModalHeader>
-            <div>
-              <h3>Insertar registro</h3>
-            </div>
-          </ModalHeader>
-
-          <ModalBody>
-            <FormGroup>
-              <label>Id:</label>
-              <input className="form-control" readOnly type="text" value={this.state.data.length + 1} />
-            </FormGroup>
-
-            <FormGroup>
-              <label>Nombre Completo:</label>
-              <input className="form-control" name="Nombre" type="text" onChange={this.handleChange} />
-            </FormGroup>
-
-            <FormGroup>
-              <label>Documento:</label>
-              <input className="form-control" name="Document" type="number" onChange={this.handleChange} />
-            </FormGroup>
-
-            <FormGroup>
-              <label>Cargo: </label>
-              <input className="form-control" name="Cargo" type="text" onChange={this.handleChange} />
-            </FormGroup>
-
-            <FormGroup>
-              <label>Empresa: </label>
-              <input className="form-control" name="Empresa" type="text" onChange={this.handleChange} />
-            </FormGroup>
-            <ModalFooter>
-              <Button color="primary" onClick={this.insertar}>Insertar</Button>
-              <Button color="danger" onClick={this.ocultarModalInsertar}>Cancelar</Button>
-            </ModalFooter>
-          </ModalBody>
-        </Modal>
-
-        <Modal isOpen={this.state.modalEditar}>
-          <ModalHeader>
-            <div>
-              <h3>Editar un registro</h3>
-            </div>
-          </ModalHeader>
-
-          <ModalBody>
-            <FormGroup>
-              <label>Id:</label>
-              <input className="form-control" readOnly type="text" value={this.state.form.id} />
-            </FormGroup>
-
-            <FormGroup>
-              <label>Nombre Completo:</label>
-              <input className="form-control" name="Nombre" type="text" onChange={this.handleChange} value={this.state.form.Nombre} />
-            </FormGroup>
-
-            <FormGroup>
-              <label>Documento:</label>
-              <input className="form-control" name="Document" type="number" onChange={this.handleChange} value={this.state.form.Document} />
-            </FormGroup>
-
-            <FormGroup>
-              <label>Cargo: </label>
-              <input className="form-control" name="Cargo" type="text" onChange={this.handleChange} value={this.state.form.Cargo} />
-            </FormGroup>
-
-            <FormGroup>
-              <label>Empresa: </label>
-              <input className="form-control" name="Empresa" type="text" onChange={this.handleChange} value={this.state.form.Empresa} />
-            </FormGroup>
-            <ModalFooter>
-              <Button color="primary" onClick={() => this.editar(this.state.form)}>Editar</Button>
-              <Button color="danger" onClick={this.ocultarModalEditar}>Cancelar</Button>
-            </ModalFooter>
-          </ModalBody>
-        </Modal>
-
-      </>
-    )
-  }
-}
-
-
+          <div className="d-flex justify-content-center">
+            <nav>
+              <ul className="pagination">
+                {pageNumbers.map(number => (
+                  <li key={number} className="page-item">
+                    <Button 
+                      className="page-link" 
+                      onClick={() => setCurrentPage(number)}
+                    >
+                      {number}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
+          {/* Modal Editar */}
+          <EditarEmpleado
+            modalEditar={modalEditar}
+            setModalEditar={setModalEditar}
+            form={form}
+            setForm={setForm}
+            data={data}
+            setData={setData}
+            openSnackbar={openSnackbar}
+          />
+          {/* Snackbar para alertas */}
+          <Snackbar
+            open={snackbarOpen}
+            autoHideDuration={6000}
+            onClose={closeSnackbar}
+          >
+            <Alert 
+              onClose={closeSnackbar} 
+              severity={snackbarSeverity} 
+              sx={{ width: '100%' }}
+            >
+              {snackbarMessage}
+            </Alert>
+          </Snackbar>
+        </>
+      )}
+    </Container>
+  );
+};
 
 export default Empleados;

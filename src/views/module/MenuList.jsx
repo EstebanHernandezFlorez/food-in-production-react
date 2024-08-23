@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 import React, { useState } from 'react';
 import { Menu, Modal } from 'antd';
+=======
+import React from 'react';
+import { Menu } from 'antd';
+>>>>>>> 374ac94c26c594d94f76282b3ab839a3f94a5c75
 import { Link } from 'react-router-dom';
 import { 
     HomeOutlined, 
@@ -12,6 +17,7 @@ import {
 } from '@ant-design/icons';
 
 const MenuList = ({ darkTheme }) => {
+<<<<<<< HEAD
     const [isModalVisible, setIsModalVisible] = useState(false); // Estado para el modal de confirmación
 
     const menuStyle = {
@@ -21,6 +27,27 @@ const MenuList = ({ darkTheme }) => {
 
     const itemStyle = {
         color: darkTheme ? '#ffffff' : '#000000',
+=======
+    // Definir los estilos en función del tema
+    const menuStyle = {
+        backgroundColor: darkTheme ? '#222222' : '#ffffff',
+        color: darkTheme ? '#ffffff' : '#222222',
+        height: '100vh', // Asegura que el menú ocupe toda la altura del contenedor
+    };
+
+    const itemStyle = {
+        color: darkTheme ? '#ffffff' : '#222222',
+    };
+
+    const activeItemStyle = {
+        backgroundColor: darkTheme ? '#444444' : '#f0f0f0',
+        color: darkTheme ? '#ffffff' : '#222222',
+    };
+
+    const submenuStyle = {
+        backgroundColor: darkTheme ? '#222222' : '#ffffff',
+        color: darkTheme ? '#ffffff' : '#222222',
+>>>>>>> 374ac94c26c594d94f76282b3ab839a3f94a5c75
     };
 
     const activeItemStyle = {
