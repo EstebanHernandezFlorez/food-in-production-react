@@ -5,7 +5,8 @@
 }
 
 .sidebar{
-    color: 222222;
+    
+    color: #fff;
 }
 
 .header{
@@ -37,11 +38,11 @@
     justify-content: center;
     font-size: 1.5rem;
     border-radius:50% ;
-    background: rgba(28, 17, 41, 0.88);
+    background-color: #080A0D;
 }
 
 .menu-bar{
-    background-color: #222222;
+    background-color: #080A0D;
     height: 90vh;
     margin-top: 2rem;
     display: flex;
@@ -67,5 +68,5 @@
 }
 
 .submenu{
-    background-color:#222222;
+    background-color:#080A0D;
 }

@@ -17,18 +17,22 @@ const MenuList = ({ darkTheme }) => {
 
   // Definir los estilos en función del tema
   const menuStyle = {
-    backgroundColor: darkTheme ? '#222222' : '#ffffff',
-    color: darkTheme ? '#ffffff' : '#222222',
-    height: '100vh', // Asegura que el menú ocupe toda la altura del contenedor
+    backgroundColor: '#000000', // Fondo negro oscuro
+    color: '#D9A407', // Color de texto dorado
+    height: '8vh', // Asegura que el menú ocupe toda la altura del contenedor
   };
 
   const itemStyle = {
-    color: darkTheme ? '#ffffff' : '#222222',
+    color: '#D9A407', // Color de texto dorado
+  };
+
+  const submenuStyle = {
+    color: '#D9A407', // Color de texto dorado para los ítems dentro de SubMenu
   };
 
   const activeItemStyle = {
-    backgroundColor: darkTheme ? '#444444' : '#f0f0f0',
-    color: darkTheme ? '#ffffff' : '#222222',
+    backgroundColor: '#444444', // Color de fondo cuando el ítem está activo
+    color: '#D9A407', // Color de texto dorado cuando el ítem está activo
   };
 
   // Funciones para manejar la visibilidad del modal
@@ -58,6 +62,7 @@ const MenuList = ({ darkTheme }) => {
         <Menu.Item
           key="dashboard"
           icon={<HomeOutlined style={{ color: itemStyle.color }} />}
+          style={itemStyle}
         >
           <Link to="/dashboard" style={itemStyle}>
             Dashboard
@@ -66,6 +71,7 @@ const MenuList = ({ darkTheme }) => {
         <Menu.Item
           key="roles"
           icon={<IdcardOutlined style={{ color: itemStyle.color }} />}
+          style={itemStyle}
         >
           <Link to="/roles" style={itemStyle}>
             Roles
@@ -74,6 +80,7 @@ const MenuList = ({ darkTheme }) => {
         <Menu.Item
           key="usuarios"
           icon={<UserOutlined style={{ color: itemStyle.color }} />}
+          style={itemStyle}
         >
           <Link to="/usuarios" style={itemStyle}>
             Usuarios
@@ -83,44 +90,47 @@ const MenuList = ({ darkTheme }) => {
           key="subtasks"
           icon={<ProductOutlined style={{ color: itemStyle.color }} />}
           title="Producción"
+          style={itemStyle} // Estilo aplicado al SubMenu
         >
-          <Menu.Item key="produccion" style={menuStyle}>
-            <Link to="/produccion">Producción</Link>
+          <Menu.Item key="produccion" style={submenuStyle}>
+            <Link to="/produccion" style={submenuStyle}>Producción</Link>
           </Menu.Item>
-          <Menu.Item key="orden_produccion" style={menuStyle}>
-            <Link to="/orden_produccion">Orden de Producción</Link>
+          <Menu.Item key="orden_produccion" style={submenuStyle}>
+            <Link to="/orden_produccion" style={submenuStyle}>Orden de Producción</Link>
           </Menu.Item>
-          <Menu.Item key="producto_insumo" style={menuStyle}>
-            <Link to="/producto_insumo">Producto Insumo</Link>
+          <Menu.Item key="producto_insumo" style={submenuStyle}>
+            <Link to="/producto_insumo" style={submenuStyle}>Producto Insumo</Link>
           </Menu.Item>
-          <Menu.Item key="insumo" style={menuStyle}>
-            <Link to="/insumo">Insumo</Link>
+          <Menu.Item key="insumo" style={submenuStyle}>
+            <Link to="/insumo" style={submenuStyle}>Insumo</Link>
           </Menu.Item>
-          <Menu.Item key="empleados" style={menuStyle}>
-            <Link to="/empleados">Empleados</Link>
+          <Menu.Item key="empleados" style={submenuStyle}>
+            <Link to="/empleados" style={submenuStyle}>Empleados</Link>
           </Menu.Item>
-          <Menu.Item key="proveedores" style={menuStyle}>
-            <Link to="/proveedores">Proveedores</Link>
+          <Menu.Item key="proveedores" style={submenuStyle}>
+            <Link to="/proveedores" style={submenuStyle}>Proveedores</Link>
           </Menu.Item>
         </Menu.SubMenu>
         <Menu.SubMenu
           key="reservas"
           icon={<CalendarOutlined style={{ color: itemStyle.color }} />}
           title="Reservas"
+          style={itemStyle} // Estilo aplicado al SubMenu
         >
-          <Menu.Item key="clientes" style={itemStyle}>
-            <Link to="/clientes">Clientes</Link>
+          <Menu.Item key="clientes" style={submenuStyle}>
+            <Link to="/clientes" style={submenuStyle}>Clientes</Link>
           </Menu.Item>
-          <Menu.Item key="reservas" style={itemStyle}>
-            <Link to="/reservas">Reservas</Link>
+          <Menu.Item key="reservas" style={submenuStyle}>
+            <Link to="/reservas" style={submenuStyle}>Reservas</Link>
           </Menu.Item>
-          <Menu.Item key="servicios" style={itemStyle}>
-            <Link to="/servicios">Servicios</Link>
+          <Menu.Item key="servicios" style={submenuStyle}>
+            <Link to="/servicios" style={submenuStyle}>Servicios</Link>
           </Menu.Item>
         </Menu.SubMenu>
         <Menu.Item
           key="mano_de_obra"
           icon={<BarChartOutlined style={{ color: itemStyle.color }} />}
+          style={itemStyle}
         >
           <Link to="/mano_de_obra" style={itemStyle}>
             Mano de Obra
@@ -129,6 +139,7 @@ const MenuList = ({ darkTheme }) => {
         <Menu.Item
           key="logout"
           icon={<LogoutOutlined style={{ color: itemStyle.color }} />}
+          style={itemStyle}
           onClick={showConfirm}
         >
           <span style={itemStyle}>Cerrar sesión</span>

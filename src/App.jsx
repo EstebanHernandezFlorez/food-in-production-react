@@ -70,7 +70,7 @@ export default function App() {
                 <ToggleThemeButton darkTheme={darkTheme} toggleTheme={toggleTheme} />
               </Sider>
               <Layout>
-                <Header style={{ padding: 0 }} className='header'>
+                <Header style={{ padding:'5px'}} className='header'>
                   <div className="d-flex justify-content-between align-items-center" style={{ height: '100%' }}>
                     <Button
                       className='buttonInt'
@@ -78,7 +78,7 @@ export default function App() {
                       icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
                       onClick={() => setCollapsed(!collapsed)}
                     />
-                    <h1 style={{ margin: 0 }}>Food in Production</h1>
+                    <h1 style={{ margin: 0}}>Food in Production</h1>
 
                   </div>
                 </Header>
