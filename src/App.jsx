@@ -20,6 +20,7 @@ import Clientes from './views/module/Clientes/Clientes';
 import Reservas from './views/module/Reservas/Reservas';
 import Servicios from './views/module/Servicios/Servicios';
 import ManoDeObra from './views/module/ManoDeObra/ManoDeObra';
+import EditarPerfil from "./views/module/EditarPerfil/EditarPerfil";
 
 const users = [
   {
@@ -58,10 +59,6 @@ export default function App() {
           <Route path="/*" element={
             <Layout>
               <Sider
-                theme={darkTheme ? 'dark' : 'light'}
-                style={{
-                  backgroundColor: darkTheme ? '#4a0000' : '#fff',  // Vinotinto si darkTheme es true
-                }}
                 className="sidebar"
                 collapsible
                 trigger={null}
@@ -82,14 +79,7 @@ export default function App() {
                       onClick={() => setCollapsed(!collapsed)}
                     />
                     <h1 style={{ margin: 0 }}>Food in Production</h1>
-                    <Button 
-                      className='buttonStatus justify-content-end'
-                      type='text'
-                      icon={<UserOutlined />}
-                      style={{ marginLeft: 'auto' }} // Alinea el botón a la derecha
-                    >
-                      Lina Marcela: Admin
-                    </Button>
+
                   </div>
                 </Header>
                 <Content style={{ padding: '24px', minHeight: 'calc(100vh - 64px)' }}>
@@ -141,48 +131,75 @@ function Login({ setIsAuthenticated }) {
 
   return (
     <div className="row h-100 w-100">
-      <div className="col-sm-12 col-md-6">
-        <div className="d-flex justify-content-center align-items-center h-100">
-          <form className='border border-black p-5' onSubmit={handleSubmit}>
-            <img src="../src/assets/logo.jpg" alt="logo" style={{ width: 100, height: 100 }} className="logo img-fluid mb-4" />
-            <div className="form-group">
-              <i className="fa fa-user fa-lg" aria-hidden="true"></i>
-              <label htmlFor="username" className='form-label'>Usuario</label>
-              <input
-                type="text"
-                className="form-control"
-                id="username"
-                placeholder="correo@micorreo.com"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="password" className='form-label'>Contraseña</label>
-              <input
-                type="password"
-                className="form-control"
-                id="password"
-                placeholder="Ingrese la contraseña"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            {error && <div className="text-danger mb-3">{error}</div>}
-            <div className='my-3'>
-              <a href="#">Recuperar contraseña</a>
-            </div>
-            <div className="btn-group">
-              <button type="submit" className="btn btn-primary">
-                Ingresar
-              </button>
-            </div>
-          </form>
-        </div>
+      <div className="col-sm-12 col-md-6 d-flex justify-content-center align-items-center">
+    <div className="d-flex justify-content-center align-items-center h-100 w-100 ">
+    <form className="p-5 border border-black border border-2 " onSubmit={handleSubmit}>
+      <div className="d-flex justify-content-center ">
+        <img 
+          src="../src/assets/logo.jpg" 
+          alt="logo" 
+          style={{ width: 100, height: 100 }} 
+          className="justify-content-center"
+        />
+      </div>  
+      <div className="form-group d-flex flex-column align-items-center">
+    <label htmlFor="username" className="form-label">Usuario</label>
+      <div className="input-group mb-3 w-100 justify-content-center">
+    <div className="input-group-prepend">
+      <span className="input-group-text">
+        <i className="fa fa-user"></i>
+      </span>
+    </div>
+    <input
+      type="text"
+      className="form-control border border-black border-2"
+      id="username"
+      placeholder="correo@micorreo.com"
+      value={username}
+      onChange={(e) => setUsername(e.target.value)}
+    />
+    </div>
+    </div>
+
+    <div className="form-group d-flex flex-column align-items-center">
+     <label htmlFor="password" className="form-label">Contraseña</label>
+      <div className="input-group mb-3 w-100 justify-content-center">
+      <div className="input-group-prepend">
+      <span className="input-group-text">
+        <i className="fa fa-lock"></i>
+      </span>
+    </div>
+    <input
+      type="password"
+      className="form-control border border-black border-2"
+      id="password"
+      placeholder="Ingrese la contraseña"
+      value={password}
+      onChange={(e) => setPassword(e.target.value)}
+    />
+    </div>
+    </div>
+
+      {error && <div className="text-danger mb-3">{error}</div>}
+      <div className="my-3 text-center link-tex " >
+        <a href="#!"> ¿Ha olvidado su contraseña?</a>
       </div>
+      <div className="btn-group w-100">
+      <button 
+       type="submit" 
+      className="btn w-100" 
+      style={{ backgroundColor: '#cc4123', color: 'white' }}>
+    Ingresar
+    </button>
+      </div>
+
+    </form>
+    </div>
+    </div>
+
       <article className="col-sm-12 col-md-6">
         <div className="d-flex justify-content-center align-items-center h-100">
-          <img src="../src/assets/login.jpg" alt="food-in-production" width="800" height="800" />
+          <img src="../src/assets/login.jpg" alt="food-in-production" width="800" height="800" className="rounded"/>
         </div>
       </article>
     </div>

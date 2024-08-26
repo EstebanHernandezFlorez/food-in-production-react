@@ -1,91 +1,113 @@
-import React from 'react';
-import { Form, Input, Button, Alert } from 'antd';
-import { UserOutlined, MailOutlined, PhoneOutlined, LockOutlined } from '@ant-design/icons';
-
-const EditProfile = () => {
-    const [form] = Form.useForm();
-    const [error, setError] = React.useState("");
-
-    // Datos del usuario (simulados, normalmente los obtendrás de un servidor o contexto)
-    const userData = {
-        document: '1234567890',
-        fullName: 'Lina Marcela',
-        email: 'lina.marcela@example.com',
-        phone: '1234567890',
-        role: 'Administrador',
+export default function EditarPerfil() {
+    const [formData, setFormData] = useState({
+      documento: '12345678', // Ejemplo, puedes obtener esto de la sesión
+      nombreCompleto: 'Lina Marcela',
+      correo: 'lina@example.com',
+      celular: '1234567890',
+      rol: 'Admin',
+      contraseña: '',
+      confirmarContraseña: ''
+    });
+  
+    const handleChange = (e) => {
+      const { name, value } = e.target;
+      setFormData({ ...formData, [name]: value });
     };
-
-    const handleSubmit = (values) => {
-        // Aquí iría la lógica para manejar la edición del perfil, como enviar datos a un servidor
-        console.log('Datos del perfil:', values);
-        setError(""); // Limpiar cualquier error previo
-        alert('Perfil actualizado con éxito!');
+  
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      // Aquí agregas la lógica para actualizar la información del perfil
+      if (formData.contraseña !== formData.confirmarContraseña) {
+        alert('Las contraseñas no coinciden');
+        return;
+      }
+      // Lógica para enviar datos al backend o actualizar estado
+      console.log('Perfil actualizado:', formData);
     };
-
-    const validateConfirmPassword = (_, value) => {
-        if (!value || form.getFieldValue('password') === value) {
-            return Promise.resolve();
-        }
-        return Promise.reject('Las contraseñas no coinciden');
-    };
-
+  
     return (
-        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-            <h2>Editar Perfil</h2>
-            {error && <Alert message={error} type="error" />}
-            <Form
-                form={form}
-                layout="vertical"
-                onFinish={handleSubmit}
-                initialValues={{
-                    document: userData.document,
-                    fullName: userData.fullName,
-                    email: userData.email,
-                    phone: userData.phone,
-                    role: userData.role,
-                }}
-            >
-                <Form.Item name="document" label="Documento" initialValue={userData.document}>
-                    <Input disabled prefix={<UserOutlined />} />
-                </Form.Item>
-                <Form.Item name="fullName" label="Nombre Completo" rules={[{ required: true, message: 'Por favor ingresa tu nombre completo' }]}>
-                    <Input prefix={<UserOutlined />} />
-                </Form.Item>
-                <Form.Item name="email" label="Correo" rules={[{ type: 'email', message: 'El correo no es válido' }, { required: true, message: 'Por favor ingresa tu correo' }]}>
-                    <Input prefix={<MailOutlined />} />
-                </Form.Item>
-                <Form.Item name="phone" label="Celular" rules={[{ required: true, message: 'Por favor ingresa tu número de celular' }]}>
-                    <Input prefix={<PhoneOutlined />} />
-                </Form.Item>
-                <Form.Item name="role" label="Rol" initialValue={userData.role}>
-                    <Input disabled prefix={<UserOutlined />} />
-                </Form.Item>
-                <Form.Item
-                    name="password"
-                    label="Contraseña"
-                    rules={[{ required: true, message: 'Por favor ingresa tu contraseña' }]}
-                >
-                    <Input.Password prefix={<LockOutlined />} />
-                </Form.Item>
-                <Form.Item
-                    name="confirmPassword"
-                    label="Confirmar Contraseña"
-                    dependencies={['password']}
-                    rules={[
-                        { required: true, message: 'Por favor confirma tu contraseña' },
-                        { validator: validateConfirmPassword },
-                    ]}
-                >
-                    <Input.Password prefix={<LockOutlined />} />
-                </Form.Item>
-                <Form.Item>
-                    <Button type="primary" htmlType="submit">
-                        Actualizar
-                    </Button>
-                </Form.Item>
-            </Form>
-        </div>
+      <div className="container mt-4">
+        <h2>Editar Perfil</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-3">
+            <label htmlFor="documento" className="form-label">Documento</label>
+            <input
+              type="text"
+              className="form-control"
+              id="documento"
+              name="documento"
+              value={formData.documento}
+              readOnly
+            />
+          </div>
+          <div className="mb-3">
+            <label htmlFor="nombreCompleto" className="form-label">Nombre Completo</label>
+            <input
+              type="text"
+              className="form-control"
+              id="nombreCompleto"
+              name="nombreCompleto"
+              value={formData.nombreCompleto}
+              readOnly
+            />
+          </div>
+          <div className="mb-3">
+            <label htmlFor="correo" className="form-label">Correo</label>
+            <input
+              type="email"
+              className="form-control"
+              id="correo"
+              name="correo"
+              value={formData.correo}
+              onChange={handleChange}
+            />
+          </div>
+          <div className="mb-3">
+            <label htmlFor="celular" className="form-label">Celular</label>
+            <input
+              type="text"
+              className="form-control"
+              id="celular"
+              name="celular"
+              value={formData.celular}
+              onChange={handleChange}
+            />
+          </div>
+          <div className="mb-3">
+            <label htmlFor="rol" className="form-label">Rol</label>
+            <input
+              type="text"
+              className="form-control"
+              id="rol"
+              name="rol"
+              value={formData.rol}
+              readOnly
+            />
+          </div>
+          <div className="mb-3">
+            <label htmlFor="contraseña" className="form-label">Contraseña</label>
+            <input
+              type="password"
+              className="form-control"
+              id="contraseña"
+              name="contraseña"
+              value={formData.contraseña}
+              onChange={handleChange}
+            />
+          </div>
+          <div className="mb-3">
+            <label htmlFor="confirmarContraseña" className="form-label">Confirmar Contraseña</label>
+            <input
+              type="password"
+              className="form-control"
+              id="confirmarContraseña"
+              name="confirmarContraseña"
+              value={formData.confirmarContraseña}
+              onChange={handleChange}
+            />
+          </div>
+          <button type="submit" className="btn btn-primary">Guardar Cambios</button>
+        </form>
+      </div>
     );
-};
-
-export default EditProfile;
+  }
