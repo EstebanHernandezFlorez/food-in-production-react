@@ -1,224 +1,518 @@
-import React from "react";
+import React, { useState } from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Table, Button, Container, Modal, ModalBody, ModalHeader, ModalFooter, FormGroup, Input, Alert } from 'reactstrap';
-import { FaEdit, FaTrashAlt } from 'react-icons/fa'; // Importar íconos de react-icons
+import { Table, Button, Container, Row, Col, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
+import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { Snackbar, Alert } from '@mui/material';
 
-const data = [
-  { id: 1, Nombre: "Decoraciones", Estado: "Activo" }
+// Datos iniciales de ejemplo
+const initialData = [
+  { id: 1, NombreCompleto: "Carolina Guzman", Distintivo: "VIP", CategoriaCliente: "Frecuente", Correo: "carolina@example.com", Celular: "1234567890", Estado: "Confirmado", Direccion: "cl 76 j 12b 55", NroPersonas: 5, CantidadMesas: 2, TipoEvento: "Cumpleaños", DuracionEvento: "3 horas", FechaHora: "2024-08-22T15:00", ServiciosAdicionales: "DJ", Observaciones: "Decoración azul", MontoDecoracion: 500, TotalPagar: 1500, Abono: 500, Restante: 1000, FormaPago: "Tarjeta" },
+  // Puedes agregar más datos de ejemplo aquí
 ];
 
-class Reservas extends React.Component {
-  state = {
-    data: data,
-    filteredData: data,
-    form: {
-      id: '',
-      Nombre: '',
-      Estado: 'Activo',
-    },
-    modalInsertar: false,
-    modalEditar: false,
-    searchText: '',
-    alertMessage: '',
-    alertType: ''
+const Reservas = () => {
+  const [data, setData] = useState(initialData); // Estado para almacenar las reservas
+  const [form, setForm] = useState({ // Estado para el formulario
+    id: '',
+    NombreCompleto: '',
+    Distintivo: '',
+    CategoriaCliente: '',
+    Correo: '',
+    Celular: '',
+    Estado: '',
+    Direccion: '',
+    NroPersonas: '',
+    CantidadMesas: '',
+    TipoEvento: '',
+    DuracionEvento: '',
+    FechaHora: '',
+    ServiciosAdicionales: '',
+    Observaciones: '',
+    MontoDecoracion: '',
+    TotalPagar: '',
+    Abono: '',
+    Restante: '',
+    FormaPago: ''
+  });
+  const [isEditing, setIsEditing] = useState(false); // Estado para saber si se está editando una reserva
+  const [showForm, setShowForm] = useState(false); // Estado para mostrar el formulario
+  const [searchText, setSearchText] = useState(''); // Estado para el texto de búsqueda
+  const [snackbarOpen, setSnackbarOpen] = useState(false); // Estado para el snackbar (notificaciones)
+  const [snackbarMessage, setSnackbarMessage] = useState(''); // Estado para el mensaje del snackbar
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success'); // Estado para la severidad del snackbar
+  const [currentPage, setCurrentPage] = useState(1); // Estado para la paginación
+  const [modalOpen, setModalOpen] = useState(false); // Estado para el modal de edición
+  const itemsPerPage = 7; // Número de elementos por página
+
+  // Función para manejar la búsqueda
+  const handleSearch = (e) => {
+    setSearchText(e.target.value.toLowerCase());
   };
 
-  handleChange = e => {
-    this.setState({
-      form: {
-        ...this.state.form,
-        [e.target.name]: e.target.value,
-      }
+  // Función para manejar los cambios en los campos del formulario
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm(prevForm => ({
+      ...prevForm,
+      [name]: value
+    }));
+  };
+
+  // Función para cambiar de página en la paginación
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
+  // Función para abrir el snackbar con un mensaje y severidad específicos
+  const openSnackbar = (message, severity) => {
+    setSnackbarMessage(message);
+    setSnackbarSeverity(severity);
+    setSnackbarOpen(true);
+  };
+
+  // Función para cerrar el snackbar
+  const closeSnackbar = () => {
+    setSnackbarOpen(false);
+  };
+
+  // Función para agregar una nueva reserva
+  const handleSubmit = () => {
+    const { NombreCompleto, Correo, Celular, Estado, Direccion, NroPersonas, CantidadMesas, TipoEvento, DuracionEvento, FechaHora, ServiciosAdicionales, MontoDecoracion, TotalPagar, Abono, Restante, FormaPago } = form;
+
+    // Validación de campos obligatorios
+    if (!NombreCompleto || !Correo || !Celular || !Estado || !Direccion || !NroPersonas || !CantidadMesas || !TipoEvento || !DuracionEvento || !FechaHora || !MontoDecoracion || !TotalPagar || !Abono || !Restante || !FormaPago) {
+      openSnackbar("Por favor, ingrese todos los campos obligatorios", 'warning');
+      return;
+    }
+
+    const nuevaReserva = {
+      ...form,
+      id: data.length ? Math.max(...data.map(emp => emp.id)) + 1 : 1
+    };
+
+    setData([...data, nuevaReserva]); // Agregar la nueva reserva a la lista de datos
+    setForm({ // Restablecer el formulario
+      id: '',
+      NombreCompleto: '',
+      Distintivo: '',
+      CategoriaCliente: '',
+      Correo: '',
+      Celular: '',
+      Estado: '',
+      Direccion: '',
+      NroPersonas: '',
+      CantidadMesas: '',
+      TipoEvento: '',
+      DuracionEvento: '',
+      FechaHora: '',
+      ServiciosAdicionales: '',
+      Observaciones: '',
+      MontoDecoracion: '',
+      TotalPagar: '',
+      Abono: '',
+      Restante: '',
+      FormaPago: ''
     });
-  }
+    setShowForm(false);
+    openSnackbar("Reserva agregada exitosamente", 'success');
+  };
 
-  handleSearch = e => {
-    const searchText = e.target.value.toLowerCase();
-    this.setState({
-      searchText,
-      filteredData: this.state.data.filter(item =>
-        item.Nombre.toLowerCase().includes(searchText)
-      )
-    });
-  }
+  // Función para editar una reserva existente
+  const editar = () => {
+    const { NombreCompleto, Correo, Celular, Estado, Direccion, NroPersonas, CantidadMesas, TipoEvento, DuracionEvento, FechaHora, ServiciosAdicionales, MontoDecoracion, TotalPagar, Abono, Restante, FormaPago } = form;
 
-  mostrarModalInsertar = () => {
-    this.setState({ modalInsertar: true });
-  }
-
-  ocultarModalInsertar = () => {
-    this.setState({ modalInsertar: false, alertMessage: '', alertType: '' });
-  }
-
-  mostrarModalEditar = (registro) => {
-    this.setState({ modalEditar: true, form: registro });
-  }
-
-  ocultarModalEditar = () => {
-    this.setState({ modalEditar: false, alertMessage: '', alertType: '' });
-  }
-
-  validarFormulario = () => {
-    const { Nombre } = this.state.form;
-    if (!Nombre.trim()) {
-      this.setState({ alertMessage: 'Todos los campos son obligatorios.', alertType: 'danger' });
-      return false;
+    // Validación de campos obligatorios
+    if (!NombreCompleto || !Correo || !Celular || !Estado || !Direccion || !NroPersonas || !CantidadMesas || !TipoEvento || !DuracionEvento || !FechaHora || !MontoDecoracion || !TotalPagar || !Abono || !Restante || !FormaPago) {
+      openSnackbar("Por favor, ingrese todos los campos obligatorios", 'warning');
+      return;
     }
-    return true;
-  }
 
-  insertar = () => {
-    if (!this.validarFormulario()) return;
+    const updatedData = data.map((registro) =>
+      registro.id === form.id ? { ...form } : registro
+    );
 
-    const { data, form } = this.state;
-    const nombreExistente = data.find(servicio => servicio.Nombre.toLowerCase() === form.Nombre.toLowerCase());
+    setData(updatedData); // Actualizar la lista de datos con la reserva editada
+    setIsEditing(false);
+    setModalOpen(false); // Cerrar el modal después de actualizar
+    openSnackbar("Reserva editada exitosamente", 'success');
+  };
 
-    if (nombreExistente) {
-      this.setState({ alertMessage: 'El servicio ya existe.', alertType: 'danger' });
-    } else {
-      const valorNuevo = { ...form, id: data.length + 1 };
-      const lista = [...data, valorNuevo];
-      this.setState({ data: lista, filteredData: lista, modalInsertar: false, alertMessage: 'Servicio agregado con éxito.', alertType: 'success' });
+  // Función para eliminar una reserva
+  const eliminar = (dato) => {
+    if (window.confirm(`¿Realmente desea eliminar la reserva de ${dato.NombreCompleto}?`)) {
+      const updatedData = data.filter(registro => registro.id !== dato.id);
+      setData(updatedData);
+      openSnackbar("Reserva eliminada exitosamente", 'success');
     }
+  };
+
+  // Filtrado de datos en base al texto de búsqueda
+  const filteredData = data.filter(item =>
+    item.NombreCompleto.toLowerCase().includes(searchText) ||
+    item.Correo.toLowerCase().includes(searchText) ||
+    item.Celular.toString().includes(searchText) ||
+    item.Direccion.toLowerCase().includes(searchText)
+  );
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
+
+  const pageNumbers = [];
+  for (let i = 1; i <= Math.ceil(filteredData.length / itemsPerPage); i++) {
+    pageNumbers.push(i);
   }
 
-  editar = (dato) => {
-    if (!this.validarFormulario()) return;
+  return (
+    <Container>
+      <br />
+      <h2>Lista de Reservas</h2>
+      <br />
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <Input
+          type="text"
+          placeholder="Buscar reserva"
+          value={searchText}
+          onChange={handleSearch}
+          style={{ width: '50%' }}
+        />
+        <Button color="success" onClick={() => { setForm({ id: '', NombreCompleto: '', Distintivo: '', CategoriaCliente: '', Correo: '', Celular: '', Estado: '', Direccion: '', NroPersonas: '', CantidadMesas: '', TipoEvento: '', DuracionEvento: '', FechaHora: '', ServiciosAdicionales: '', Observaciones: '', MontoDecoracion: '', TotalPagar: '', Abono: '', Restante: '', FormaPago: '' }); setIsEditing(false); setShowForm(true); }}>
+          Agregar Reserva
+        </Button>
+      </div>
 
-    const { data } = this.state;
-    const nombreExistente = data.find(servicio => servicio.Nombre.toLowerCase() === dato.Nombre.toLowerCase() && servicio.id !== dato.id);
-
-    if (nombreExistente) {
-      this.setState({ alertMessage: 'No se puede editar. Otro servicio con el mismo nombre ya existe.', alertType: 'danger' });
-    } else {
-      const lista = data.map(servicio => servicio.id === dato.id ? dato : servicio);
-      this.setState({ data: lista, filteredData: lista, modalEditar: false, alertMessage: 'Servicio editado con éxito.', alertType: 'success' });
-    }
-  }
-
-  eliminar = (dato) => {
-    const opcion = window.confirm("¿Realmente desea eliminar el servicio adicional? " + dato.id);
-    if (opcion) {
-      const lista = this.state.data.filter(servicio => servicio.id !== dato.id);
-      this.setState({ data: lista, filteredData: lista });
-    }
-  }
-
-  // Cambio de estado
-  toggleEstado = (registro) => {
-    const lista = this.state.data.map(servicio => {
-      if (servicio.id === registro.id) {
-        return { ...servicio, Estado: servicio.Estado === "Activo" ? "Inactivo" : "Activo" };
-      }
-      return servicio;
-    });
-    this.setState({ data: lista, filteredData: lista });
-  }
-
-  render() {
-    return (
-      <>
-        <Container>
-          <br />
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <Input
-              type="text"
-              placeholder="Buscar servicio adicional"
-              value={this.state.searchText}
-              onChange={this.handleSearch}
-              style={{ width: '300px' }}
-            />
-            <Button color="success" onClick={this.mostrarModalInsertar}>Agregar servicio adicional</Button>
-          </div>
-
-          {this.state.alertMessage && (
-            <Alert color={this.state.alertType} toggle={() => this.setState({ alertMessage: '' })}>
-              {this.state.alertMessage}
-            </Alert>
-          )}
-
-          <Table className="table table-bordered">
+      {/* Mostrar la tabla solo si no se está mostrando el formulario */}
+      {!showForm && (
+        <>
+          <Table className="table table-hover">
             <thead>
               <tr>
-                <th>Id</th>
-                <th>Nombre</th>
+                <th>id</th>
+                <th>Nombre Completo</th>
+                <th>Correo</th>
+                <th>Celular</th>
+                <th>Dirección</th>
+                <th>Número de Personas</th>
                 <th>Estado</th>
+                <th>Cantidad de Mesas</th>
+                <th>Tipo de Evento</th>
+                <th>Fecha y Hora</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {this.state.filteredData.map((elemento) => (
-                <tr key={elemento.id}>
-                  <td>{elemento.id}</td>
-                  <td>{elemento.Nombre}</td>
-                  <td>{elemento.Estado}</td>
+              {currentItems.map((dato) => (
+                <tr key={dato.id}>
+                  <td>{dato.id}</td>
+                  <td>{dato.NombreCompleto}</td>
+                  <td>{dato.Correo}</td>
+                  <td>{dato.Celular}</td>
+                  <td>{dato.Direccion}</td>
+                  <td>{dato.NroPersonas}</td>
+                  <td>{dato.Estado}</td>
+                  <td>{dato.CantidadMesas}</td>
+                  <td>{dato.TipoEvento}</td>
+                  <td>{dato.FechaHora}</td>
                   <td>
-                    <Button color="primary" onClick={() => this.mostrarModalEditar(elemento)}><FaEdit /></Button>{' '}
-                    <Button color="danger" onClick={() => this.eliminar(elemento)}><FaTrashAlt /></Button>{' '}
-                    <Button color={elemento.Estado === "Activo" ? "warning" : "success"} onClick={() => this.toggleEstado(elemento)}>
-                      {elemento.Estado === "Activo" ? "Desactivar" : "Activar"}
+                    <Button color="primary" className="me-2" onClick={() => { setForm(dato); setIsEditing(true); setModalOpen(true); }}>
+                      <FaEdit />
+                    </Button>
+                    <Button color="danger" onClick={() => eliminar(dato)}>
+                      <FaTrashAlt />
                     </Button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </Table>
-        </Container>
 
-        <Modal isOpen={this.state.modalInsertar}>
-          <ModalHeader>
-            <div>
-              <h3>Insertar servicio adicional</h3>
-            </div>
-          </ModalHeader>
+          {/* Paginación */}
+          <div className="d-flex justify-content-center">
+            {pageNumbers.map((number) => (
+              <Button
+                key={number}
+                color="primary"
+                onClick={() => handlePageChange(number)}
+                className={number === currentPage ? 'active' : ''}
+              >
+                {number}
+              </Button>
+            ))}
+          </div>
+        </>
+      )}
 
-          <ModalBody>
-            <FormGroup>
-              <label>Nombre:</label>
-              <input 
-                className="form-control" 
-                name="Nombre" 
-                type="text" 
-                onChange={this.handleChange} 
-                value={this.state.form.Nombre} 
-              />
-            </FormGroup>
+      {/* Formulario para agregar/editar reserva */}
+      {showForm && (
+        <div>
+          <h3>{isEditing ? "Editar Reserva" : "Agregar Nueva Reserva"}</h3>
+          <Row>
+            <Col md="6">
+              <FormGroup>
+                <label>Nombre Completo</label>
+                <Input type="text" name="NombreCompleto" value={form.NombreCompleto} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+            <Col md="6">
+              <FormGroup>
+                <label>Correo</label>
+                <Input type="email" name="Correo" value={form.Correo} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col md="6">
+              <FormGroup>
+                <label>Celular</label>
+                <Input type="text" name="Celular" value={form.Celular} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+            <Col md="6">
+              <FormGroup>
+                <label>Estado</label>
+                <Input type="text" name="Estado" value={form.Estado} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col md="6">
+              <FormGroup>
+                <label>Dirección</label>
+                <Input type="text" name="Direccion" value={form.Direccion} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+            <Col md="6">
+              <FormGroup>
+                <label>Número de Personas</label>
+                <Input type="number" name="NroPersonas" value={form.NroPersonas} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col md="6">
+              <FormGroup>
+                <label>Cantidad de Mesas</label>
+                <Input type="number" name="CantidadMesas" value={form.CantidadMesas} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+            <Col md="6">
+              <FormGroup>
+                <label>Tipo de Evento</label>
+                <Input type="text" name="TipoEvento" value={form.TipoEvento} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col md="6">
+              <FormGroup>
+                <label>Duración del Evento</label>
+                <Input type="text" name="DuracionEvento" value={form.DuracionEvento} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+            <Col md="6">
+              <FormGroup>
+                <label>Fecha y Hora</label>
+                <Input type="datetime-local" name="FechaHora" value={form.FechaHora} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col md="6">
+              <FormGroup>
+                <label>Servicios Adicionales</label>
+                <Input type="text" name="ServiciosAdicionales" value={form.ServiciosAdicionales} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+            <Col md="6">
+              <FormGroup>
+                <label>Observaciones</label>
+                <Input type="text" name="Observaciones" value={form.Observaciones} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col md="4">
+              <FormGroup>
+                <label>Monto Decoración</label>
+                <Input type="number" name="MontoDecoracion" value={form.MontoDecoracion} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+            <Col md="4">
+              <FormGroup>
+                <label>Total a Pagar</label>
+                <Input type="number" name="TotalPagar" value={form.TotalPagar} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+            <Col md="4">
+              <FormGroup>
+                <label>Abono</label>
+                <Input type="number" name="Abono" value={form.Abono} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col md="6">
+              <FormGroup>
+                <label>Restante</label>
+                <Input type="number" name="Restante" value={form.Restante} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+            <Col md="6">
+              <FormGroup>
+                <label>Forma de Pago</label>
+                <Input type="text" name="FormaPago" value={form.FormaPago} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+          </Row>
+          <div className="d-flex justify-content-between">
+            <Button color="primary" onClick={isEditing ? editar : handleSubmit}>
+              {isEditing ? "Guardar Cambios" : "Agregar Reserva"}
+            </Button>
+            <Button color="secondary" onClick={() => setShowForm(false)}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      )}
 
-            <ModalFooter>
-              <Button color="primary" onClick={this.insertar}>Insertar</Button>
-              <Button color="danger" onClick={this.ocultarModalInsertar}>Cancelar</Button>
-            </ModalFooter>
-          </ModalBody>
-        </Modal>
-
-        <Modal isOpen={this.state.modalEditar}>
-          <ModalHeader>
-            <div>
-              <h3>Editar servicio adicional</h3>
-            </div>
-          </ModalHeader>
-
-          <ModalBody>
-            <FormGroup>
-              <label>Nombre:</label>
-              <input 
-                className="form-control" 
-                name="Nombre" 
-                type="text" 
-                onChange={this.handleChange} 
-                value={this.state.form.Nombre} 
-              />
-            </FormGroup>
-
-            <ModalFooter>
-              <Button color="primary" onClick={() => this.editar(this.state.form)}>Editar</Button>
-              <Button color="danger" onClick={this.ocultarModalEditar}>Cancelar</Button>
-            </ModalFooter>
-          </ModalBody>
-        </Modal>
-      </>
-    )
-  }
-}
+      {/* Modal de edición */}
+      <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)}>
+        <ModalHeader toggle={() => setModalOpen(!modalOpen)}>
+          Editar Reserva
+        </ModalHeader>
+        <ModalBody>
+          <Row>
+            <Col md="6">
+              <FormGroup>
+                <label>Nombre Completo</label>
+                <Input type="text" name="NombreCompleto" value={form.NombreCompleto} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+            <Col md="6">
+              <FormGroup>
+                <label>Correo</label>
+                <Input type="email" name="Correo" value={form.Correo} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col md="6">
+              <FormGroup>
+                <label>Celular</label>
+                <Input type="text" name="Celular" value={form.Celular} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+            <Col md="6">
+              <FormGroup>
+                <label>Estado</label>
+                <Input type="text" name="Estado" value={form.Estado} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col md="6">
+              <FormGroup>
+                <label>Dirección</label>
+                <Input type="text" name="Direccion" value={form.Direccion} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+            <Col md="6">
+              <FormGroup>
+                <label>Número de Personas</label>
+                <Input type="number" name="NroPersonas" value={form.NroPersonas} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col md="6">
+              <FormGroup>
+                <label>Cantidad de Mesas</label>
+                <Input type="number" name="CantidadMesas" value={form.CantidadMesas} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+            <Col md="6">
+              <FormGroup>
+                <label>Tipo de Evento</label>
+                <Input type="text" name="TipoEvento" value={form.TipoEvento} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col md="6">
+              <FormGroup>
+                <label>Duración del Evento</label>
+                <Input type="text" name="DuracionEvento" value={form.DuracionEvento} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+            <Col md="6">
+              <FormGroup>
+                <label>Fecha y Hora</label>
+                <Input type="datetime-local" name="FechaHora" value={form.FechaHora} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col md="6">
+              <FormGroup>
+                <label>Servicios Adicionales</label>
+                <Input type="text" name="ServiciosAdicionales" value={form.ServiciosAdicionales} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+            <Col md="6">
+              <FormGroup>
+                <label>Observaciones</label>
+                <Input type="text" name="Observaciones" value={form.Observaciones} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col md="4">
+              <FormGroup>
+                <label>Monto Decoración</label>
+                <Input type="number" name="MontoDecoracion" value={form.MontoDecoracion} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+            <Col md="4">
+              <FormGroup>
+                <label>Total a Pagar</label>
+                <Input type="number" name="TotalPagar" value={form.TotalPagar} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+            <Col md="4">
+              <FormGroup>
+                <label>Abono</label>
+                <Input type="number" name="Abono" value={form.Abono} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col md="6">
+              <FormGroup>
+                <label>Restante</label>
+                <Input type="number" name="Restante" value={form.Restante} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+            <Col md="6">
+              <FormGroup>
+                <label>Forma de Pago</label>
+                <Input type="text" name="FormaPago" value={form.FormaPago} onChange={handleChange} />
+              </FormGroup>
+            </Col>
+          </Row>
+        </ModalBody>
+        <ModalFooter>
+          <Button color="primary" onClick={editar}>
+            Guardar Cambios
+          </Button>{' '}
+          <Button color="secondary" onClick={() => setModalOpen(false)}>
+            Cancelar
+          </Button>
+        </ModalFooter>
+      </Modal>
+    
+    </Container>
+    
+  );
+};
 
 export default Reservas;
