@@ -7,12 +7,10 @@ import { Table, Button, Container, Row, Col, FormGroup, Input, Modal, ModalHeade
 import { FaEdit, FaTrashAlt } from 'react-icons/fa'; // Iconos de edición y eliminación
 import { Snackbar, Alert } from '@mui/material'; // Componentes para notificaciones
 
-
-
 // Datos iniciales de ejemplo
 const initialData = [
-  { id: 1, NombreCompleto: "Juan Pérez", Distintivo: "7867", CategoriaCliente: "regular", Celular: "3123456789", Correo: "juan.perez@example.com", Direccion: "Cl 76 j 12b 55" },
-  { id: 2, NombreCompleto: "Ana Torres", Distintivo: "7576", CategoriaCliente: "familiar", Celular: "3109876543", Correo: "ana.torres@example.com", Direccion: "Av. El Dorado 92-45" },
+  { id: 1, NombreCompleto: "Juan Pérez", Distintivo: "7867", CategoriaCliente: "regular", Celular: "3123456789", Correo: "juan.perez@example.com", Direccion: "Cl 76 j 12b 55", Estado: true },
+  { id: 2, NombreCompleto: "Ana Torres", Distintivo: "7576", CategoriaCliente: "familiar", Celular: "3109876543", Correo: "ana.torres@example.com", Direccion: "Av. El Dorado 92-45", Estado: true },
   // Más datos de ejemplo...
 ];
 
@@ -52,6 +50,10 @@ const Clientes = () => {
 
   // Estado para manejar la apertura del modal de edición
   const [modalOpen, setModalOpen] = useState(false);
+
+  // Estado para manejar la apertura de la alerta de eliminación
+  const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
+  const [deleteClient, setDeleteClient] = useState(null);
 
   // Número de elementos por página
   const itemsPerPage = 7;
@@ -98,12 +100,12 @@ const Clientes = () => {
     }
 
     // Verificación de cliente existente por distintivo
-    
     const clienteExistente = data.find(registro => registro.Distintivo.toString() === Distintivo.toString());
     if (clienteExistente) {
       openSnackbar("El cliente ya existe. Por favor, ingrese un distintivo diferente.", 'error');
       return;
     }
+
     // Creación de un nuevo cliente
     const nuevoCliente = {
       ...form,
@@ -139,12 +141,10 @@ const Clientes = () => {
     }
 
     // Verificación de cliente existente por distintivo, excluyendo el actual
-
     const clienteExistente = data.find(
       (registro) => registro.Distintivo.toString() === Distintivo.toString() &&
       registro.id !== form.id
     );
-    
     if (clienteExistente) {
       openSnackbar("Ya existe un cliente con el mismo distintivo. Por favor, ingresa un distintivo diferente.", 'error');
       return;
@@ -162,12 +162,22 @@ const Clientes = () => {
   };
 
   // Función para manejar la eliminación de un cliente
-  const eliminar = (dato) => {
-    if (window.confirm(`¿Realmente desea eliminar el registro ${dato.id}?`)) {
-      const updatedData = data.filter(registro => registro.id !== dato.id);
+  const handleDelete = (dato) => {
+    setDeleteClient(dato);
+    setDeleteAlertOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (deleteClient) {
+      const updatedData = data.filter(registro => registro.id !== deleteClient.id);
       setData(updatedData);
       openSnackbar("Cliente eliminado exitosamente", 'success');
+      setDeleteAlertOpen(false);
     }
+  };
+
+  const cancelDelete = () => {
+    setDeleteAlertOpen(false);
   };
 
   // Función para cambiar el estado (activo/inactivo) de un cliente
@@ -207,20 +217,26 @@ const Clientes = () => {
   return (
     <Container>
       <br />
-      <h2>Lista de Clientes</h2>
-      <br />
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <Input
-          type="text"
-          placeholder="Buscar cliente"
-          value={searchText}
-          onChange={handleSearch}
-          style={{ width: '50%' }}
-        />
-        <Button color="success" onClick={() => { setForm({ id: '', NombreCompleto: '', Distintivo: '', CategoriaCliente: '', Celular: '', Correo: '', Direccion: '', Estado: true }); setIsEditing(false); setShowForm(true); }}>
-          Agregar Cliente
-        </Button>
-      </div>
+
+      {/* Solo se muestra cuando no se está en la pantalla de agregar o editar cliente */}
+      {!showForm && (
+        <>
+          <h2>Lista de Clientes</h2>
+          <br />
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <Input
+              type="text"
+              placeholder="Buscar cliente"
+              value={searchText}
+              onChange={handleSearch}
+              style={{ width: '50%' }}
+            />
+            <Button color="success" onClick={() => { setForm({ id: '', NombreCompleto: '', Distintivo: '', CategoriaCliente: '', Celular: '', Correo: '', Direccion: '', Estado: true }); setIsEditing(false); setShowForm(true); }}>
+              Agregar Cliente
+            </Button>
+          </div>
+        </>
+      )}
 
       {!showForm && (
         <>
@@ -230,7 +246,7 @@ const Clientes = () => {
                 <th>id</th>
                 <th>Nombre Completo</th>
                 <th>Distintivo</th>
-                <th>Categoría Cliente</th>
+                <th>Categoria Cliente</th>
                 <th>Celular</th>
                 <th>Correo</th>
                 <th>Dirección</th>
@@ -239,153 +255,228 @@ const Clientes = () => {
               </tr>
             </thead>
             <tbody>
-              {currentItems.length > 0 ? (
-                currentItems.map((item) => (
-                  <tr key={item.id}>
-                    <td>{item.id}</td>
-                    <td>{item.NombreCompleto}</td>
-                    <td>{item.Distintivo}</td>
-                    <td>{item.CategoriaCliente}</td>
-                    <td>{item.Celular}</td>
-                    <td>{item.Correo}</td>
-                    <td>{item.Direccion}</td>
-                    <td>
-                      <Button
-                        color={item.Estado ? "success" : "danger"}
-                        onClick={() => cambiarEstado(item.id)}
-                      >
-                        {item.Estado ? "Activo" : "Inactivo"}
-                      </Button>
-                    </td>
-                    <td>
-                      <Button color="primary" className="me-2" onClick={() => { setForm(item); setIsEditing(true); setModalOpen(true); }}>
-                        <FaEdit />
-                      </Button>{" "}
-                      <Button color="danger" onClick={() => eliminar(item)}>
-                        <FaTrashAlt />
-                      </Button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="9" className="text-center">No se encontraron clientes</td>
+              {currentItems.map((dato) => (
+                <tr key={dato.id} style={{ backgroundColor: dato.Estado ? 'transparent' : '#f8f9fa' }}>
+                  <td>{dato.id}</td>
+                  <td>{dato.NombreCompleto}</td>
+                  <td>{dato.Distintivo}</td>
+                  <td>{dato.CategoriaCliente}</td>
+                  <td>{dato.Celular}</td>
+                  <td>{dato.Correo}</td>
+                  <td>{dato.Direccion}</td>
+                  <td>
+                    <Button color={dato.Estado ? "success" : "secondary"} onClick={() => cambiarEstado(dato.id)}>
+                      {dato.Estado ? "Activo" : "Inactivo"}
+                    </Button>
+                  </td>
+                  <td>
+                    <Button color="primary" onClick={() => { setForm(dato); setIsEditing(true); setModalOpen(true); }}>
+                      <FaEdit />
+                    </Button>{" "}
+                    <Button color="danger" onClick={() => handleDelete(dato)}>
+                      <FaTrashAlt />
+                    </Button>
+                  </td>
                 </tr>
-              )}
+              ))}
             </tbody>
           </Table>
 
+          {/* Paginación */}
           <div className="d-flex justify-content-center">
-            <ul className="pagination">
-              {pageNumbers.map(number => (
-                <li key={number} className={`page-item ${currentPage === number ? 'active' : ''}`}>
-                  <Button
-                    onClick={() => handlePageChange(number)}
-                    className="page-link"
-                  >
-                    {number}
-                  </Button>
-                </li>
-              ))}
-            </ul>
+            {pageNumbers.map(number => (
+              <Button
+                key={number}
+                color="info"
+                onClick={() => handlePageChange(number)}
+                className="mx-1"
+              >
+                {number}
+              </Button>
+            ))}
           </div>
         </>
       )}
 
+      {/* Mostrar formulario cuando `showForm` sea verdadero */}
       {showForm && (
-        <div>
-          <h3>{isEditing ? "Editar Cliente" : "Agregar Cliente"}</h3>
+        <div className="mt-4">
+          <h2>{isEditing ? "Editar Cliente" : "Agregar Cliente"}</h2>
+          <br />
           <Row>
-            <Col md={4}>
+            <Col md={6}>
               <FormGroup>
-                <label>Nombre Completo</label>
-                <Input type="text" name="NombreCompleto" value={form.NombreCompleto} onChange={handleChange} />
+                <label>Nombre Completo:</label>
+                <Input
+                  type="text"
+                  name="NombreCompleto"
+                  value={form.NombreCompleto}
+                  onChange={handleChange}
+                  style={{ border: '2px solid #000000' }}
+                />
               </FormGroup>
             </Col>
-            <Col md={4}>
+            <Col md={6}>
               <FormGroup>
-                <label>Distintivo</label>
-                <Input type="text" name="Distintivo" value={form.Distintivo} onChange={handleChange} />
-              </FormGroup>
-            </Col>
-            <Col md={4}>
-              <FormGroup>
-                <label>Categoría Cliente</label>
-                <Input type="select" name="CategoriaCliente" value={form.CategoriaCliente} onChange={handleChange}>
-                  <option value="">Seleccione...</option>
-                  <option value="regular">Regular</option>
-                  <option value="familiar">Familiar</option>
-                  <option value="vip">VIP</option>
-                </Input>
+                <label>Distintivo:</label>
+                <Input
+                  type="text"
+                  name="Distintivo"
+                  value={form.Distintivo}
+                  onChange={handleChange}
+                  style={{ border: '2px solid #000000' }}
+                />
               </FormGroup>
             </Col>
           </Row>
           <Row>
-            <Col md={4}>
+            <Col md={6}>
               <FormGroup>
-                <label>Celular</label>
-                <Input type="text" name="Celular" value={form.Celular} onChange={handleChange} />
+                <label>Categoría Cliente:</label>
+                <Input
+                  type="text"
+                  name="CategoriaCliente"
+                  value={form.CategoriaCliente}
+                  onChange={handleChange}
+                  style={{ border: '2px solid #000000' }}
+                />
               </FormGroup>
             </Col>
-            <Col md={4}>
+            <Col md={6}>
               <FormGroup>
-                <label>Correo</label>
-                <Input type="email" name="Correo" value={form.Correo} onChange={handleChange} />
-              </FormGroup>
-            </Col>
-            <Col md={4}>
-              <FormGroup>
-                <label>Dirección</label>
-                <Input type="text" name="Direccion" value={form.Direccion} onChange={handleChange} />
+                <label>Celular:</label>
+                <Input
+                  type="text"
+                  name="Celular"
+                  value={form.Celular}
+                  onChange={handleChange}
+                  style={{ border: '2px solid #000000' }}
+                />
               </FormGroup>
             </Col>
           </Row>
-          <Button color="primary" onClick={isEditing ? editar : handleSubmit}>
-            {isEditing ? "Guardar Cambios" : "Agregar Cliente"}
+          <Row>
+            <Col md={6}>
+              <FormGroup>
+                <label>Correo:</label>
+                <Input
+                  type="text"
+                  name="Correo"
+                  value={form.Correo}
+                  onChange={handleChange}
+                  style={{ border: '2px solid #000000' }}
+                />
+              </FormGroup>
+            </Col>
+            <Col md={6}>
+              <FormGroup>
+                <label>Dirección:</label>
+                <Input
+                  type="text"
+                  name="Direccion"
+                  value={form.Direccion}
+                  onChange={handleChange}
+                  style={{ border: '2px solid #000000' }}
+                />
+              </FormGroup>
+            </Col>
+          </Row>
+          <Button style={{background:'#2e8322'}} onClick={isEditing ? editar : handleSubmit}>
+            {isEditing ? "Guardar Cambios" : "Agregar"}
           </Button>{" "}
-          <Button color="secondary" onClick={() => setShowForm(false)}>
+          <Button style={{background:'#6d0f0f'}} onClick={() => setShowForm(false)}>
             Cancelar
           </Button>
         </div>
       )}
 
-      {/* Modal para edición de clientes */}
+      {/* Modal de edición */}
       <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)}>
         <ModalHeader toggle={() => setModalOpen(!modalOpen)}>Editar Cliente</ModalHeader>
         <ModalBody>
-          <FormGroup>
-            <label>Nombre Completo</label>
-            <Input type="text" name="NombreCompleto" value={form.NombreCompleto} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <label>Distintivo</label>
-            <Input type="text" name="Distintivo" value={form.Distintivo} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <label>Categoría Cliente</label>
-            <Input type="select" name="CategoriaCliente" value={form.CategoriaCliente} onChange={handleChange}>
-              <option value="">Seleccione...</option>
-              <option value="regular">Regular</option>
-              <option value="familiar">Familiar</option>
-              <option value="vip">VIP</option>
-            </Input>
-          </FormGroup>
-          <FormGroup>
-            <label>Celular</label>
-            <Input type="text" name="Celular" value={form.Celular} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <label>Correo</label>
-            <Input type="email" name="Correo" value={form.Correo} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <label>Dirección</label>
-            <Input type="text" name="Direccion" value={form.Direccion} onChange={handleChange} />
-          </FormGroup>
+          {/* Formulario de edición dentro del modal */}
+          <Row>
+            <Col md={6}>
+              <FormGroup>
+                <label>Nombre Completo:</label>
+                <Input
+                  type="text"
+                  name="NombreCompleto"
+                  value={form.NombreCompleto}
+                  onChange={handleChange}
+                  style={{ border: '2px solid #000000' }}
+                />
+              </FormGroup>
+            </Col>
+            <Col md={6}>
+              <FormGroup>
+                <label>Distintivo:</label>
+                <Input
+                  type="text"
+                  name="Distintivo"
+                  value={form.Distintivo}
+                  onChange={handleChange}
+                  style={{ border: '2px solid #000000' }}
+                />
+              </FormGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col md={6}>
+              <FormGroup>
+                <label>Categoría Cliente:</label>
+                <Input
+                  type="text"
+                  name="CategoriaCliente"
+                  value={form.CategoriaCliente}
+                  onChange={handleChange}
+                  style={{ border: '2px solid #000000' }}
+                />
+              </FormGroup>
+            </Col>
+            <Col md={6}>
+              <FormGroup>
+                <label>Celular:</label>
+                <Input
+                  type="text"
+                  name="Celular"
+                  value={form.Celular}
+                  onChange={handleChange}
+                  style={{ border: '2px solid #000000' }}
+                />
+              </FormGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col md={6}>
+              <FormGroup>
+                <label>Correo:</label>
+                <Input
+                  type="text"
+                  name="Correo"
+                  value={form.Correo}
+                  onChange={handleChange}
+                  style={{ border: '2px solid #000000' }}
+                />
+              </FormGroup>
+            </Col>
+            <Col md={6}>
+              <FormGroup>
+                <label>Dirección:</label>
+                <Input
+                  type="text"
+                  name="Direccion"
+                  value={form.Direccion}
+                  onChange={handleChange}
+                  style={{ border: '2px solid #000000' }}
+                />
+              </FormGroup>
+            </Col>
+          </Row>
         </ModalBody>
         <ModalFooter>
-          <Button color="primary" onClick={editar}>Guardar Cambios</Button>{' '}
-          <Button color="secondary" onClick={() => setModalOpen(false)}>Cancelar</Button>
+          <Button style={{background:'#2e8322'}} onClick={editar}>Guardar Cambios</Button>{' '}
+          <Button style={{background:'#6d0f0f'}} onClick={() => setModalOpen(false)}>Cancelar</Button>
         </ModalFooter>
       </Modal>
 
@@ -395,7 +486,22 @@ const Clientes = () => {
           {snackbarMessage}
         </Alert>
       </Snackbar>
-    
+
+      {/* Alerta de eliminación */}
+      <Snackbar open={deleteAlertOpen} autoHideDuration={null} onClose={cancelDelete}>
+        <Alert
+          action={
+            <div>
+              <Button color="inherit" onClick={confirmDelete}>Eliminar</Button>
+              <Button color="inherit" onClick={cancelDelete}>Cancelar</Button>
+            </div>
+          }
+          onClose={cancelDelete}
+          severity="warning"
+        >
+          ¿Realmente desea eliminar el registro {deleteClient?.id}?
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };
