@@ -6,7 +6,113 @@ import { IoSearchOutline } from "react-icons/io5";
 import { Snackbar, Alert } from '@mui/material';
 
 const initialData = [
-  // Los datos iniciales se mantienen igual
+  [
+    {
+      id: 1,
+      Nombre: "Carolina Guzman",
+      Document: 16514416,
+      FechaIni: "15-07-2020",
+      ContactoEmerg: "319898119",
+      Parentesco: "Madre",
+      NombreFamiliar: "Carolina Zapata",
+      GrupoSang: "O+",
+      NumeroSS: 61515371,
+      Direccion: "cl 76 j 12b 55",
+      TipoContrato: "doble tiempo"
+    },
+    {
+      id: 2,
+      Nombre: "Andra Torres",
+      Document: 18761919,
+      FechaIni: "01-02-2023",
+      ContactoEmerg: "3001234567",
+      Parentesco: "Hermano",
+      NombreFamiliar: "Juan Torres",
+      GrupoSang: "A+",
+      NumeroSS: 12345678,
+      Direccion: "Av. El Dorado 92-45",
+      TipoContrato: "tiempo completo"
+    },
+    {
+      id: 3,
+      Nombre: "Natalia Muriel",
+      Document: 1016177143,
+      FechaIni: "15-03-2022",
+      ContactoEmerg: "3207654321",
+      Parentesco: "Padre",
+      NombreFamiliar: "Carlos Muriel",
+      GrupoSang: "B+",
+      NumeroSS: 23456789,
+      Direccion: "Cra 15 #76-30",
+      TipoContrato: "tiempo completo"
+    },
+    {
+      id: 4,
+      Nombre: "Luis Pérez",
+      Document: 12345678,
+      FechaIni: "10-11-2021",
+      ContactoEmerg: "3109876543",
+      Parentesco: "Esposa",
+      NombreFamiliar: "Ana Pérez",
+      GrupoSang: "AB+",
+      NumeroSS: 34567890,
+      Direccion: "Cl 10 #15-20",
+      TipoContrato: "medio tiempo"
+    },
+    {
+      id: 5,
+      Nombre: "María Gómez",
+      Document: 23456789,
+      FechaIni: "20-09-2020",
+      ContactoEmerg: "3134567890",
+      Parentesco: "Hermano",
+      NombreFamiliar: "David Gómez",
+      GrupoSang: "O-",
+      NumeroSS: 45678901,
+      Direccion: "Cra 7 #22-12",
+      TipoContrato: "tiempo completo"
+    },
+    {
+      id: 6,
+      Nombre: "Pedro Martínez",
+      Document: 34567890,
+      FechaIni: "05-06-2021",
+      ContactoEmerg: "3145678901",
+      Parentesco: "Madre",
+      NombreFamiliar: "Elena Martínez",
+      GrupoSang: "A-",
+      NumeroSS: 56789012,
+      Direccion: "Cl 80 #14-05",
+      TipoContrato: "tiempo completo"
+    },
+    {
+      id: 7,
+      Nombre: "Laura Fernández",
+      Document: 45678901,
+      FechaIni: "12-04-2023",
+      ContactoEmerg: "3156789012",
+      Parentesco: "Hijo",
+      NombreFamiliar: "Jorge Fernández",
+      GrupoSang: "B-",
+      NumeroSS: 67890123,
+      Direccion: "Av. 68 #10-20",
+      TipoContrato: "medio tiempo"
+    },
+    {
+      id: 8,
+      Nombre: "Carlos Rodríguez",
+      Document: 56789012,
+      FechaIni: "01-01-2020",
+      ContactoEmerg: "3167890123",
+      Parentesco: "Esposa",
+      NombreFamiliar: "María Rodríguez",
+      GrupoSang: "AB-",
+      NumeroSS: 78901234,
+      Direccion: "Cra 50 #30-40",
+      TipoContrato: "tiempo completo"
+    }
+  ]
+  
 ];
 
 const Empleados = () => {
@@ -16,6 +122,10 @@ const Empleados = () => {
     Nombre: '',
     Document: '',
     FechaIni: '',
+    ContactoEmerg: '',
+    Parentesco: '',
+    NombreFamiliar: '',
+    GrupoSang:'',
     NumeroSS: '',
     Direccion: '',
     TipoContrato: '',
@@ -30,6 +140,20 @@ const Empleados = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false); // Estado para el modal de edición
   const itemsPerPage = 7;
+
+  // States for validation
+  const [formErrors, setFormErrors] = useState({
+    Nombre: false,
+    Document: false,
+    FechaIni: false,
+    ContactoEmerg: false,
+    Parentesco: false,
+    NombreFamiliar: false,
+    GrupoSang: false,
+    NumeroSS: false,
+    Direccion: false,
+    TipoContrato: false
+  });
 
   const handleTableSearch = (e) => {
     setTableSearchText(e.target.value.toLowerCase());
@@ -57,13 +181,30 @@ const Empleados = () => {
     setSnackbarOpen(false);
   };
 
+  const validateForm = () => {
+    const errors = {
+      Nombre: !form.Nombre,
+      Document: !form.Document,
+      FechaIni: !form.FechaIni,
+      ContactoEmerg: !form.ContactoEmerg,
+      Parentesco: !form.Parentesco,
+      NombreFamiliar: !form.NombreFamiliar,
+      GrupoSang: !form.GrupoSang,
+      NumeroSS: !form.NumeroSS,
+      Direccion: !form.Direccion,
+      TipoContrato: !form.TipoContrato
+    };
+    setFormErrors(errors);
+    return !Object.values(errors).includes(true);
+  };
+
   const handleSubmit = () => {
-    const { Nombre, Document, FechaIni, NumeroSS, Direccion, TipoContrato } = form;
-  
-    if (!Nombre || !Document || !FechaIni || !NumeroSS || !Direccion || !TipoContrato) {
+    if (!validateForm()) {
       openSnackbar("Por favor, ingrese todos los campos", 'warning');
       return;
     }
+
+    const { Nombre, Document, FechaIni, ContactoEmerg, Parentesco, NombreFamiliar, GrupoSang,  NumeroSS, Direccion, TipoContrato } = form;
   
     const empleadoExistente = data.find(registro => registro.Document.toString() === Document.toString());
     if (empleadoExistente) {
@@ -82,6 +223,10 @@ const Empleados = () => {
       Nombre: '',
       Document: '',
       FechaIni: '',
+      ContactoEmerg: '',
+      Parentesco: '',
+      NombreFamiliar: '',
+      GrupoSang:'',
       NumeroSS: '',
       Direccion: '',
       TipoContrato: '',
@@ -92,15 +237,13 @@ const Empleados = () => {
   };
 
   const editar = () => {
-    const { Nombre, Document, FechaIni, NumeroSS, Direccion, TipoContrato } = form;
-  
-    if (!Nombre || !Document || !FechaIni || !NumeroSS || !Direccion || !TipoContrato) {
+    if (!validateForm()) {
       openSnackbar("Por favor, ingrese todos los campos", 'warning');
       return;
     }
   
     const empleadoExistente = data.find(
-      (registro) => registro.Document.toString() === Document.toString() &&
+      (registro) => registro.Document.toString() === form.Document.toString() &&
       registro.id !== form.id
     );
   
@@ -170,7 +313,7 @@ const Empleados = () => {
               onChange={handleTableSearch}
               style={{ width: '50%' }}
             />
-            <Button color="success" onClick={() => { setForm({ id: '', Nombre: '', Document: '', FechaIni: '', NumeroSS: '', Direccion: '', TipoContrato: '', Estado: true }); setIsEditing(false); setShowForm(true); }}>
+            <Button color="success" onClick={() => { setForm({ id: '', Nombre: '', Document: '', FechaIni: '', ContactoEmerg:'', Parentesco:'', NombreFamiliar:'',GrupoSang:'', NumeroSS: '', Direccion: '', TipoContrato: '', Estado: true }); setIsEditing(false); setShowForm(true); }}>
               Agregar Empleado
             </Button>
           </div>
@@ -180,7 +323,11 @@ const Empleados = () => {
                 <th>id</th>
                 <th>Nombre</th>
                 <th>Documento</th>
-                <th>Fecha Inicio</th>
+                <th>Fecha Ingreso</th>
+                <th>Contacto Emergencia</th>
+                <th>Parentesco</th>
+                <th>Nombre familiar</th>
+                <th>GRupo sanguineo</th>
                 <th>Número SS</th>
                 <th>Dirección</th>
                 <th>Tipo de Contrato</th>
@@ -196,16 +343,24 @@ const Empleados = () => {
                     <td>{item.Nombre}</td>
                     <td>{item.Document}</td>
                     <td>{item.FechaIni}</td>
+                    <td>{item.ContactoEmerg}</td>
+                    <td>{item.Parentesco}</td>
+                    <td>{item.NombreFamiliar}</td>
+                    <td>{item.GrupoSang}</td>
                     <td>{item.NumeroSS}</td>
                     <td>{item.Direccion}</td>
                     <td>{item.TipoContrato}</td>
-                    <td>{item.Estado ? 'Activo' : 'Inactivo'}</td>
+                    <td>
+                      <Button
+                        color={item.Estado ? "success" : "danger"}
+                        onClick={() => cambiarEstado(item.id)}
+                      >
+                        {item.Estado ? "Activo" : "Inactivo"}
+                      </Button>
+                    </td>
                     <td>
                       <Button color="info" onClick={() => { setForm(item); setIsEditing(true); setModalOpen(true); }}> <FaEdit /> </Button>{' '}
                       <Button color="danger" onClick={() => eliminar(item)}> <FaTrashAlt /> </Button>{' '}
-                      <Button color={item.Estado ? "warning" : "success"} onClick={() => cambiarEstado(item.id)}>
-                        {item.Estado ? 'Desactivar' : 'Activar'}
-                      </Button>
                     </td>
                   </tr>
                 ))
@@ -217,19 +372,16 @@ const Empleados = () => {
             </tbody>
           </Table>
 
-          <div className="d-flex justify-content-center mt-3">
-            <nav>
-              <ul className="pagination">
-                {pageNumbers.map(number => (
-                  <li key={number} className={`page-item ${currentPage === number ? 'active' : ''}`}>
-                    <Button className="page-link" onClick={() => handlePageChange(number)}>
-                      {number}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          </div>
+          <ul className="pagination">
+          {pageNumbers.map(number => (
+            <li key={number} className={`page-item ${currentPage === number ? 'active' : ''}`}>
+              <Button className="page-link" onClick={() => handlePageChange(number)}>
+                {number}
+              </Button>
+            </li>
+          ))}
+        </ul>
+
         </>
       )}
 
@@ -262,8 +414,9 @@ const Empleados = () => {
                   value={form.Nombre}
                   onChange={handleChange}
                   placeholder="Nombre del empleado"
-                  style={{ border: '2px solid #000000' }}
+                  className={`form-control ${formErrors.Nombre ? 'is-invalid' : ''}`}
                 />
+                {formErrors.Nombre && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
             <Col md={4}>
@@ -275,36 +428,97 @@ const Empleados = () => {
                   value={form.Document}
                   onChange={handleChange}
                   placeholder="Número de documento"
-                  style={{ border: '2px solid #000000' }}
+                  className={`form-control ${formErrors.Document ? 'is-invalid' : ''}`}
                 />
+                {formErrors.Document && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
             <Col md={4}>
               <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Fecha de Inicio</label>
+                <label style={{fontSize:'15px', padding:'5px'}}>Fecha de Ingreso</label>
                 <Input
                   type="date"
                   name="FechaIni"
-                  value={form.FechaIni}
+                  value={form.FechaIni.split('-').reverse().join('-')} // Asegúrate de que el formato sea correcto
                   onChange={handleChange}
                   placeholder="Fecha de inicio"
-                  style={{ border: '2px solid #000000' }}
+                  className={`form-control ${formErrors.FechaIni ? 'is-invalid' : ''}`}
                 />
+                {formErrors.FechaIni && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
           </Row>
           <Row>
-            <Col md={4} style={{fontSize:'15px', padding:'5px'}}>
+            <Col md={4}>
               <FormGroup>
-                <label>Número de Seguridad Social</label>
+                <label style={{fontSize:'15px', padding:'5px'}}>Contacto de emergencia</label>
+                <Input
+                  type="text"
+                  name="ContactoEmerg"
+                  value={form.ContactoEmerg}
+                  onChange={handleChange}
+                  placeholder="Número de contacto de emergencia"
+                  className={`form-control ${formErrors.ContactoEmerg ? 'is-invalid' : ''}`}
+                />
+                {formErrors.ContactoEmerg && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+              </FormGroup>
+            </Col>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{fontSize:'15px', padding:'5px'}}>Parentesco</label>
+                <Input
+                  type="text"
+                  name="Parentesco"
+                  value={form.Parentesco}
+                  onChange={handleChange}
+                  placeholder="Número de Parentesco"
+                  className={`form-control ${formErrors.Parentesco ? 'is-invalid' : ''}`}
+                />
+                {formErrors.Parentesco && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+              </FormGroup>
+            </Col>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{fontSize:'15px', padding:'5px'}}>Nombre del familiar</label>
+                <Input
+                  type="text"
+                  name="NombreFamiliar"
+                  value={form.NombreFamiliar}
+                  onChange={handleChange}
+                  placeholder="Nombre del familiar"
+                  className={`form-control ${formErrors.NombreFamiliar ? 'is-invalid' : ''}`}
+                />
+                {formErrors.NombreFamiliar && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+              </FormGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{fontSize:'15px', padding:'5px'}}>Grupo sanguineo</label>
+                <Input
+                  type="text"
+                  name="GrupoSang"
+                  value={form.GrupoSang}
+                  onChange={handleChange}
+                  placeholder="Grupo Sanguineo"
+                  className={`form-control ${formErrors.GrupoSang ? 'is-invalid' : ''}`}
+                />
+                {formErrors.GrupoSang && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+              </FormGroup>
+            </Col>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{fontSize:'15px', padding:'5px'}}>Número de Seguridad Social</label>
                 <Input
                   type="text"
                   name="NumeroSS"
                   value={form.NumeroSS}
                   onChange={handleChange}
                   placeholder="Número de seguridad social"
-                  style={{ border: '2px solid #000000' }}
+                  className={`form-control ${formErrors.NumeroSS ? 'is-invalid' : ''}`}
                 />
+                {formErrors.NumeroSS && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
             <Col md={4}>
@@ -316,11 +530,14 @@ const Empleados = () => {
                   value={form.Direccion}
                   onChange={handleChange}
                   placeholder="Dirección"
-                  style={{ border: '2px solid #000000' }}
+                  className={`form-control ${formErrors.Direccion ? 'is-invalid' : ''}`}
                 />
+                {formErrors.Direccion && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
-            <Col md={4}>
+          </Row>
+          <Row>
+          <Col md={4}>
               <FormGroup>
                 <label style={{fontSize:'15px', padding:'5px'}}>Tipo de Contrato</label>
                 <Input
@@ -329,13 +546,14 @@ const Empleados = () => {
                   value={form.TipoContrato}
                   onChange={handleChange}
                   placeholder="Tipo de contrato"
-                  style={{ border: '2px solid #000000' }}
+                  className={`form-control ${formErrors.TipoContrato ? 'is-invalid' : ''}`}
                 />
+                {formErrors.TipoContrato && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
           </Row>
           <div className="d-flex justify-content-star mt-3">
-          <Button style={{background:'#2e8322'}} onClick={handleSubmit}>
+            <Button style={{background:'#2e8322'}} onClick={handleSubmit}>
               {isEditing ? 'Actualizar' : 'Agregar'}
             </Button>
             
@@ -362,7 +580,9 @@ const Empleados = () => {
                   value={form.Nombre}
                   onChange={handleChange}
                   placeholder="Nombre del empleado"
+                  className={`form-control ${formErrors.Nombre ? 'is-invalid' : ''}`}
                 />
+                {formErrors.Nombre && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
             <Col md={4}>
@@ -374,7 +594,9 @@ const Empleados = () => {
                   value={form.Document}
                   onChange={handleChange}
                   placeholder="Número de documento"
+                  className={`form-control ${formErrors.Document ? 'is-invalid' : ''}`}
                 />
+                {formErrors.Document && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
             <Col md={4}>
@@ -386,11 +608,71 @@ const Empleados = () => {
                   value={form.FechaIni}
                   onChange={handleChange}
                   placeholder="Fecha de inicio"
+                  className={`form-control ${formErrors.FechaIni ? 'is-invalid' : ''}`}
                 />
+                {formErrors.FechaIni && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
           </Row>
           <Row>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{fontSize:'15px', padding:'5px'}}>Contacto de emergencia</label>
+                <Input
+                  type="text"
+                  name="ContactoEmerg"
+                  value={form.ContactoEmerg}
+                  onChange={handleChange}
+                  placeholder="Número de contacto de emergencia"
+                  className={`form-control ${formErrors.ContactoEmerg ? 'is-invalid' : ''}`}
+                />
+                {formErrors.ContactoEmerg && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+              </FormGroup>
+            </Col>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{fontSize:'15px', padding:'5px'}}>Parentesco</label>
+                <Input
+                  type="text"
+                  name="Parentesco"
+                  value={form.Parentesco}
+                  onChange={handleChange}
+                  placeholder="Número de Parentesco"
+                  className={`form-control ${formErrors.Parentesco ? 'is-invalid' : ''}`}
+                />
+                {formErrors.Parentesco && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+              </FormGroup>
+            </Col>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{fontSize:'15px', padding:'5px'}}>Nombre del familiar</label>
+                <Input
+                  type="text"
+                  name="NombreFamiliar"
+                  value={form.NombreFamiliar}
+                  onChange={handleChange}
+                  placeholder="Nombre del familiar"
+                  className={`form-control ${formErrors.NombreFamiliar ? 'is-invalid' : ''}`}
+                />
+                {formErrors.NombreFamiliar && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+              </FormGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{fontSize:'15px', padding:'5px'}}>Grupo sanguineo</label>
+                <Input
+                  type="text"
+                  name="GrupoSang"
+                  value={form.GrupoSang}
+                  onChange={handleChange}
+                  placeholder="Grupo Sanguineo"
+                  className={`form-control ${formErrors.GrupoSang ? 'is-invalid' : ''}`}
+                />
+                {formErrors.GrupoSang && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+              </FormGroup>
+            </Col>
             <Col md={4}>
               <FormGroup>
                 <label>Número de Seguridad Social</label>
@@ -400,7 +682,9 @@ const Empleados = () => {
                   value={form.NumeroSS}
                   onChange={handleChange}
                   placeholder="Número de seguridad social"
+                  className={`form-control ${formErrors.NumeroSS ? 'is-invalid' : ''}`}
                 />
+                {formErrors.NumeroSS && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
             <Col md={4}>
@@ -412,10 +696,14 @@ const Empleados = () => {
                   value={form.Direccion}
                   onChange={handleChange}
                   placeholder="Dirección"
+                  className={`form-control ${formErrors.Direccion ? 'is-invalid' : ''}`}
                 />
+                {formErrors.Direccion && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
-            <Col md={4}>
+          </Row>
+          <Row>
+          <Col md={4}>
               <FormGroup>
                 <label>Tipo de Contrato</label>
                 <Input
@@ -424,7 +712,9 @@ const Empleados = () => {
                   value={form.TipoContrato}
                   onChange={handleChange}
                   placeholder="Tipo de contrato"
+                  className={`form-control ${formErrors.TipoContrato ? 'is-invalid' : ''}`}
                 />
+                {formErrors.TipoContrato && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
           </Row>
