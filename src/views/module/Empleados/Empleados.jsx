@@ -6,112 +6,14 @@ import { IoSearchOutline } from "react-icons/io5";
 import { Snackbar, Alert } from '@mui/material';
 
 const initialData = [
-  [
-    {
-      id: 1,
-      Nombre: "Carolina Guzman",
-      Document: 16514416,
-      FechaIni: "15-07-2020",
-      ContactoEmerg: "319898119",
-      Parentesco: "Madre",
-      NombreFamiliar: "Carolina Zapata",
-      GrupoSang: "O+",
-      NumeroSS: 61515371,
-      Direccion: "cl 76 j 12b 55",
-      TipoContrato: "doble tiempo"
-    },
-    {
-      id: 2,
-      Nombre: "Andra Torres",
-      Document: 18761919,
-      FechaIni: "01-02-2023",
-      ContactoEmerg: "3001234567",
-      Parentesco: "Hermano",
-      NombreFamiliar: "Juan Torres",
-      GrupoSang: "A+",
-      NumeroSS: 12345678,
-      Direccion: "Av. El Dorado 92-45",
-      TipoContrato: "tiempo completo"
-    },
-    {
-      id: 3,
-      Nombre: "Natalia Muriel",
-      Document: 1016177143,
-      FechaIni: "15-03-2022",
-      ContactoEmerg: "3207654321",
-      Parentesco: "Padre",
-      NombreFamiliar: "Carlos Muriel",
-      GrupoSang: "B+",
-      NumeroSS: 23456789,
-      Direccion: "Cra 15 #76-30",
-      TipoContrato: "tiempo completo"
-    },
-    {
-      id: 4,
-      Nombre: "Luis Pérez",
-      Document: 12345678,
-      FechaIni: "10-11-2021",
-      ContactoEmerg: "3109876543",
-      Parentesco: "Esposa",
-      NombreFamiliar: "Ana Pérez",
-      GrupoSang: "AB+",
-      NumeroSS: 34567890,
-      Direccion: "Cl 10 #15-20",
-      TipoContrato: "medio tiempo"
-    },
-    {
-      id: 5,
-      Nombre: "María Gómez",
-      Document: 23456789,
-      FechaIni: "20-09-2020",
-      ContactoEmerg: "3134567890",
-      Parentesco: "Hermano",
-      NombreFamiliar: "David Gómez",
-      GrupoSang: "O-",
-      NumeroSS: 45678901,
-      Direccion: "Cra 7 #22-12",
-      TipoContrato: "tiempo completo"
-    },
-    {
-      id: 6,
-      Nombre: "Pedro Martínez",
-      Document: 34567890,
-      FechaIni: "05-06-2021",
-      ContactoEmerg: "3145678901",
-      Parentesco: "Madre",
-      NombreFamiliar: "Elena Martínez",
-      GrupoSang: "A-",
-      NumeroSS: 56789012,
-      Direccion: "Cl 80 #14-05",
-      TipoContrato: "tiempo completo"
-    },
-    {
-      id: 7,
-      Nombre: "Laura Fernández",
-      Document: 45678901,
-      FechaIni: "12-04-2023",
-      ContactoEmerg: "3156789012",
-      Parentesco: "Hijo",
-      NombreFamiliar: "Jorge Fernández",
-      GrupoSang: "B-",
-      NumeroSS: 67890123,
-      Direccion: "Av. 68 #10-20",
-      TipoContrato: "medio tiempo"
-    },
-    {
-      id: 8,
-      Nombre: "Carlos Rodríguez",
-      Document: 56789012,
-      FechaIni: "01-01-2020",
-      ContactoEmerg: "3167890123",
-      Parentesco: "Esposa",
-      NombreFamiliar: "María Rodríguez",
-      GrupoSang: "AB-",
-      NumeroSS: 78901234,
-      Direccion: "Cra 50 #30-40",
-      TipoContrato: "tiempo completo"
-    }
-  ]
+  {id: 1, Nombre: "Carolina Guzman", Document: 16514416,FechaIni: "15-07-2020",ContactoEmerg: "319898119",Parentesco: "Madre",NombreFamiliar: "Carolina Zapata", GrupoSang: "O+",NumeroSS: 61515371,Direccion: "cl 76 j 12b 55",TipoContrato: "doble tiempo"},
+  {id: 2,Nombre: "Andra Torres",Document: 18761919,FechaIni: "01-02-2023",ContactoEmerg: "3001234567",Parentesco: "Hermano",NombreFamiliar: "Juan Torres",GrupoSang: "A+",NumeroSS: 12345678,Direccion: "Av. El Dorado 92-45",TipoContrato: "tiempo completo"}, 
+  {id: 3,Nombre: "Natalia Muriel",Document: 1016177143,FechaIni: "15-03-2022",ContactoEmerg: "3207654321",Parentesco: "Padre",NombreFamiliar: "Carlos Muriel",GrupoSang: "B+",NumeroSS: 23456789,Direccion: "Cra 15 #76-30",TipoContrato: "tiempo completo"},
+  {id: 4,Nombre: "Luis Pérez",Document: 12345678,FechaIni: "10-11-2021",ContactoEmerg: "3109876543",Parentesco: "Esposa",NombreFamiliar: "Ana Pérez",GrupoSang: "AB+",NumeroSS: 34567890,Direccion: "Cl 10 #15-20",TipoContrato: "medio tiempo"},
+  {id: 5,Nombre: "María Gómez",Document: 23456789,FechaIni: "20-09-2020",ContactoEmerg: "3134567890",Parentesco: "Hermano",NombreFamiliar: "David Gómez",GrupoSang: "O-",NumeroSS: 45678901,Direccion: "Cra 7 #22-767",TipoContrato: "medio tiempo"},
+  {id: 6,Nombre: "Pedro Martínez",Document: 34567890,FechaIni: "05-06-2021",ContactoEmerg: "3145678901",Parentesco: "Madre",NombreFamiliar: "Elena Martínez",GrupoSang: "A-",NumeroSS: 56789012,Direccion: "Cl 80 #14-05",TipoContrato: "tiempo completo"},
+  {id: 7,Nombre: "Laura Fernández",Document: 45678901,FechaIni: "12-04-2023",ContactoEmerg: "3156789012",Parentesco: "Hijo",NombreFamiliar: "Jorge Fernández",GrupoSang: "B-",NumeroSS: 67890123,Direccion: "Av. 68 #10-20",TipoContrato: "medio tiempo"},
+  {id: 8,Nombre: "Carlos Rodríguez",Document: 56789012,FechaIni: "01-01-2020",ContactoEmerg: "3167890123",Parentesco: "Esposa",NombreFamiliar: "María Rodríguez",GrupoSang: "AB-",NumeroSS: 78901234,Direccion: "Cra 50 #30-40",TipoContrato: "tiempo completo"}
   
 ];
 
@@ -197,6 +99,12 @@ const Empleados = () => {
     setFormErrors(errors);
     return !Object.values(errors).includes(true);
   };
+  
+
+  const formatDate = (date) => {
+    const [day, month, year] = date.split('-');
+    return `${year}-${month}-${day}`;
+  };
 
   const handleSubmit = () => {
     if (!validateForm()) {
@@ -277,10 +185,11 @@ const Empleados = () => {
       }
       return registro;
     });
-
+  
     setData(updatedData);
     openSnackbar("Estado del empleado actualizado exitosamente", 'success');
   };
+  
 
   const filteredData = data.filter(item =>
     item.Nombre.toLowerCase().includes(tableSearchText) ||
@@ -317,7 +226,7 @@ const Empleados = () => {
               Agregar Empleado
             </Button>
           </div>
-          <Table className="table table-hover">
+          <Table className="table table-sm table-hover">
             <thead>
               <tr>
                 <th>id</th>
@@ -354,14 +263,23 @@ const Empleados = () => {
                       <Button
                         color={item.Estado ? "success" : "danger"}
                         onClick={() => cambiarEstado(item.id)}
+                        className="me-2 btn-sm"
                       >
-                        {item.Estado ? "Activo" : "Inactivo"}
+                        {item.Estado ? "On" : "Off"}
+                      
                       </Button>
                     </td>
                     <td>
-                      <Button color="info" onClick={() => { setForm(item); setIsEditing(true); setModalOpen(true); }}> <FaEdit /> </Button>{' '}
-                      <Button color="danger" onClick={() => eliminar(item)}> <FaTrashAlt /> </Button>{' '}
+                      <div className="d-flex align-items-center">
+                        <Button color="info" onClick={() => { setForm(item); setIsEditing(true); setModalOpen(true); }} className="me-2 btn-sm">
+                          <FaEdit />
+                        </Button>
+                        <Button color="danger" onClick={() => eliminar(item)} className="me-2 btn-sm">
+                          <FaTrashAlt />
+                        </Button>
+                      </div>
                     </td>
+
                   </tr>
                 ))
               ) : (
@@ -373,14 +291,15 @@ const Empleados = () => {
           </Table>
 
           <ul className="pagination">
-          {pageNumbers.map(number => (
-            <li key={number} className={`page-item ${currentPage === number ? 'active' : ''}`}>
-              <Button className="page-link" onClick={() => handlePageChange(number)}>
-                {number}
-              </Button>
-            </li>
-          ))}
-        </ul>
+        {pageNumbers.map(number => (
+          <li key={number} className={`page-item ${currentPage === number ? 'active' : ''}`}>
+            <Button className="page-link" onClick={() => handlePageChange(number)}>
+              {number}
+            </Button>
+          </li>
+        ))}
+      </ul>
+
 
         </>
       )}
@@ -439,7 +358,7 @@ const Empleados = () => {
                 <Input
                   type="date"
                   name="FechaIni"
-                  value={form.FechaIni.split('-').reverse().join('-')} // Asegúrate de que el formato sea correcto
+                  value={formatDate(form.FechaIni)}
                   onChange={handleChange}
                   placeholder="Fecha de inicio"
                   className={`form-control ${formErrors.FechaIni ? 'is-invalid' : ''}`}
@@ -720,12 +639,12 @@ const Empleados = () => {
           </Row>
         </ModalBody>
         <ModalFooter>
-          <Button color="6d0f0f" onClick={() => setModalOpen(false)}>
-            Cancelar
-          </Button>
-          <Button color="primary" onClick={editar}>
-            Actualizar
-          </Button>
+        <Button color="danger" onClick={() => setModalOpen(false)}>
+          Cancelar
+        </Button>
+        <Button color="primary" onClick={editar}>
+          Actualizar
+        </Button>
         </ModalFooter>
       </Modal>
 
