@@ -1,4 +1,3 @@
-// Importaciones de React y Material-UI
 import React from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Table, Button, Container, Modal, ModalBody, ModalHeader, ModalFooter, FormGroup, Input } from 'reactstrap';
@@ -139,17 +138,29 @@ class Servicios extends React.Component {
 
   // Eliminar un servicio
   eliminar = (dato) => {
-    const opcion = window.confirm("¿Realmente desea eliminar el servicio?");
-    if (opcion) {
-      const lista = this.state.data.filter(servicio => servicio.id !== dato.id);
-      this.setState({ 
-        data: lista, 
-        filteredData: lista,
-        snackbarMessage: 'Servicio eliminado con éxito.', 
-        snackbarSeverity: 'success',
-        snackbarOpen: true 
-      });
-    }
+    this.setState({
+      snackbarOpen: true,
+      snackbarMessage: '¿Realmente desea eliminar el servicio?',
+      snackbarSeverity: 'warning',
+      snackbarAction: (
+        <Button
+          color="inherit"
+          onClick={() => {
+            this.setState({ snackbarOpen: false });
+            const lista = this.state.data.filter(servicio => servicio.id !== dato.id);
+            this.setState({ 
+              data: lista, 
+              filteredData: lista,
+              snackbarMessage: 'Servicio eliminado con éxito.', 
+              snackbarSeverity: 'success',
+              snackbarOpen: true 
+            });
+          }}
+        >
+          Confirmar
+        </Button>
+      )
+    });
   }
 
   // Cambiar el estado de un servicio (Activo/Inactivo)
@@ -194,6 +205,8 @@ class Servicios extends React.Component {
       <>
         <Container>
           <br />
+          <h2>Lista de Servicios Adicionales</h2>
+          <br />
           <div className="d-flex justify-content-between align-items-center mb-3">
             {/* Input para búsqueda */}
             <Input
@@ -213,31 +226,29 @@ class Servicios extends React.Component {
               <tr>
                 <th>Id</th>
                 <th>Nombre</th>
-                <th>Estado</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {currentItems.map((elemento) => (
-                <tr key={elemento.id}>
+                <tr key={elemento.id} style={{ backgroundColor: elemento.Estado === "Inactivo" ? "#e9ecef" : "white" }}>
                   <td>{elemento.id}</td>
                   <td>{elemento.Nombre}</td>
-                  <td>{elemento.Estado}</td>
                   <td>
-                    {/* Botón para editar un servicio */}
-                    <Button color="primary" onClick={() => this.mostrarModalEditar(elemento)}><FaEdit /></Button>{' '}
-                    {/* Botón para eliminar un servicio */}
-                    <Button color="danger" onClick={() => this.eliminar(elemento)}><FaTrashAlt /></Button>{' '}
                     {/* Botón para cambiar el estado de un servicio */}
                     <Button 
                       color={elemento.Estado === "Activo" ? "success" : "secondary"} 
                       onClick={(e) => { e.stopPropagation(); this.cambiarEstado(elemento.id); }}
                       size="sm"
-                      className="mr-1" 
+                      className="mr-1"
                       style={{ padding: '0.375rem 0.75rem' }}
                     >
-                      {elemento.Estado === "Activo" ? "On" : "Off"}
-                    </Button>
+                      {elemento.Estado === "Activo" ? "Activo" : "Inactivo"}
+                    </Button>{' '}
+                    {/* Botón para editar un servicio */}
+                    <Button color="primary" onClick={() => this.mostrarModalEditar(elemento)}><FaEdit /></Button>{' '}
+                    {/* Botón para eliminar un servicio */}
+                    <Button color="danger" onClick={() => this.eliminar(elemento)}><FaTrashAlt /></Button>
                   </td>
                 </tr>
               ))}
@@ -276,12 +287,13 @@ class Servicios extends React.Component {
                 type="text" 
                 onChange={this.handleChange} 
                 value={this.state.form.Nombre}
+                style={{ border: '2px solid #000000' }}
               />
             </FormGroup>
 
             <ModalFooter>
-              <Button color="primary" onClick={this.insertar}>Agregar</Button>
-              <Button color="danger" onClick={this.ocultarModalInsertar}>Cancelar</Button>
+              <Button style={{background:'#2e8322'}} onClick={this.insertar}>Agregar</Button>
+              <Button style={{background:'#6d0f0f'}} onClick={this.ocultarModalInsertar}>Cancelar</Button>
             </ModalFooter>
           </ModalBody>
         </Modal>
@@ -307,8 +319,8 @@ class Servicios extends React.Component {
             </FormGroup>
 
             <ModalFooter>
-              <Button color="primary" onClick={() => this.editar(this.state.form)}>Editar</Button>
-              <Button color="danger" onClick={this.ocultarModalEditar}>Cancelar</Button>
+              <Button style={{background:'#2e8322'}} onClick={() => this.editar(this.state.form)}>Editar</Button>
+              <Button style={{background:'#6d0f0f'}} onClick={this.ocultarModalEditar}>Cancelar</Button>
             </ModalFooter>
           </ModalBody>
         </Modal>
@@ -324,6 +336,7 @@ class Servicios extends React.Component {
             severity={this.state.snackbarSeverity}
           >
             {this.state.snackbarMessage}
+            {this.state.snackbarAction}
           </Alert>
         </Snackbar>
       </>
