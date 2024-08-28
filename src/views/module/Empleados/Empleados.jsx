@@ -726,7 +726,7 @@ const Empleados = () => {
           <Button color="primary" onClick={editar}>
             Actualizar
           </Button>
-        </ModalFooter>
+git        </ModalFooter>
       </Modal>
 
       {/* Snackbar */}
