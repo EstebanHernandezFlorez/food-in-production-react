@@ -3,7 +3,6 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { Table, Button, Container, Row, Col, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 import { IoSearchOutline } from "react-icons/io5";
-import { IoSearchOutline } from "react-icons/io5";
 import { Snackbar, Alert } from '@mui/material';
 
 const initialData = [
@@ -196,7 +195,7 @@ const Empleados = () => {
     item.Nombre.toLowerCase().includes(tableSearchText) ||
     item.Document.toString().includes(tableSearchText) ||
     item.FechaIni.toLowerCase().includes(tableSearchText) ||
-    item.NumeroSS.toString().includes(tableSearchText)
+    item.NumeroSS.toString().includes(tableSearchText) ||
     item.Nombre.toLowerCase().includes(tableSearchText) ||
     item.Document.toString().includes(tableSearchText) ||
     item.FechaIni.toLowerCase().includes(tableSearchText) ||
@@ -438,7 +437,7 @@ const Empleados = () => {
             </Button>
           </div>
         </div>
-      )}
+        )}
 
       {/* Modal de edición */}
       <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)}>
@@ -781,6 +780,7 @@ const Empleados = () => {
       </Snackbar>
     </Container>
   );
+ }
 };
 
 export default Empleados;
