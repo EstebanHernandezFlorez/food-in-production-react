@@ -92,8 +92,6 @@ export default function App() {
                       icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
                       onC lick={() => setCollapsed(!collapsed)}
                     />
-                    <h1 style={{ margin: 0 }}>Food in Production</h1> 
-
                     <NavDropdown title={<span><UserOutlined style={{ marginRight: '8px' }} /> Cargar Nombre Usuario</span>} id="nav-dropdown">
                     <NavDropdown.Item href="#action1">Perfil</NavDropdown.Item>
                     </NavDropdown>

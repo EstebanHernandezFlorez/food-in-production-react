@@ -20,26 +20,6 @@
     margin-top: 10px;
 }
 
-.logo{
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    padding: 10px;
-    background-color: #222222;
-}
-
-.logo-icon{
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    border-radius:50% ;
-    background-color: #080A0D;
-}
-
 .menu-bar{
     background-color: #080A0D;
     height: 90vh;
