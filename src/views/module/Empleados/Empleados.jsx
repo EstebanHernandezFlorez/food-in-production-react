@@ -3,6 +3,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { Table, Button, Container, Row, Col, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 import { IoSearchOutline } from "react-icons/io5";
+import { IoSearchOutline } from "react-icons/io5";
 import { Snackbar, Alert } from '@mui/material';
 
 const initialData = [
@@ -196,6 +197,10 @@ const Empleados = () => {
     item.Document.toString().includes(tableSearchText) ||
     item.FechaIni.toLowerCase().includes(tableSearchText) ||
     item.NumeroSS.toString().includes(tableSearchText)
+    item.Nombre.toLowerCase().includes(tableSearchText) ||
+    item.Document.toString().includes(tableSearchText) ||
+    item.FechaIni.toLowerCase().includes(tableSearchText) ||
+    item.NumeroSS.toString().includes(tableSearchText)
   );
 
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -210,23 +215,25 @@ const Empleados = () => {
   return (
     <Container>
       <br />
-      {/* Mostrar la sección de búsqueda y el botón solo si no se está mostrando el formulario */}
+      <h2>Lista de Empleados</h2>
+      <br />
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <Input
+          type="text"
+          placeholder="Buscar empleado"
+          value={searchText}
+          onChange={handleSearch}
+          style={{ width: '50%' }}
+        />
+        <Button color="success" onClick={() => { setForm({ id: '', Nombre: '', Document: '', FechaIni: '', NumeroSS: '', Direccion: '', TipoContrato: '', Estado: true }); setIsEditing(false); setShowForm(true); }}>
+          Agregar Empleado
+        </Button>
+      </div>
+
+      {/* Mostrar la tabla solo si no se está mostrando el formulario */}
       {!showForm && (
         <>
-          <h2>Lista de Empleados</h2>
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <Input
-              type="text"
-              placeholder="Buscar empleado en la tabla"
-              value={tableSearchText}
-              onChange={handleTableSearch}
-              style={{ width: '50%' }}
-            />
-            <Button color="success" onClick={() => { setForm({ id: '', Nombre: '', Document: '', FechaIni: '', ContactoEmerg:'', Parentesco:'', NombreFamiliar:'',GrupoSang:'', NumeroSS: '', Direccion: '', TipoContrato: '', Estado: true }); setIsEditing(false); setShowForm(true); }}>
-              Agregar Empleado
-            </Button>
-          </div>
-          <Table className="table table-sm table-hover">
+          <Table className="table table-hover">
             <thead>
               <tr>
                 <th>id</th>
@@ -285,6 +292,7 @@ const Empleados = () => {
               ) : (
                 <tr>
                   <td colSpan="9" className="text-center">No hay datos disponibles</td>
+                  <td colSpan="9" className="text-center">No hay datos disponibles</td>
                 </tr>
               )}
             </tbody>
@@ -321,6 +329,123 @@ const Empleados = () => {
             </div>
           </div>     
           <br />
+        <div>
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h2 className="text-star" >{isEditing ? 'Editar empleado' : 'Agregar empleado'}</h2>
+            <div className="d-flex align-items-center">
+              <Input
+                type="text"
+                placeholder="Buscar documento de usuario"
+                value={tableSearchText}
+                onChange={handleTableSearch}
+                style={{ width: '60vh', marginRight: '8px' ,border:'2px solid #353535'}} // Ajusta el ancho y el margen a tu preferencia
+              />
+              <IoSearchOutline size={24} />
+            </div>
+          </div>     
+          <br />
+          <Row>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{fontSize:'15px', padding:'5px'}}>
+                  Nombre completo 
+                </label>
+                <Input
+                  type="text"
+                  name="Nombre"
+                  value={form.Nombre}
+                  onChange={handleChange}
+                  placeholder="Nombre del empleado"
+                  style={{ border: '2px solid #000000' }}
+                />
+              </FormGroup>
+            </Col>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{fontSize:'15px', padding:'5px'}}>Documento</label>
+                <Input
+                  type="text"
+                  name="Document"
+                  value={form.Document}
+                  onChange={handleChange}
+                  placeholder="Número de documento"
+                  style={{ border: '2px solid #000000' }}
+                />
+              </FormGroup>
+            </Col>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{fontSize:'15px', padding:'5px'}}>Fecha de Inicio</label>
+                <Input
+                  type="date"
+                  name="FechaIni"
+                  value={form.FechaIni}
+                  onChange={handleChange}
+                  placeholder="Fecha de inicio"
+                  style={{ border: '2px solid #000000' }}
+                />
+              </FormGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col md={4} style={{fontSize:'15px', padding:'5px'}}>
+              <FormGroup>
+                <label>Número de Seguridad Social</label>
+                <Input
+                  type="text"
+                  name="NumeroSS"
+                  value={form.NumeroSS}
+                  onChange={handleChange}
+                  placeholder="Número de seguridad social"
+                  style={{ border: '2px solid #000000' }}
+                />
+              </FormGroup>
+            </Col>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{fontSize:'15px', padding:'5px'}}>Dirección</label>
+                <Input
+                  type="text"
+                  name="Direccion"
+                  value={form.Direccion}
+                  onChange={handleChange}
+                  placeholder="Dirección"
+                  style={{ border: '2px solid #000000' }}
+                />
+              </FormGroup>
+            </Col>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{fontSize:'15px', padding:'5px'}}>Tipo de Contrato</label>
+                <Input
+                  type="text"
+                  name="TipoContrato"
+                  value={form.TipoContrato}
+                  onChange={handleChange}
+                  placeholder="Tipo de contrato"
+                  style={{ border: '2px solid #000000' }}
+                />
+              </FormGroup>
+            </Col>
+          </Row>
+          <div className="d-flex justify-content-star mt-3">
+          <Button style={{background:'#2e8322'}} onClick={handleSubmit}>
+              {isEditing ? 'Actualizar' : 'Agregar'}
+            </Button>
+            
+            <Button style={{background:'#6d0f0f'}} onClick={() => { setShowForm(false); setIsEditing(false); }}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de edición */}
+      <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)}>
+        <ModalHeader toggle={() => setModalOpen(!modalOpen)}>
+          Editar Empleado
+        </ModalHeader>
+        <ModalBody>
           <Row>
             <Col md={4}>
               <FormGroup>
@@ -639,12 +764,12 @@ const Empleados = () => {
           </Row>
         </ModalBody>
         <ModalFooter>
-        <Button color="danger" onClick={() => setModalOpen(false)}>
-          Cancelar
-        </Button>
-        <Button color="primary" onClick={editar}>
-          Actualizar
-        </Button>
+          <Button color="secondary" onClick={() => setModalOpen(false)}>
+            Cancelar
+          </Button>
+          <Button color="primary" onClick={editar}>
+            Actualizar
+          </Button>
         </ModalFooter>
       </Modal>
 
