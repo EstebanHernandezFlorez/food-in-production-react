@@ -94,11 +94,9 @@ export default function App() {
                     />
                     <h1 style={{ margin: 0 }}>Food in Production</h1> 
 
-                    <Nav variant="pills" activeKey="1" onSelect={handleSelectcted}>
-                    <NavDropdown title="(Icon)Cargar Nombre Usuario" id="nav-dropdown">                    
-                    <NavDropdown.Item eventKey="4.4">Editar Perfil</NavDropdown.Item>
-                </NavDropdown>
-                    </Nav>
+                    <NavDropdown title={<span><UserOutlined style={{ marginRight: '8px' }} /> Cargar Nombre Usuario</span>} id="nav-dropdown">
+                    <NavDropdown.Item href="#action1">Perfil</NavDropdown.Item>
+                    </NavDropdown>
 
                   </div>
                 </Header>

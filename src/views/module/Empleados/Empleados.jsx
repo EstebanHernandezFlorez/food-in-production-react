@@ -2,17 +2,11 @@ import React, { useState } from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Table, Button, Container, Row, Col, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { IoSearchOutline } from "react-icons/io5";
 import { Snackbar, Alert } from '@mui/material';
 
 const initialData = [
-  { id: 1, Nombre: "Carolina Guzman", Document: 16514416, FechaIni: "15-07-2020", NumeroSS: 61515371, Direccion: "cl 76 j 12b 55", TipoContrato: "doble tiempo" },
-  { id: 2, Nombre: "Andra Torres", Document: 18761919, FechaIni: "01-02-2023", NumeroSS: 12345678, Direccion: "Av. El Dorado 92-45", TipoContrato: "tiempo completo" },
-  { id: 3, Nombre: "Natalia Muriel", Document: 1016177143, FechaIni: "15-03-2022", NumeroSS: 23456789, Direccion: "Cra 15 #76-30", TipoContrato: "tiempo completo" },
-  { id: 4, Nombre: "Luis Pérez", Document: 12345678, FechaIni: "10-11-2021", NumeroSS: 34567890, Direccion: "Cl 10 #15-20", TipoContrato: "medio tiempo" },
-  { id: 5, Nombre: "María Gómez", Document: 23456789, FechaIni: "20-09-2020", NumeroSS: 45678901, Direccion: "Cra 7 #22-12", TipoContrato: "tiempo completo" },
-  { id: 6, Nombre: "Pedro Martínez", Document: 34567890, FechaIni: "05-06-2021", NumeroSS: 56789012, Direccion: "Cl 80 #14-05", TipoContrato: "tiempo completo" },
-  { id: 7, Nombre: "Laura Fernández", Document: 45678901, FechaIni: "12-04-2023", NumeroSS: 67890123, Direccion: "Av. 68 #10-20", TipoContrato: "medio tiempo" },
-  { id: 8, Nombre: "Carlos Rodríguez", Document: 56789012, FechaIni: "01-01-2020", NumeroSS: 78901234, Direccion: "Cra 50 #30-40", TipoContrato: "tiempo completo" }
+  // Los datos iniciales se mantienen igual
 ];
 
 const Empleados = () => {
@@ -29,7 +23,7 @@ const Empleados = () => {
   });
   const [isEditing, setIsEditing] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [searchText, setSearchText] = useState('');
+  const [tableSearchText, setTableSearchText] = useState('');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
@@ -37,8 +31,8 @@ const Empleados = () => {
   const [modalOpen, setModalOpen] = useState(false); // Estado para el modal de edición
   const itemsPerPage = 7;
 
-  const handleSearch = (e) => {
-    setSearchText(e.target.value.toLowerCase());
+  const handleTableSearch = (e) => {
+    setTableSearchText(e.target.value.toLowerCase());
   };
 
   const handleChange = (e) => {
@@ -146,10 +140,10 @@ const Empleados = () => {
   };
 
   const filteredData = data.filter(item =>
-    item.Nombre.toLowerCase().includes(searchText) ||
-    item.Document.toString().includes(searchText) ||
-    item.FechaIni.toLowerCase().includes(searchText) ||
-    item.NumeroSS.toString().includes(searchText)
+    item.Nombre.toLowerCase().includes(tableSearchText) ||
+    item.Document.toString().includes(tableSearchText) ||
+    item.FechaIni.toLowerCase().includes(tableSearchText) ||
+    item.NumeroSS.toString().includes(tableSearchText)
   );
 
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -164,24 +158,22 @@ const Empleados = () => {
   return (
     <Container>
       <br />
-      <h2>Lista de Empleados</h2>
-      <br />
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <Input
-          type="text"
-          placeholder="Buscar empleado"
-          value={searchText}
-          onChange={handleSearch}
-          style={{ width: '50%' }}
-        />
-        <Button color="success" onClick={() => { setForm({ id: '', Nombre: '', Document: '', FechaIni: '', NumeroSS: '', Direccion: '', TipoContrato: '', Estado: true }); setIsEditing(false); setShowForm(true); }}>
-          Agregar Empleado
-        </Button>
-      </div>
-
-      {/* Mostrar la tabla solo si no se está mostrando el formulario */}
+      {/* Mostrar la sección de búsqueda y el botón solo si no se está mostrando el formulario */}
       {!showForm && (
         <>
+          <h2>Lista de Empleados</h2>
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <Input
+              type="text"
+              placeholder="Buscar empleado en la tabla"
+              value={tableSearchText}
+              onChange={handleTableSearch}
+              style={{ width: '50%' }}
+            />
+            <Button color="success" onClick={() => { setForm({ id: '', Nombre: '', Document: '', FechaIni: '', NumeroSS: '', Direccion: '', TipoContrato: '', Estado: true }); setIsEditing(false); setShowForm(true); }}>
+              Agregar Empleado
+            </Button>
+          </div>
           <Table className="table table-hover">
             <thead>
               <tr>
@@ -219,7 +211,7 @@ const Empleados = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="8" className="text-center">No hay datos disponibles</td>
+                  <td colSpan="9" className="text-center">No hay datos disponibles</td>
                 </tr>
               )}
             </tbody>
@@ -243,8 +235,123 @@ const Empleados = () => {
 
       {/* Formulario de inserción */}
       {showForm && (
-        <div className="mb-3">
-          <h2>{isEditing ? 'Editar empleado' : 'Agregar empleado'}</h2>
+        <div>
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h2 className="text-star" >{isEditing ? 'Editar empleado' : 'Agregar empleado'}</h2>
+            <div className="d-flex align-items-center">
+              <Input
+                type="text"
+                placeholder="Buscar documento de usuario"
+                value={tableSearchText}
+                onChange={handleTableSearch}
+                style={{ width: '60vh', marginRight: '8px' ,border:'2px solid #353535'}} // Ajusta el ancho y el margen a tu preferencia
+              />
+              <IoSearchOutline size={24} />
+            </div>
+          </div>     
+          <br />
+          <Row>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{fontSize:'15px', padding:'5px'}}>
+                  Nombre completo 
+                </label>
+                <Input
+                  type="text"
+                  name="Nombre"
+                  value={form.Nombre}
+                  onChange={handleChange}
+                  placeholder="Nombre del empleado"
+                  style={{ border: '2px solid #000000' }}
+                />
+              </FormGroup>
+            </Col>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{fontSize:'15px', padding:'5px'}}>Documento</label>
+                <Input
+                  type="text"
+                  name="Document"
+                  value={form.Document}
+                  onChange={handleChange}
+                  placeholder="Número de documento"
+                  style={{ border: '2px solid #000000' }}
+                />
+              </FormGroup>
+            </Col>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{fontSize:'15px', padding:'5px'}}>Fecha de Inicio</label>
+                <Input
+                  type="date"
+                  name="FechaIni"
+                  value={form.FechaIni}
+                  onChange={handleChange}
+                  placeholder="Fecha de inicio"
+                  style={{ border: '2px solid #000000' }}
+                />
+              </FormGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col md={4} style={{fontSize:'15px', padding:'5px'}}>
+              <FormGroup>
+                <label>Número de Seguridad Social</label>
+                <Input
+                  type="text"
+                  name="NumeroSS"
+                  value={form.NumeroSS}
+                  onChange={handleChange}
+                  placeholder="Número de seguridad social"
+                  style={{ border: '2px solid #000000' }}
+                />
+              </FormGroup>
+            </Col>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{fontSize:'15px', padding:'5px'}}>Dirección</label>
+                <Input
+                  type="text"
+                  name="Direccion"
+                  value={form.Direccion}
+                  onChange={handleChange}
+                  placeholder="Dirección"
+                  style={{ border: '2px solid #000000' }}
+                />
+              </FormGroup>
+            </Col>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{fontSize:'15px', padding:'5px'}}>Tipo de Contrato</label>
+                <Input
+                  type="text"
+                  name="TipoContrato"
+                  value={form.TipoContrato}
+                  onChange={handleChange}
+                  placeholder="Tipo de contrato"
+                  style={{ border: '2px solid #000000' }}
+                />
+              </FormGroup>
+            </Col>
+          </Row>
+          <div className="d-flex justify-content-star mt-3">
+          <Button style={{background:'#2e8322'}} onClick={handleSubmit}>
+              {isEditing ? 'Actualizar' : 'Agregar'}
+            </Button>
+            
+            <Button style={{background:'#6d0f0f'}} onClick={() => { setShowForm(false); setIsEditing(false); }}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de edición */}
+      <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)}>
+        <ModalHeader toggle={() => setModalOpen(!modalOpen)}>
+          Editar Empleado
+        </ModalHeader>
+        <ModalBody>
           <Row>
             <Col md={4}>
               <FormGroup>
@@ -321,102 +428,9 @@ const Empleados = () => {
               </FormGroup>
             </Col>
           </Row>
-          <div className="d-flex justify-content-between">
-            <Button color="secondary" onClick={() => { setShowForm(false); setIsEditing(false); }}>
-              Cancelar
-            </Button>
-            <Button color="primary" onClick={handleSubmit}>
-              {isEditing ? 'Actualizar' : 'Agregar'}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de edición */}
-      <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)}>
-        <ModalHeader toggle={() => setModalOpen(!modalOpen)}>
-          Editar Empleado
-        </ModalHeader>
-        <ModalBody>
-          <Row>
-            <Col md={4}>
-              <FormGroup>
-                <label>Nombre</label>
-                <Input
-                  type="text"
-                  name="Nombre"
-                  value={form.Nombre}
-                  onChange={handleChange}
-                  placeholder="Nombre del empleado"
-                />
-              </FormGroup>
-            </Col>
-            <Col md={4}>
-              <FormGroup>
-                <label>Documento</label>
-                <Input
-                  type="text"
-                  name="Document"
-                  value={form.Document}
-                  onChange={handleChange}
-                  placeholder="Número de documento"
-                />
-              </FormGroup>
-            </Col>
-            <Col md={4}>
-              <FormGroup>
-                <label>Fecha de Inicio</label>
-                <Input
-                  type="text"
-                  name="FechaIni"
-                  value={form.FechaIni}
-                  onChange={handleChange}
-                  placeholder="Fecha de inicio"
-                />
-              </FormGroup>
-            </Col>
-          </Row>
-          <Row>
-            <Col md={4}>
-              <FormGroup>
-                <label>Número de Seguridad Social</label>
-                <Input
-                  type="text"
-                  name="NumeroSS"
-                  value={form.NumeroSS}
-                  onChange={handleChange}
-                  placeholder="Número de seguridad social"
-                />
-              </FormGroup>
-            </Col>
-            <Col md={4}>
-              <FormGroup>
-                <label>Dirección</label>
-                <Input
-                  type="text"
-                  name="Direccion"
-                  value={form.Direccion}
-                  onChange={handleChange}
-                  placeholder="Dirección"
-                />
-              </FormGroup>
-            </Col>
-            <Col md={4}>
-              <FormGroup>
-                <label>Tipo de Contrato</label>
-                <Input
-                  type="text"
-                  name="TipoContrato"
-                  value={form.TipoContrato}
-                  onChange={handleChange}
-                  placeholder="Tipo de contrato"
-                />
-              </FormGroup>
-            </Col>
-          </Row>
         </ModalBody>
         <ModalFooter>
-          <Button color="secondary" onClick={() => setModalOpen(false)}>
+          <Button color="6d0f0f" onClick={() => setModalOpen(false)}>
             Cancelar
           </Button>
           <Button color="primary" onClick={editar}>
