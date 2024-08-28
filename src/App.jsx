@@ -83,8 +83,8 @@ export default function App() {
                 <MenuList darkTheme={darkTheme} />
                 <ToggleThemeButton darkTheme={darkTheme} toggleTheme={toggleTheme} />
               </Sider>
-             <Layout>
-                <Header style={{ padding: 0 }} className='header'>
+              <Layout>
+                <Header style={{ padding:'5px'}} className='header'>
                   <div className="d-flex justify-content-between align-items-center" style={{ height: '100%' }}>
                     <Button
                       className='buttonInt'
