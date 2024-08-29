@@ -23,9 +23,6 @@ import ManoDeObra from './views/module/ManoDeObra/ManoDeObra';
 import RecoveryPassword from './views/module/Auth/olvidoContraseña'; // Nombre 
 import {NavDropdown,Nav} from 'react-bootstrap';
 
-
-
-
 const users = [
   {
     id: 1,
@@ -73,18 +70,18 @@ export default function App() {
           <Route path="/*" element={
             <Layout>
               <Sider
-                className="sidebar"
-                collapsible
-                trigger={null}
-                collapsed={collapsed}
-                onCollapse={() => setCollapsed(!collapsed)}
-              >
-                <Logo />
-                <MenuList darkTheme={darkTheme} />
-                <ToggleThemeButton darkTheme={darkTheme} toggleTheme={toggleTheme} />
-              </Sider>
+        className="sidebar"
+        collapsible
+        trigger={null}
+        collapsed={collapsed}
+        onCollapse={() => setCollapsed(!collapsed)}
+      >
+        <Logo />
+        <MenuList darkTheme={darkTheme} />
+        <ToggleThemeButton darkTheme={darkTheme} toggleTheme={toggleTheme} />
+      </Sider>
               <Layout>
-                <Header style={{ padding:'5px'}} className='header'>
+                <Header style={{ padding:'3px'}} className='header'>
                   <div className="d-flex justify-content-between align-items-center" style={{ height: '100%' }}>
                     <Button
                       className='buttonInt'
