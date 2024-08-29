@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Menu, Modal } from 'antd';
-
 import { Link } from 'react-router-dom';
 import {
   HomeOutlined,
@@ -15,23 +14,33 @@ import {
 const MenuList = ({ darkTheme }) => {
   const [isModalVisible, setIsModalVisible] = useState(false); // Inicialización del estado
 
-  // Definir los estilos en función del tema
+  // Estilos en función del tema
   const menuStyle = {
-    backgroundColor: '#000000', // Fondo negro oscuro
-    color: '#D9A407', // Color de texto dorado
-    height: '8vh', // Asegura que el menú ocupe toda la altura del contenedor
+    backgroundColor: 'black', // Fondo negro para el menú
+    color: 'white', // Color de texto vinotinto
+    fontWeight: 'bold', // Peso de fuente en negrita
+    height: '100vh', // Altura del menú para ocupar toda la pantalla
+    border: 'none', // Quita el borde del menú
+    fontSize:'15px'
   };
+  
 
   const itemStyle = {
     color: 'white',        // Color de texto blanco
-    textDecoration: 'none' // Sin decoración de texto
+    textDecoration: 'none', // Sin decoración de texto
+    backgroundColor: 'black', // Fondo negro para cada item
   };  
 
   const submenuStyle = {
-    color: 'black', // Color de texto dorado para los ítems dentro de SubMenu
-    backgroundColor: 'black'
+    color: 'white', // Color de texto blanco para los ítems dentro del SubMenu
+    backgroundColor: 'black', // Fondo negro para los ítems dentro del SubMenu
+    textDecoration: 'none',
   };
 
+  // Estilos específicos para el SubMenu
+  const subMenuStyle = {
+    backgroundColor: 'black', // Fondo negro para el SubMenu
+  };
 
   // Funciones para manejar la visibilidad del modal
   const showConfirm = () => {
@@ -56,6 +65,7 @@ const MenuList = ({ darkTheme }) => {
         theme={darkTheme ? 'dark' : 'light'}
         mode="inline"
         style={menuStyle}
+        className='MenuCompleto'
       >
         <Menu.Item
           key="dashboard"
@@ -88,25 +98,25 @@ const MenuList = ({ darkTheme }) => {
           key="subtasks"
           icon={<ProductOutlined style={{ color: itemStyle.color }} />}
           title="Producción"
-          style={itemStyle} // Estilo aplicado al SubMenu
+          style={subMenuStyle} // Estilo aplicado al SubMenu
         >
           <Menu.Item key="produccion" style={submenuStyle}>
-            <Link to="/produccion" style={itemStyle}>Producción</Link>
+            <Link to="/produccion" style={submenuStyle}>Producción</Link>
           </Menu.Item>
           <Menu.Item key="orden_produccion" style={submenuStyle}>
-            <Link to="/orden_produccion" style={itemStyle}>Orden de Producción</Link>
+            <Link to="/orden_produccion" style={submenuStyle}>Orden de Producción</Link>
           </Menu.Item>
           <Menu.Item key="producto_insumo" style={submenuStyle}>
-            <Link to="/producto_insumo" style={itemStyle}>Producto Insumo</Link>
+            <Link to="/producto_insumo" style={submenuStyle}>Producto Insumo</Link>
           </Menu.Item>
           <Menu.Item key="insumo" style={submenuStyle}>
-            <Link to="/insumo" style={itemStyle}>Insumo</Link>
+            <Link to="/insumo" style={submenuStyle}>Insumo</Link>
           </Menu.Item>
           <Menu.Item key="empleados" style={submenuStyle}>
-            <Link to="/empleados" style={itemStyle}>Empleados</Link>
+            <Link to="/empleados" style={submenuStyle}>Empleados</Link>
           </Menu.Item>
           <Menu.Item key="proveedores" style={submenuStyle}>
-            <Link to="/proveedores" style={itemStyle}>Proveedores</Link>
+            <Link to="/proveedores" style={submenuStyle}>Proveedores</Link>
           </Menu.Item>
         </Menu.SubMenu>
         <Menu.SubMenu
@@ -114,19 +124,19 @@ const MenuList = ({ darkTheme }) => {
           key="reservas"
           icon={<CalendarOutlined style={{ color: itemStyle.color }} />}
           title="Reservas"
-          style={itemStyle} // Estilo aplicado al SubMenu
+          style={subMenuStyle} // Estilo aplicado al SubMenu
         >
           <Menu.Item key="Calendario" style={submenuStyle}>
             <Link to="/Calendario" style={itemStyle}>Calendario</Link>
           </Menu.Item>
           <Menu.Item key="clientes" style={submenuStyle}>
-            <Link to="/clientes" style={itemStyle}>Clientes</Link>
+            <Link to="/clientes" style={submenuStyle}>Clientes</Link>
           </Menu.Item>
           <Menu.Item key="reservas" style={submenuStyle}>
-            <Link to="/reservas" style={itemStyle}>Reservas</Link>
+            <Link to="/reservas" style={submenuStyle}>Reservas</Link>
           </Menu.Item>
           <Menu.Item key="servicios" style={submenuStyle}>
-            <Link to="/servicios" style={itemStyle}>Servicios</Link>
+            <Link to="/servicios" style={submenuStyle}>Servicios</Link>
           </Menu.Item>
         </Menu.SubMenu>
         <Menu.Item
