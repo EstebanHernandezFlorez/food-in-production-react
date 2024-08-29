@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, Button, Form } from 'react-bootstrap';
-import { Modal } from 'antd';
 
-
-function RecovyPassword({ show, onHide }) {
+function RecoveryPassword({ isOpen, onClose }) {
   const [email, setEmail] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -27,7 +25,7 @@ function RecovyPassword({ show, onHide }) {
       
       setTimeout(() => {
         setShowChangePasswordModal(true);
-      }, 2000); // Muestra el modal de cambio de contraseña después de 2 segundos
+      }, 2000);
     } else {
       setErrorMessage('El correo electrónico no está registrado.');
       setSuccessMessage('');
@@ -35,7 +33,6 @@ function RecovyPassword({ show, onHide }) {
   };
 
   const validatePassword = (password) => {
-    // Validación de contraseña robusta
     return /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{10,}$/.test(password);
   };
 
@@ -60,16 +57,15 @@ function RecovyPassword({ show, onHide }) {
       setPasswordError('Las contraseñas no coinciden.');
       return;
     }
-    // Aquí podrías manejar el cambio de contraseña
     setShowChangePasswordModal(false);
-    onHide(); // Cierra el modal después de cambiar la contraseña
+    onClose(); 
   };
 
   return (
     <>
-      <Modal show={show} onHide={onHide} centered size="lg">
+      <Modal show={isOpen} onHide={onClose} centered size="lg">
         <Modal.Body>
-          <Button variant="danger" onClick={onHide} style={{ float: 'right' }}>X</Button>
+          <Button variant="danger" onClick={onClose} style={{ float: 'right' }}>X</Button>
           <Modal.Title className="text-center">Recuperación de Contraseña</Modal.Title>
           <Form onSubmit={handleSubmit}>
             <Form.Group className="mb-3" controlId="formBasicEmail">
@@ -145,4 +141,4 @@ function RecovyPassword({ show, onHide }) {
   );
 }
 
-export default RecovyPassword;
+export default RecoveryPassword;
