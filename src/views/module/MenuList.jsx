@@ -120,11 +120,15 @@ const MenuList = ({ darkTheme }) => {
           </Menu.Item>
         </Menu.SubMenu>
         <Menu.SubMenu
+        
           key="reservas"
           icon={<CalendarOutlined style={{ color: itemStyle.color }} />}
           title="Reservas"
           style={subMenuStyle} // Estilo aplicado al SubMenu
         >
+          <Menu.Item key="Calendario" style={submenuStyle}>
+            <Link to="/Calendario" style={itemStyle}>Calendario</Link>
+          </Menu.Item>
           <Menu.Item key="clientes" style={submenuStyle}>
             <Link to="/clientes" style={submenuStyle}>Clientes</Link>
           </Menu.Item>

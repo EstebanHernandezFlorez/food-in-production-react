@@ -22,6 +22,9 @@ import Servicios from './views/module/Servicios/Servicios';
 import ManoDeObra from './views/module/ManoDeObra/ManoDeObra';
 import RecoveryPassword from './views/module/Auth/olvidoContraseña'; // Nombre 
 import {NavDropdown,Nav} from 'react-bootstrap';
+import Calendario from './views/module/Calendario/Calendario';
+
+
 
 const users = [
   {
@@ -110,6 +113,8 @@ export default function App() {
                     <Route path="/reservas" element={<Reservas />} />
                     <Route path="/servicios" element={<Servicios />} />
                     <Route path="/mano_de_obra" element={<ManoDeObra />} />
+                    <Route path="/Calendario" element={<Calendario />} />
+
                   </Routes>
                 </Content>
               </Layout>

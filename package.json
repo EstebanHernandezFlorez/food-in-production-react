@@ -10,13 +10,22 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "2": "^3.0.0",
     "@emotion/react": "^11.13.3",
     "@emotion/styled": "^11.13.0",
+    "@fullcalendar/daygrid": "^6.1.15",
+    "@fullcalendar/interaction": "^6.1.15",
+    "@fullcalendar/react": "^6.1.15",
     "@heroicons/react": "^2.1.5",
     "@mui/material": "^5.16.7",
+    "alert": "^6.0.2",
     "antd": "^5.20.1",
     "bootstrap": "^5.3.3",
+    "calendar": "^0.1.1",
+    "full": "^1.0.1",
     "heroicons": "^2.1.5",
+    "install": "^0.13.0",
+    "npm": "^10.8.3",
     "react": "^18.3.1",
     "react-bootstrap": "^2.10.4",
     "react-dom": "^18.3.1",
@@ -24,7 +33,11 @@
     "react-paginate": "^8.2.0",
     "react-router-dom": "^6.26.0",
     "reactstrap": "^9.2.2",
+<<<<<<< HEAD
     "styled-components": "^6.1.12",
+=======
+    "sweet": "^0.1.1",
+>>>>>>> 76f2efd33ff48d864ef7f8087040d6e3ae3118aa
     "sweetalert2": "^11.12.4"
   },
   "devDependencies": {
