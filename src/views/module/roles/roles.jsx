@@ -1,16 +1,4 @@
 
-11 de 480
-PERMISOS Y ROLES REACT
-Recibidos
-
-Anderson Cartagena Hidalgo <cartagenahianderson@gmail.com>
-Adjuntos
-mié, 28 ago, 10:06 (hace 2 días)
-para mí
-
-
- 1 archivo adjunto
-•  Analizado por Gmail
 import { useState } from "react";
 import { Table, Button, Container, Row, Col, FormGroup, Input } from 'reactstrap';
 import { PencilSquareIcon, TrashIcon } from "@heroicons/react/16/solid";
