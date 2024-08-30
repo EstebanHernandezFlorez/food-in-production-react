@@ -20,19 +20,23 @@ import Clientes from './views/module/Clientes/Clientes';
 import Reservas from './views/module/Reservas/Reservas';
 import Servicios from './views/module/Servicios/Servicios';
 import ManoDeObra from './views/module/ManoDeObra/ManoDeObra';
-import EditarPerfil from "./views/module/EditarPerfil/EditarPerfil";
+import RecoveryPassword from './views/module/Auth/olvidoContraseña'; // Nombre 
+import {NavDropdown,Nav} from 'react-bootstrap';
+import Calendario from './views/module/Calendario/Calendario';
+
+
 
 const users = [
   {
     id: 1,
     usuario: "Carla Gomez",
-    contrasena: "12345", // Convertido a string para comparación
+    contrasena: "12345",
     rol: "auxiliar de cocina"
   },
   {
     id: 2,
-    usuario: "Luis gutierrez",
-    contrasena: "12345", // Convertido a string para comparación
+    usuario: "Luis Gutierrez",
+    contrasena: "12345",
     rol: "administrador"
   },
 ];
@@ -40,21 +44,31 @@ const users = [
 const { Header, Sider, Content } = Layout;
 
 export default function App() {
+  const handleSelectcted = (eventKey) => alert(`sele  const handleSelectcted ${eventKey}`);
+
   const [darkTheme, setDarkTheme] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false); // Estado de autenticación
+  const [isRecoveryOpen, setIsRecoveryOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const toggleTheme = () => {
     setDarkTheme(!darkTheme);
   };
 
+  const openRecoverModal = (e) => {
+    e.preventDefault();
+    setIsRecoveryOpen(true);
+  };
+  
+  const closeRecoverModal = () => {
+    setIsRecoveryOpen(false);
+  };
+ 
   return (
     <Router>
       <Routes>
-        {/* Ruta de inicio de sesión */}
-        <Route path="/" element={<Login setIsAuthenticated={setIsAuthenticated} />} />
+        <Route path="/" element={<Login setIsAuthenticated={setIsAuthenticated} openRecoverModal={openRecoverModal} />} />
         
-        {/* Rutas protegidas que requieren autenticación */}
         {isAuthenticated ? (
           <Route path="/*" element={
             <Layout>
@@ -76,10 +90,11 @@ export default function App() {
                       className='buttonInt'
                       type='text'
                       icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-                      onClick={() => setCollapsed(!collapsed)}
+                      onC lick={() => setCollapsed(!collapsed)}
                     />
-                    <h1 style={{ margin: 0}}>Food in Production</h1>
-
+                    <NavDropdown title={<span><UserOutlined style={{ marginRight: '8px' }} /> Cargar Nombre Usuario</span>} id="nav-dropdown">
+                    <NavDropdown.Item href="#action1">Perfil</NavDropdown.Item>
+                    </NavDropdown>
 
                   </div>
                 </Header>
@@ -98,6 +113,8 @@ export default function App() {
                     <Route path="/reservas" element={<Reservas />} />
                     <Route path="/servicios" element={<Servicios />} />
                     <Route path="/mano_de_obra" element={<ManoDeObra />} />
+                    <Route path="/Calendario" element={<Calendario />} />
+
                   </Routes>
                 </Content>
               </Layout>
@@ -107,11 +124,14 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" />} />
         )}
       </Routes>
+
+      {/* Modal de recuperación de contraseña */}
+      <RecoveryPassword isOpen={isRecoveryOpen} onClose={closeRecoverModal} />
     </Router>
   );
 }
 
-function Login({ setIsAuthenticated }) {
+function Login({ setIsAuthenticated, openRecoverModal }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
@@ -123,7 +143,7 @@ function Login({ setIsAuthenticated }) {
     
     if (validUser) {
       setError("");
-      setIsAuthenticated(true); // Establecer la autenticación
+      setIsAuthenticated(true);
       navigate("/dashboard");
     } else {
       setError("Usuario o contraseña incorrectos");
@@ -133,74 +153,65 @@ function Login({ setIsAuthenticated }) {
   return (
     <div className="row h-100 w-100">
       <div className="col-sm-12 col-md-6 d-flex justify-content-center align-items-center">
-    <div className="d-flex justify-content-center align-items-center h-100 w-100 ">
-    <form className="p-5 border border-black border border-2 " onSubmit={handleSubmit}>
-      <div className="d-flex justify-content-center ">
-        <img 
-          src="../src/assets/logo.jpg" 
-          alt="logo" 
-          style={{ width: 100, height: 100 }} 
-          className="justify-content-center"
-        />
-      </div>  
-      <div className="form-group d-flex flex-column align-items-center">
-    <label htmlFor="username" className="form-label">Usuario</label>
-      <div className="input-group mb-3 w-100 justify-content-center">
-    <div className="input-group-prepend">
-      <span className="input-group-text">
-        <i className="fa fa-user"></i>
-      </span>
-    </div>
-    <input
-      type="text"
-      className="form-control border border-black border-2"
-      id="username"
-      placeholder="correo@micorreo.com"
-      value={username}
-      onChange={(e) => setUsername(e.target.value)}
-    />
-    </div>
-    </div>
+        <div className="d-flex justify-content-center align-items-center h-100 w-100 ">
+          <form className="p-5 border border-black border border-2" onSubmit={handleSubmit}>
+            <div className="d-flex justify-content-center">
+              <img 
+                src="../src/assets/logo.jpg" 
+                alt="logo" 
+                style={{ width: 100, height: 100 }} 
+                className="justify-content-center"
+              />
+            </div>  
+            <div className="form-group d-flex flex-column align-items-center">
+              <label htmlFor="username" className="form-label">Usuario</label>
+              <div className="input-group mb-3 w-100 justify-content-center">
+                <div className="input-group-prepend"></div>
+                <input
+                  type="text"
+                  className="form-control border border-black border-2"
+                  id="username"
+                  placeholder="correo@micorreo.com"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+              </div>
+            </div>
 
-    <div className="form-group d-flex flex-column align-items-center">
-     <label htmlFor="password" className="form-label">Contraseña</label>
-      <div className="input-group mb-3 w-100 justify-content-center">
-      <div className="input-group-prepend">
-      <span className="input-group-text">
-        <i className="fa fa-lock"></i>
-      </span>
-    </div>
-    <input
-      type="password"
-      className="form-control border border-black border-2"
-      id="password"
-      placeholder="Ingrese la contraseña"
-      value={password}
-      onChange={(e) => setPassword(e.target.value)}
-    />
-    </div>
-    </div>
+            <div className="form-group d-flex flex-column align-items-center">
+              <label htmlFor="password" className="form-label">Contraseña</label>
+              <div className="input-group mb-3 w-100 justify-content-center">
+                <div className="input-group-prepend"></div>
+                <input
+                  type="password"
+                  className="form-control border border-black border-2"
+                  id="password"
+                  placeholder="Ingrese la contraseña"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+            </div>
 
-      {error && <div className="text-danger mb-3">{error}</div>}
-      <div className="my-3 text-center link-tex " >
-        <a href="#!"> ¿Ha olvidado su contraseña?</a>
+            {error && <div className="text-danger mb-3">{error}</div>}
+            <div className="my-3 text-center link-text">
+              <a href="#!" onClick={openRecoverModal}> ¿Ha olvidado su contraseña?</a>
+            </div>
+            <div className="btn-group w-100">
+              <button 
+                type="submit" 
+                className="btn w-100" 
+                style={{ backgroundColor: '#8C1616', color: 'white' }}>
+                Ingresar
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-      <div className="btn-group w-100">
-      <button 
-       type="submit" 
-      className="btn w-100" 
-      style={{ backgroundColor: '#cc4123', color: 'white' }}>
-    Ingresar
-    </button>
-      </div>
-
-    </form>
-    </div>
-    </div>
 
       <article className="col-sm-12 col-md-6">
         <div className="d-flex justify-content-center align-items-center h-100">
-          <img src="../src/assets/login.jpg" alt="food-in-production" width="800" height="800" className="rounded"/>
+          <img src="../src/assets/login.jpg" alt="food-in-production" width="790" height="734" className="rounded"/>
         </div>
       </article>
     </div>

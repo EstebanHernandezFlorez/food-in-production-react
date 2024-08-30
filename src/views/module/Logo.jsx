@@ -1,14 +1,12 @@
 import React from "react";
-import {FireFilled} from '@ant-design/icons'
 
-const Logo = ()=>{
-    return(
+const Logo = () => {
+    return (
         <div className="logo">
-            <div className="logo-icon">
-                <FireFilled/>
-            </div>
+            <img src="../../assents/logo.png" alt="Logo" />
+            <h1>Food in Production</h1>
         </div>
-    )
+    );
 }
 
-export default Logo
+export default Logo;

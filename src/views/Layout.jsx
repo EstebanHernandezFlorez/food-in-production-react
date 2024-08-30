@@ -4,22 +4,8 @@ import { Layout, Button, Dropdown, Menu } from 'antd';
 import { MenuUnfoldOutlined, MenuFoldOutlined, UserOutlined } from '@ant-design/icons';
 import { BrowserRouter as Router, Route, Routes, useNavigate } from 'react-router-dom';
 
-// Importa los componentes de página
-import Login from './views/module/Auth/Login';
-import Dashboard from './views/module/Dashboard/dashboard';
-import Roles from './views/module/roles/roles';
-import Usuarios from './views/module/usuarios/usuarios';
-import Produccion from './views/module/Produccion/produccion';
-import OrdenProduccion from './views/module/OrdenProduccion/OrdenProduccion';
-import ProductoInsumo from './views/module/ProductoInsumo/ProductoInsumo';
-import Insumo from './views/module/Insumo/Insumo';
-import Empleados from './views/module/Empleados/Empleados';
-import Proveedores from './views/module/Proveedores/Proveedores';
-import Clientes from './views/module/Clientes/Clientes';
-import Reservas from './views/module/Reservas/Reservas';
-import Servicios from './views/module/Servicios/Servicios';
-import ManoDeObra from './views/module/ManoDeObra/ManoDeObra';
-import EditarPerfil from './views/module/EditarPerfil/EditarPerfil';
+
+
 
 const { Header, Sider, Content } = Layout;
 
@@ -75,13 +61,7 @@ export default function AppLayout({ children }) {
               <h1 style={{ margin: 0 }}>Food in Production</h1>
               <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
                 <Dropdown overlay={menu} trigger={['click']}>
-                  <Button
-                    className="buttonStatus"
-                    type="text"
-                    icon={<UserOutlined />}
-                  >
-                    Lina Marcela: Admin
-                  </Button>
+                  
                 </Dropdown>
               </div>
             </div>
