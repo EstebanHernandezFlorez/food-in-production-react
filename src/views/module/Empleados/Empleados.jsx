@@ -4,7 +4,6 @@ import { Table, Button, Container, Row, Col, FormGroup, Input, Modal, ModalHeade
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 import { IoSearchOutline } from "react-icons/io5";
 import { Snackbar, Alert } from '@mui/material';
-
 const initialData = [
   {id: 1, Nombre: "Carolina Guzman", Document: 16514416,FechaIni: "15-07-2020",ContactoEmerg: "319898119",Parentesco: "Madre",NombreFamiliar: "Carolina Zapata", GrupoSang: "O+",NumeroSS: 61515371,Direccion: "cl 76 j 12b 55",TipoContrato: "doble tiempo"},
   {id: 2,Nombre: "Andra Torres",Document: 18761919,FechaIni: "01-02-2023",ContactoEmerg: "3001234567",Parentesco: "Hermano",NombreFamiliar: "Juan Torres",GrupoSang: "A+",NumeroSS: 12345678,Direccion: "Av. El Dorado 92-45",TipoContrato: "tiempo completo"}, 
@@ -16,7 +15,6 @@ const initialData = [
   {id: 8,Nombre: "Carlos Rodríguez",Document: 56789012,FechaIni: "01-01-2020",ContactoEmerg: "3167890123",Parentesco: "Esposa",NombreFamiliar: "María Rodríguez",GrupoSang: "AB-",NumeroSS: 78901234,Direccion: "Cra 50 #30-40",TipoContrato: "tiempo completo"}
   
 ];
-
 const Empleados = () => {
   const [data, setData] = useState(initialData);
   const [form, setForm] = useState({
@@ -42,7 +40,6 @@ const Empleados = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false); // Estado para el modal de edición
   const itemsPerPage = 7;
-
   // States for validation
   const [formErrors, setFormErrors] = useState({
     Nombre: false,
@@ -56,11 +53,9 @@ const Empleados = () => {
     Direccion: false,
     TipoContrato: false
   });
-
   const handleTableSearch = (e) => {
     setTableSearchText(e.target.value.toLowerCase());
   };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prevForm => ({
@@ -68,21 +63,17 @@ const Empleados = () => {
       [name]: value
     }));
   };
-
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
   };
-
   const openSnackbar = (message, severity) => {
     setSnackbarMessage(message);
     setSnackbarSeverity(severity);
     setSnackbarOpen(true);
   };
-
   const closeSnackbar = () => {
     setSnackbarOpen(false);
   };
-
   const validateForm = () => {
     const errors = {
       Nombre: !form.Nombre,
@@ -100,18 +91,15 @@ const Empleados = () => {
     return !Object.values(errors).includes(true);
   };
   
-
   const formatDate = (date) => {
     const [day, month, year] = date.split('-');
     return `${year}-${month}-${day}`;
   };
-
   const handleSubmit = () => {
     if (!validateForm()) {
       openSnackbar("Por favor, ingrese todos los campos", 'warning');
       return;
     }
-
     const { Nombre, Document, FechaIni, ContactoEmerg, Parentesco, NombreFamiliar, GrupoSang,  NumeroSS, Direccion, TipoContrato } = form;
   
     const empleadoExistente = data.find(registro => registro.Document.toString() === Document.toString());
@@ -143,7 +131,6 @@ const Empleados = () => {
     setShowForm(false);
     openSnackbar("Empleado agregado exitosamente", 'success');
   };
-
   const editar = () => {
     if (!validateForm()) {
       openSnackbar("Por favor, ingrese todos los campos", 'warning');
@@ -169,7 +156,6 @@ const Empleados = () => {
     setModalOpen(false); // Cierra el modal después de actualizar
     openSnackbar("Empleado editado exitosamente", 'success');
   };
-
   const eliminar = (dato) => {
     if (window.confirm(`¿Realmente desea eliminar el registro ${dato.id}?`)) {
       const updatedData = data.filter(registro => registro.id !== dato.id);
@@ -177,7 +163,6 @@ const Empleados = () => {
       openSnackbar("Empleado eliminado exitosamente", 'success');
     }
   };
-
   const cambiarEstado = (id) => {
     const updatedData = data.map((registro) => {
       if (registro.id === id) {
@@ -190,23 +175,19 @@ const Empleados = () => {
     openSnackbar("Estado del empleado actualizado exitosamente", 'success');
   };
   
-
   const filteredData = data.filter(item =>
     item.Nombre.toLowerCase().includes(tableSearchText) ||
     item.Document.toString().includes(tableSearchText) ||
     item.FechaIni.toLowerCase().includes(tableSearchText) ||
     item.NumeroSS.toString().includes(tableSearchText)
   );
-
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
-
   const pageNumbers = [];
   for (let i = 1; i <= Math.ceil(filteredData.length / itemsPerPage); i++) {
     pageNumbers.push(i);
   }
-
   return (
     <Container>
       <br />
@@ -279,7 +260,6 @@ const Empleados = () => {
                         </Button>
                       </div>
                     </td>
-
                   </tr>
                 ))
               ) : (
@@ -289,7 +269,6 @@ const Empleados = () => {
               )}
             </tbody>
           </Table>
-
           <ul className="pagination">
         {pageNumbers.map(number => (
           <li key={number} className={`page-item ${currentPage === number ? 'active' : ''}`}>
@@ -299,11 +278,8 @@ const Empleados = () => {
           </li>
         ))}
       </ul>
-
-
         </>
       )}
-
       {/* Formulario de inserción */}
       {showForm && (
         <div>
@@ -482,7 +458,6 @@ const Empleados = () => {
           </div>
         </div>
       )}
-
       {/* Modal de edición */}
       <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)}>
         <ModalHeader toggle={() => setModalOpen(!modalOpen)}>
@@ -647,7 +622,6 @@ const Empleados = () => {
         </Button>
         </ModalFooter>
       </Modal>
-
       {/* Snackbar */}
       <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={closeSnackbar}>
         <Alert onClose={closeSnackbar} severity={snackbarSeverity}>

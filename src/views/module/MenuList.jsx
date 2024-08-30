@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Menu, Modal } from 'antd';
-
 import { Link } from 'react-router-dom';
 import {
   HomeOutlined,
@@ -15,24 +14,32 @@ import {
 const MenuList = ({ darkTheme }) => {
   const [isModalVisible, setIsModalVisible] = useState(false); // Inicialización del estado
 
-  // Definir los estilos en función del tema
+  // Estilos en función del tema
   const menuStyle = {
-    backgroundColor: '#000000', // Fondo negro oscuro
-    color: '#D9A407', // Color de texto dorado
-    height: '8vh', // Asegura que el menú ocupe toda la altura del contenedor
+    backgroundColor: 'black', // Fondo negro para el menú
+    color: 'white', // Color de texto vinotinto
+    fontWeight: 'bold', // Peso de fuente en negrita
+    height: '100vh', // Altura del menú para ocupar toda la pantalla
+    border: 'none', // Quita el borde del menú
+    fontSize:'15px'
   };
+  
 
   const itemStyle = {
-    color: '#D9A407', // Color de texto dorado
-  };
+    color: 'white',        // Color de texto blanco
+    textDecoration: 'none', // Sin decoración de texto
+    backgroundColor: 'black', // Fondo negro para cada item
+  };  
 
   const submenuStyle = {
-    color: '#D9A407', // Color de texto dorado para los ítems dentro de SubMenu
+    color: 'white', // Color de texto blanco para los ítems dentro del SubMenu
+    backgroundColor: 'black', // Fondo negro para los ítems dentro del SubMenu
+    textDecoration: 'none',
   };
 
-  const activeItemStyle = {
-    backgroundColor: '#444444', // Color de fondo cuando el ítem está activo
-    color: '#D9A407', // Color de texto dorado cuando el ítem está activo
+  // Estilos específicos para el SubMenu
+  const subMenuStyle = {
+    backgroundColor: 'black', // Fondo negro para el SubMenu
   };
 
   // Funciones para manejar la visibilidad del modal
@@ -58,6 +65,7 @@ const MenuList = ({ darkTheme }) => {
         theme={darkTheme ? 'dark' : 'light'}
         mode="inline"
         style={menuStyle}
+        className='MenuCompleto'
       >
         <Menu.Item
           key="dashboard"
@@ -90,7 +98,7 @@ const MenuList = ({ darkTheme }) => {
           key="subtasks"
           icon={<ProductOutlined style={{ color: itemStyle.color }} />}
           title="Producción"
-          style={itemStyle} // Estilo aplicado al SubMenu
+          style={subMenuStyle} // Estilo aplicado al SubMenu
         >
           <Menu.Item key="produccion" style={submenuStyle}>
             <Link to="/produccion" style={submenuStyle}>Producción</Link>
@@ -112,11 +120,15 @@ const MenuList = ({ darkTheme }) => {
           </Menu.Item>
         </Menu.SubMenu>
         <Menu.SubMenu
+        
           key="reservas"
           icon={<CalendarOutlined style={{ color: itemStyle.color }} />}
           title="Reservas"
-          style={itemStyle} // Estilo aplicado al SubMenu
+          style={subMenuStyle} // Estilo aplicado al SubMenu
         >
+          <Menu.Item key="Calendario" style={submenuStyle}>
+            <Link to="/Calendario" style={itemStyle}>Calendario</Link>
+          </Menu.Item>
           <Menu.Item key="clientes" style={submenuStyle}>
             <Link to="/clientes" style={submenuStyle}>Clientes</Link>
           </Menu.Item>

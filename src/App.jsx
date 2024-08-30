@@ -22,7 +22,7 @@ import Servicios from './views/module/Servicios/Servicios';
 import ManoDeObra from './views/module/ManoDeObra/ManoDeObra';
 import RecoveryPassword from './views/module/Auth/olvidoContraseña'; // Nombre 
 import {NavDropdown,Nav} from 'react-bootstrap';
-
+import Calendario from './views/module/Calendario/Calendario';
 
 
 
@@ -73,18 +73,18 @@ export default function App() {
           <Route path="/*" element={
             <Layout>
               <Sider
-                className="sidebar"
-                collapsible
-                trigger={null}
-                collapsed={collapsed}
-                onCollapse={() => setCollapsed(!collapsed)}
-              >
-                <Logo />
-                <MenuList darkTheme={darkTheme} />
-                <ToggleThemeButton darkTheme={darkTheme} toggleTheme={toggleTheme} />
-              </Sider>
+        className="sidebar"
+        collapsible
+        trigger={null}
+        collapsed={collapsed}
+        onCollapse={() => setCollapsed(!collapsed)}
+      >
+        <Logo />
+        <MenuList darkTheme={darkTheme} />
+        <ToggleThemeButton darkTheme={darkTheme} toggleTheme={toggleTheme} />
+      </Sider>
               <Layout>
-                <Header style={{ padding:'5px'}} className='header'>
+                <Header style={{ padding:'3px'}} className='header'>
                   <div className="d-flex justify-content-between align-items-center" style={{ height: '100%' }}>
                     <Button
                       className='buttonInt'
@@ -92,8 +92,6 @@ export default function App() {
                       icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
                       onC lick={() => setCollapsed(!collapsed)}
                     />
-                    <h1 style={{ margin: 0 }}>Food in Production</h1> 
-
                     <NavDropdown title={<span><UserOutlined style={{ marginRight: '8px' }} /> Cargar Nombre Usuario</span>} id="nav-dropdown">
                     <NavDropdown.Item href="#action1">Perfil</NavDropdown.Item>
                     <NavDropdown.Item href="#action2">Cerrar Sesión</NavDropdown.Item>
@@ -116,6 +114,8 @@ export default function App() {
                     <Route path="/reservas" element={<Reservas />} />
                     <Route path="/servicios" element={<Servicios />} />
                     <Route path="/mano_de_obra" element={<ManoDeObra />} />
+                    <Route path="/Calendario" element={<Calendario />} />
+
                   </Routes>
                 </Content>
               </Layout>
