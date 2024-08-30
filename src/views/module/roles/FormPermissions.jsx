@@ -1,4 +1,4 @@
-            import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 
             export default function FormPermissions({ onAddRole, onUpdateRole, selectedRole, nameRol }) {
               const permissions = [
@@ -159,4 +159,4 @@
                   )}
                 </form>
               );
-            }            
+            }
