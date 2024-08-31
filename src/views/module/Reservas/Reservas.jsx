@@ -39,7 +39,6 @@ const Reservas = () => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
   const [currentPage, setCurrentPage] = useState(1);
-  const [modalOpen, setModalOpen] = useState(false);
   const itemsPerPage = 7;
 
   const handleSearch = (e) => {
@@ -138,7 +137,7 @@ const Reservas = () => {
 
     setData(updatedData);
     setIsEditing(false);
-    setModalOpen(false);
+    setShowForm(false);
     openSnackbar("Reserva editada exitosamente", 'success');
   };
 
@@ -213,7 +212,7 @@ const Reservas = () => {
                     <Button color="warning" onClick={() => {
                       setForm(dato);
                       setIsEditing(true);
-                      setModalOpen(true);
+                      setShowForm(true);
                     }}>
                       <FaEdit />
                     </Button>
@@ -236,73 +235,91 @@ const Reservas = () => {
           </Row>
         </Col>
       </Row>
-      <Modal isOpen={showForm} toggle={() => setShowForm(!showForm)}>
-        <ModalHeader toggle={() => setShowForm(!showForm)}>
-          {isEditing ? 'Editar Reserva' : 'Agregar Reserva'}
-        </ModalHeader>
+
+      <Modal isOpen={showForm}>
+        <ModalHeader>{isEditing ? 'Editar Reserva' : 'Agregar Reserva'}</ModalHeader>
         <ModalBody>
           <FormGroup>
-            <Input name="NombreCompleto" placeholder="Nombre Completo" value={form.NombreCompleto} onChange={handleChange} />
+            <label>Nombre Completo:</label>
+            <Input type="text" name="NombreCompleto" value={form.NombreCompleto} onChange={handleChange} />
           </FormGroup>
           <FormGroup>
-            <Input name="Distintivo" placeholder="Distintivo" value={form.Distintivo} onChange={handleChange} />
+            <label>Distintivo:</label>
+            <Input type="text" name="Distintivo" value={form.Distintivo} onChange={handleChange} />
           </FormGroup>
           <FormGroup>
-            <Input name="CategoriaCliente" placeholder="Categoria Cliente" value={form.CategoriaCliente} onChange={handleChange} />
+            <label>Categoria Cliente:</label>
+            <Input type="text" name="CategoriaCliente" value={form.CategoriaCliente} onChange={handleChange} />
           </FormGroup>
           <FormGroup>
-            <Input name="Correo" placeholder="Correo" type="email" value={form.Correo} onChange={handleChange} />
+            <label>Correo:</label>
+            <Input type="email" name="Correo" value={form.Correo} onChange={handleChange} />
           </FormGroup>
           <FormGroup>
-            <Input name="Celular" placeholder="Celular" type="tel" value={form.Celular} onChange={handleChange} />
+            <label>Celular:</label>
+            <Input type="text" name="Celular" value={form.Celular} onChange={handleChange} />
           </FormGroup>
           <FormGroup>
-            <Input name="Direccion" placeholder="Dirección" value={form.Direccion} onChange={handleChange} />
+            <label>Dirección:</label>
+            <Input type="text" name="Direccion" value={form.Direccion} onChange={handleChange} />
           </FormGroup>
           <FormGroup>
-            <Input name="NroPersonas" placeholder="Número de Personas" type="number" value={form.NroPersonas} onChange={handleChange} />
+            <label>Número de Personas:</label>
+            <Input type="number" name="NroPersonas" value={form.NroPersonas} onChange={handleChange} />
           </FormGroup>
           <FormGroup>
-            <Input name="CantidadMesas" placeholder="Cantidad de Mesas" type="number" value={form.CantidadMesas} onChange={handleChange} />
+            <label>Cantidad de Mesas:</label>
+            <Input type="number" name="CantidadMesas" value={form.CantidadMesas} onChange={handleChange} />
           </FormGroup>
           <FormGroup>
-            <Input name="TipoEvento" placeholder="Tipo de Evento" value={form.TipoEvento} onChange={handleChange} />
+            <label>Tipo de Evento:</label>
+            <Input type="text" name="TipoEvento" value={form.TipoEvento} onChange={handleChange} />
           </FormGroup>
           <FormGroup>
-            <Input name="DuracionEvento" placeholder="Duración del Evento" value={form.DuracionEvento} onChange={handleChange} />
+            <label>Duración del Evento:</label>
+            <Input type="text" name="DuracionEvento" value={form.DuracionEvento} onChange={handleChange} />
           </FormGroup>
           <FormGroup>
-            <Input name="FechaHora" placeholder="Fecha y Hora" type="datetime-local" value={form.FechaHora} onChange={handleChange} />
+            <label>Fecha y Hora:</label>
+            <Input type="datetime-local" name="FechaHora" value={form.FechaHora} onChange={handleChange} />
           </FormGroup>
           <FormGroup>
-            <Input name="ServiciosAdicionales" placeholder="Servicios Adicionales" value={form.ServiciosAdicionales} onChange={handleChange} />
+            <label>Servicios Adicionales:</label>
+            <Input type="text" name="ServiciosAdicionales" value={form.ServiciosAdicionales} onChange={handleChange} />
           </FormGroup>
           <FormGroup>
-            <Input name="Observaciones" placeholder="Observaciones" type="textarea" value={form.Observaciones} onChange={handleChange} />
+            <label>Observaciones:</label>
+            <Input type="text" name="Observaciones" value={form.Observaciones} onChange={handleChange} />
           </FormGroup>
           <FormGroup>
-            <Input name="MontoDecoracion" placeholder="Monto Decoración" type="number" value={form.MontoDecoracion} onChange={handleChange} />
+            <label>Monto Decoración:</label>
+            <Input type="number" name="MontoDecoracion" value={form.MontoDecoracion} onChange={handleChange} />
           </FormGroup>
           <FormGroup>
-            <Input name="TotalPagar" placeholder="Total a Pagar" type="number" value={form.TotalPagar} onChange={handleChange} />
+            <label>Total a Pagar:</label>
+            <Input type="number" name="TotalPagar" value={form.TotalPagar} onChange={handleChange} />
           </FormGroup>
           <FormGroup>
-            <Input name="Abono" placeholder="Abono" type="number" value={form.Abono} onChange={handleChange} />
+            <label>Abono:</label>
+            <Input type="number" name="Abono" value={form.Abono} onChange={handleChange} />
           </FormGroup>
           <FormGroup>
-            <Input name="Restante" placeholder="Restante" type="number" value={form.Restante} onChange={handleChange} />
+            <label>Restante:</label>
+            <Input type="number" name="Restante" value={form.Restante} onChange={handleChange} />
           </FormGroup>
           <FormGroup>
-            <Input name="FormaPago" placeholder="Forma de Pago" value={form.FormaPago} onChange={handleChange} />
+            <label>Forma de Pago:</label>
+            <Input type="text" name="FormaPago" value={form.FormaPago} onChange={handleChange} />
           </FormGroup>
         </ModalBody>
         <ModalFooter>
-          <Button color="secondary" onClick={() => setShowForm(false)}>Cancelar</Button>
           <Button color="primary" onClick={isEditing ? editar : handleSubmit}>
-            {isEditing ? 'Guardar Cambios' : 'Agregar Reserva'}
+            {isEditing ? 'Editar' : 'Agregar'}
           </Button>
+          <Button color="secondary" onClick={() => setShowForm(false)}>Cancelar</Button>
         </ModalFooter>
       </Modal>
+
       <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={closeSnackbar}>
         <Alert onClose={closeSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }}>
           {snackbarMessage}
