@@ -632,4 +632,4 @@ const Empleados = () => {
   );
 };
 
-export default Empleados
+export default Empleados;

@@ -88,9 +88,9 @@ class Servicios extends React.Component {
     if (!this.validarFormulario()) return;
 
     const { data, form } = this.state;
-    const nombreExistente = data.find(servicio => servicio.Nombre.toLowerCase() === form.Nombre.toLowerCase());
+    const tipoDocumentoExistente = data.find(servicio => servicio.Nombre.toLowerCase() === form.Nombre.toLowerCase());
 
-    if (nombreExistente) {
+    if (tipoDocumentoExistente) {
       this.setState({ 
         snackbarMessage: 'El servicio ya existe.', 
         snackbarSeverity: 'error',
@@ -115,11 +115,11 @@ class Servicios extends React.Component {
     if (!this.validarFormulario()) return;
 
     const { data } = this.state;
-    const nombreExistente = data.find(servicio => servicio.Nombre.toLowerCase() === dato.Nombre.toLowerCase() && servicio.id !== dato.id);
+    const tipoDocumentoExistente = data.find(servicio => servicio.Nombre.toLowerCase() === dato.Nombre.toLowerCase() && servicio.id !== dato.id);
 
-    if (nombreExistente) {
+    if (tipoDocumentoExistente) {
       this.setState({ 
-        snackbarMessage: 'No se puede editar. Otro servicio con el mismo nombre ya existe.', 
+        snackbarMessage: 'No se puede editar. Otro servicio con el mismo tipoDocumento ya existe.', 
         snackbarSeverity: 'error',
         snackbarOpen: true 
       });

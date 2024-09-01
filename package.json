@@ -33,7 +33,7 @@
     "react-paginate": "^8.2.0",
     "react-router-dom": "^6.26.0",
     "reactstrap": "^9.2.2",
-    "styled-components": "^6.1.12",
+    "sweet": "^0.1.1",
     "sweetalert2": "^11.12.4"
   },
   "devDependencies": {

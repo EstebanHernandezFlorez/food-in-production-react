@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 export default function EditarPerfil() {
   const [formData, setFormData] = useState({
     documento: '12345678', // Ejemplo, puedes obtener esto de la sesión
-    nombreCompleto: 'Lina Marcela',
+    tipoDocumentoCompleto: 'Lina Marcela',
     correo: 'lina@example.com',
     celular: '1234567890',
     rol: 'Admin',
@@ -43,13 +43,13 @@ export default function EditarPerfil() {
           />
         </div>
         <div className="mb-3">
-          <label htmlFor="nombreCompleto" className="form-label">Nombre Completo</label>
+          <label htmlFor="tipoDocumentoCompleto" className="form-label">Nombre Completo</label>
           <input
             type="text"
             className="form-control"
-            id="nombreCompleto"
-            name="nombreCompleto"
-            value={formData.nombreCompleto}
+            id="tipoDocumentoCompleto"
+            name="tipoDocumentoCompleto"
+            value={formData.tipoDocumentoCompleto}
             readOnly
           />
         </div>
