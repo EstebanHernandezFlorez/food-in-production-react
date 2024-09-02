@@ -1,7 +1,5 @@
-.comfortaa-default {
-    font-family: "Comfortaa", sans-serif;
-    font-optical-sizing: auto;
-    font-weight: 400; /* Puedes ajustar el peso aquí, por ejemplo, 300, 400, 700 */
-    font-style: normal;
-  }
-  
+.full-width-image {
+  width: 100dvb;            /* Asegura que la imagen ocupe el 100% del ancho del contenedor */
+  height: 70vh;          /* Mantiene la proporción de la imagen */
+  display: block;        /* Elimina el espacio extra debajo de la imagen */
+}

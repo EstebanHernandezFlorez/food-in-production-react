@@ -73,31 +73,37 @@ export default function App() {
           <Route path="/*" element={
             <Layout>
               <Sider
-        className="sidebar"
-        collapsible
-        trigger={null}
-        collapsed={collapsed}
-        onCollapse={() => setCollapsed(!collapsed)}
-      >
-        <Logo />
-        <MenuList darkTheme={darkTheme} />
-        <ToggleThemeButton darkTheme={darkTheme} toggleTheme={toggleTheme} />
-      </Sider>
-              <Layout>
-                <Header style={{ padding:'3px'}} className='header'>
-                  <div className="d-flex justify-content-between align-items-center" style={{ height: '100%' }}>
-                    <Button
-                      className='buttonInt'
-                      type='text'
-                      icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-                      onC lick={() => setCollapsed(!collapsed)}
-                    />
-                    <NavDropdown title={<span><UserOutlined style={{ marginRight: '8px' }} /> Cargar Nombre Usuario</span>} id="nav-dropdown">
+                className="sidebar"
+                collapsible
+                trigger={null}
+                collapsed={collapsed}
+                onCollapse={() => setCollapsed(!collapsed)}
+            >
+                <Logo collapsed={collapsed} />
+                <MenuList darkTheme={darkTheme} />
+                <ToggleThemeButton darkTheme={darkTheme} toggleTheme={toggleTheme} />
+              </Sider>
+            <Layout>
+            <Header style={{ padding: '3px', borderBottom: '5px solid #800020', position: 'relative' }} className='header'>
+              <div className="d-flex justify-content-between align-items-center" style={{ height: '100%' }}>
+                <Button
+                  className='buttonInt'
+                  type='text'
+                  icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+                  onClick={() => setCollapsed(!collapsed)}
+                  style={{ fontSize: collapsed ? '16px' : '24px', transition: 'font-size 0.3s' }}
+                />
+                <div style={{ position: 'absolute', right: '20px' }}>
+                  <NavDropdown
+                    title={<span><UserOutlined style={{ marginRight: '8px', fontSize: '20px' }} /> Lina Marcela - Admin</span>}
+                    id="nav-dropdown"
+                  >
                     <NavDropdown.Item href="#action1">Perfil</NavDropdown.Item>
-                    </NavDropdown>
-
-                  </div>
-                </Header>
+                    <NavDropdown.Item href="#action2">Cerrar Sesión</NavDropdown.Item>
+                  </NavDropdown>
+                </div>
+              </div>
+            </Header>
                 <Content style={{ padding: '24px', minHeight: 'calc(100vh - 64px)' }}>
                   <Routes>
                     <Route path="/dashboard" element={<Dashboard />} />
@@ -151,27 +157,27 @@ function Login({ setIsAuthenticated, openRecoverModal }) {
   };
 
   return (
-    <div className="row h-100 w-100">
+    <div className="row h-150 w-150">
       <div className="col-sm-12 col-md-6 d-flex justify-content-center align-items-center">
         <div className="d-flex justify-content-center align-items-center h-100 w-100 ">
-          <form className="p-5 border border-black border border-2" onSubmit={handleSubmit}>
+          <form className="p-5 border border-black border border-3" onSubmit={handleSubmit}>
             <div className="d-flex justify-content-center">
               <img 
-                src="../src/assets/logo.jpg" 
+                src="../src/assets/logoFIP.png" 
                 alt="logo" 
                 style={{ width: 100, height: 100 }} 
                 className="justify-content-center"
               />
             </div>  
             <div className="form-group d-flex flex-column align-items-center">
-              <label htmlFor="username" className="form-label">Usuario</label>
+              <label htmlFor="username" className="form-label"><strong>Usuario</strong></label>
               <div className="input-group mb-3 w-100 justify-content-center">
                 <div className="input-group-prepend"></div>
                 <input
                   type="text"
-                  className="form-control border border-black border-2"
+                  className="form-control border border-black border-2 "
                   id="username"
-                  placeholder="correo@micorreo.com"
+                  placeholder="Ingrese el usuario"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                 />
@@ -179,7 +185,8 @@ function Login({ setIsAuthenticated, openRecoverModal }) {
             </div>
 
             <div className="form-group d-flex flex-column align-items-center">
-              <label htmlFor="password" className="form-label">Contraseña</label>
+              <label htmlFor="password" className="form-label"><strong>Contraseña</strong></label>
+              
               <div className="input-group mb-3 w-100 justify-content-center">
                 <div className="input-group-prepend"></div>
                 <input

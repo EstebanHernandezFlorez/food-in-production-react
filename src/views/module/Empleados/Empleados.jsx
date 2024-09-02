@@ -1,9 +1,13 @@
 import React, { useState } from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Table, Button, Container, Row, Col, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
-import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { FaTrashAlt, FaEye } from 'react-icons/fa';
+import { FiEdit } from "react-icons/fi";
 import { IoSearchOutline } from "react-icons/io5";
+import { PlusOutlined } from '@ant-design/icons';
 import { Snackbar, Alert } from '@mui/material';
+import { notification } from 'antd';
+
 const initialData = [
   {id: 1, Nombre: "Carolina Guzman", Document: 16514416,FechaIni: "15-07-2020",ContactoEmerg: "319898119",Parentesco: "Madre",NombreFamiliar: "Carolina Zapata", GrupoSang: "O+",NumeroSS: 61515371,Direccion: "cl 76 j 12b 55",TipoContrato: "doble tiempo"},
   {id: 2,Nombre: "Andra Torres",Document: 18761919,FechaIni: "01-02-2023",ContactoEmerg: "3001234567",Parentesco: "Hermano",NombreFamiliar: "Juan Torres",GrupoSang: "A+",NumeroSS: 12345678,Direccion: "Av. El Dorado 92-45",TipoContrato: "tiempo completo"}, 
@@ -38,7 +42,11 @@ const Empleados = () => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
   const [currentPage, setCurrentPage] = useState(1);
-  const [modalOpen, setModalOpen] = useState(false); // Estado para el modal de edición
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
   const itemsPerPage = 7;
   // States for validation
   const [formErrors, setFormErrors] = useState({
@@ -53,6 +61,35 @@ const Empleados = () => {
     Direccion: false,
     TipoContrato: false
   });
+
+  const handleOk = () => {
+  if (selectedEmployee) {
+    const updatedData = data.filter(registro => registro.id !== selectedEmployee.id);
+    setData(updatedData);
+    notification.success({
+      message: 'Éxito',
+      description: 'Empleado eliminado exitosamente',
+    });
+  }
+  setModalOpen(false); // Cierra el modal
+  setSelectedEmployee(null); // Limpia el empleado seleccionado
+};  
+
+  const handleCancel = () => {
+    setModalOpen(false);
+    setSelectedEmployee(null);
+  };
+
+  const openDeleteModal = (employee) => {
+    setSelectedEmployee(employee);
+    setIsDeleteModalOpen(true);
+  };
+  
+  const handleDeleteModalClose = () => {
+    setIsDeleteModalOpen(false);
+    setSelectedEmployee(null);
+  };
+
   const handleTableSearch = (e) => {
     setTableSearchText(e.target.value.toLowerCase());
   };
@@ -156,13 +193,7 @@ const Empleados = () => {
     setModalOpen(false); // Cierra el modal después de actualizar
     openSnackbar("Empleado editado exitosamente", 'success');
   };
-  const eliminar = (dato) => {
-    if (window.confirm(`¿Realmente desea eliminar el registro ${dato.id}?`)) {
-      const updatedData = data.filter(registro => registro.id !== dato.id);
-      setData(updatedData);
-      openSnackbar("Empleado eliminado exitosamente", 'success');
-    }
-  };
+
   const cambiarEstado = (id) => {
     const updatedData = data.map((registro) => {
       if (registro.id === id) {
@@ -188,37 +219,42 @@ const Empleados = () => {
   for (let i = 1; i <= Math.ceil(filteredData.length / itemsPerPage); i++) {
     pageNumbers.push(i);
   }
+
+  const toggleDetailModal = () => setDetailModalOpen(!detailModalOpen);
+
+  const viewDetails = (item) => {
+    setSelectedItem(item);
+    toggleDetailModal();
+  };
   return (
     <Container>
       <br />
       {/* Mostrar la sección de búsqueda y el botón solo si no se está mostrando el formulario */}
       {!showForm && (
         <>
-          <h2>Lista de Empleados</h2>
+          <h2>Lista de empleados</h2>
           <div className="d-flex justify-content-between align-items-center mb-3">
             <Input
               type="text"
-              placeholder="Buscar empleado en la tabla"
+              placeholder="Buscar empleados"
               value={tableSearchText}
               onChange={handleTableSearch}
               style={{ width: '50%' }}
             />
-            <Button color="success" onClick={() => { setForm({ id: '', Nombre: '', Document: '', FechaIni: '', ContactoEmerg:'', Parentesco:'', NombreFamiliar:'',GrupoSang:'', NumeroSS: '', Direccion: '', TipoContrato: '', Estado: true }); setIsEditing(false); setShowForm(true); }}>
-              Agregar Empleado
+            <Button style={{backgroundColor:'#228b22', color:'black'}} onClick={() => { setForm({ id: '', Nombre: '', Document: '', FechaIni: '', ContactoEmerg:'', Parentesco:'', NombreFamiliar:'',GrupoSang:'', NumeroSS: '', Direccion: '', TipoContrato: '', Estado: true }); setIsEditing(false); setShowForm(true); }}>
+              Agregar empleado
+              <PlusOutlined style={{ fontSize: '16px', color: 'black', padding:'5px' }} />
             </Button>
           </div>
           <Table className="table table-sm table-hover">
             <thead>
               <tr>
-                <th>id</th>
+                <th>ID</th>
                 <th>Nombre</th>
                 <th>Documento</th>
-                <th>Fecha Ingreso</th>
-                <th>Contacto Emergencia</th>
-                <th>Parentesco</th>
-                <th>Nombre familiar</th>
-                <th>GRupo sanguineo</th>
-                <th>Número SS</th>
+                <th>Fecha de Ingreso</th>
+                <th>Grupo Sanguíneo</th>
+                <th>Numero de SS</th>
                 <th>Dirección</th>
                 <th>Tipo de Contrato</th>
                 <th>Estado</th>
@@ -229,86 +265,111 @@ const Empleados = () => {
               {currentItems.length > 0 ? (
                 currentItems.map((item) => (
                   <tr key={item.id}>
-                    <td>{item.id}</td>
+                    <td style={{ textAlign: 'center' }}>{item.id}</td>
                     <td>{item.Nombre}</td>
-                    <td>{item.Document}</td>
-                    <td>{item.FechaIni}</td>
-                    <td>{item.ContactoEmerg}</td>
-                    <td>{item.Parentesco}</td>
-                    <td>{item.NombreFamiliar}</td>
-                    <td>{item.GrupoSang}</td>
-                    <td>{item.NumeroSS}</td>
-                    <td>{item.Direccion}</td>
-                    <td>{item.TipoContrato}</td>
+                    <td style={{ textAlign: 'center' }}>{item.Document}</td>
+                    <td style={{ textAlign: 'center' }}>{item.FechaIni}</td>
+                    <td style={{ textAlign: 'center' }}>{item.GrupoSang}</td>
+                    <td style={{ textAlign: 'center' }}>{item.NumeroSS}</td>
+                    <td style={{ textAlign: 'center' }}>{item.Direccion}</td>
+                    <td style={{ textAlign: 'center' }}>{item.TipoContrato}</td>
                     <td>
                       <Button
-                        color={item.Estado ? "success" : "danger"}
+                        color={item.Estado ? "success" : "secondary"}
                         onClick={() => cambiarEstado(item.id)}
-                        className="me-2 btn-sm"
+                        className=" btn-sm" // Usa btn-sm para botones más pequeños
                       >
-                        {item.Estado ? "On" : "Off"}
-                      
+                        {item.Estado ? "Activo" : "Inactivo"}
                       </Button>
                     </td>
                     <td>
                       <div className="d-flex align-items-center">
-                        <Button color="info" onClick={() => { setForm(item); setIsEditing(true); setModalOpen(true); }} className="me-2 btn-sm">
-                          <FaEdit />
+                        <Button 
+                          color="dark" 
+                          onClick={() => { setForm(item); setIsEditing(true); setModalOpen(true); }} 
+                          className="me-2 " // Usa btn-sm para botones más pequeños
+                          style={{ padding: '0.25rem 0.5rem' }} // Ajusta el relleno si es necesario
+                        >
+                          <FiEdit style={{ fontSize: '0.75rem' }} /> {/* Tamaño del ícono reducido */}
                         </Button>
-                        <Button color="danger" onClick={() => eliminar(item)} className="me-2 btn-sm">
-                          <FaTrashAlt />
+                        <Button 
+                          color="danger" 
+                          onClick={() => openDeleteModal(item)}
+                          className="btn-sm" // Usa btn-sm para botones más pequeños
+                          style={{ padding: '0.25rem 0.5rem' }} // Ajusta el relleno si es necesario
+                        >
+                          <FaTrashAlt style={{ fontSize: '0.75rem' }} /> {/* Tamaño del ícono reducido */}
                         </Button>
                       </div>
                     </td>
+                    <td>
+                      <Button 
+                        onClick={() => viewDetails(item)}
+                        className="me-2 btn-sm" 
+                        style={{ 
+                          backgroundColor: '#F5C300', // Color dorado miel
+                          border: 'none', // Elimina el borde del botón
+                          padding: '0.25rem', // Ajusta el relleno para hacer el botón más pequeño
+                          display: 'flex', // Asegura que el icono esté centrado
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '10rem' // Ajusta el tamaño del texto si es necesario
+                        }}
+                      >
+                        <FaEye style={{ color: 'black', fontSize: '1.10rem' }} /> {/* Tamaño del ícono reducido */}
+                      </Button> 
+                    </td>
+
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="9" className="text-center">No hay datos disponibles</td>
+                  <td colSpan="13" className="text-center">No hay datos disponibles</td>
                 </tr>
               )}
             </tbody>
           </Table>
           <ul className="pagination">
-        {pageNumbers.map(number => (
-          <li key={number} className={`page-item ${currentPage === number ? 'active' : ''}`}>
-            <Button className="page-link" onClick={() => handlePageChange(number)}>
-              {number}
-            </Button>
-          </li>
-        ))}
-      </ul>
+            {pageNumbers.map(number => (
+              <li key={number} className={`page-item ${currentPage === number ? 'active' : ''}`}>
+                <Button className="page-link" onClick={() => handlePageChange(number)}>
+                  {number}
+                </Button>
+              </li>
+            ))}
+          </ul>
         </>
       )}
       {/* Formulario de inserción */}
       {showForm && (
         <div>
           <div className="d-flex justify-content-between align-items-center mb-3">
-            <h2 className="text-star" >{isEditing ? 'Editar empleado' : 'Agregar empleado'}</h2>
+            <h2 className="text-star">{isEditing ? 'Editar Empleado' : 'Agregar Empleado'}</h2>
             <div className="d-flex align-items-center">
               <Input
                 type="text"
                 placeholder="Buscar documento de usuario"
                 value={tableSearchText}
                 onChange={handleTableSearch}
-                style={{ width: '60vh', marginRight: '8px' ,border:'2px solid #353535'}} // Ajusta el ancho y el margen a tu preferencia
+                style={{ width: '60vh', marginRight: '8px', border: '2px solid #353535' }} // Ajustar ancho y margen según sea necesario
               />
               <IoSearchOutline size={24} />
             </div>
-          </div>     
+          </div>
           <br />
           <Row>
             <Col md={4}>
               <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>
-                  Nombre completo 
+                <label style={{ fontSize: '15px', padding: '5px' }}>
+                  Nombre Completo
                 </label>
                 <Input
                   type="text"
                   name="Nombre"
                   value={form.Nombre}
                   onChange={handleChange}
-                  placeholder="Nombre del empleado"
+                  placeholder="Nombre del Empleado"
+                  style={{ border: '2px solid black' }} // Borde negro
                   className={`form-control ${formErrors.Nombre ? 'is-invalid' : ''}`}
                 />
                 {formErrors.Nombre && <div className="invalid-feedback">Este campo es obligatorio.</div>}
@@ -316,57 +377,61 @@ const Empleados = () => {
             </Col>
             <Col md={4}>
               <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Documento</label>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Documento</label>
                 <Input
                   type="text"
-                  name="Document"
-                  value={form.Document}
+                  name="Documento"
+                  value={form.Documento}
                   onChange={handleChange}
-                  placeholder="Número de documento"
-                  className={`form-control ${formErrors.Document ? 'is-invalid' : ''}`}
+                  placeholder="Número de Documento"
+                  style={{ border: '2px solid black' }} // Borde negro
+                  className={`form-control ${formErrors.Documento ? 'is-invalid' : ''}`}
                 />
-                {formErrors.Document && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.Documento && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
             <Col md={4}>
               <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Fecha de Ingreso</label>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Fecha de Ingreso</label>
                 <Input
                   type="date"
-                  name="FechaIni"
-                  value={formatDate(form.FechaIni)}
+                  name="FechaIngreso"
+                  value={formatDate(form.FechaIngreso)}
                   onChange={handleChange}
-                  placeholder="Fecha de inicio"
-                  className={`form-control ${formErrors.FechaIni ? 'is-invalid' : ''}`}
+                  placeholder="Fecha de Ingreso"
+                  style={{ border: '2px solid black' }} // Borde negro
+                  className={`form-control ${formErrors.FechaIngreso ? 'is-invalid' : ''}`}
                 />
-                {formErrors.FechaIni && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.FechaIngreso && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
           </Row>
           <Row>
             <Col md={4}>
               <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Contacto de emergencia</label>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Contacto de Emergencia</label>
                 <Input
                   type="text"
-                  name="ContactoEmerg"
-                  value={form.ContactoEmerg}
+                  name="ContactoEmergencia"
+                  value={form.ContactoEmergencia}
                   onChange={handleChange}
-                  placeholder="Número de contacto de emergencia"
-                  className={`form-control ${formErrors.ContactoEmerg ? 'is-invalid' : ''}`}
+                  placeholder="Número de Contacto de Emergencia"
+                  style={{ border: '2px solid black' }} // Borde negro
+                  className={`form-control ${formErrors.ContactoEmergencia ? 'is-invalid' : ''}`}
                 />
-                {formErrors.ContactoEmerg && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.ContactoEmergencia && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
             <Col md={4}>
               <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Parentesco</label>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Parentesco</label>
                 <Input
                   type="text"
                   name="Parentesco"
                   value={form.Parentesco}
                   onChange={handleChange}
-                  placeholder="Número de Parentesco"
+                  placeholder="Parentesco"
+                  style={{ border: '2px solid black' }} // Borde negro
                   className={`form-control ${formErrors.Parentesco ? 'is-invalid' : ''}`}
                 />
                 {formErrors.Parentesco && <div className="invalid-feedback">Este campo es obligatorio.</div>}
@@ -374,13 +439,14 @@ const Empleados = () => {
             </Col>
             <Col md={4}>
               <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Nombre del familiar</label>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Nombre del Familiar</label>
                 <Input
                   type="text"
                   name="NombreFamiliar"
                   value={form.NombreFamiliar}
                   onChange={handleChange}
-                  placeholder="Nombre del familiar"
+                  placeholder="Nombre del Familiar"
+                  style={{ border: '2px solid black' }} // Borde negro
                   className={`form-control ${formErrors.NombreFamiliar ? 'is-invalid' : ''}`}
                 />
                 {formErrors.NombreFamiliar && <div className="invalid-feedback">Este campo es obligatorio.</div>}
@@ -390,27 +456,29 @@ const Empleados = () => {
           <Row>
             <Col md={4}>
               <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Grupo sanguineo</label>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Grupo Sanguíneo</label>
                 <Input
                   type="text"
-                  name="GrupoSang"
-                  value={form.GrupoSang}
+                  name="GrupoSanguineo"
+                  value={form.GrupoSanguineo}
                   onChange={handleChange}
-                  placeholder="Grupo Sanguineo"
-                  className={`form-control ${formErrors.GrupoSang ? 'is-invalid' : ''}`}
+                  placeholder="Grupo Sanguíneo"
+                  style={{ border: '2px solid black' }} // Borde negro
+                  className={`form-control ${formErrors.GrupoSanguineo ? 'is-invalid' : ''}`}
                 />
-                {formErrors.GrupoSang && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.GrupoSanguineo && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
             <Col md={4}>
               <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Número de Seguridad Social</label>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Número de Seguridad Social</label>
                 <Input
                   type="text"
                   name="NumeroSS"
                   value={form.NumeroSS}
                   onChange={handleChange}
-                  placeholder="Número de seguridad social"
+                  placeholder="Número de Seguridad Social"
+                  style={{ border: '2px solid black' }} // Borde negro
                   className={`form-control ${formErrors.NumeroSS ? 'is-invalid' : ''}`}
                 />
                 {formErrors.NumeroSS && <div className="invalid-feedback">Este campo es obligatorio.</div>}
@@ -418,13 +486,14 @@ const Empleados = () => {
             </Col>
             <Col md={4}>
               <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Dirección</label>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Dirección</label>
                 <Input
                   type="text"
                   name="Direccion"
                   value={form.Direccion}
                   onChange={handleChange}
                   placeholder="Dirección"
+                  style={{ border: '2px solid black' }} // Borde negro
                   className={`form-control ${formErrors.Direccion ? 'is-invalid' : ''}`}
                 />
                 {formErrors.Direccion && <div className="invalid-feedback">Este campo es obligatorio.</div>}
@@ -432,31 +501,34 @@ const Empleados = () => {
             </Col>
           </Row>
           <Row>
-          <Col md={4}>
+            <Col md={4}>
               <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Tipo de Contrato</label>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Tipo de Contrato</label>
                 <Input
                   type="text"
                   name="TipoContrato"
                   value={form.TipoContrato}
                   onChange={handleChange}
-                  placeholder="Tipo de contrato"
+                  placeholder="Tipo de Contrato"
+                  style={{ border: '2px solid black' }} // Borde negro
                   className={`form-control ${formErrors.TipoContrato ? 'is-invalid' : ''}`}
                 />
                 {formErrors.TipoContrato && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
           </Row>
-          <div className="d-flex justify-content-star mt-3">
-            <Button style={{background:'#2e8322'}} onClick={handleSubmit}>
-              {isEditing ? 'Actualizar' : 'Agregar'}
-            </Button>
-            
-            <Button style={{background:'#6d0f0f'}} onClick={() => { setShowForm(false); setIsEditing(false); }}>
-              Cancelar
-            </Button>
-          </div>
+        <div className="d-flex justify-content-start mt-3">
+          <Button style={{ background: '#2e8322' }} onClick={handleSubmit}>
+            {isEditing ? 'Update' : 'Add'}
+          </Button>
+      
+          <Button style={{ background: '#6d0f0f' }} onClick={() => { setShowForm(false); setIsEditing(false); }}>
+            Cancel
+          </Button>
         </div>
+      </div>
+      
+      
       )}
       {/* Modal de edición */}
       <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)}>
@@ -614,14 +686,59 @@ const Empleados = () => {
           </Row>
         </ModalBody>
         <ModalFooter>
-        <Button color="danger" onClick={() => setModalOpen(false)}>
-          Cancelar
-        </Button>
-        <Button color="primary" onClick={editar}>
-          Actualizar
-        </Button>
+          <Button color="primary" onClick={isEditing ? editar : handleSubmit}>
+              {isEditing ? 'Update' : 'Submit'}
+            </Button>
+          <Button color="danger" onClick={handleCancel}>
+            Cancelar
+          </Button>
         </ModalFooter>
       </Modal>
+
+      <Modal isOpen={isDeleteModalOpen} toggle={handleDeleteModalClose}>
+        <ModalHeader toggle={handleDeleteModalClose}>
+          Confirmar Eliminación
+        </ModalHeader>
+        <ModalBody>
+          ¿Está seguro de que desea eliminar al empleado seleccionado <strong>{selectedEmployee?.Nombre}</strong>?
+        </ModalBody>
+        <ModalFooter>
+          <Button color="danger" onClick={handleOk}>
+            Eliminar
+          </Button>
+          <Button color="secondary" onClick={handleDeleteModalClose}>
+            Cancelar
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Modal de detalle */}
+      <Modal isOpen={detailModalOpen} toggle={toggleDetailModal}>
+      <ModalHeader toggle={toggleDetailModal} style={{ color: '#8C1616'}}>
+        Detalles del Empleado
+      </ModalHeader>
+        <ModalBody>
+          {selectedItem && (
+            <div style={{padding:'10px'}}>
+              <p><strong>Nombre:</strong> {selectedItem.Nombre}</p>
+              <p><strong>Documento:</strong> {selectedItem.Document}</p>
+              <p><strong>Fecha de Ingreso:</strong> {selectedItem.FechaIni}</p>
+              <p><strong>Contacto de Emergencia:</strong> {selectedItem.ContactoEmerg}</p>
+              <p><strong>Parentesco:</strong> {selectedItem.Parentesco}</p>
+              <p><strong>Nombre del Familiar:</strong> {selectedItem.NombreFamiliar}</p>
+              <p><strong>Grupo Sanguíneo:</strong> {selectedItem.GrupoSang}</p>
+              <p><strong>Número de Seguro Social:</strong> {selectedItem.NumeroSS}</p>
+              <p><strong>Dirección:</strong> {selectedItem.Direccion}</p>
+              <p><strong>Tipo de Contrato:</strong> {selectedItem.TipoContrato}</p>
+              <p><strong>Estado:</strong> {selectedItem.Estado ? 'Activo' : 'Inactivo'}</p>
+            </div>
+          )}
+        </ModalBody>
+        <ModalFooter>
+          <Button color="danger" onClick={toggleDetailModal}>Cerrar</Button>
+        </ModalFooter>
+      </Modal>
+
       {/* Snackbar */}
       <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={closeSnackbar}>
         <Alert onClose={closeSnackbar} severity={snackbarSeverity}>
@@ -632,4 +749,4 @@ const Empleados = () => {
   );
 };
 
-export default Empleados
+export default Empleados;

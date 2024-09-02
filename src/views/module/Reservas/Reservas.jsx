@@ -1,23 +1,18 @@
-import React, { useState } from "react";
-import 'bootstrap/dist/css/bootstrap.min.css';
-import { Table, Button, Container, Row, Col, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
+import  { useState, useEffect, useCallback, useMemo } from 'react';
+import PropTypes from 'prop-types'; 
+import { Table, Button, Input, Row, Col, FormGroup, Alert } from 'reactstrap';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
-import { Snackbar, Alert } from '@mui/material';
-
-const initialData = [
-  // Asegúrate de que los datos aquí estén correctamente formateados
-];
+import { IoSearchOutline } from 'react-icons/io5';
 
 const Reservas = () => {
-  const [data, setData] = useState(initialData);
-  const [form, setForm] = useState({
-    id: '',
+  // Usa useMemo para memorizar el initialFormState y evitar su recreación en cada renderizado
+  const initialFormState = useMemo(() => ({
     NombreCompleto: '',
     Distintivo: '',
     CategoriaCliente: '',
     Correo: '',
     Celular: '',
-    Estado: 'Activo',
+    Estado: '',
     Direccion: '',
     NroPersonas: '',
     CantidadMesas: '',
@@ -30,34 +25,76 @@ const Reservas = () => {
     TotalPagar: '',
     Abono: '',
     Restante: '',
-    FormaPago: ''
-  });
-  const [isEditing, setIsEditing] = useState(false);
+    FormaPago: '',
+  }), []);
+  const [data,setData]=useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [searchText, setSearchText] = useState('');
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+  const [form, setForm] = useState(initialFormState);
+  const [formErrors, setFormErrors] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
-  const [modalOpen, setModalOpen] = useState(false);
-  const itemsPerPage = 7;
+  const [itemsPerPage] = useState(5);
+  const [tableSearchText, setTableSearchText] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
 
-  const handleSearch = (e) => {
-    setSearchText(e.target.value.toLowerCase());
+  // Usa useCallback para memoizar resetForm y evitar que se cree una nueva función en cada renderizado
+  const resetForm = useCallback(() => {
+    setFormErrors({});
+    setForm(initialFormState);
+    setIsEditing(false);
+  }, [initialFormState]);
+
+  useEffect(() => {
+    if (!showForm) {
+      resetForm();
+    }
+  }, [showForm, resetForm]);
+
+  const toggleForm = () => {
+    setShowForm(!showForm);
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm(prevForm => ({
-      ...prevForm,
-      [name]: value
-    }));
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const validarFormulario = () => {
+    const errors = {};
+    const requiredFields = Object.keys(initialFormState);
+
+    requiredFields.forEach((field) => {
+      if (!form[field]) {
+        errors[field] = 'Este campo es requerido';
+      }
+    });
+
+    setFormErrors(errors);
+
+    if (Object.keys(errors).length === 0) {
+      if (isEditing) {
+        // Lógica para editar la reserva
+      } else {
+        // Lógica para crear nueva reserva
+      }
+      setShowForm(false);
+    }
+  };
+
+  const handleTableSearch = (e) => {
+    setTableSearchText(e.target.value);
   };
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
   };
 
+  // const filteredItems = reservas.filter((item) =>
+  //   Object.values(item).some((value) =>
+  //     String(value).toLowerCase().includes(tableSearchText.toLowerCase())
+  //   )
+  // );
   const openSnackbar = (message, severity) => {
     setSnackbarMessage(message);
     setSnackbarSeverity(severity);
@@ -138,17 +175,10 @@ const Reservas = () => {
 
     setData(updatedData);
     setIsEditing(false);
-    setModalOpen(false);
+    setShowForm(false);
     openSnackbar("Reserva editada exitosamente", 'success');
   };
 
-  const eliminar = (dato) => {
-    if (window.confirm(`¿Realmente desea eliminar el registro ${dato.id}?`)) {
-      const updatedData = data.filter(registro => registro.id !== dato.id);
-      setData(updatedData);
-      openSnackbar("Reserva eliminada exitosamente", 'success');
-    }
-  };
 
   const cambiarEstado = (id) => {
     const updatedData = data.map((registro) => {
@@ -162,6 +192,8 @@ const Reservas = () => {
     openSnackbar("Estado de la reserva actualizado exitosamente", 'success');
   };
 
+
+
   const filteredData = data.filter(item =>
     item.NombreCompleto.toLowerCase().includes(searchText) ||
     item.Distintivo.toLowerCase().includes(searchText) ||
@@ -174,142 +206,199 @@ const Reservas = () => {
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+
+  const pageNumbers = [];
+  for (let i = 1; i <= Math.ceil(filteredData.length / itemsPerPage); i++) {
+    pageNumbers.push(i);
+  }
 
   return (
-    <Container>
-      <Row>
-        <Col md="12">
-          <Button color="primary" onClick={() => setShowForm(true)}>Agregar Reserva</Button>
-          <Input
-            type="text"
-            placeholder="Buscar..."
-            value={searchText}
-            onChange={handleSearch}
-            style={{ margin: '10px 0' }}
-          />
-          <Table striped>
+    <div>
+      {!showForm && (
+        <>
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <div className="search-bar">
+              <IoSearchOutline className="search-icon" />
+              <Input
+                type="text"
+                className="search-input"
+                placeholder="Buscar..."
+                value={tableSearchText}
+                onChange={handleTableSearch}
+              />
+            </div>
+            <Button color="primary" onClick={toggleForm}>
+              Crear Nueva Reserva
+            </Button>
+          </div>
+          <Table responsive striped>
             <thead>
               <tr>
+                <th>ID</th>
                 <th>Nombre Completo</th>
                 <th>Distintivo</th>
-                <th>Categoria</th>
+                <th>Categoría Cliente</th>
                 <th>Correo</th>
                 <th>Celular</th>
+                <th>Estado</th>
                 <th>Dirección</th>
+                <th>Nro. Personas</th>
+                <th>Cantidad Mesas</th>
+                <th>Tipo Evento</th>
+                <th>Duración Evento</th>
+                <th>Fecha/Hora</th>
+                <th>Servicios Adicionales</th>
+                <th>Observaciones</th>
+                <th>Monto Decoración</th>
+                <th>Total a Pagar</th>
+                <th>Abono</th>
+                <th>Restante</th>
+                <th>Forma de Pago</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {currentItems.map((dato) => (
-                <tr key={dato.id}>
-                  <td>{dato.NombreCompleto}</td>
-                  <td>{dato.Distintivo}</td>
-                  <td>{dato.CategoriaCliente}</td>
-                  <td>{dato.Correo}</td>
-                  <td>{dato.Celular}</td>
-                  <td>{dato.Direccion}</td>
+              {currentItems.map((item) => (
+                <tr key={item.id}>
+                  <td>{item.id}</td>
+                  <td>{item.NombreCompleto}</td>
+                  <td>{item.Distintivo}</td>
+                  <td>{item.CategoriaCliente}</td>
+                  <td>{item.Correo}</td>
+                  <td>{item.Celular}</td>
+                  <td>{item.Estado}</td>
+                  <td>{item.Direccion}</td>
+                  <td>{item.NroPersonas}</td>
+                  <td>{item.CantidadMesas}</td>
+                  <td>{item.TipoEvento}</td>
+                  <td>{item.DuracionEvento}</td>
+                  <td>{item.FechaHora}</td>
+                  <td>{item.ServiciosAdicionales}</td>
+                  <td>{item.Observaciones}</td>
+                  <td>{item.MontoDecoracion}</td>
+                  <td>{item.TotalPagar}</td>
+                  <td>{item.Abono}</td>
+                  <td>{item.Restante}</td>
+                  <td>{item.FormaPago}</td>
                   <td>
-                    <Button color="warning" onClick={() => {
-                      setForm(dato);
-                      setIsEditing(true);
-                      setModalOpen(true);
-                    }}>
+                    <Button
+                      color="success"
+                      className="me-2"
+                      onClick={() => {
+                        setIsEditing(true);
+                        setShowForm(true);
+                        setForm(item);
+                      }}
+                    >
                       <FaEdit />
                     </Button>
-                    <Button color="danger" onClick={() => eliminar(dato)}>
+                    <Button
+                      color="danger"
+                      className="me-2"
+                      onClick={() => eliminar(item)}
+                    >
                       <FaTrashAlt />
                     </Button>
-                    <Button color={dato.Estado === 'Activo' ? 'success' : 'secondary'} onClick={() => cambiarEstado(dato.id)}>
-                      {dato.Estado}
+                    <Button
+                      color={item.Estado === 'Confirmada' ? 'warning' : 'primary'}
+                      onClick={() => cambiarEstado(item.id)}
+                    >
+                      {item.Estado === 'Confirmada' ? 'Cancelar' : 'Confirmar'}
                     </Button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </Table>
+          <nav>
+            <ul className="pagination">
+              {pageNumbers.map((number) => (
+                <li key={number} className="page-item">
+                  <button
+                    onClick={() => handlePageChange(number)}
+                    className="page-link"
+                  >
+                    {number}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </>
+      )}
+      {showForm && (
+        <>
+          <h2>{isEditing ? 'Editar Reserva' : 'Crear Nueva Reserva'}</h2>
           <Row>
-            <Col>
-              <Button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}>Anterior</Button>
-              <Button onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages}>Siguiente</Button>
+            <Col md={6}>
+              {Object.keys(initialFormState).slice(0, 9).map((key) => (
+                <FormGroup key={key}>
+                  <label>{key}</label>
+                  <Input
+                    type={key === 'Correo' ? 'email' : 'text'}
+                    name={key}
+                    value={form[key]}
+                    onChange={handleChange}
+                  />
+                  {formErrors[key] && <Alert color="danger">{formErrors[key]}</Alert>}
+                </FormGroup>
+              ))}
+            </Col>
+            <Col md={6}>
+              {Object.keys(initialFormState).slice(9).map((key) => (
+                <FormGroup key={key}>
+                  <label>{key}</label>
+                  <Input
+                    type={key === 'FechaHora' ? 'datetime-local' : 'text'}
+                    name={key}
+                    value={form[key]}
+                    onChange={handleChange}
+                  />
+                  {formErrors[key] && <Alert color="danger">{formErrors[key]}</Alert>}
+                </FormGroup>
+              ))}
+              <Button color="primary" onClick={validarFormulario}>
+                {isEditing ? 'Actualizar' : 'Crear'}
+              </Button>
+              <Button color="secondary" onClick={toggleForm}>
+                Cancelar
+              </Button>
             </Col>
           </Row>
-        </Col>
-      </Row>
-      <Modal isOpen={showForm} toggle={() => setShowForm(!showForm)}>
-        <ModalHeader toggle={() => setShowForm(!showForm)}>
-          {isEditing ? 'Editar Reserva' : 'Agregar Reserva'}
-        </ModalHeader>
-        <ModalBody>
-          <FormGroup>
-            <Input name="NombreCompleto" placeholder="Nombre Completo" value={form.NombreCompleto} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <Input name="Distintivo" placeholder="Distintivo" value={form.Distintivo} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <Input name="CategoriaCliente" placeholder="Categoria Cliente" value={form.CategoriaCliente} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <Input name="Correo" placeholder="Correo" type="email" value={form.Correo} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <Input name="Celular" placeholder="Celular" type="tel" value={form.Celular} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <Input name="Direccion" placeholder="Dirección" value={form.Direccion} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <Input name="NroPersonas" placeholder="Número de Personas" type="number" value={form.NroPersonas} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <Input name="CantidadMesas" placeholder="Cantidad de Mesas" type="number" value={form.CantidadMesas} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <Input name="TipoEvento" placeholder="Tipo de Evento" value={form.TipoEvento} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <Input name="DuracionEvento" placeholder="Duración del Evento" value={form.DuracionEvento} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <Input name="FechaHora" placeholder="Fecha y Hora" type="datetime-local" value={form.FechaHora} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <Input name="ServiciosAdicionales" placeholder="Servicios Adicionales" value={form.ServiciosAdicionales} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <Input name="Observaciones" placeholder="Observaciones" type="textarea" value={form.Observaciones} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <Input name="MontoDecoracion" placeholder="Monto Decoración" type="number" value={form.MontoDecoracion} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <Input name="TotalPagar" placeholder="Total a Pagar" type="number" value={form.TotalPagar} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <Input name="Abono" placeholder="Abono" type="number" value={form.Abono} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <Input name="Restante" placeholder="Restante" type="number" value={form.Restante} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <Input name="FormaPago" placeholder="Forma de Pago" value={form.FormaPago} onChange={handleChange} />
-          </FormGroup>
-        </ModalBody>
-        <ModalFooter>
-          <Button color="secondary" onClick={() => setShowForm(false)}>Cancelar</Button>
-          <Button color="primary" onClick={isEditing ? editar : handleSubmit}>
-            {isEditing ? 'Guardar Cambios' : 'Agregar Reserva'}
-          </Button>
-        </ModalFooter>
-      </Modal>
-      <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={closeSnackbar}>
-        <Alert onClose={closeSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }}>
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
-    </Container>
+        </>
+      )}
+    </div>
   );
+};
+
+// Definición de PropTypes
+Reservas.propTypes = {
+  reservas: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.number.isRequired,
+      NombreCompleto: PropTypes.string.isRequired,
+      Distintivo: PropTypes.string.isRequired,
+      CategoriaCliente: PropTypes.string.isRequired,
+      Correo: PropTypes.string.isRequired,
+      Celular: PropTypes.string.isRequired,
+      Estado: PropTypes.string.isRequired,
+      Direccion: PropTypes.string.isRequired,
+      NroPersonas: PropTypes.string.isRequired,
+      CantidadMesas: PropTypes.string.isRequired,
+      TipoEvento: PropTypes.string.isRequired,
+      DuracionEvento: PropTypes.string.isRequired,
+      FechaHora: PropTypes.string.isRequired,
+      ServiciosAdicionales: PropTypes.string,
+      Observaciones: PropTypes.string,
+      MontoDecoracion: PropTypes.string.isRequired,
+      TotalPagar: PropTypes.string.isRequired,
+      Abono: PropTypes.string.isRequired,
+      Restante: PropTypes.string.isRequired,
+      FormaPago: PropTypes.string.isRequired,
+    })
+  ).isRequired,
+  eliminar: PropTypes.func.isRequired,
+  cambiarEstado: PropTypes.func.isRequired,
 };
 
 export default Reservas;
