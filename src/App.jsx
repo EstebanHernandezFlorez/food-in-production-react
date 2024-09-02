@@ -152,27 +152,27 @@ function Login({ setIsAuthenticated, openRecoverModal }) {
   };
 
   return (
-    <div className="row h-100 w-100">
+    <div className="row h-150 w-150">
       <div className="col-sm-12 col-md-6 d-flex justify-content-center align-items-center">
         <div className="d-flex justify-content-center align-items-center h-100 w-100 ">
-          <form className="p-5 border border-black border border-2" onSubmit={handleSubmit}>
+          <form className="p-5 border border-black border border-3" onSubmit={handleSubmit}>
             <div className="d-flex justify-content-center">
               <img 
-                src="../src/assets/logo.jpg" 
+                src="../src/assets/logoFIP.png" 
                 alt="logo" 
                 style={{ width: 100, height: 100 }} 
                 className="justify-content-center"
               />
             </div>  
             <div className="form-group d-flex flex-column align-items-center">
-              <label htmlFor="username" className="form-label">Usuario</label>
+              <label htmlFor="username" className="form-label"><strong>Usuario</strong></label>
               <div className="input-group mb-3 w-100 justify-content-center">
                 <div className="input-group-prepend"></div>
                 <input
                   type="text"
-                  className="form-control border border-black border-2"
+                  className="form-control border border-black border-2 "
                   id="username"
-                  placeholder="correo@micorreo.com"
+                  placeholder="Ingrese el usuario"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                 />
@@ -180,7 +180,8 @@ function Login({ setIsAuthenticated, openRecoverModal }) {
             </div>
 
             <div className="form-group d-flex flex-column align-items-center">
-              <label htmlFor="password" className="form-label">Contraseña</label>
+              <label htmlFor="password" className="form-label"><strong>Contraseña</strong></label>
+              
               <div className="input-group mb-3 w-100 justify-content-center">
                 <div className="input-group-prepend"></div>
                 <input
