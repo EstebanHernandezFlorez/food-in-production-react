@@ -2,7 +2,10 @@ import React, { useState } from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Table, Button, Container, Row, Col, Form, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { PlusOutlined } from '@ant-design/icons';
 import { Snackbar, Alert } from '@mui/material';
+import FondoForm from '../../../assets/login.jpg'
+import '../../../App.css'
 
 const initialData = [
   {id: 1, NombreCompleto: "Carolina Guzman", TipoDocument: 13132312, Document: 16514416, Telefono: 3527158372, Empresa: "Sena"},
@@ -34,6 +37,8 @@ const Proveedores = () => {
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
   const [currentPage, setCurrentPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false); // Estado para el modal de edición
+  const [selectedProveedor, setSelectedPrselectedProveedor] = useState(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const itemsPerPage = 7;
 
   // States for validation
@@ -44,6 +49,33 @@ const Proveedores = () => {
     Telefono: false,
     Empresa: false,
   });
+
+  const handleOk = () => {
+    if (selectedProveedor) {
+      const updatedData = data.filter(registro => registro.id !== selectedProveedor.id);
+      setData(updatedData);
+      notification.success({
+        message: 'Éxito',
+        description: 'Empleado eliminado exitosamente',
+      });
+    }
+    setModalOpen(false); // Cierra el modal
+    setSelectedProveedor(null); // Limpia el empleado seleccionado
+  };
+    const handleCancel = () => {
+    setModalOpen(false);
+    setSelectedProveedor(null);
+  };
+
+  const openDeleteModal = (employee) => {
+    setSelectedProveedor(employee);
+    setIsDeleteModalOpen(true);
+  };
+  
+  const handleDeleteModalClose = () => {
+    setIsDeleteModalOpen(false);
+    setSelectedProveedor(null);
+  };  
 
   const handleTableSearch = (e) => {
     setTableSearchText(e.target.value.toLowerCase());
@@ -193,8 +225,9 @@ const Proveedores = () => {
               onChange={handleTableSearch}
               style={{ width: '50%' }}
             />
-            <Button color="success" onClick={() => { setForm({ id: '', NombreCompleto: '', TipoDocument:'', Document: '', Telefono:'',Empresa:'', Estado: true }); setIsEditing(false); setShowForm(true); }}>
+            <Button style={{backgroundColor:'#228b22', color:'black'}} onClick={() => { setForm({ id: '', NombreCompleto: '', TipoDocument:'', Document: '', Telefono:'',Empresa:'', Estado: true }); setIsEditing(false); setShowForm(true); }}>
               Agregar Empleado
+              <PlusOutlined style={{ fontSize: '16px', color: 'black', padding:'5px' }} />
             </Button>
           </div>
           <Table className="table table-sm table-hover">
@@ -221,21 +254,21 @@ const Proveedores = () => {
                     <td>{item.Telefono}</td>
                     <td>{item.Empresa}</td>
                     <td>
-                      <Button
-                        color={item.Estado ? "success" : "danger"}
+                    <Button
+                        color={item.Estado ? "warning" : "dark"}
                         onClick={() => cambiarEstado(item.id)}
                         className="me-2 btn-sm"
                       >
-                        {item.Estado ? "On" : "Off"}
+                        {item.Estado ? "Active" : "Inactive"}
                       
                       </Button>
                     </td>
                     <td>
                       <div className="d-flex align-items-center">
-                        <Button color="info" onClick={() => { setForm(item); setIsEditing(true); setModalOpen(true); }} className="me-2 btn-sm">
+                        <Button color="info" onClick={() => { setForm(item); setIsEditing(true); setModalOpen(true); }} className="me-2 btn-">
                           <FaEdit />
                         </Button>
-                        <Button color="danger" onClick={() => eliminar(item)} className="me-2 btn-sm">
+                        <Button color="danger" onClick={() => openDeleteModal(item)}>
                           <FaTrashAlt />
                         </Button>
                       </div>
@@ -269,122 +302,129 @@ const Proveedores = () => {
       {showForm && (
         <div className="container">
           <h1 className="text-center">Crear Proveedores</h1>
-            <br />
-            <Form>
-              <Row className="justify-content-center">
-                <Col md={12}>
-                  <FormGroup>
-                    <label style={{ fontSize: '15px', padding: '5px' }}>
-                      Nombre Completo
-                    </label>
-                    <Input
-                      type="text"
-                      name="NombreCompleto"
-                      value={form.NombreCompleto}
-                      onChange={handleChange}
-                      placeholder="Nombre Completo del empleado"
-                      className={`form-control ${formErrors.NombreCompleto ? 'is-invalid' : ''}`}
-                      style={{ border: '2px solid black', width: '50%' }}
-                    />
-                    {formErrors.NombreCompleto && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-                  </FormGroup>
-                </Col>
-              </Row>
+          <br />
+          <Row>
+            <Col md={8}>
+              <Form>
+                <Row className="justify-content-center">
+                  <Col md={12}>
+                    <FormGroup>
+                      <label style={{ fontSize: '15px', padding: '5px' }}>
+                        Nombre Completo
+                      </label>
+                      <Input
+                        type="text"
+                        name="NombreCompleto"
+                        value={form.NombreCompleto}
+                        onChange={handleChange}
+                        placeholder="Nombre Completo del empleado"
+                        className={`form-control ${formErrors.NombreCompleto ? 'is-invalid' : ''}`}
+                        style={{ border: '2px solid black', width: '100%' }}
+                      />
+                      {formErrors.NombreCompleto && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                    </FormGroup>
+                  </Col>
+                </Row>
+        
+                <Row className="justify-content-center">
+                  <Col md={6}>
+                    <FormGroup>
+                      <label style={{ fontSize: '15px', padding: '5px' }}>
+                        Tipo de Documento
+                      </label>
+                      <Input
+                        type="text"
+                        name="TipoDocument"
+                        value={form.TipoDocument}
+                        onChange={handleChange}
+                        placeholder="Tipo de documento"
+                        className={`form-control ${formErrors.TipoDocument ? 'is-invalid' : ''}`}
+                        style={{ border: '2px solid black', width: '100%' }}
+                      />
+                      {formErrors.TipoDocument && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                    </FormGroup>
+                  </Col>
+        
+                  <Col md={6}>
+                    <FormGroup>
+                      <label style={{ fontSize: '15px', padding: '5px' }}>
+                        Documento
+                      </label>
+                      <Input
+                        type="text"
+                        name="Document"
+                        value={form.Document}
+                        onChange={handleChange}
+                        placeholder="Número de documento"
+                        className={`form-control ${formErrors.Document ? 'is-invalid' : ''}`}
+                        style={{ border: '2px solid black', width: '100%' }}
+                      />
+                      {formErrors.Document && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                    </FormGroup>
+                  </Col>
+                </Row>
+        
+                <Row className="justify-content-center">
+                  <Col md={6}>
+                    <FormGroup>
+                      <label style={{ fontSize: '15px', padding: '5px' }}>
+                        Teléfono
+                      </label>
+                      <Input
+                        type="text"
+                        name="Telefono"
+                        value={form.Telefono}
+                        onChange={handleChange}
+                        placeholder="Número de contacto"
+                        className={`form-control ${formErrors.Telefono ? 'is-invalid' : ''}`}
+                        style={{ border: '2px solid black', width: '100%' }}
+                      />
+                      {formErrors.Telefono && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                    </FormGroup>
+                  </Col>
+        
+                  <Col md={6}>
+                    <FormGroup>
+                      <label style={{ fontSize: '15px', padding: '5px' }}>
+                        Empresa
+                      </label>
+                      <Input
+                        type="text"
+                        name="Empresa"
+                        value={form.Empresa}
+                        onChange={handleChange}
+                        placeholder="Nombre de la empresa"
+                        className={`form-control ${formErrors.Empresa ? 'is-invalid' : ''}`}
+                        style={{ border: '2px solid black', width: '100%' }}
+                      />
+                      {formErrors.Empresa && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                    </FormGroup>
+                  </Col>
+                </Row>
+        
+                <Row className="justify-content-center mt-3">
+                  <Col md={12} className="d-flex justify-content-end">
+                    <Button style={{ background: '#2e8322' }} onClick={handleSubmit}>
+                      {isEditing ? 'Actualizar' : 'Agregar'}
+                    </Button>
+                    <Button style={{ background: '#6d0f0f' }} onClick={() => { setShowForm(false); setIsEditing(false); }}>
+                      Cancelar
+                    </Button>
+                  </Col>
+                </Row>
+              </Form>
+            </Col>
+        
+            <Col md={4} className="d-flex align-items-center justify-content-center">
+            <img
+              src={FondoForm} // Usa el atributo src para proporcionar la URL de la imagen
+              alt="Descripción de la Imagen" // Agrega una descripción adecuada para la accesibilidad
+              className="img-fluid full-width-image"
+            />
+          </Col>
 
-              <Row className="justify-content-center">
-                <Col md={12}>
-                  <FormGroup>
-                    <label style={{ fontSize: '15px', padding: '5px' }}>
-                      Tipo de Documento
-                    </label>
-                    <Input
-                      type="text"
-                      name="TipoDocument"
-                      value={form.TipoDocument}
-                      onChange={handleChange}
-                      placeholder="Tipo de documento"
-                      className={`form-control ${formErrors.TipoDocument ? 'is-invalid' : ''}`}
-                      style={{ border: '2px solid black', width: '50%' }}
-                    />
-                    {formErrors.TipoDocument && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-                  </FormGroup>
-                </Col>
-              </Row>
-
-              <Row className="justify-content-center">
-                <Col md={12}>
-                  <FormGroup>
-                    <label style={{ fontSize: '15px', padding: '5px' }}>
-                      Documento
-                    </label>
-                    <Input
-                      type="text"
-                      name="Document"
-                      value={form.Document}
-                      onChange={handleChange}
-                      placeholder="Número de documento"
-                      className={`form-control ${formErrors.Document ? 'is-invalid' : ''}`}
-                      style={{ border: '2px solid black', width: '50%' }}
-                    />
-                    {formErrors.Document && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-                  </FormGroup>
-                </Col>
-              </Row>
-
-              <Row className="justify-content-center">
-                <Col md={12}>
-                  <FormGroup>
-                    <label style={{ fontSize: '15px', padding: '5px' }}>
-                      Teléfono
-                    </label>
-                    <Input
-                      type="text"
-                      name="Telefono"
-                      value={form.Telefono}
-                      onChange={handleChange}
-                      placeholder="Número de contacto"
-                      className={`form-control ${formErrors.Telefono ? 'is-invalid' : ''}`}
-                      style={{ border: '2px solid black', width: '50%' }}
-                    />
-                    {formErrors.Telefono && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-                  </FormGroup>
-                </Col>
-              </Row>
-
-              <Row className="justify-content-center">
-                <Col md={12}>
-                  <FormGroup>
-                    <label style={{ fontSize: '15px', padding: '5px' }}>
-                      Empresa
-                    </label>
-                    <Input
-                      type="text"
-                      name="Empresa"
-                      value={form.Empresa}
-                      onChange={handleChange}
-                      placeholder="Nombre de la empresa"
-                      className={`form-control ${formErrors.Empresa ? 'is-invalid' : ''}`}
-                      style={{ border: '2px solid black', width: '50%' }}
-                    />
-                    {formErrors.Empresa && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-                  </FormGroup>
-                </Col>
-              </Row>
-
-              <Row className="justify-content-center mt-3">
-                <Col md={12} className="d-flex justify-content-between">
-                  <Button style={{ background: '#2e8322' }} onClick={handleSubmit}>
-                    {isEditing ? 'Actualizar' : 'Agregar'}
-                  </Button>
-                  
-                  <Button style={{ background: '#6d0f0f' }} onClick={() => { setShowForm(false); setIsEditing(false); }}>
-                    Cancelar
-                  </Button>
-                </Col>
-              </Row>
-            </Form>
-          </div>
-
+          </Row>
+        </div>
       )}
 
       {/* Modal de edición */}
@@ -471,12 +511,29 @@ const Proveedores = () => {
           </Row>
         </ModalBody>
         <ModalFooter>
-        <Button color="danger" onClick={() => setModalOpen(false)}>
-          Cancelar
-        </Button>
-        <Button color="primary" onClick={editar}>
-          Actualizar
-        </Button>
+          <Button color="primary" onClick={isEditing ? editar : handleSubmit}>
+            {isEditing ? 'Update' : 'Submit'}
+          </Button>
+          <Button color="danger" onClick={handleCancel}>
+            Cancelar
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      <Modal isOpen={isDeleteModalOpen} toggle={handleDeleteModalClose}>
+        <ModalHeader toggle={handleDeleteModalClose}>
+          Confirmar Eliminación
+        </ModalHeader>
+        <ModalBody>
+          ¿Está seguro de que desea eliminar al empleado seleccionado <strong>{selectedProveedor?.NombreCompleto}</strong>?
+        </ModalBody>
+        <ModalFooter>
+          <Button color="danger" onClick={handleOk}>
+            Eliminar
+          </Button>
+          <Button color="secondary" onClick={handleDeleteModalClose}>
+            Cancelar
+          </Button>
         </ModalFooter>
       </Modal>
 
