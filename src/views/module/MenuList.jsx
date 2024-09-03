@@ -19,7 +19,7 @@ const MenuList = ({ darkTheme }) => {
     backgroundColor: 'black', // Fondo negro para el menú
     color: 'white', // Color de texto vinotinto
     fontWeight: 'bold', // Peso de fuente en negrita
-    height: '100vh', // Altura del menú para ocupar toda la pantalla
+    height: '90vh', // Altura del menú para ocupar toda la pantalla
     border: 'none', // Quita el borde del menú
     fontSize:'15px'
   };
