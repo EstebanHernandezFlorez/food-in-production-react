@@ -4,6 +4,7 @@ import { Table, Button, Container, Row, Col, FormGroup, Input, Modal, ModalHeade
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 import { Snackbar, Alert } from '@mui/material';
 
+
 const initialData = [
   {id: 1,TipoDocumento: "Cedula", Documento: 16514416,Celular: 3104561250, NombreCompleto: "Carolina Guzman", Correo: "Carito@gmail.com", Rol:"Administrador"},
   {id: 2,TipoDocumento: "PPT", Documento: 16514416,Celular: 3004561250, NombreCompleto: "Daniela Martinez", Correo: "daniela@gmail.com", Rol:"Administrador"}
@@ -177,12 +178,16 @@ const Usuario = () => {
   
   const tiposDocumento = [
     { value: 'CC', label: 'Cédula de Ciudadanía' },
-    { value: 'TI', label: 'Tarjeta de Identidad' },
+  
     { value: 'CE', label: 'Cédula de Extranjería' },
     { value: 'PA', label: 'Pasaporte' },
     { value: 'PEP', label: 'Permiso Especial de Permanencia' }
   ];
-
+  const roles =[
+    { id_role: 1, name: "Administrador", state: true },
+    { id_role: 2, name: "Jefe de cocina", state: true },
+    { id_role: 3, name: "Auxiliar de cocina", state: true },
+  ];
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -192,6 +197,8 @@ const Usuario = () => {
   for (let i = 1; i <= Math.ceil(filteredData.length / itemsPerPage); i++) {
     pageNumbers.push(i);
   }
+
+  
 
   return (
     <Container>
@@ -298,22 +305,29 @@ const Usuario = () => {
           </div>     
           <br />
           <Row>
-            <Col md={4}>
-              <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>
+          <Col md={4}>
+           <FormGroup>
+              <label style={{ fontSize: '15px', padding: '5px' }}>
                 Tipo Documento
-                </label>
-                <Input
-                  type="text"
-                  name="TipoDocumento"
-                  value={form.TipoDocumento}
-                  onChange={handleChange}
-                  placeholder="Nombre del usuario"
-                  className={`form-control ${formErrors.TipoDocumento ? 'is-invalid' : ''}`}
-                />
-                {formErrors.TipoDocumento && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-            </Col>
+              </label>
+              <Input
+              type="select"  // Cambiado a "select"
+              name="TipoDocumento"
+              value={form.TipoDocumento}
+              onChange={handleChange}
+                className={`form-control ${formErrors.TipoDocumento ? 'is-invalid' : ''}`}
+                 >
+             <option value="">Seleccione un tipo de documento</option> 
+                {tiposDocumento.map((tipo) => (
+            <option key={tipo.value} value={tipo.value}>
+             {tipo.label}
+            </option>
+              ))}
+            </Input>
+          {formErrors.TipoDocumento && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+          </FormGroup>
+          </Col>
+
             <Col md={4}>
               <FormGroup>
                 <label style={{fontSize:'15px', padding:'5px'}}>Documento</label>
@@ -373,47 +387,57 @@ const Usuario = () => {
               </FormGroup>
             </Col>
             <Col md={4}>
-              <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Rol</label>
-                <Input
-                  type="text"
-                  name="Rol"
-                  value={form.Rol}
-                  onChange={handleChange}
-                  placeholder="Rol"
-                  className={`form-control ${formErrors.Rol ? 'is-invalid' : ''}`}
-                />
-                {formErrors.Rol && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-            </Col>
-            <Col md={4}>
-              <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Contraseña</label>
-                <Input
-                  type="text"
-                  name="Contraseña"
-                  value={form.Rol}
-                  onChange={handleChange}
-                  placeholder="Contraseña"
-                  className={`form-control ${formErrors.Contraseña ? 'is-invalid' : ''}`}
-                />
-                {formErrors.Contraseña && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-            </Col>
-            <Col md={4}>
-              <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Confirmar contraseña</label>
-                <Input
-                  type="text"
-                  name="Confirmarcontraseña"
-                  value={form.Rol}
-                  onChange={handleChange}
-                  placeholder="Confirmar contraseña"
-                  className={`form-control ${formErrors.Confirmarcontraseña ? 'is-invalid' : ''}`}
-                />
-                {formErrors.Confirmarcontraseña && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-            </Col>
+  <FormGroup>
+    <label style={{ fontSize: '15px', padding: '5px' }}>
+      Rol
+    </label>
+    <Input
+      type="select"  // Cambiado a "select"
+      name="Rol"
+      value={form.Rol}
+      onChange={handleChange}
+      className={`form-control ${formErrors.Rol ? 'is-invalid' : ''}`}
+    >
+      <option value="">Seleccione un rol</option> 
+      {roles.map((role) => (
+        <option key={role.id_role} value={role.id_role}>
+          {role.name}
+        </option>
+      ))}
+    </Input>
+    {formErrors.Rol && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+  </FormGroup>
+</Col>
+
+<Col md={4}>
+  <FormGroup>
+    <label style={{ fontSize: '15px', padding: '5px' }}>Contraseña</label>
+    <Input
+      type="password"  // Cambiado a "password"
+      name="Contraseña"
+      value={form.Contraseña}
+      onChange={handleChange}
+      placeholder="Contraseña"
+      className={`form-control ${formErrors.Contraseña ? 'is-invalid' : ''}`}
+    />
+    {formErrors.Contraseña && <div className="invalid-feedback">{formErrors.Contraseña}</div>}
+  </FormGroup>
+</Col>
+<Col md={4}>
+  <FormGroup>
+    <label style={{ fontSize: '15px', padding: '5px' }}>Confirmar contraseña</label>
+    <Input
+      type="password"  // Cambiado a "password"
+      name="Confirmarcontraseña"
+      value={form.Confirmarcontraseña}
+      onChange={handleChange}
+      placeholder="Confirmar contraseña"
+      className={`form-control ${formErrors.Confirmarcontraseña ? 'is-invalid' : ''}`}
+    />
+    {formErrors.Confirmarcontraseña && <div className="invalid-feedback">{formErrors.Confirmarcontraseña}</div>}
+  </FormGroup>
+</Col>
+
           </Row>
           <div className="d-flex justify-content-star mt-3">
             <Button style={{background:'#2e8322'}} onClick={handleSubmit}>
@@ -428,109 +452,110 @@ const Usuario = () => {
       )}
 
       {/* Modal de edición */}
-      <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)}>
-        <ModalHeader toggle={() => setModalOpen(!modalOpen)}>
-          Editar Usuario
-        </ModalHeader>
-        <ModalBody>
-          <Row>
-            <Col md={4}>
-              <FormGroup>
-                <label>Tipo Documento</label>
-                <Input
-                  type="text"
-                  name="TipoDocumento"
-                  value={form.TipoDocumento}
-                  onChange={handleChange}
-                  placeholder="Tipo Documento del usuario"
-                  className={`form-control ${formErrors.TipoDocumento ? 'is-invalid' : ''}`}
-                />
-                {formErrors.TipoDocumento && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-            </Col>
-            <Col md={4}>
-              <FormGroup>
-                <label>Documento</label>
-                <Input
-                  type="text"
-                  name="Documento"
-                  value={form.Documento}
-                  onChange={handleChange}
-                  placeholder="Número de documento"
-                  className={`form-control ${formErrors.Documento ? 'is-invalid' : ''}`}
-                />
-                {formErrors.Documento && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-            </Col>
-            <Col md={4}>
-              <FormGroup>
-                <label>Celular</label>
-                <Input
-                  type="te"
-                  name="Celular"
-                  value={form.Celular}
-                  onChange={handleChange}
-                  placeholder="Fecha de inicio"
-                  className={`form-control ${formErrors.Celular ? 'is-invalid' : ''}`}
-                />
-                {formErrors.Celular && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-            </Col>
-          </Row>
-          <Row>
-            <Col md={4}>
-              <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Nombre Completo</label>
-                <Input
-                  type="text"
-                  name="NombreCompleto"
-                  value={form.NombreCompleto}
-                  onChange={handleChange}
-                  placeholder="Número de contacto de emergencia"
-                  className={`form-control ${formErrors.NombreCompleto ? 'is-invalid' : ''}`}
-                />
-                {formErrors.NombreCompleto && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-            </Col>
-            <Col md={4}>
-              <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Correo</label>
-                <Input
-                  type="text"
-                  name="Correo"
-                  value={form.Correo}
-                  onChange={handleChange}
-                  placeholder="Número de Correo"
-                  className={`form-control ${formErrors.Correo ? 'is-invalid' : ''}`}
-                />
-                {formErrors.Correo && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-            </Col>
-            <Col md={4}>
-              <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Rol</label>
-                <Input
-                  type="text"
-                  name="Rol"
-                  value={form.Rol}
-                  onChange={handleChange}
-                  placeholder="Nombre del familiar"
-                  className={`form-control ${formErrors.Rol ? 'is-invalid' : ''}`}
-                />
-                {formErrors.Rol && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-            </Col>
-          </Row>
-        </ModalBody>
-        <ModalFooter>
-        <Button color="danger" onClick={() => setModalOpen(false)}>
-          Cancelar
-        </Button>
-        <Button color="primary" onClick={editar}>
-          Actualizar
-        </Button>
-        </ModalFooter>
-      </Modal>
+    <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)}>
+  <ModalHeader toggle={() => setModalOpen(!modalOpen)}>
+    Editar Usuario
+  </ModalHeader>
+  <ModalBody>
+    <Row>
+      <Col md={4}>
+        <FormGroup>
+          <label>Tipo Documento</label>
+          <Input
+            type="text"
+            name="TipoDocumento"
+            readOnly
+            value={form.TipoDocumento}
+            placeholder="Tipo Documento del usuario"
+            className={`form-control ${formErrors.TipoDocumento ? 'is-invalid' : ''}`}
+          />
+          {formErrors.TipoDocumento && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+        </FormGroup>
+      </Col>
+      <Col md={4}>
+        <FormGroup>
+          <label>Documento</label>
+          <Input
+            type="text"
+            name="Documento"
+            readOnly
+            value={form.Documento}
+            placeholder="Número de documento"
+            className={`form-control ${formErrors.Documento ? 'is-invalid' : ''}`}
+          />
+          {formErrors.Documento && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+        </FormGroup>
+      </Col>
+      <Col md={4}>
+        <FormGroup>
+          <label>Celular</label>
+          <Input
+            type="number"  // Corrige el typo "te" a "text"
+            name="Celular"
+            value={form.Celular}
+            onChange={handleChange}
+            placeholder="Número de contacto"
+            className={`form-control ${formErrors.Celular ? 'is-invalid' : ''}`}
+          />
+          {formErrors.Celular && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+        </FormGroup>
+      </Col>
+    </Row>
+    <Row>
+      <Col md={4}>
+        <FormGroup>
+          <label style={{fontSize: '15px', padding: '5px'}}>Nombre Completo</label>
+          <Input
+            type="text"
+            name="NombreCompleto"
+            value={form.NombreCompleto}
+            onChange={handleChange}
+            placeholder="Nombre Completo"
+            className={`form-control ${formErrors.NombreCompleto ? 'is-invalid' : ''}`}
+          />
+          {formErrors.NombreCompleto && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+        </FormGroup>
+      </Col>
+      <Col md={4}>
+        <FormGroup>
+          <label style={{fontSize: '15px', padding: '5px'}}>Correo</label>
+          <Input
+            type="email"  // Cambiado a "email" para validación automática del formato
+            name="Correo"
+            value={form.Correo}
+            onChange={handleChange}
+            placeholder="Correo Electrónico"
+            className={`form-control ${formErrors.Correo ? 'is-invalid' : ''}`}
+          />
+          {formErrors.Correo && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+        </FormGroup>
+      </Col>
+      <Col md={4}>
+        <FormGroup>
+          <label style={{fontSize: '15px', padding: '5px'}}>Rol</label>
+          <Input
+            type="text"
+            name="Rol"
+            value={form.Rol}
+            readOnly
+            placeholder="Rol del usuario"
+            className={`form-control ${formErrors.Rol ? 'is-invalid' : ''}`}
+          />
+          {formErrors.Rol && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+        </FormGroup>
+      </Col>
+    </Row>
+  </ModalBody>
+  <ModalFooter>
+    <Button color="danger" onClick={() => setModalOpen(false)}>
+      Cancelar
+    </Button>
+    <Button color="primary" onClick={editar}>
+      Actualizar
+    </Button>
+  </ModalFooter>
+</Modal>
+
 
       {/* Snackbar */}
       <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={closeSnackbar}>
