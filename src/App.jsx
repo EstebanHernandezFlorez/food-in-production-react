@@ -86,7 +86,6 @@ export default function App() {
         />
 
         {isAuthenticated ? (
-<<<<<<< HEAD
           <Route
             path="/*"
             element={
@@ -98,68 +97,61 @@ export default function App() {
                   collapsed={collapsed}
                   onCollapse={() => setCollapsed(!collapsed)}
                 >
-                  <Logo />
+                  <Logo collapsed={collapsed} />
                   <MenuList darkTheme={darkTheme} />
-                  <ToggleThemeButton
-                    darkTheme={darkTheme}
-                    toggleTheme={toggleTheme}
-                  />
+                  <ToggleThemeButton darkTheme={darkTheme} toggleTheme={toggleTheme} />
                 </Sider>
                 <Layout>
-                  <Header style={{ padding: "3px" }} className="header">
+                  <Header
+                    style={{
+                      padding: '3px',
+                      borderBottom: '5px solid #800020',
+                      position: 'relative',
+                    }}
+                    className="header"
+                  >
                     <div
                       className="d-flex justify-content-between align-items-center"
-                      style={{ height: "100%" }}
+                      style={{ height: '100%' }}
                     >
                       <Button
                         className="buttonInt"
                         type="text"
-                        icon={
-                          collapsed ? (
-                            <MenuUnfoldOutlined />
-                          ) : (
-                            <MenuFoldOutlined />
-                          )
-                        }
-                        onC
-                        lick={() => setCollapsed(!collapsed)}
+                        icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+                        onClick={() => setCollapsed(!collapsed)}
+                        style={{
+                          fontSize: collapsed ? '16px' : '24px',
+                          transition: 'font-size 0.3s',
+                        }}
                       />
-                      <NavDropdown
-                        title={
-                          <span>
-                            <UserOutlined style={{ marginRight: "8px" }} />{" "}
-                            Cargar Nombre Usuario
-                          </span>
-                        }
-                        id="nav-dropdown"
-                      >
-                        <NavDropdown.Item
-                          onClick={() => navigate("/editar-perfil")}
+                      <div style={{ position: 'absolute', right: '20px' }}>
+                        <NavDropdown
+                          title={
+                            <span>
+                              <UserOutlined
+                                style={{ marginRight: '8px', fontSize: '20px' }}
+                              />
+                              Lina Marcela - Admin
+                            </span>
+                          }
+                          id="nav-dropdown"
                         >
-                          Perfil
-                        </NavDropdown.Item>
-                        <NavDropdown.Item href="#action2">
-                          Cerrar Sesión
-                        </NavDropdown.Item>
-                      </NavDropdown>
+                          <NavDropdown.Item href="#action1">Perfil</NavDropdown.Item>
+                          <NavDropdown.Item href="#action2">Cerrar Sesión</NavDropdown.Item>
+                        </NavDropdown>
+                      </div>
                     </div>
                   </Header>
                   <Content
-                    style={{ padding: "24px", minHeight: "calc(100vh - 64px)" }}
+                    style={{ padding: '24px', minHeight: 'calc(100vh - 64px)' }}
                   >
                     <Routes>
                       <Route path="/dashboard" element={<Dashboard />} />
                       <Route path="/roles" element={<Roles />} />
                       <Route path="/usuarios" element={<Usuarios />} />
                       <Route path="/produccion" element={<Produccion />} />
-                      <Route
-                        path="/orden_produccion"
-                        element={<OrdenProduccion />}
-                      />
-                      <Route
-                        path="/producto_insumo"
-                        element={<ProductoInsumo />}
-                      />
+                      <Route path="/orden_produccion" element={<OrdenProduccion />} />
+                      <Route path="/producto_insumo" element={<ProductoInsumo />} />
                       <Route path="/insumo" element={<Insumo />} />
                       <Route path="/empleados" element={<Empleados />} />
                       <Route path="/proveedores" element={<Proveedores />} />
@@ -167,65 +159,11 @@ export default function App() {
                       <Route path="/reservas" element={<Reservas />} />
                       <Route path="/servicios" element={<Servicios />} />
                       <Route path="/mano_de_obra" element={<ManoDeObra />} />
-                      <Route path="/Calendario" element={<Calendario />} />
+                      <Route path="/calendario" element={<Calendario />} />
+                      {/* Añade más rutas según sea necesario */}
                     </Routes>
                   </Content>
                 </Layout>
-=======
-          <Route path="/*" element={
-            <Layout>
-              <Sider
-                className="sidebar"
-                collapsible
-                trigger={null}
-                collapsed={collapsed}
-                onCollapse={() => setCollapsed(!collapsed)}
-            >
-                <Logo collapsed={collapsed} />
-                <MenuList darkTheme={darkTheme} />
-                <ToggleThemeButton darkTheme={darkTheme} toggleTheme={toggleTheme} />
-              </Sider>
-            <Layout>
-            <Header style={{ padding: '3px', borderBottom: '5px solid #800020', position: 'relative' }} className='header'>
-              <div className="d-flex justify-content-between align-items-center" style={{ height: '100%' }}>
-                <Button
-                  className='buttonInt'
-                  type='text'
-                  icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-                  onClick={() => setCollapsed(!collapsed)}
-                  style={{ fontSize: collapsed ? '16px' : '24px', transition: 'font-size 0.3s' }}
-                />
-                <div style={{ position: 'absolute', right: '20px' }}>
-                  <NavDropdown
-                    title={<span><UserOutlined style={{ marginRight: '8px', fontSize: '20px' }} /> Lina Marcela - Admin</span>}
-                    id="nav-dropdown"
-                  >
-                    <NavDropdown.Item href="#action1">Perfil</NavDropdown.Item>
-                    <NavDropdown.Item href="#action2">Cerrar Sesión</NavDropdown.Item>
-                  </NavDropdown>
-                </div>
-              </div>
-            </Header>
-                <Content style={{ padding: '24px', minHeight: 'calc(100vh - 64px)' }}>
-                  <Routes>
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/roles" element={<Roles />} />
-                    <Route path="/usuarios" element={<Usuarios />} />
-                    <Route path="/produccion" element={<Produccion />} />
-                    <Route path="/orden_produccion" element={<OrdenProduccion />} />
-                    <Route path="/producto_insumo" element={<ProductoInsumo />} />
-                    <Route path="/insumo" element={<Insumo />} />
-                    <Route path="/empleados" element={<Empleados />} />
-                    <Route path="/proveedores" element={<Proveedores />} />
-                    <Route path="/clientes" element={<Clientes />} />
-                    <Route path="/reservas" element={<Reservas />} />
-                    <Route path="/servicios" element={<Servicios />} />
-                    <Route path="/mano_de_obra" element={<ManoDeObra />} />
-                    <Route path="/Calendario" element={<Calendario />} />
-
-                  </Routes>
-                </Content>
->>>>>>> db7b6acff7aae82c313c25810dc486d3c9d69fb3
               </Layout>
             }
           />
@@ -238,7 +176,7 @@ export default function App() {
       <RecoveryPassword isOpen={isRecoveryOpen} onClose={closeRecoverModal} />
     </Router>
   );
-}
+};
 
 function Login({ setIsAuthenticated, openRecoverModal }) {
   const [username, setUsername] = useState("");

@@ -4,7 +4,7 @@ import { Table, Button, Input, Row, Col, FormGroup, Alert } from 'reactstrap';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 import { IoSearchOutline } from 'react-icons/io5';
 
-const Reservas = ({ eliminar, cambiarEstado }) => {
+const Reservas = () => {
   // Usa useMemo para memorizar el initialFormState y evitar su recreación en cada renderizado
   const initialFormState = useMemo(() => ({
     NombreCompleto: '',

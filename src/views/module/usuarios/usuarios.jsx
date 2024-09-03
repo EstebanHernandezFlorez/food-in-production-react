@@ -74,7 +74,7 @@ const Usuario = () => {
 
   const validateForm = () => {
     const errors = {
-      TipoDocumento: !form.TipoDocumento,
+      TipoDocumento:!form.TipoDocumento,
       Documento: !form.Documento,
       Celular: !form.Celular,
       NombreCompleto: !form.NombreCompleto,
@@ -490,7 +490,7 @@ const Usuario = () => {
         <FormGroup>
           <label>Celular</label>
           <Input
-            type="number"  // Corrige el typo "te" a "text"
+            type="text"  // Corrige el typo "te" a "text"
             name="Celular"
             value={form.Celular}
             onChange={handleChange}
