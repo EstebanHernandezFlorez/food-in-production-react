@@ -27,7 +27,7 @@ const Reservas = () => {
     Restante: '',
     FormaPago: '',
   }), []);
-  const [data,setData]=useState([]);
+
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(initialFormState);
   const [formErrors, setFormErrors] = useState({});

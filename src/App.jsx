@@ -1,50 +1,58 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import 'bootstrap/dist/css/bootstrap.min.css';
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import { Layout, Button } from 'antd';
-import { MenuUnfoldOutlined, MenuFoldOutlined, UserOutlined } from '@ant-design/icons';
-import MenuList from './views/module/MenuList';
-import Logo from './views/module/Logo';
-import ToggleThemeButton from './views/module/ToggleThemeButton';
+import "bootstrap/dist/css/bootstrap.min.css";
+import {
+  BrowserRouter as Router,
+  Route,
+  Routes,
+  Navigate,
+} from "react-router-dom";
+import { Layout, Button } from "antd";
+import {
+  MenuUnfoldOutlined,
+  MenuFoldOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
+import MenuList from "./views/module/MenuList";
+import Logo from "./views/module/Logo";
+import ToggleThemeButton from "./views/module/ToggleThemeButton";
 import Dashboard from "./views/module/Dashboard/dashboard";
-import Roles from './views/module/roles/roles';
-import Usuarios from './views/module/usuarios/usuarios';
-import Produccion from './views/module/Produccion/produccion';
-import OrdenProduccion from './views/module/OrdenProduccion/OrdenProduccion';
-import ProductoInsumo from './views/module/ProductoInsumo/ProductoInsumo';
-import Insumo from './views/module/Insumo/Insumo';
-import Empleados from './views/module/Empleados/Empleados';
-import Proveedores from './views/module/Proveedores/Proveedores';
-import Clientes from './views/module/Clientes/Clientes';
-import Reservas from './views/module/Reservas/Reservas';
-import Servicios from './views/module/Servicios/Servicios';
-import ManoDeObra from './views/module/ManoDeObra/ManoDeObra';
-import RecoveryPassword from './views/module/Auth/olvidoContraseña'; // Nombre 
-import {NavDropdown,Nav} from 'react-bootstrap';
-import Calendario from './views/module/Calendario/Calendario';
-
-
+import Roles from "./views/module/roles/roles";
+import Usuarios from "./views/module/usuarios/usuarios";
+import Produccion from "./views/module/Produccion/produccion";
+import OrdenProduccion from "./views/module/OrdenProduccion/OrdenProduccion";
+import ProductoInsumo from "./views/module/ProductoInsumo/ProductoInsumo";
+import Insumo from "./views/module/Insumo/Insumo";
+import Empleados from "./views/module/Empleados/Empleados";
+import Proveedores from "./views/module/Proveedores/Proveedores";
+import Clientes from "./views/module/Clientes/Clientes";
+import Reservas from "./views/module/Reservas/Reservas";
+import Servicios from "./views/module/Servicios/Servicios";
+import ManoDeObra from "./views/module/ManoDeObra/ManoDeObra";
+import RecoveryPassword from "./views/module/Auth/olvidoContraseña"; // Nombre
+import { NavDropdown } from "react-bootstrap";
+import Calendario from "./views/module/Calendario/Calendario";
 
 const users = [
   {
     id: 1,
     usuario: "Carla Gomez",
     contrasena: "12345",
-    rol: "auxiliar de cocina"
+    rol: "auxiliar de cocina",
   },
   {
     id: 2,
     usuario: "Luis Gutierrez",
     contrasena: "12345",
-    rol: "administrador"
+    rol: "administrador",
   },
 ];
 
 const { Header, Sider, Content } = Layout;
 
 export default function App() {
-  const handleSelectcted = (eventKey) => alert(`sele  const handleSelectcted ${eventKey}`);
+  const handleSelectcted = (eventKey) =>
+    alert(`sele  const handleSelectcted ${eventKey}`);
 
   const [darkTheme, setDarkTheme] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
@@ -59,73 +67,106 @@ export default function App() {
     e.preventDefault();
     setIsRecoveryOpen(true);
   };
-  
+
   const closeRecoverModal = () => {
     setIsRecoveryOpen(false);
   };
- 
+
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Login setIsAuthenticated={setIsAuthenticated} openRecoverModal={openRecoverModal} />} />
-        
-        {isAuthenticated ? (
-          <Route path="/*" element={
-            <Layout>
-              <Sider
-                className="sidebar"
-                collapsible
-                trigger={null}
-                collapsed={collapsed}
-                onCollapse={() => setCollapsed(!collapsed)}
-            >
-                <Logo collapsed={collapsed} />
-                <MenuList darkTheme={darkTheme} />
-                <ToggleThemeButton darkTheme={darkTheme} toggleTheme={toggleTheme} />
-              </Sider>
-            <Layout>
-            <Header style={{ padding: '3px', borderBottom: '5px solid #800020', position: 'relative' }} className='header'>
-              <div className="d-flex justify-content-between align-items-center" style={{ height: '100%' }}>
-                <Button
-                  className='buttonInt'
-                  type='text'
-                  icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-                  onClick={() => setCollapsed(!collapsed)}
-                  style={{ fontSize: collapsed ? '16px' : '24px', transition: 'font-size 0.3s' }}
-                />
-                <div style={{ position: 'absolute', right: '20px' }}>
-                  <NavDropdown
-                    title={<span><UserOutlined style={{ marginRight: '8px', fontSize: '20px' }} /> Lina Marcela - Admin</span>}
-                    id="nav-dropdown"
-                  >
-                    <NavDropdown.Item href="#action1">Perfil</NavDropdown.Item>
-                    <NavDropdown.Item href="#action2">Cerrar Sesión</NavDropdown.Item>
-                  </NavDropdown>
-                </div>
-              </div>
-            </Header>
-                <Content style={{ padding: '24px', minHeight: 'calc(100vh - 64px)' }}>
-                  <Routes>
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/roles" element={<Roles />} />
-                    <Route path="/usuarios" element={<Usuarios />} />
-                    <Route path="/produccion" element={<Produccion />} />
-                    <Route path="/orden_produccion" element={<OrdenProduccion />} />
-                    <Route path="/producto_insumo" element={<ProductoInsumo />} />
-                    <Route path="/insumo" element={<Insumo />} />
-                    <Route path="/empleados" element={<Empleados />} />
-                    <Route path="/proveedores" element={<Proveedores />} />
-                    <Route path="/clientes" element={<Clientes />} />
-                    <Route path="/reservas" element={<Reservas />} />
-                    <Route path="/servicios" element={<Servicios />} />
-                    <Route path="/mano_de_obra" element={<ManoDeObra />} />
-                    <Route path="/Calendario" element={<Calendario />} />
+        <Route
+          path="/"
+          element={
+            <Login
+              setIsAuthenticated={setIsAuthenticated}
+              openRecoverModal={openRecoverModal}
+            />
+          }
+        />
 
-                  </Routes>
-                </Content>
+        {isAuthenticated ? (
+          <Route
+            path="/*"
+            element={
+              <Layout>
+                <Sider
+                  className="sidebar"
+                  collapsible
+                  trigger={null}
+                  collapsed={collapsed}
+                  onCollapse={() => setCollapsed(!collapsed)}
+                >
+                  <Logo collapsed={collapsed} />
+                  <MenuList darkTheme={darkTheme} />
+                  <ToggleThemeButton darkTheme={darkTheme} toggleTheme={toggleTheme} />
+                </Sider>
+                <Layout>
+                  <Header
+                    style={{
+                      padding: '3px',
+                      borderBottom: '5px solid #800020',
+                      position: 'relative',
+                    }}
+                    className="header"
+                  >
+                    <div
+                      className="d-flex justify-content-between align-items-center"
+                      style={{ height: '100%' }}
+                    >
+                      <Button
+                        className="buttonInt"
+                        type="text"
+                        icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+                        onClick={() => setCollapsed(!collapsed)}
+                        style={{
+                          fontSize: collapsed ? '16px' : '24px',
+                          transition: 'font-size 0.3s',
+                        }}
+                      />
+                      <div style={{ position: 'absolute', right: '20px' }}>
+                        <NavDropdown
+                          title={
+                            <span>
+                              <UserOutlined
+                                style={{ marginRight: '8px', fontSize: '20px' }}
+                              />
+                              Lina Marcela - Admin
+                            </span>
+                          }
+                          id="nav-dropdown"
+                        >
+                          <NavDropdown.Item href="#action1">Perfil</NavDropdown.Item>
+                          <NavDropdown.Item href="#action2">Cerrar Sesión</NavDropdown.Item>
+                        </NavDropdown>
+                      </div>
+                    </div>
+                  </Header>
+                  <Content
+                    style={{ padding: '24px', minHeight: 'calc(100vh - 64px)' }}
+                  >
+                    <Routes>
+                      <Route path="/dashboard" element={<Dashboard />} />
+                      <Route path="/roles" element={<Roles />} />
+                      <Route path="/usuarios" element={<Usuarios />} />
+                      <Route path="/produccion" element={<Produccion />} />
+                      <Route path="/orden_produccion" element={<OrdenProduccion />} />
+                      <Route path="/producto_insumo" element={<ProductoInsumo />} />
+                      <Route path="/insumo" element={<Insumo />} />
+                      <Route path="/empleados" element={<Empleados />} />
+                      <Route path="/proveedores" element={<Proveedores />} />
+                      <Route path="/clientes" element={<Clientes />} />
+                      <Route path="/reservas" element={<Reservas />} />
+                      <Route path="/servicios" element={<Servicios />} />
+                      <Route path="/mano_de_obra" element={<ManoDeObra />} />
+                      <Route path="/calendario" element={<Calendario />} />
+                      {/* Añade más rutas según sea necesario */}
+                    </Routes>
+                  </Content>
+                </Layout>
               </Layout>
-            </Layout>
-          } />
+            }
+          />
         ) : (
           <Route path="*" element={<Navigate to="/" />} />
         )}
@@ -135,7 +176,7 @@ export default function App() {
       <RecoveryPassword isOpen={isRecoveryOpen} onClose={closeRecoverModal} />
     </Router>
   );
-}
+};
 
 function Login({ setIsAuthenticated, openRecoverModal }) {
   const [username, setUsername] = useState("");
@@ -145,8 +186,10 @@ function Login({ setIsAuthenticated, openRecoverModal }) {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    const validUser = users.find((user) => user.usuario === username && user.contrasena === password);
-    
+    const validUser = users.find(
+      (user) => user.usuario === username && user.contrasena === password
+    );
+
     if (validUser) {
       setError("");
       setIsAuthenticated(true);
@@ -160,17 +203,22 @@ function Login({ setIsAuthenticated, openRecoverModal }) {
     <div className="row h-150 w-150">
       <div className="col-sm-12 col-md-6 d-flex justify-content-center align-items-center">
         <div className="d-flex justify-content-center align-items-center h-100 w-100 ">
-          <form className="p-5 border border-black border border-3" onSubmit={handleSubmit}>
+          <form
+            className="p-5 border border-black border border-3"
+            onSubmit={handleSubmit}
+          >
             <div className="d-flex justify-content-center">
-              <img 
-                src="../src/assets/logoFIP.png" 
-                alt="logo" 
-                style={{ width: 100, height: 100 }} 
+              <img
+                src="../src/assets/logoFIP.png"
+                alt="logo"
+                style={{ width: 100, height: 100 }}
                 className="justify-content-center"
               />
-            </div>  
+            </div>
             <div className="form-group d-flex flex-column align-items-center">
-              <label htmlFor="username" className="form-label"><strong>Usuario</strong></label>
+              <label htmlFor="username" className="form-label">
+                <strong>Usuario</strong>
+              </label>
               <div className="input-group mb-3 w-100 justify-content-center">
                 <div className="input-group-prepend"></div>
                 <input
@@ -185,8 +233,10 @@ function Login({ setIsAuthenticated, openRecoverModal }) {
             </div>
 
             <div className="form-group d-flex flex-column align-items-center">
-              <label htmlFor="password" className="form-label"><strong>Contraseña</strong></label>
-              
+              <label htmlFor="password" className="form-label">
+                <strong>Contraseña</strong>
+              </label>
+
               <div className="input-group mb-3 w-100 justify-content-center">
                 <div className="input-group-prepend"></div>
                 <input
@@ -202,13 +252,17 @@ function Login({ setIsAuthenticated, openRecoverModal }) {
 
             {error && <div className="text-danger mb-3">{error}</div>}
             <div className="my-3 text-center link-text">
-              <a href="#!" onClick={openRecoverModal}> ¿Ha olvidado su contraseña?</a>
+              <a href="#!" onClick={openRecoverModal}>
+                {" "}
+                ¿Ha olvidado su contraseña?
+              </a>
             </div>
             <div className="btn-group w-100">
-              <button 
-                type="submit" 
-                className="btn w-100" 
-                style={{ backgroundColor: '#8C1616', color: 'white' }}>
+              <button
+                type="submit"
+                className="btn w-100"
+                style={{ backgroundColor: "#8C1616", color: "white" }}
+              >
                 Ingresar
               </button>
             </div>
@@ -218,7 +272,13 @@ function Login({ setIsAuthenticated, openRecoverModal }) {
 
       <article className="col-sm-12 col-md-6">
         <div className="d-flex justify-content-center align-items-center h-100">
-          <img src="../src/assets/login.jpg" alt="food-in-production" width="790" height="734" className="rounded"/>
+          <img
+            src="../src/assets/login.jpg"
+            alt="food-in-production"
+            width="790"
+            height="734"
+            className="rounded"
+          />
         </div>
       </article>
     </div>
