@@ -5,6 +5,7 @@ import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 import { PlusOutlined } from '@ant-design/icons';
 import { Snackbar, Alert } from '@mui/material';
 import FondoForm from '../../../assets/login.jpg'
+import { FiEdit } from "react-icons/fi";
 import '../../../App.css'
 
 const initialData = [
@@ -29,6 +30,7 @@ const Proveedores = () => {
     Empresa:'',
     Estado: true
   });
+  
   const [isEditing, setIsEditing] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [tableSearchText, setTableSearchText] = useState('');
@@ -37,7 +39,7 @@ const Proveedores = () => {
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
   const [currentPage, setCurrentPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false); // Estado para el modal de edición
-  const [selectedProveedor, setSelectedPrselectedProveedor] = useState(null);
+  const [selectedProveedor, setSelectedProveedor] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const itemsPerPage = 7;
 
@@ -226,7 +228,7 @@ const Proveedores = () => {
               style={{ width: '50%' }}
             />
             <Button style={{backgroundColor:'#228b22', color:'black'}} onClick={() => { setForm({ id: '', NombreCompleto: '', TipoDocument:'', Document: '', Telefono:'',Empresa:'', Estado: true }); setIsEditing(false); setShowForm(true); }}>
-              Agregar Empleado
+              Agregar Proveedor
               <PlusOutlined style={{ fontSize: '16px', color: 'black', padding:'5px' }} />
             </Button>
           </div>
@@ -254,22 +256,31 @@ const Proveedores = () => {
                     <td>{item.Telefono}</td>
                     <td>{item.Empresa}</td>
                     <td>
-                    <Button
-                        color={item.Estado ? "warning" : "dark"}
+                      <Button
+                        color={item.Estado ? "success" : "secondary"}
                         onClick={() => cambiarEstado(item.id)}
-                        className="me-2 btn-sm"
+                        className=" btn-sm" // Usa btn-sm para botones más pequeños
                       >
-                        {item.Estado ? "Active" : "Inactive"}
-                      
+                        {item.Estado ? "Activo" : "Inactivo"}
                       </Button>
                     </td>
                     <td>
                       <div className="d-flex align-items-center">
-                        <Button color="info" onClick={() => { setForm(item); setIsEditing(true); setModalOpen(true); }} className="me-2 btn-">
-                          <FaEdit />
+                        <Button 
+                          color="dark" 
+                          onClick={() => { setForm(item); setIsEditing(true); setModalOpen(true); }} 
+                          className="me-2 " // Usa btn-sm para botones más pequeños
+                          style={{ padding: '0.25rem 0.5rem' }} // Ajusta el relleno si es necesario
+                        >
+                          <FiEdit style={{ fontSize: '0.75rem' }} /> {/* Tamaño del ícono reducido */}
                         </Button>
-                        <Button color="danger" onClick={() => openDeleteModal(item)}>
-                          <FaTrashAlt />
+                        <Button 
+                          color="danger" 
+                          onClick={() => openDeleteModal(item)}
+                          className="btn-sm" // Usa btn-sm para botones más pequeños
+                          style={{ padding: '0.25rem 0.5rem' }} // Ajusta el relleno si es necesario
+                        >
+                          <FaTrashAlt style={{ fontSize: '0.75rem' }} /> {/* Tamaño del ícono reducido */}
                         </Button>
                       </div>
                     </td>
@@ -301,7 +312,7 @@ const Proveedores = () => {
       {/* Formulario de inserción */}
       {showForm && (
         <div className="container">
-          <h1 className="text-center">Crear Proveedores</h1>
+          <h1 className="text-start left-2">Crear Proveedores</h1>
           <br />
           <Row>
             <Col md={8}>

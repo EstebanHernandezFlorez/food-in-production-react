@@ -246,6 +246,7 @@ const Empleados = () => {
               <PlusOutlined style={{ fontSize: '16px', color: 'black', padding:'5px' }} />
             </Button>
           </div>
+          
           <Table className="table table-sm table-hover">
             <thead>
               <tr>
@@ -305,18 +306,19 @@ const Empleados = () => {
                     <td>
                       <Button 
                         onClick={() => viewDetails(item)}
-                        className="me-2 btn-sm" 
+                        className="me-3 btn-sm" 
                         style={{ 
                           backgroundColor: '#F5C300', // Color dorado miel
                           border: 'none', // Elimina el borde del botón
-                          padding: '0.25rem', // Ajusta el relleno para hacer el botón más pequeño
+                          padding: '0.45rem', // Ajusta el relleno para hacer el botón más pequeño
                           display: 'flex', // Asegura que el icono esté centrado
                           alignItems: 'center',
                           justifyContent: 'center',
-                          fontSize: '10rem' // Ajusta el tamaño del texto si es necesario
+                          // Ajusta el tamaño del texto si es necesario
+                          
                         }}
                       >
-                        <FaEye style={{ color: 'black', fontSize: '1.10rem' }} /> {/* Tamaño del ícono reducido */}
+                        <FaEye style={{ color: 'black', fontSize: '1.10rem', top: '5px' }} /> {/* Tamaño del ícono reducido */}
                       </Button> 
                     </td>
 
@@ -381,13 +383,13 @@ const Empleados = () => {
                 <Input
                   type="text"
                   name="Documento"
-                  value={form.Documento}
+                  value={form.Document}
                   onChange={handleChange}
                   placeholder="Número de Documento"
                   style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.Documento ? 'is-invalid' : ''}`}
+                  className={`form-control ${formErrors.Document ? 'is-invalid' : ''}`}
                 />
-                {formErrors.Documento && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.Document && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
             <Col md={4}>
@@ -396,13 +398,13 @@ const Empleados = () => {
                 <Input
                   type="date"
                   name="FechaIngreso"
-                  value={formatDate(form.FechaIngreso)}
+                  value={formatDate(form.FechaIni)}
                   onChange={handleChange}
                   placeholder="Fecha de Ingreso"
                   style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.FechaIngreso ? 'is-invalid' : ''}`}
+                  className={`form-control ${formErrors.FechaIni ? 'is-invalid' : ''}`}
                 />
-                {formErrors.FechaIngreso && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.FechaIni && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
           </Row>
@@ -413,13 +415,13 @@ const Empleados = () => {
                 <Input
                   type="text"
                   name="ContactoEmergencia"
-                  value={form.ContactoEmergencia}
+                  value={form.ContactoEmerg}
                   onChange={handleChange}
                   placeholder="Número de Contacto de Emergencia"
                   style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.ContactoEmergencia ? 'is-invalid' : ''}`}
+                  className={`form-control ${formErrors.ContactoEmerg ? 'is-invalid' : ''}`}
                 />
-                {formErrors.ContactoEmergencia && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.ContactoEmerg && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
             <Col md={4}>
@@ -460,13 +462,13 @@ const Empleados = () => {
                 <Input
                   type="text"
                   name="GrupoSanguineo"
-                  value={form.GrupoSanguineo}
+                  value={form.GrupoSang}
                   onChange={handleChange}
                   placeholder="Grupo Sanguíneo"
                   style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.GrupoSanguineo ? 'is-invalid' : ''}`}
+                  className={`form-control ${formErrors.GrupoSang ? 'is-invalid' : ''}`}
                 />
-                {formErrors.GrupoSanguineo && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.GrupoSang && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
             <Col md={4}>
