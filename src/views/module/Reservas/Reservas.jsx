@@ -1,100 +1,69 @@
-import  { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState } from "react";
+import 'bootstrap/dist/css/bootstrap.min.css';
+import { Table, Button, Container, Row, Col, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
+import { FaEdit, FaTrashAlt } from 'react-icons/fa'; 
+import { Snackbar, Alert } from '@mui/material'; 
 import PropTypes from 'prop-types'; 
-import { Table, Button, Input, Row, Col, FormGroup, Alert } from 'reactstrap';
-import { FaEdit, FaTrashAlt } from 'react-icons/fa';
-import { IoSearchOutline } from 'react-icons/io5';
 
-const Reservas = () => {
-  // Usa useMemo para memorizar el initialFormState y evitar su recreación en cada renderizado
-  const initialFormState = useMemo(() => ({
-    NombreCompleto: '',
+const initialData = [
+  { id: 1, Nombre: "Boda Juan y María", Distintivo: "7867", Evento: "Boda", Fechahora: "2024-09-01T18:00", Cantidadmesas: "15", Nropersonas: "150", Abono: "500", Totalpag: "1500", Restante: "1000" },
+  { id: 2, Nombre: "Fiesta de Empresa", Distintivo: "7576", Evento: "Corporativo", Fechahora: "2024-09-15T20:00", Cantidadmesas: "20", Nropersonas: "200", Abono: "700", Totalpag: "2000", Restante: "1300" },
+  // Más datos de ejemplo...
+];
+
+const Reserva = () => {
+  const [data, setData] = useState(initialData);
+  const [form, setForm] = useState({
+    id: '',
+    Nombre: '',
     Distintivo: '',
+    Evento: '',
+    Fechahora: '',
+    Cantidadmesas: '',
+    Nropersonas: '',
     CategoriaCliente: '',
     Correo: '',
     Celular: '',
-    Estado: '',
     Direccion: '',
-    NroPersonas: '',
-    CantidadMesas: '',
-    TipoEvento: '',
     DuracionEvento: '',
-    FechaHora: '',
     ServiciosAdicionales: '',
     Observaciones: '',
     MontoDecoracion: '',
-    TotalPagar: '',
     Abono: '',
+    Totalpag: '',
     Restante: '',
-    FormaPago: '',
-  }), []);
+    FormaPago: ''
+  });
 
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState(initialFormState);
-  const [formErrors, setFormErrors] = useState({});
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5);
-  const [tableSearchText, setTableSearchText] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
+  const [deleteReserva, setDeleteReserva] = useState(null);
 
-  // Usa useCallback para memoizar resetForm y evitar que se cree una nueva función en cada renderizado
-  const resetForm = useCallback(() => {
-    setFormErrors({});
-    setForm(initialFormState);
-    setIsEditing(false);
-  }, [initialFormState]);
+  const itemsPerPage = 7;
 
-  useEffect(() => {
-    if (!showForm) {
-      resetForm();
-    }
-  }, [showForm, resetForm]);
-
-  const toggleForm = () => {
-    setShowForm(!showForm);
+  const handleSearch = (e) => {
+    setSearchText(e.target.value.toLowerCase());
   };
 
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const validarFormulario = () => {
-    const errors = {};
-    const requiredFields = Object.keys(initialFormState);
-
-    requiredFields.forEach((field) => {
-      if (!form[field]) {
-        errors[field] = 'Este campo es requerido';
-      }
-    });
-
-    setFormErrors(errors);
-
-    if (Object.keys(errors).length === 0) {
-      if (isEditing) {
-        // Lógica para editar la reserva
-      } else {
-        // Lógica para crear nueva reserva
-      }
-      setShowForm(false);
-    }
-  };
-
-  const handleTableSearch = (e) => {
-    setTableSearchText(e.target.value);
+    const { name, value } = e.target;
+    setForm(prevForm => ({
+      ...prevForm,
+      [name]: value
+    }));
   };
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
   };
 
-  // const filteredItems = reservas.filter((item) =>
-  //   Object.values(item).some((value) =>
-  //     String(value).toLowerCase().includes(tableSearchText.toLowerCase())
-  //   )
-  // );
   const openSnackbar = (message, severity) => {
     setSnackbarMessage(message);
     setSnackbarSeverity(severity);
@@ -106,9 +75,9 @@ const Reservas = () => {
   };
 
   const handleSubmit = () => {
-    const { NombreCompleto, Distintivo, CategoriaCliente, Correo, Celular, Direccion, NroPersonas, CantidadMesas, TipoEvento, DuracionEvento, FechaHora, ServiciosAdicionales, Observaciones, MontoDecoracion, TotalPagar, Abono, Restante, FormaPago } = form;
+    const { Nombre, Distintivo, Evento, Fechahora, Cantidadmesas, Nropersonas, CategoriaCliente, Correo, Celular, Direccion, DuracionEvento, ServiciosAdicionales, Observaciones, MontoDecoracion, Abono, Totalpag, Restante, FormaPago } = form;
 
-    if (!NombreCompleto || !Distintivo || !CategoriaCliente || !Correo || !Celular || !Direccion || !NroPersonas || !CantidadMesas || !TipoEvento || !DuracionEvento || !FechaHora || !ServiciosAdicionales || !Observaciones || !MontoDecoracion || !TotalPagar || !Abono || !Restante || !FormaPago) {
+    if (!Nombre || !Distintivo || !Evento || !Fechahora || !Cantidadmesas || !Nropersonas || !CategoriaCliente || !Correo || !Celular || !Direccion || !DuracionEvento || !ServiciosAdicionales || !Observaciones || !MontoDecoracion || !Abono || !Totalpag || !Restante || !FormaPago) {
       openSnackbar("Por favor, ingrese todos los campos", 'warning');
       return;
     }
@@ -125,26 +94,24 @@ const Reservas = () => {
     };
 
     setData([...data, nuevaReserva]);
-
     setForm({
       id: '',
-      NombreCompleto: '',
+      Nombre: '',
       Distintivo: '',
+      Evento: '',
+      Fechahora: '',
+      Cantidadmesas: '',
+      Nropersonas: '',
       CategoriaCliente: '',
       Correo: '',
       Celular: '',
-      Estado: 'Activo',
       Direccion: '',
-      NroPersonas: '',
-      CantidadMesas: '',
-      TipoEvento: '',
       DuracionEvento: '',
-      FechaHora: '',
       ServiciosAdicionales: '',
       Observaciones: '',
       MontoDecoracion: '',
-      TotalPagar: '',
       Abono: '',
+      Totalpag: '',
       Restante: '',
       FormaPago: ''
     });
@@ -153,9 +120,9 @@ const Reservas = () => {
   };
 
   const editar = () => {
-    const { NombreCompleto, Distintivo, CategoriaCliente, Correo, Celular, Direccion, NroPersonas, CantidadMesas, TipoEvento, DuracionEvento, FechaHora, ServiciosAdicionales, Observaciones, MontoDecoracion, TotalPagar, Abono, Restante, FormaPago } = form;
+    const { Nombre, Distintivo, Evento, Fechahora, Cantidadmesas, Nropersonas, CategoriaCliente, Correo, Celular, Direccion, DuracionEvento, ServiciosAdicionales, Observaciones, MontoDecoracion, Abono, Totalpag, Restante, FormaPago } = form;
 
-    if (!NombreCompleto || !Distintivo || !CategoriaCliente || !Correo || !Celular || !Direccion || !NroPersonas || !CantidadMesas || !TipoEvento || !DuracionEvento || !FechaHora || !ServiciosAdicionales || !Observaciones || !MontoDecoracion || !TotalPagar || !Abono || !Restante || !FormaPago) {
+    if (!Nombre || !Distintivo || !Evento || !Fechahora || !Cantidadmesas || !Nropersonas || !CategoriaCliente || !Correo || !Celular || !Direccion || !DuracionEvento || !ServiciosAdicionales || !Observaciones || !MontoDecoracion || !Abono || !Totalpag || !Restante || !FormaPago) {
       openSnackbar("Por favor, ingrese todos los campos", 'warning');
       return;
     }
@@ -175,32 +142,38 @@ const Reservas = () => {
 
     setData(updatedData);
     setIsEditing(false);
-    setShowForm(false);
+    setModalOpen(false);
     openSnackbar("Reserva editada exitosamente", 'success');
   };
 
-
-  const cambiarEstado = (id) => {
-    const updatedData = data.map((registro) => {
-      if (registro.id === id) {
-        registro.Estado = registro.Estado === 'Activo' ? 'Inactivo' : 'Activo';
-      }
-      return registro;
-    });
-
-    setData(updatedData);
-    openSnackbar("Estado de la reserva actualizado exitosamente", 'success');
+  const handleDelete = (dato) => {
+    setDeleteReserva(dato);
+    setDeleteAlertOpen(true);
   };
 
+  const confirmDelete = () => {
+    if (deleteReserva) {
+      const updatedData = data.filter(registro => registro.id !== deleteReserva.id);
+      setData(updatedData);
+      openSnackbar("Reserva eliminada exitosamente", 'success');
+      setDeleteAlertOpen(false);
+    }
+  };
 
+  const cancelDelete = () => {
+    setDeleteAlertOpen(false);
+  };
 
   const filteredData = data.filter(item =>
-    item.NombreCompleto.toLowerCase().includes(searchText) ||
+    item.Nombre.toLowerCase().includes(searchText) ||
     item.Distintivo.toLowerCase().includes(searchText) ||
-    item.CategoriaCliente.toLowerCase().includes(searchText) ||
-    item.Celular.toString().includes(searchText) ||
-    item.Correo.toLowerCase().includes(searchText) ||
-    item.Direccion.toLowerCase().includes(searchText)
+    item.Evento.toLowerCase().includes(searchText) ||
+    item.Fechahora.toLowerCase().includes(searchText) ||
+    item.Cantidadmesas.toString().includes(searchText) ||
+    item.Nropersonas.toString().includes(searchText) ||
+    item.Abono.toString().includes(searchText) ||
+    item.Totalpag.toString().includes(searchText) ||
+    item.Restante.toString().includes(searchText)
   );
 
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -213,192 +186,334 @@ const Reservas = () => {
   }
 
   return (
-    <div>
+    <Container>
+      <br />
+
       {!showForm && (
         <>
+          <h2>Lista de Reservas</h2>
+          <br />
           <div className="d-flex justify-content-between align-items-center mb-3">
-            <div className="search-bar">
-              <IoSearchOutline className="search-icon" />
-              <Input
-                type="text"
-                className="search-input"
-                placeholder="Buscar..."
-                value={tableSearchText}
-                onChange={handleTableSearch}
-              />
-            </div>
-            <Button color="primary" onClick={toggleForm}>
-              Crear Nueva Reserva
+            <Input
+              type="text"
+              placeholder="Buscar..."
+              value={searchText}
+              onChange={handleSearch}
+              style={{ width: '300px' }}
+            />
+            <Button color="primary" onClick={() => setShowForm(true)}>
+              Agregar Reserva
             </Button>
           </div>
-          <Table responsive striped>
+
+          <Table striped>
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Nombre Completo</th>
+                <th>Nombre</th>
                 <th>Distintivo</th>
-                <th>Categoría Cliente</th>
-                <th>Correo</th>
-                <th>Celular</th>
-                <th>Estado</th>
-                <th>Dirección</th>
-                <th>Nro. Personas</th>
-                <th>Cantidad Mesas</th>
-                <th>Tipo Evento</th>
-                <th>Duración Evento</th>
-                <th>Fecha/Hora</th>
-                <th>Servicios Adicionales</th>
-                <th>Observaciones</th>
-                <th>Monto Decoración</th>
-                <th>Total a Pagar</th>
+                <th>Evento</th>
+                <th>Fecha y Hora</th>
+                <th>Cantidad de Mesas</th>
+                <th>Número de Personas</th>
                 <th>Abono</th>
+                <th>Total a Pagar</th>
                 <th>Restante</th>
-                <th>Forma de Pago</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {currentItems.map((item) => (
                 <tr key={item.id}>
-                  <td>{item.id}</td>
-                  <td>{item.NombreCompleto}</td>
+                  <td>{item.Nombre}</td>
                   <td>{item.Distintivo}</td>
-                  <td>{item.CategoriaCliente}</td>
-                  <td>{item.Correo}</td>
-                  <td>{item.Celular}</td>
-                  <td>{item.Estado}</td>
-                  <td>{item.Direccion}</td>
-                  <td>{item.NroPersonas}</td>
-                  <td>{item.CantidadMesas}</td>
-                  <td>{item.TipoEvento}</td>
-                  <td>{item.DuracionEvento}</td>
-                  <td>{item.FechaHora}</td>
-                  <td>{item.ServiciosAdicionales}</td>
-                  <td>{item.Observaciones}</td>
-                  <td>{item.MontoDecoracion}</td>
-                  <td>{item.TotalPagar}</td>
+                  <td>{item.Evento}</td>
+                  <td>{item.Fechahora}</td>
+                  <td>{item.Cantidadmesas}</td>
+                  <td>{item.Nropersonas}</td>
                   <td>{item.Abono}</td>
+                  <td>{item.Totalpag}</td>
                   <td>{item.Restante}</td>
-                  <td>{item.FormaPago}</td>
                   <td>
-                    <Button
-                      color="success"
-                      className="me-2"
-                      onClick={() => {
-                        setIsEditing(true);
-                        setShowForm(true);
-                        setForm(item);
-                      }}
-                    >
+                    <Button color="warning" onClick={() => {
+                      setForm(item);
+                      setIsEditing(true);
+                      setModalOpen(true);
+                    }}>
                       <FaEdit />
                     </Button>
-                    <Button
-                      color="danger"
-                      className="me-2"
-                      onClick={() => eliminar(item)}
-                    >
+                    <Button color="danger" onClick={() => handleDelete(item)}>
                       <FaTrashAlt />
-                    </Button>
-                    <Button
-                      color={item.Estado === 'Confirmada' ? 'warning' : 'primary'}
-                      onClick={() => cambiarEstado(item.id)}
-                    >
-                      {item.Estado === 'Confirmada' ? 'Cancelar' : 'Confirmar'}
                     </Button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </Table>
+
           <nav>
             <ul className="pagination">
-              {pageNumbers.map((number) => (
-                <li key={number} className="page-item">
-                  <button
-                    onClick={() => handlePageChange(number)}
-                    className="page-link"
-                  >
+              {pageNumbers.map(number => (
+                <li
+                  key={number}
+                  className={`page-item ${currentPage === number ? 'active' : ''}`}
+                >
+                  <Button className="page-link" onClick={() => handlePageChange(number)}>
                     {number}
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>
           </nav>
         </>
       )}
+
       {showForm && (
-        <>
-          <h2>{isEditing ? 'Editar Reserva' : 'Crear Nueva Reserva'}</h2>
-          <Row>
-            <Col md={6}>
-              {Object.keys(initialFormState).slice(0, 9).map((key) => (
-                <FormGroup key={key}>
-                  <label>{key}</label>
-                  <Input
-                    type={key === 'Correo' ? 'email' : 'text'}
-                    name={key}
-                    value={form[key]}
-                    onChange={handleChange}
-                  />
-                  {formErrors[key] && <Alert color="danger">{formErrors[key]}</Alert>}
-                </FormGroup>
-              ))}
-            </Col>
-            <Col md={6}>
-              {Object.keys(initialFormState).slice(9).map((key) => (
-                <FormGroup key={key}>
-                  <label>{key}</label>
-                  <Input
-                    type={key === 'FechaHora' ? 'datetime-local' : 'text'}
-                    name={key}
-                    value={form[key]}
-                    onChange={handleChange}
-                  />
-                  {formErrors[key] && <Alert color="danger">{formErrors[key]}</Alert>}
-                </FormGroup>
-              ))}
-              <Button color="primary" onClick={validarFormulario}>
-                {isEditing ? 'Actualizar' : 'Crear'}
-              </Button>
-              <Button color="secondary" onClick={toggleForm}>
-                Cancelar
-              </Button>
-            </Col>
-          </Row>
-        </>
+        <div>
+          <h2>{isEditing ? 'Editar Reserva' : 'Agregar Reserva'}</h2>
+          <br />
+          <FormGroup>
+            <label>Nombre</label>
+            <Input
+              type="text"
+              name="Nombre"
+              value={form.Nombre}
+              onChange={handleChange}
+            />
+          </FormGroup>
+          <FormGroup>
+            <label>Distintivo</label>
+            <Input
+              type="text"
+              name="Distintivo"
+              value={form.Distintivo}
+              onChange={handleChange}
+            />
+          </FormGroup>
+          <FormGroup>
+            <label>Evento</label>
+            <Input
+              type="text"
+              name="Evento"
+              value={form.Evento}
+              onChange={handleChange}
+            />
+          </FormGroup>
+          <FormGroup>
+            <label>Fecha y Hora</label>
+            <Input
+              type="datetime-local"
+              name="Fechahora"
+              value={form.Fechahora}
+              onChange={handleChange}
+            />
+          </FormGroup>
+          <FormGroup>
+            <label>Cantidad de Mesas</label>
+            <Input
+              type="number"
+              name="Cantidadmesas"
+              value={form.Cantidadmesas}
+              onChange={handleChange}
+            />
+          </FormGroup>
+          <FormGroup>
+            <label>Número de Personas</label>
+            <Input
+              type="number"
+              name="Nropersonas"
+              value={form.Nropersonas}
+              onChange={handleChange}
+            />
+          </FormGroup>
+          <FormGroup>
+            <label>Categoria de Cliente</label>
+            <Input
+              type="text"
+              name="CategoriaCliente"
+              value={form.CategoriaCliente}
+              onChange={handleChange}
+            />
+          </FormGroup>
+          <FormGroup>
+            <label>Correo</label>
+            <Input
+              type="email"
+              name="Correo"
+              value={form.Correo}
+              onChange={handleChange}
+            />
+          </FormGroup>
+          <FormGroup>
+            <label>Celular</label>
+            <Input
+              type="text"
+              name="Celular"
+              value={form.Celular}
+              onChange={handleChange}
+            />
+          </FormGroup>
+          <FormGroup>
+            <label>Dirección</label>
+            <Input
+              type="text"
+              name="Direccion"
+              value={form.Direccion}
+              onChange={handleChange}
+            />
+          </FormGroup>
+          <FormGroup>
+            <label>Duración del Evento (horas)</label>
+            <Input
+              type="number"
+              name="DuracionEvento"
+              value={form.DuracionEvento}
+              onChange={handleChange}
+            />
+          </FormGroup>
+          <FormGroup>
+            <label>Servicios Adicionales</label>
+            <Input
+              type="text"
+              name="ServiciosAdicionales"
+              value={form.ServiciosAdicionales}
+              onChange={handleChange}
+            />
+          </FormGroup>
+          <FormGroup>
+            <label>Observaciones</label>
+            <Input
+              type="text"
+              name="Observaciones"
+              value={form.Observaciones}
+              onChange={handleChange}
+            />
+          </FormGroup>
+          <FormGroup>
+            <label>Monto de Decoración</label>
+            <Input
+              type="number"
+              name="MontoDecoracion"
+              value={form.MontoDecoracion}
+              onChange={handleChange}
+            />
+          </FormGroup>
+          <FormGroup>
+            <label>Abono</label>
+            <Input
+              type="number"
+              name="Abono"
+              value={form.Abono}
+              onChange={handleChange}
+            />
+          </FormGroup>
+          <FormGroup>
+            <label>Total a Pagar</label>
+            <Input
+              type="number"
+              name="Totalpag"
+              value={form.Totalpag}
+              onChange={handleChange}
+            />
+          </FormGroup>
+          <FormGroup>
+            <label>Restante</label>
+            <Input
+              type="number"
+              name="Restante"
+              value={form.Restante}
+              onChange={handleChange}
+            />
+          </FormGroup>
+          <FormGroup>
+            <label>Forma de Pago</label>
+            <Input
+              type="text"
+              name="FormaPago"
+              value={form.FormaPago}
+              onChange={handleChange}
+            />
+          </FormGroup>
+          <br />
+          <Button color="primary" onClick={isEditing ? editar : handleSubmit}>
+            {isEditing ? 'Guardar Cambios' : 'Agregar Reserva'}
+          </Button>{' '}
+          <Button color="secondary" onClick={() => setShowForm(false)}>
+            Cancelar
+          </Button>
+        </div>
       )}
-    </div>
+
+      <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={closeSnackbar}>
+        <Alert onClose={closeSnackbar} severity={snackbarSeverity}>
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
+
+      <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)}>
+        <ModalHeader toggle={() => setModalOpen(!modalOpen)}>
+          Confirmar Eliminación
+        </ModalHeader>
+        <ModalBody>
+          ¿Está seguro de que desea eliminar esta reserva?
+        </ModalBody>
+        <ModalFooter>
+          <Button color="danger" onClick={confirmDelete}>
+            Confirmar
+          </Button>{' '}
+          <Button color="secondary" onClick={cancelDelete}>
+            Cancelar
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      <Modal isOpen={deleteAlertOpen} toggle={() => setDeleteAlertOpen(!deleteAlertOpen)}>
+        <ModalHeader toggle={() => setDeleteAlertOpen(!deleteAlertOpen)}>
+          Confirmar Eliminación
+        </ModalHeader>
+        <ModalBody>
+          ¿Está seguro de que desea eliminar esta reserva?
+        </ModalBody>
+        <ModalFooter>
+          <Button color="danger" onClick={confirmDelete}>
+            Confirmar
+          </Button>{' '}
+          <Button color="secondary" onClick={() => setDeleteAlertOpen(false)}>
+            Cancelar
+          </Button>
+        </ModalFooter>
+      </Modal>
+    </Container>
   );
 };
 
-// Definición de PropTypes
-Reservas.propTypes = {
-  reservas: PropTypes.arrayOf(
-    PropTypes.shape({
-      id: PropTypes.number.isRequired,
-      NombreCompleto: PropTypes.string.isRequired,
-      Distintivo: PropTypes.string.isRequired,
-      CategoriaCliente: PropTypes.string.isRequired,
-      Correo: PropTypes.string.isRequired,
-      Celular: PropTypes.string.isRequired,
-      Estado: PropTypes.string.isRequired,
-      Direccion: PropTypes.string.isRequired,
-      NroPersonas: PropTypes.string.isRequired,
-      CantidadMesas: PropTypes.string.isRequired,
-      TipoEvento: PropTypes.string.isRequired,
-      DuracionEvento: PropTypes.string.isRequired,
-      FechaHora: PropTypes.string.isRequired,
-      ServiciosAdicionales: PropTypes.string,
-      Observaciones: PropTypes.string,
-      MontoDecoracion: PropTypes.string.isRequired,
-      TotalPagar: PropTypes.string.isRequired,
-      Abono: PropTypes.string.isRequired,
-      Restante: PropTypes.string.isRequired,
-      FormaPago: PropTypes.string.isRequired,
-    })
-  ).isRequired,
-  eliminar: PropTypes.func.isRequired,
-  cambiarEstado: PropTypes.func.isRequired,
+Reserva.propTypes = {
+  data: PropTypes.array,
+  form: PropTypes.object,
+  isEditing: PropTypes.bool,
+  showForm: PropTypes.bool,
+  searchText: PropTypes.string,
+  snackbarOpen: PropTypes.bool,
+  snackbarMessage: PropTypes.string,
+  snackbarSeverity: PropTypes.string,
+  currentPage: PropTypes.number,
+  modalOpen: PropTypes.bool,
+  deleteAlertOpen: PropTypes.bool,
+  deleteReserva: PropTypes.object,
+  handleSearch: PropTypes.func,
+  handleChange: PropTypes.func,
+  handlePageChange: PropTypes.func,
+  openSnackbar: PropTypes.func,
+  closeSnackbar: PropTypes.func,
+  handleSubmit: PropTypes.func,
+  editar: PropTypes.func,
+  handleDelete: PropTypes.func,
+  confirmDelete: PropTypes.func,
+  cancelDelete: PropTypes.func,
+  filteredData: PropTypes.array,
+  indexOfLastItem: PropTypes.number,
+  indexOfFirstItem: PropTypes.number,
+  currentItems: PropTypes.array,
+  pageNumbers: PropTypes.array,
 };
 
-export default Reservas;
+export default Reserva;

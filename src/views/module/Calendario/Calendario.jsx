@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { Modal, Button, Form } from 'react-bootstrap';
+import { Modal, Button, Form, Popover, OverlayTrigger } from 'react-bootstrap';
 
 const CalendarComponent = () => {
   const [events, setEvents] = useState([]);
@@ -33,6 +33,17 @@ const CalendarComponent = () => {
   });
   const [formErrors, setFormErrors] = useState({});
   const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    // Load events from localStorage when component mounts
+    const savedEvents = JSON.parse(localStorage.getItem('events')) || [];
+    setEvents(savedEvents);
+  }, []);
+
+  useEffect(() => {
+    // Save events to localStorage whenever events state changes
+    localStorage.setItem('events', JSON.stringify(events));
+  }, [events]);
 
   const handleDateClick = (arg) => {
     setSelectedDate(arg.dateStr);
@@ -116,6 +127,25 @@ const CalendarComponent = () => {
     resetForm();
   };
 
+  const eventPopover = (event) => (
+    <Popover id={`popover-${event.id}`}>
+      <Popover.Header as="h3">Reserva: {event.NombreCompleto}</Popover.Header>
+      <Popover.Body>
+        <strong>Fecha:</strong> {event.FechaHora}<br />
+        <strong>Tipo de Evento:</strong> {event.TipoEvento}<br />
+        <strong>Estado:</strong> {event.Estado}
+        <div className="mt-2">
+          <Button variant="primary" onClick={() => handleEventClick({ event: { id: event.id } })}>
+            Editar
+          </Button>{' '}
+          <Button variant="danger" onClick={() => deleteReservation()}>
+            Eliminar
+          </Button>
+        </div>
+      </Popover.Body>
+    </Popover>
+  );
+
   return (
     <div className="container mt-4">
       <FullCalendar
@@ -124,6 +154,15 @@ const CalendarComponent = () => {
         events={events}
         dateClick={handleDateClick}
         eventClick={handleEventClick}
+        eventContent={(eventInfo) => (
+          <OverlayTrigger
+            trigger="click"
+            placement="top"
+            overlay={eventPopover(eventInfo.event)}
+          >
+            <div className="event-content">{eventInfo.event.title}</div>
+          </OverlayTrigger>
+        )}
         headerToolbar={{
           left: 'prev,next today',
           center: 'title',
