@@ -1,11 +1,12 @@
 // Importación de React y hooks
-import React, { useState } from "react";
+import { useState } from "react";
 
 // Importación de Bootstrap y otros componentes necesarios
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Table, Button, Container, Row, Col, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa'; // Iconos de edición y eliminación
 import { Snackbar, Alert } from '@mui/material'; // Componentes para notificaciones
+import PropTypes from 'prop-types'; 
 
 // Datos iniciales de ejemplo
 const initialData = [
@@ -235,18 +236,14 @@ const Clientes = () => {
               Agregar Cliente
             </Button>
           </div>
-        </>
-      )}
 
-      {!showForm && (
-        <>
-          <Table className="table table-hover">
-            <thead>
+          <Table striped bordered hover responsive>
+            <thead className="text-center">
               <tr>
-                <th>id</th>
+                <th>ID</th>
                 <th>Nombre Completo</th>
                 <th>Distintivo</th>
-                <th>Categoria Cliente</th>
+                <th>Categoría</th>
                 <th>Celular</th>
                 <th>Correo</th>
                 <th>Dirección</th>
@@ -254,256 +251,224 @@ const Clientes = () => {
                 <th>Acciones</th>
               </tr>
             </thead>
-            <tbody>
-              {currentItems.map((dato) => (
-                <tr key={dato.id} style={{ backgroundColor: dato.Estado ? 'transparent' : '#f8f9fa' }}>
-                  <td>{dato.id}</td>
-                  <td>{dato.NombreCompleto}</td>
-                  <td>{dato.Distintivo}</td>
-                  <td>{dato.CategoriaCliente}</td>
-                  <td>{dato.Celular}</td>
-                  <td>{dato.Correo}</td>
-                  <td>{dato.Direccion}</td>
-                  <td>
-                    <Button color={dato.Estado ? "success" : "secondary"} onClick={() => cambiarEstado(dato.id)}>
-                      {dato.Estado ? "Activo" : "Inactivo"}
-                    </Button>
-                  </td>
-                  <td>
-                    <Button color="primary" onClick={() => { setForm(dato); setIsEditing(true); setModalOpen(true); }}>
-                      <FaEdit />
-                    </Button>{" "}
-                    <Button color="danger" onClick={() => handleDelete(dato)}>
-                      <FaTrashAlt />
-                    </Button>
-                  </td>
+            <tbody className="text-center">
+              {currentItems.length > 0 ? (
+                currentItems.map((dato) => (
+                  <tr key={dato.id}>
+                    <td>{dato.id}</td>
+                    <td>{dato.NombreCompleto}</td>
+                    <td>{dato.Distintivo}</td>
+                    <td>{dato.CategoriaCliente}</td>
+                    <td>{dato.Celular}</td>
+                    <td>{dato.Correo}</td>
+                    <td>{dato.Direccion}</td>
+                    <td>
+                      <Button
+                        color={dato.Estado ? "success" : "danger"}
+                        onClick={() => cambiarEstado(dato.id)}
+                      >
+                        {dato.Estado ? "Activo" : "Inactivo"}
+                      </Button>
+                    </td>
+                    <td>
+                      <Button color="primary" onClick={() => { setForm(dato); setIsEditing(true); setModalOpen(true); }}>
+                        <FaEdit />
+                      </Button>{" "}
+                      <Button color="danger" onClick={() => handleDelete(dato)}>
+                        <FaTrashAlt />
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="9">No se encontraron clientes</td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </Table>
 
           {/* Paginación */}
-          <div className="d-flex justify-content-center">
-            {pageNumbers.map(number => (
-              <Button
-                key={number}
-                color="info"
-                onClick={() => handlePageChange(number)}
-                className="mx-1"
-              >
-                {number}
-              </Button>
-            ))}
-          </div>
+          <nav>
+            <ul className="pagination justify-content-center">
+              {pageNumbers.map((number) => (
+                <li key={number} className={`page-item ${currentPage === number ? "active" : ""}`}>
+                  <Button className="page-link" onClick={() => handlePageChange(number)}>
+                    {number}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </>
       )}
 
-      {/* Mostrar formulario cuando `showForm` sea verdadero */}
+      {/* Formulario de agregar/editar cliente */}
       {showForm && (
-        <div className="mt-4">
+        <div>
           <h2>{isEditing ? "Editar Cliente" : "Agregar Cliente"}</h2>
           <br />
-          <Row>
+          <Row form>
             <Col md={6}>
               <FormGroup>
                 <label>Nombre Completo:</label>
-                <Input
-                  type="text"
-                  name="NombreCompleto"
-                  value={form.NombreCompleto}
-                  onChange={handleChange}
-                  style={{ border: '2px solid #000000' }}
-                />
+                <Input type="text" name="NombreCompleto" value={form.NombreCompleto} onChange={handleChange} />
               </FormGroup>
             </Col>
             <Col md={6}>
               <FormGroup>
                 <label>Distintivo:</label>
-                <Input
-                  type="text"
-                  name="Distintivo"
-                  value={form.Distintivo}
-                  onChange={handleChange}
-                  style={{ border: '2px solid #000000' }}
-                />
+                <Input type="text" name="Distintivo" value={form.Distintivo} onChange={handleChange} />
               </FormGroup>
             </Col>
           </Row>
-          <Row>
+          <Row form>
             <Col md={6}>
               <FormGroup>
-                <label>Categoría Cliente:</label>
-                <Input
-                  type="text"
-                  name="CategoriaCliente"
-                  value={form.CategoriaCliente}
-                  onChange={handleChange}
-                  style={{ border: '2px solid #000000' }}
-                />
+                <label>Categoría:</label>
+                <Input type="select" name="CategoriaCliente" value={form.CategoriaCliente} onChange={handleChange}>
+                  <option value="">Seleccione una categoría</option>
+                  <option value="regular">Regular</option>
+                  <option value="familiar">Familiar</option>
+                  <option value="VIP">VIP</option>
+                </Input>
               </FormGroup>
             </Col>
             <Col md={6}>
               <FormGroup>
                 <label>Celular:</label>
-                <Input
-                  type="text"
-                  name="Celular"
-                  value={form.Celular}
-                  onChange={handleChange}
-                  style={{ border: '2px solid #000000' }}
-                />
+                <Input type="text" name="Celular" value={form.Celular} onChange={handleChange} />
               </FormGroup>
             </Col>
           </Row>
-          <Row>
+          <Row form>
             <Col md={6}>
               <FormGroup>
                 <label>Correo:</label>
-                <Input
-                  type="text"
-                  name="Correo"
-                  value={form.Correo}
-                  onChange={handleChange}
-                  style={{ border: '2px solid #000000' }}
-                />
+                <Input type="email" name="Correo" value={form.Correo} onChange={handleChange} />
               </FormGroup>
             </Col>
             <Col md={6}>
               <FormGroup>
                 <label>Dirección:</label>
-                <Input
-                  type="text"
-                  name="Direccion"
-                  value={form.Direccion}
-                  onChange={handleChange}
-                  style={{ border: '2px solid #000000' }}
-                />
+                <Input type="text" name="Direccion" value={form.Direccion} onChange={handleChange} />
               </FormGroup>
             </Col>
           </Row>
-          <Button style={{background:'#2e8322'}} onClick={isEditing ? editar : handleSubmit}>
-            {isEditing ? "Guardar Cambios" : "Agregar"}
+          <Button color="primary" onClick={isEditing ? editar : handleSubmit}>
+            {isEditing ? "Guardar Cambios" : "Agregar Cliente"}
           </Button>{" "}
-          <Button style={{background:'#6d0f0f'}} onClick={() => setShowForm(false)}>
+          <Button color="secondary" onClick={() => setShowForm(false)}>
             Cancelar
           </Button>
         </div>
       )}
 
-      {/* Modal de edición */}
+      {/* Modal para edición de cliente */}
       <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)}>
-        <ModalHeader toggle={() => setModalOpen(!modalOpen)}>Editar Cliente</ModalHeader>
+        <ModalHeader toggle={() => setModalOpen(!modalOpen)}>
+          Editar Cliente
+        </ModalHeader>
         <ModalBody>
-          {/* Formulario de edición dentro del modal */}
-          <Row>
+          <Row form>
             <Col md={6}>
               <FormGroup>
                 <label>Nombre Completo:</label>
-                <Input
-                  type="text"
-                  name="NombreCompleto"
-                  value={form.NombreCompleto}
-                  onChange={handleChange}
-                  style={{ border: '2px solid #000000' }}
-                />
+                <Input type="text" name="NombreCompleto" value={form.NombreCompleto} onChange={handleChange} />
               </FormGroup>
             </Col>
             <Col md={6}>
               <FormGroup>
                 <label>Distintivo:</label>
-                <Input
-                  type="text"
-                  name="Distintivo"
-                  value={form.Distintivo}
-                  onChange={handleChange}
-                  style={{ border: '2px solid #000000' }}
-                />
+                <Input type="text" name="Distintivo" value={form.Distintivo} onChange={handleChange} />
               </FormGroup>
             </Col>
           </Row>
-          <Row>
+          <Row form>
             <Col md={6}>
               <FormGroup>
-                <label>Categoría Cliente:</label>
-                <Input
-                  type="text"
-                  name="CategoriaCliente"
-                  value={form.CategoriaCliente}
-                  onChange={handleChange}
-                  style={{ border: '2px solid #000000' }}
-                />
+                <label>Categoría:</label>
+                <Input type="select" name="CategoriaCliente" value={form.CategoriaCliente} onChange={handleChange}>
+                  <option value="">Seleccione una categoría</option>
+                  <option value="regular">Regular</option>
+                  <option value="familiar">Familiar</option>
+                  <option value="VIP">VIP</option>
+                </Input>
               </FormGroup>
             </Col>
             <Col md={6}>
               <FormGroup>
                 <label>Celular:</label>
-                <Input
-                  type="text"
-                  name="Celular"
-                  value={form.Celular}
-                  onChange={handleChange}
-                  style={{ border: '2px solid #000000' }}
-                />
+                <Input type="text" name="Celular" value={form.Celular} onChange={handleChange} />
               </FormGroup>
             </Col>
           </Row>
-          <Row>
+          <Row form>
             <Col md={6}>
               <FormGroup>
                 <label>Correo:</label>
-                <Input
-                  type="text"
-                  name="Correo"
-                  value={form.Correo}
-                  onChange={handleChange}
-                  style={{ border: '2px solid #000000' }}
-                />
+                <Input type="email" name="Correo" value={form.Correo} onChange={handleChange} />
               </FormGroup>
             </Col>
             <Col md={6}>
               <FormGroup>
                 <label>Dirección:</label>
-                <Input
-                  type="text"
-                  name="Direccion"
-                  value={form.Direccion}
-                  onChange={handleChange}
-                  style={{ border: '2px solid #000000' }}
-                />
+                <Input type="text" name="Direccion" value={form.Direccion} onChange={handleChange} />
               </FormGroup>
             </Col>
           </Row>
         </ModalBody>
         <ModalFooter>
-          <Button style={{background:'#2e8322'}} onClick={editar}>Guardar Cambios</Button>{' '}
-          <Button style={{background:'#6d0f0f'}} onClick={() => setModalOpen(false)}>Cancelar</Button>
+          <Button color="primary" onClick={editar}>
+            Guardar Cambios
+          </Button>{" "}
+          <Button color="secondary" onClick={() => setModalOpen(false)}>
+            Cancelar
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Alerta de eliminación */}
+      <Modal isOpen={deleteAlertOpen} toggle={() => setDeleteAlertOpen(!deleteAlertOpen)}>
+        <ModalHeader toggle={() => setDeleteAlertOpen(!deleteAlertOpen)}>
+          Eliminar Cliente
+        </ModalHeader>
+        <ModalBody>
+          ¿Está seguro de que desea eliminar el cliente "{deleteClient?.NombreCompleto}"?
+        </ModalBody>
+        <ModalFooter>
+          <Button color="danger" onClick={confirmDelete}>
+            Eliminar
+          </Button>{" "}
+          <Button color="secondary" onClick={cancelDelete}>
+            Cancelar
+          </Button>
         </ModalFooter>
       </Modal>
 
       {/* Snackbar para notificaciones */}
       <Snackbar open={snackbarOpen} autoHideDuration={3000} onClose={closeSnackbar}>
-        <Alert onClose={closeSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }}>
+        <Alert onClose={closeSnackbar} severity={snackbarSeverity}>
           {snackbarMessage}
-        </Alert>
-      </Snackbar>
-
-      {/* Alerta de eliminación */}
-      <Snackbar open={deleteAlertOpen} autoHideDuration={null} onClose={cancelDelete}>
-        <Alert
-          action={
-            <div>
-              <Button color="inherit" onClick={confirmDelete}>Eliminar</Button>
-              <Button color="inherit" onClick={cancelDelete}>Cancelar</Button>
-            </div>
-          }
-          onClose={cancelDelete}
-          severity="warning"
-        >
-          ¿Realmente desea eliminar el registro {deleteClient?.id}?
         </Alert>
       </Snackbar>
     </Container>
   );
+};
+
+Clientes.propTypes = {
+  clientes: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.number.isRequired,
+      NombreCompleto: PropTypes.string.isRequired,
+      Distintivo: PropTypes.string.isRequired,
+      CategoriaCliente: PropTypes.string.isRequired,
+      Celular: PropTypes.string.isRequired,
+      Correo: PropTypes.string.isRequired,
+      Direccion: PropTypes.string.isRequired,
+      Estado: PropTypes.bool.isRequired,
+    })
+  )
 };
 
 export default Clientes;
