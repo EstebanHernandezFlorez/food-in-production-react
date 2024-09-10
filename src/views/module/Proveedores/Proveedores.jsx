@@ -427,12 +427,16 @@ const Proveedores = () => {
             </Col>
         
             <Col md={4} className="d-flex align-items-center justify-content-center">
-            <img
-              src={FondoForm} // Usa el atributo src para proporcionar la URL de la imagen
-              alt="Descripción de la Imagen" // Agrega una descripción adecuada para la accesibilidad
-              className="img-fluid full-width-image"
-            />
-          </Col>
+              <img
+                src={FondoForm} // Usa el atributo src para proporcionar la URL de la imagen
+                alt="Descripción de la Imagen" // Agrega una descripción adecuada para la accesibilidad
+                style={{
+                  width: '100%',       
+                  height: '60vh',     
+                  objectFit: 'cover',  
+                }}
+              />
+            </Col>
 
           </Row>
         </div>
