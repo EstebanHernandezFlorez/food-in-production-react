@@ -17,7 +17,7 @@ const initialData = [
   {id: 6,Nombre: "Pedro Martínez",Document: 34567890,FechaIni: "05-06-2021",ContactoEmerg: "3145678901",Parentesco: "Madre",NombreFamiliar: "Elena Martínez",GrupoSang: "A-",NumeroSS: 56789012,Direccion: "Cl 80 #14-05",TipoContrato: "tiempo completo"},
   {id: 7,Nombre: "Laura Fernández",Document: 45678901,FechaIni: "12-04-2023",ContactoEmerg: "3156789012",Parentesco: "Hijo",NombreFamiliar: "Jorge Fernández",GrupoSang: "B-",NumeroSS: 67890123,Direccion: "Av. 68 #10-20",TipoContrato: "medio tiempo"},
   {id: 8,Nombre: "Carlos Rodríguez",Document: 56789012,FechaIni: "01-01-2020",ContactoEmerg: "3167890123",Parentesco: "Esposa",NombreFamiliar: "María Rodríguez",GrupoSang: "AB-",NumeroSS: 78901234,Direccion: "Cra 50 #30-40",TipoContrato: "tiempo completo"}
-  
+   
 ];
 const Empleados = () => {
   const [data, setData] = useState(initialData);
@@ -66,13 +66,8 @@ const Empleados = () => {
   if (selectedEmployee) {
     const updatedData = data.filter(registro => registro.id !== selectedEmployee.id);
     setData(updatedData);
-    notification.success({
-      message: 'Éxito',
-      description: 'Empleado eliminado exitosamente',
-    });
   }
-  setModalOpen(false); // Cierra el modal
-  setSelectedEmployee(null); // Limpia el empleado seleccionado
+  handleDeleteModalClose();
 };  
 
   const handleCancel = () => {
@@ -212,6 +207,7 @@ const Empleados = () => {
     item.FechaIni.toLowerCase().includes(tableSearchText) ||
     item.NumeroSS.toString().includes(tableSearchText)
   );
+  
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
@@ -268,7 +264,7 @@ const Empleados = () => {
                   <tr key={item.id}>
                     <td style={{ textAlign: 'center' }}>{item.id}</td>
                     <td>{item.Nombre}</td>
-                    <td style={{ textAlign: 'center' }}>{item.Document}</td>
+                    <td >{item.Document}</td>
                     <td style={{ textAlign: 'center' }}>{item.FechaIni}</td>
                     <td style={{ textAlign: 'center' }}>{item.GrupoSang}</td>
                     <td style={{ textAlign: 'center' }}>{item.NumeroSS}</td>
@@ -521,11 +517,11 @@ const Empleados = () => {
           </Row>
         <div className="d-flex justify-content-start mt-3">
           <Button style={{ background: '#2e8322' }} onClick={handleSubmit}>
-            {isEditing ? 'Update' : 'Add'}
+            {isEditing ? 'Actualizar' : 'Guardar'}
           </Button>
       
           <Button style={{ background: '#6d0f0f' }} onClick={() => { setShowForm(false); setIsEditing(false); }}>
-            Cancel
+            Cancelar
           </Button>
         </div>
       </div>
@@ -533,7 +529,7 @@ const Empleados = () => {
       
       )}
       {/* Modal de edición */}
-      <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)}>
+      <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)} style={{ maxWidth: '50%' }}>
         <ModalHeader toggle={() => setModalOpen(!modalOpen)}>
           Editar Empleado
         </ModalHeader>
@@ -688,10 +684,10 @@ const Empleados = () => {
           </Row>
         </ModalBody>
         <ModalFooter>
-          <Button color="primary" onClick={isEditing ? editar : handleSubmit}>
-              {isEditing ? 'Update' : 'Submit'}
+        <Button style={{ background: '#2e8322' }} onClick={isEditing ? editar : handleSubmit}>
+              {isEditing ? 'Actualizar' : 'Guardar'}
             </Button>
-          <Button color="danger" onClick={handleCancel}>
+          <Button style={{ background: '#6d0f0f' }} onClick={handleCancel}>
             Cancelar
           </Button>
         </ModalFooter>
@@ -705,23 +701,27 @@ const Empleados = () => {
           ¿Está seguro de que desea eliminar al empleado seleccionado <strong>{selectedEmployee?.Nombre}</strong>?
         </ModalBody>
         <ModalFooter>
-          <Button color="danger" onClick={handleOk}>
+          <Button style={{ background: '#6d0f0f' }} onClick={handleOk}>
             Eliminar
           </Button>
-          <Button color="secondary" onClick={handleDeleteModalClose}>
+          <Button style={{ background: '#2e8322' }} onClick={handleDeleteModalClose}>
             Cancelar
           </Button>
         </ModalFooter>
       </Modal>
 
       {/* Modal de detalle */}
-      <Modal isOpen={detailModalOpen} toggle={toggleDetailModal}>
-      <ModalHeader toggle={toggleDetailModal} style={{ color: '#8C1616'}}>
-        Detalles del Empleado
-      </ModalHeader>
-        <ModalBody>
+      <Modal 
+        isOpen={detailModalOpen} 
+        toggle={toggleDetailModal} 
+        style={{ maxWidth: '40%', marginTop:'10px', marginBottom:'3px'}}
+      >
+        <ModalHeader toggle={toggleDetailModal} style={{ color: '#8C1616' }}>
+          Detalles del Empleado
+        </ModalHeader>
+        <ModalBody style={{ overflowY: 'auto', maxHeight: 'calc(120vh - 120px)' }}>
           {selectedItem && (
-            <div style={{padding:'10px'}}>
+            <div style={{ padding: '10px' }}>
               <p><strong>Nombre:</strong> {selectedItem.Nombre}</p>
               <p><strong>Documento:</strong> {selectedItem.Document}</p>
               <p><strong>Fecha de Ingreso:</strong> {selectedItem.FechaIni}</p>
@@ -735,11 +735,12 @@ const Empleados = () => {
               <p><strong>Estado:</strong> {selectedItem.Estado ? 'Activo' : 'Inactivo'}</p>
             </div>
           )}
+            <ModalFooter style={{display: 'flex', justifyContent: 'flex-end', padding:0 }}>
+              <Button style={{ background: '#6d0f0f' }} onClick={toggleDetailModal}>Cerrar</Button>
+            </ModalFooter>
         </ModalBody>
-        <ModalFooter>
-          <Button color="danger" onClick={toggleDetailModal}>Cerrar</Button>
-        </ModalFooter>
       </Modal>
+
 
       {/* Snackbar */}
       <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={closeSnackbar}>

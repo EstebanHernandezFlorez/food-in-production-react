@@ -169,7 +169,7 @@ const Usuario = () => {
   
 
   const filteredData = data.filter(item =>
-    item.TipoDocumento.toLowerCase().includes(tableSearchText) ||
+    item.Correo.toLowerCase().includes(tableSearchText) ||
     item.Documento.toString().includes(tableSearchText) ||
     item.Celular.toLowerCase().includes(tableSearchText) ||
     item.NombreCompleto.toString().includes(tableSearchText)
