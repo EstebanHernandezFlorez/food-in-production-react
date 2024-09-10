@@ -1,100 +1,137 @@
-import  { useState, useEffect, useCallback, useMemo } from 'react';
-import PropTypes from 'prop-types'; 
-import { Table, Button, Input, Row, Col, FormGroup, Alert } from 'reactstrap';
+import { useState } from "react";
+import { Table, Button, Container, Row, Col, FormGroup, Input } from 'reactstrap';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
-import { IoSearchOutline } from 'react-icons/io5';
+import { Snackbar, Alert } from '@mui/material';
 
-const Reservas = () => {
-  // Usa useMemo para memorizar el initialFormState y evitar su recreación en cada renderizado
-  const initialFormState = useMemo(() => ({
-    NombreCompleto: '',
+const initialData = [
+  { id: 1, Nombre: "Boda Juan y María", Distintivo: "7867", Evento: "Boda", Fechahora: "2024-09-01T18:00", Cantidadmesas: "15", Nropersonas: "150", Abono: "500", Totalpag: "1500", Restante: "1000" },
+  { id: 2, Nombre: "Fiesta de Empresa", Distintivo: "7576", Evento: "Corporativo", Fechahora: "2024-09-15T20:00", Cantidadmesas: "20", Nropersonas: "200", Abono: "700", Totalpag: "2000", Restante: "1300" },
+];
+
+const Reserva = () => {
+  const [data, setData] = useState(initialData);
+  const [form, setForm] = useState({
+    id: '',
+    Nombre: '',
     Distintivo: '',
+    Evento: '',
+    Fechahora: '',
+    Cantidadmesas: '',
+    Nropersonas: '',
     CategoriaCliente: '',
     Correo: '',
     Celular: '',
-    Estado: '',
     Direccion: '',
-    NroPersonas: '',
-    CantidadMesas: '',
-    TipoEvento: '',
     DuracionEvento: '',
-    FechaHora: '',
     ServiciosAdicionales: '',
     Observaciones: '',
     MontoDecoracion: '',
-    TotalPagar: '',
     Abono: '',
+    Totalpag: '',
     Restante: '',
-    FormaPago: '',
-  }), []);
+    FormaPago: ''
+  });
 
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState(initialFormState);
-  const [formErrors, setFormErrors] = useState({});
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5);
-  const [tableSearchText, setTableSearchText] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
+  const [searchText, setSearchText] = useState('');
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
 
-  // Usa useCallback para memoizar resetForm y evitar que se cree una nueva función en cada renderizado
-  const resetForm = useCallback(() => {
-    setFormErrors({});
-    setForm(initialFormState);
-    setIsEditing(false);
-  }, [initialFormState]);
-
-  useEffect(() => {
-    if (!showForm) {
-      resetForm();
-    }
-  }, [showForm, resetForm]);
-
-  const toggleForm = () => {
-    setShowForm(!showForm);
+  const handleSearch = (e) => {
+    setSearchText(e.target.value.toLowerCase());
   };
 
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    setForm(prevForm => ({
+      ...prevForm,
+      [name]: value
+    }));
   };
 
-  const validarFormulario = () => {
-    const errors = {};
-    const requiredFields = Object.keys(initialFormState);
+  const validateForm = () => {
+    let errors = {};
+    if (!form.Nombre) errors.Nombre = 'El nombre es obligatorio';
+    if (!form.Distintivo) errors.Distintivo = 'El distintivo es obligatorio';
+    if (!form.Evento) errors.Evento = 'El evento es obligatorio';
+    if (!form.Fechahora) errors.Fechahora = 'La fecha y hora son obligatorias';
+    if (!form.Cantidadmesas) errors.Cantidadmesas = 'La cantidad de mesas es obligatoria';
+    if (!form.Nropersonas) errors.Nropersonas = 'El número de personas es obligatorio';
+    if (!form.CategoriaCliente) errors.CategoriaCliente = 'La categoria del cliente es obligatoria';
+    if (!form.Correo) errors.Correo = 'El correo es obligatorio';
+    if (!form.Celular) errors.Celular = 'El número de celular es obligatorio';
+    if (!form.Direccion) errors.Direccion = 'La dirección es obligatoria';
+    if (!form.DuracionEvento) errors.DuracionEvento = 'La duración del evento es obligatorio';
+    if (!form.ServiciosAdicionales) errors.ServiciosAdicionales = 'El servicio adicional es obligatorio';
+    if (!form.Observaciones) errors.Observaciones = 'Las observacionnes son obligatorias';
+    if (!form.MontoDecoracion) errors.MontoDecoracion = 'El monto de la decoracion es obligatoria';
+    if (!form.Abono) errors.Abono = 'El abono es obligatorio';
+    if (!form.Totalpag) errors.Totalpag = 'El total a pagar es obligatorio';
+    if (!form.Restante) errors.Restante = 'El restante es obligatorio';
+    if (!form.FormaPago) errors.FormaPago = 'La forma de pago es obligatoria';
 
-    requiredFields.forEach((field) => {
-      if (!form[field]) {
-        errors[field] = 'Este campo es requerido';
-      }
-    });
 
     setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
-    if (Object.keys(errors).length === 0) {
-      if (isEditing) {
-        // Lógica para editar la reserva
-      } else {
-        // Lógica para crear nueva reserva
-      }
-      setShowForm(false);
+  const handleSubmit = () => {
+    if (!validateForm()) {
+      openSnackbar("Por favor, complete todos los campos obligatorios", 'warning');
+      return;
+    }
+
+    if (isEditing) {
+      // Actualiza la reserva existente
+      setData(data.map(item => (item.id === form.id ? form : item)));
+      openSnackbar("Reserva actualizada exitosamente", 'success');
+    } else {
+      // Crea una nueva reserva
+      const nuevaReserva = { ...form, id: data.length ? Math.max(...data.map(res => res.id)) + 1 : 1 };
+      setData([...data, nuevaReserva]);
+      openSnackbar("Reserva agregada exitosamente", 'success');
+    }
+
+    setShowForm(false);
+    resetForm();
+  };
+
+  const handleDelete = (id) => {
+    if (window.confirm("¿Está seguro de que desea eliminar esta reserva?")) {
+      setData(data.filter(item => item.id !== id));
+      openSnackbar("Reserva eliminada exitosamente", 'success');
     }
   };
 
-  const handleTableSearch = (e) => {
-    setTableSearchText(e.target.value);
+  const resetForm = () => {
+    setForm({
+      id: '',
+      Nombre: '',
+      Distintivo: '',
+      Evento: '',
+      Fechahora: '',
+      Cantidadmesas: '',
+      Nropersonas: '',
+      CategoriaCliente: '',
+      Correo: '',
+      Celular: '',
+      Direccion: '',
+      DuracionEvento: '',
+      ServiciosAdicionales: '',
+      Observaciones: '',
+      MontoDecoracion: '',
+      Abono: '',
+      Totalpag: '',
+      Restante: '',
+      FormaPago: ''
+    });
+    setFormErrors({});
+    setIsEditing(false);
   };
 
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
-  };
-
-  // const filteredItems = reservas.filter((item) =>
-  //   Object.values(item).some((value) =>
-  //     String(value).toLowerCase().includes(tableSearchText.toLowerCase())
-  //   )
-  // );
   const openSnackbar = (message, severity) => {
     setSnackbarMessage(message);
     setSnackbarSeverity(severity);
@@ -105,300 +142,275 @@ const Reservas = () => {
     setSnackbarOpen(false);
   };
 
-  const handleSubmit = () => {
-    const { NombreCompleto, Distintivo, CategoriaCliente, Correo, Celular, Direccion, NroPersonas, CantidadMesas, TipoEvento, DuracionEvento, FechaHora, ServiciosAdicionales, Observaciones, MontoDecoracion, TotalPagar, Abono, Restante, FormaPago } = form;
-
-    if (!NombreCompleto || !Distintivo || !CategoriaCliente || !Correo || !Celular || !Direccion || !NroPersonas || !CantidadMesas || !TipoEvento || !DuracionEvento || !FechaHora || !ServiciosAdicionales || !Observaciones || !MontoDecoracion || !TotalPagar || !Abono || !Restante || !FormaPago) {
-      openSnackbar("Por favor, ingrese todos los campos", 'warning');
-      return;
-    }
-
-    const reservaExistente = data.find(registro => registro.Distintivo.toString() === Distintivo.toString());
-    if (reservaExistente) {
-      openSnackbar("La reserva ya existe. Por favor, ingrese un distintivo diferente.", 'error');
-      return;
-    }
-
-    const nuevaReserva = {
-      ...form,
-      id: data.length ? Math.max(...data.map(res => res.id)) + 1 : 1
-    };
-
-    setData([...data, nuevaReserva]);
-
-    setForm({
-      id: '',
-      NombreCompleto: '',
-      Distintivo: '',
-      CategoriaCliente: '',
-      Correo: '',
-      Celular: '',
-      Estado: 'Activo',
-      Direccion: '',
-      NroPersonas: '',
-      CantidadMesas: '',
-      TipoEvento: '',
-      DuracionEvento: '',
-      FechaHora: '',
-      ServiciosAdicionales: '',
-      Observaciones: '',
-      MontoDecoracion: '',
-      TotalPagar: '',
-      Abono: '',
-      Restante: '',
-      FormaPago: ''
-    });
-    setShowForm(false);
-    openSnackbar("Reserva agregada exitosamente", 'success');
-  };
-
-  const editar = () => {
-    const { NombreCompleto, Distintivo, CategoriaCliente, Correo, Celular, Direccion, NroPersonas, CantidadMesas, TipoEvento, DuracionEvento, FechaHora, ServiciosAdicionales, Observaciones, MontoDecoracion, TotalPagar, Abono, Restante, FormaPago } = form;
-
-    if (!NombreCompleto || !Distintivo || !CategoriaCliente || !Correo || !Celular || !Direccion || !NroPersonas || !CantidadMesas || !TipoEvento || !DuracionEvento || !FechaHora || !ServiciosAdicionales || !Observaciones || !MontoDecoracion || !TotalPagar || !Abono || !Restante || !FormaPago) {
-      openSnackbar("Por favor, ingrese todos los campos", 'warning');
-      return;
-    }
-
-    const reservaExistente = data.find(
-      (registro) => registro.Distintivo.toString() === Distintivo.toString() &&
-      registro.id !== form.id
-    );
-    if (reservaExistente) {
-      openSnackbar("Ya existe una reserva con el mismo distintivo. Por favor, ingresa un distintivo diferente.", 'error');
-      return;
-    }
-
-    const updatedData = data.map((registro) =>
-      registro.id === form.id ? { ...form } : registro
-    );
-
-    setData(updatedData);
-    setIsEditing(false);
-    setShowForm(false);
-    openSnackbar("Reserva editada exitosamente", 'success');
-  };
-
-
-  const cambiarEstado = (id) => {
-    const updatedData = data.map((registro) => {
-      if (registro.id === id) {
-        registro.Estado = registro.Estado === 'Activo' ? 'Inactivo' : 'Activo';
-      }
-      return registro;
-    });
-
-    setData(updatedData);
-    openSnackbar("Estado de la reserva actualizado exitosamente", 'success');
-  };
-
-
-
   const filteredData = data.filter(item =>
-    item.NombreCompleto.toLowerCase().includes(searchText) ||
+    item.Nombre.toLowerCase().includes(searchText) ||
     item.Distintivo.toLowerCase().includes(searchText) ||
-    item.CategoriaCliente.toLowerCase().includes(searchText) ||
-    item.Celular.toString().includes(searchText) ||
-    item.Correo.toLowerCase().includes(searchText) ||
-    item.Direccion.toLowerCase().includes(searchText)
+    item.Evento.toLowerCase().includes(searchText)
   );
 
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
-
-  const pageNumbers = [];
-  for (let i = 1; i <= Math.ceil(filteredData.length / itemsPerPage); i++) {
-    pageNumbers.push(i);
-  }
-
   return (
-    <div>
-      {!showForm && (
-        <>
+    <Container fluid>
+      <Row>
+        <Col md={8}>
+          <h2>Lista de Reservas</h2>
           <div className="d-flex justify-content-between align-items-center mb-3">
-            <div className="search-bar">
-              <IoSearchOutline className="search-icon" />
-              <Input
-                type="text"
-                className="search-input"
-                placeholder="Buscar..."
-                value={tableSearchText}
-                onChange={handleTableSearch}
-              />
-            </div>
-            <Button color="primary" onClick={toggleForm}>
-              Crear Nueva Reserva
+            <Input
+              type="text"
+              placeholder="Buscar..."
+              value={searchText}
+              onChange={handleSearch}
+              style={{ width: '300px' }}
+            />
+            <Button color="primary" onClick={() => {
+              resetForm();
+              setShowForm(true);
+            }}>
+              Agregar Reserva
             </Button>
           </div>
-          <Table responsive striped>
+          <Table striped>
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Nombre Completo</th>
+                <th>Nombre</th>
                 <th>Distintivo</th>
-                <th>Categoría Cliente</th>
-                <th>Correo</th>
-                <th>Celular</th>
-                <th>Estado</th>
-                <th>Dirección</th>
-                <th>Nro. Personas</th>
-                <th>Cantidad Mesas</th>
-                <th>Tipo Evento</th>
-                <th>Duración Evento</th>
-                <th>Fecha/Hora</th>
-                <th>Servicios Adicionales</th>
-                <th>Observaciones</th>
-                <th>Monto Decoración</th>
-                <th>Total a Pagar</th>
-                <th>Abono</th>
-                <th>Restante</th>
-                <th>Forma de Pago</th>
+                <th>Evento</th>
+                <th>Fecha y Hora</th>
+                <th>Cantidad de Mesas</th>
+                <th>Número de Personas</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {currentItems.map((item) => (
+              {filteredData.map((item) => (
                 <tr key={item.id}>
-                  <td>{item.id}</td>
-                  <td>{item.NombreCompleto}</td>
+                  <td>{item.Nombre}</td>
                   <td>{item.Distintivo}</td>
-                  <td>{item.CategoriaCliente}</td>
-                  <td>{item.Correo}</td>
-                  <td>{item.Celular}</td>
-                  <td>{item.Estado}</td>
-                  <td>{item.Direccion}</td>
-                  <td>{item.NroPersonas}</td>
-                  <td>{item.CantidadMesas}</td>
-                  <td>{item.TipoEvento}</td>
-                  <td>{item.DuracionEvento}</td>
-                  <td>{item.FechaHora}</td>
-                  <td>{item.ServiciosAdicionales}</td>
-                  <td>{item.Observaciones}</td>
-                  <td>{item.MontoDecoracion}</td>
-                  <td>{item.TotalPagar}</td>
-                  <td>{item.Abono}</td>
-                  <td>{item.Restante}</td>
-                  <td>{item.FormaPago}</td>
+                  <td>{item.Evento}</td>
+                  <td>{item.Fechahora}</td>
+                  <td>{item.Cantidadmesas}</td>
+                  <td>{item.Nropersonas}</td>
                   <td>
-                    <Button
-                      color="success"
-                      className="me-2"
-                      onClick={() => {
-                        setIsEditing(true);
-                        setShowForm(true);
-                        setForm(item);
-                      }}
-                    >
+                    <Button color="warning" onClick={() => {
+                      setForm(item);
+                      setIsEditing(true);
+                      setShowForm(true);
+                    }}>
                       <FaEdit />
-                    </Button>
-                    <Button
-                      color="danger"
-                      className="me-2"
-                      onClick={() => eliminar(item)}
-                    >
+                    </Button>{' '}
+                    <Button color="danger" onClick={() => handleDelete(item.id)}>
                       <FaTrashAlt />
-                    </Button>
-                    <Button
-                      color={item.Estado === 'Confirmada' ? 'warning' : 'primary'}
-                      onClick={() => cambiarEstado(item.id)}
-                    >
-                      {item.Estado === 'Confirmada' ? 'Cancelar' : 'Confirmar'}
                     </Button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </Table>
-          <nav>
-            <ul className="pagination">
-              {pageNumbers.map((number) => (
-                <li key={number} className="page-item">
-                  <button
-                    onClick={() => handlePageChange(number)}
-                    className="page-link"
-                  >
-                    {number}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        </>
-      )}
-      {showForm && (
-        <>
-          <h2>{isEditing ? 'Editar Reserva' : 'Crear Nueva Reserva'}</h2>
-          <Row>
-            <Col md={6}>
-              {Object.keys(initialFormState).slice(0, 9).map((key) => (
-                <FormGroup key={key}>
-                  <label>{key}</label>
-                  <Input
-                    type={key === 'Correo' ? 'email' : 'text'}
-                    name={key}
-                    value={form[key]}
-                    onChange={handleChange}
-                  />
-                  {formErrors[key] && <Alert color="danger">{formErrors[key]}</Alert>}
-                </FormGroup>
-              ))}
-            </Col>
-            <Col md={6}>
-              {Object.keys(initialFormState).slice(9).map((key) => (
-                <FormGroup key={key}>
-                  <label>{key}</label>
-                  <Input
-                    type={key === 'FechaHora' ? 'datetime-local' : 'text'}
-                    name={key}
-                    value={form[key]}
-                    onChange={handleChange}
-                  />
-                  {formErrors[key] && <Alert color="danger">{formErrors[key]}</Alert>}
-                </FormGroup>
-              ))}
-              <Button color="primary" onClick={validarFormulario}>
-                {isEditing ? 'Actualizar' : 'Crear'}
-              </Button>
-              <Button color="secondary" onClick={toggleForm}>
-                Cancelar
-              </Button>
-            </Col>
-          </Row>
-        </>
-      )}
-    </div>
+        </Col>
+
+        {showForm && (
+          <Col md={4}>
+            <h2>{isEditing ? 'Editar Reserva' : 'Agregar Reserva'}</h2>
+
+            {/* Formulario con todos los campos */}
+            <FormGroup>
+              <label>Nombre</label>
+              <Input
+                type="text"
+                name="Nombre"
+                value={form.Nombre}
+                onChange={handleChange}
+                invalid={!!formErrors.Nombre}
+              />
+              {formErrors.Nombre && <div className="text-danger">{formErrors.Nombre}</div>}
+            </FormGroup>
+
+            <FormGroup>
+              <label>Distintivo</label>
+              <Input
+                type="text"
+                name="Distintivo"
+                value={form.Distintivo}
+                onChange={handleChange}
+                invalid={!!formErrors.Distintivo}
+              />
+              {formErrors.Distintivo && <div className="text-danger">{formErrors.Distintivo}</div>}
+            </FormGroup>
+
+            <FormGroup>
+              <label>Evento</label>
+              <Input
+                type="text"
+                name="Evento"
+                value={form.Evento}
+                onChange={handleChange}
+                invalid={!!formErrors.Evento}
+              />
+              {formErrors.Evento && <div className="text-danger">{formErrors.Evento}</div>}
+            </FormGroup>
+
+            <FormGroup>
+              <label>Fecha y Hora</label>
+              <Input
+                type="datetime-local"
+                name="Fechahora"
+                value={form.Fechahora}
+                onChange={handleChange}
+                invalid={!!formErrors.Fechahora}
+              />
+              {formErrors.Fechahora && <div className="text-danger">{formErrors.Fechahora}</div>}
+            </FormGroup>
+
+            <FormGroup>
+              <label>Cantidad de Mesas</label>
+              <Input
+                type="number"
+                name="Cantidadmesas"
+                value={form.Cantidadmesas}
+                onChange={handleChange}
+                invalid={!!formErrors.Cantidadmesas}
+              />
+              {formErrors.Cantidadmesas && <div className="text-danger">{formErrors.Cantidadmesas}</div>}
+            </FormGroup>
+
+            <FormGroup>
+              <label>Número de Personas</label>
+              <Input
+                type="number"
+                name="Nropersonas"
+                value={form.Nropersonas}
+                onChange={handleChange}
+                invalid={!!formErrors.Nropersonas}
+              />
+              {formErrors.Nropersonas && <div className="text-danger">{formErrors.Nropersonas}</div>}
+            </FormGroup>
+
+            <FormGroup>
+              <label>Correo</label>
+              <Input
+                type="email"
+                name="Correo"
+                value={form.Correo}
+                onChange={handleChange}
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <label>Celular</label>
+              <Input
+                type="tel"
+                name="Celular"
+                value={form.Celular}
+                onChange={handleChange}
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <label>Dirección</label>
+              <Input
+                type="text"
+                name="Direccion"
+                value={form.Direccion}
+                onChange={handleChange}
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <label>Duración del Evento</label>
+              <Input
+                type="text"
+                name="DuracionEvento"
+                value={form.DuracionEvento}
+                onChange={handleChange}
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <label>Servicios Adicionales</label>
+              <Input
+                type="textarea"
+                name="ServiciosAdicionales"
+                value={form.ServiciosAdicionales}
+                onChange={handleChange}
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <label>Observaciones</label>
+              <Input
+                type="textarea"
+                name="Observaciones"
+                value={form.Observaciones}
+                onChange={handleChange}
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <label>Monto de Decoración</label>
+              <Input
+                type="number"
+                name="MontoDecoracion"
+                value={form.MontoDecoracion}
+                onChange={handleChange}
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <label>Abono</label>
+              <Input
+                type="number"
+                name="Abono"
+                value={form.Abono}
+                onChange={handleChange}
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <label>Total a Pagar</label>
+              <Input
+                type="number"
+                name="Totalpag"
+                value={form.Totalpag}
+                onChange={handleChange}
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <label>Restante</label>
+              <Input
+                type="number"
+                name="Restante"
+                value={form.Restante}
+                onChange={handleChange}
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <label>Forma de Pago</label>
+              <Input
+                type="text"
+                name="FormaPago"
+                value={form.FormaPago}
+                onChange={handleChange}
+              />
+            </FormGroup>
+
+            <Button color="primary" onClick={handleSubmit}>
+              {isEditing ? 'Guardar Cambios' : 'Agregar'}
+            </Button>{' '}
+            <Button color="secondary" onClick={() => setShowForm(false)}>
+              Cancelar
+            </Button>
+          </Col>
+        )}
+      </Row>
+
+      <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={closeSnackbar}>
+        <Alert onClose={closeSnackbar} severity={snackbarSeverity}>
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
+    </Container>
   );
 };
 
-// Definición de PropTypes
-Reservas.propTypes = {
-  reservas: PropTypes.arrayOf(
-    PropTypes.shape({
-      id: PropTypes.number.isRequired,
-      NombreCompleto: PropTypes.string.isRequired,
-      Distintivo: PropTypes.string.isRequired,
-      CategoriaCliente: PropTypes.string.isRequired,
-      Correo: PropTypes.string.isRequired,
-      Celular: PropTypes.string.isRequired,
-      Estado: PropTypes.string.isRequired,
-      Direccion: PropTypes.string.isRequired,
-      NroPersonas: PropTypes.string.isRequired,
-      CantidadMesas: PropTypes.string.isRequired,
-      TipoEvento: PropTypes.string.isRequired,
-      DuracionEvento: PropTypes.string.isRequired,
-      FechaHora: PropTypes.string.isRequired,
-      ServiciosAdicionales: PropTypes.string,
-      Observaciones: PropTypes.string,
-      MontoDecoracion: PropTypes.string.isRequired,
-      TotalPagar: PropTypes.string.isRequired,
-      Abono: PropTypes.string.isRequired,
-      Restante: PropTypes.string.isRequired,
-      FormaPago: PropTypes.string.isRequired,
-    })
-  ).isRequired,
-  eliminar: PropTypes.func.isRequired,
-  cambiarEstado: PropTypes.func.isRequired,
-};
-
-export default Reservas;
+export default Reserva;

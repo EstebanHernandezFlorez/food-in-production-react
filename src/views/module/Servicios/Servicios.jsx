@@ -175,7 +175,7 @@ class Servicios extends React.Component {
     this.setState({ 
       data: lista, 
       filteredData: lista,
-      snackbarMessage: 'Estado del servicio cambiado con éxito.', 
+      snackbarMessage: 'Estado del servicio actualizado exitosamente.', 
       snackbarSeverity: 'info',
       snackbarOpen: true 
     });
@@ -292,8 +292,8 @@ class Servicios extends React.Component {
             </FormGroup>
 
             <ModalFooter>
-              <Button style={{background:'#2e8322'}} onClick={this.insertar}>Agregar</Button>
-              <Button style={{background:'#6d0f0f'}} onClick={this.ocultarModalInsertar}>Cancelar</Button>
+              <Button style={{background:'#2e8329'}} onClick={this.insertar}>Agregar</Button>
+              <Button style={{background:'#8d0f0f'}} onClick={this.ocultarModalInsertar}>Cancelar</Button>
             </ModalFooter>
           </ModalBody>
         </Modal>
