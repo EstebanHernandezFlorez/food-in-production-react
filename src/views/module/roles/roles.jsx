@@ -106,10 +106,10 @@ export default function RolePage() {
               ))}
             </tbody>
           </Table>
-          <FormGroup>
+          {/* <FormGroup>
             <label htmlFor="role">Roles:</label>
             <Input id="role" placeholder="Administrador" className="form-control" />
-          </FormGroup>
+          </FormGroup> */}
         </Col>
         <Col sm="12" md="6">
           <fieldset>
