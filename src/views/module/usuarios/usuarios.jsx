@@ -11,7 +11,7 @@ import {
   Input,
   Modal,
   ModalHeader,
-  ModalBody,
+  ModalBody,  
   ModalFooter,
 } from "reactstrap";
 import { FaEdit, FaTrashAlt } from "react-icons/fa";
