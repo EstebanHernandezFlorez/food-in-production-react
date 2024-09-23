@@ -1,20 +1,23 @@
-import  { useState } from "react";
+import React, { useState } from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Row, Col, FormGroup, Label, Input, Button } from 'reactstrap';
+import { Table, Button, Container, Row, Col, Form, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
+import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { PlusOutlined } from '@ant-design/icons';
+import { Snackbar, Alert } from '@mui/material';
+import FondoForm from '../../../assets/login.jpg'
+import { FiEdit } from "react-icons/fi";
+import '../../../App.css'
 
-const initialFormState = {
-  productName: '',
-  quantity: 0,
-  typeGrams: '',
-  startDate: '',
-  endDate: '',
-  // Next row inputs (assuming separate form fields):
-  productionStart: '',
-  portionsPerUnit: 0,
-  portions: 0,
-  productionTypeGrams: '',
-  supplier: '',
-};
+const initialData = [
+  {id: 1, NombreCompleto: "Carolina Guzman", TipoDocument: 13132312, Document: 16514416, Telefono: 3527158372, Empresa: "Sena"},
+  {id: 2, NombreCompleto: "Andra Torres", TipoDocument: 0, Document: 18761919, Telefono: 0, Empresa: "Desconocida"},
+  {id: 3, NombreCompleto: "Natalia Muriel", TipoDocument: 0, Document: 1016177143, Telefono: 0, Empresa: "Desconocida"},
+  {id: 4, NombreCompleto: "Luis Pérez", TipoDocument: 0, Document: 12345678, Telefono: 0, Empresa: "Desconocida"},
+  {id: 5, NombreCompleto: "María Gómez", TipoDocument: 0, Document: 23456789, Telefono: 0, Empresa: "Desconocida"},
+  {id: 6, NombreCompleto: "Pedro Martínez", TipoDocument: 0, Document: 34567890, Telefono: 0, Empresa: "Desconocida"},
+  {id: 7, NombreCompleto: "Laura Fernández", TipoDocument: 0, Document: 45678901, Telefono: 0, Empresa: "Desconocida"},
+  {id: 8, NombreCompleto: "Carlos Rodríguez", TipoDocument: 0, Document: 56789012, Telefono: 0, Empresa: "Desconocida"}  
+];
 
 const Proveedores = () => {
   const [data, setData] = useState(initialData);
@@ -34,11 +37,20 @@ const Proveedores = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [modalOpen, setModalOpen] = useState(false); // Estado para el modal de edición
+  const [selectedProveedor, setSelectedProveedor] = useState(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const itemsPerPage = 7;
 
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    setFormData((prevData) => ({ ...prevData, [name]: value }));
-  };
+  // States for validation
+  const [formErrors, setFormErrors] = useState({
+    NombreCompleto: false,
+    TipoDocument: false,
+    Document: false,
+    Telefono: false,
+    Empresa: false,
+  });
 
   const handleOk = () => {
     if (selectedProveedor) {
@@ -548,4 +560,6 @@ const Proveedores = () => {
       </Snackbar>
     </Container>
   );
-}
+};
+
+export default Proveedores;
