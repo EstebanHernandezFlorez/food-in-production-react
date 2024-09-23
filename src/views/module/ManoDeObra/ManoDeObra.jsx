@@ -70,7 +70,7 @@ const ManoDeObra = () => {
   const [selectedManoObra, setSelectedManoObra] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedItem, setSelectedtoggle] = useState(null);
   const itemsPerPage = 7;
   // States for validation
   const [formErrors, setFormErrors] = useState({

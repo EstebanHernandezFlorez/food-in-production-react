@@ -33,7 +33,8 @@ import { NavDropdown } from "react-bootstrap";
 import Calendario from "./views/module/Calendario/Calendario";
 import TablaGastos from "./views/module/ManoDeObra/TablaGastos"
 import RendimientoEmpleado from "./views/module/ManoDeObra/RendimientoEmpleado"
-
+      
+      
 const users = [
   {
     id: 1,
@@ -50,6 +51,7 @@ const users = [
 ];
 
 const { Header, Sider, Content } = Layout;
+
 
 export default function App() {
   const handleSelectcted = (eventKey) =>

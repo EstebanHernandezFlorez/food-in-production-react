@@ -5,22 +5,22 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from "@fullcalendar/interaction";
 
-const initialData = [
+const Reservas = [
   { id: 1, Nombre: "Boda Juan y María", Distintivo: "7867", Evento: "Boda", Fechahora: "2024-09-01T18:00", Cantidadmesas: "15", Nropersonas: "150", Abono: "500", Totalpag: "1500", Restante: "1000", Estado: "terminada" },
   { id: 2, Nombre: "Fiesta de Empresa", Distintivo: "7576", Evento: "Corporativo", Fechahora: "2024-09-15T20:00", Cantidadmesas: "20", Nropersonas: "200", Abono: "700", Totalpag: "2000", Restante: "1300", Estado: "confirmada" },
 ];
 
-const Reserva = () => {
+export default function Calendario () {
   const navigate = useNavigate();
-  const [data, setData] = useState(initialData);
+  const [data, setData] = useState(Reservas);
   const [form, setForm] = useState({});
   const [showForm, setShowForm] = useState(false);
   const [selectedReserva, setSelectedReserva] = useState(null); // Para la reserva seleccionada
 
-  // Abrir formulario para nueva reserva
-  const openForm = (selectedDate) => {
-    setForm({ ...form, Fechahora: selectedDate });
-    setShowForm(true);
+  // Abrir formulario con los datos prellenados de la reserva
+  const openForm = (reserva) => {
+    setForm(reserva); // Llenar el formulario con los datos de la reserva seleccionada
+    setShowForm(true); // Mostrar el formulario
   };
 
   const closeForm = () => {
@@ -30,7 +30,7 @@ const Reserva = () => {
 
   // Manejar click en una fecha del calendario
   const handleDateClick = (info) => {
-    openForm(info.dateStr);
+    openForm({ Fechahora: info.dateStr });
     navigate("/reservas");
   };
 
@@ -53,17 +53,16 @@ const Reserva = () => {
   // Editar reserva (abrir modal de edición con los datos de la reserva)
   const handleEdit = () => {
     if (selectedReserva) {
-      setForm(selectedReserva); // Rellenar el formulario con los datos de la reserva seleccionada
-      setShowForm(true);
+      openForm(selectedReserva); // Llenar el formulario con los datos de la reserva seleccionada
       setSelectedReserva(null);
     }
   };
 
-  // Reprogramar reserva (se podría añadir un campo para seleccionar la nueva fecha)
-  const handleReprogram = (newDate) => {
+  // Reprogramar reserva
+  const handleReprogram = () => {
     if (selectedReserva) {
-      setData(data.map(res => res.id === selectedReserva.id ? { ...res, Fechahora: newDate } : res));
-      setSelectedReserva(null);
+      openForm(selectedReserva); // Llenar el formulario para editar la fecha
+      setSelectedReserva(null); // Ocultar detalles de la reserva
     }
   };
 
@@ -85,7 +84,7 @@ const Reserva = () => {
     terminada: 'green',
     anulada: 'red',
     pendiente: 'yellow',
-    'en proceso': 'orange',
+    en_proceso: 'orange',
     confirmada: 'blue'
   };
 
@@ -111,7 +110,7 @@ const Reserva = () => {
 
       {/* Modal para crear/editar reservas */}
       <Modal isOpen={showForm} toggle={closeForm}>
-        <ModalHeader toggle={closeForm}>Agregar/Editar Reserva</ModalHeader>
+        <ModalHeader style={{ background: '#6d0f0f' }} toggle={closeForm}><h3 className="text-white"> Editar Reserva</h3></ModalHeader>
         <ModalBody>
           <Input
             type="text"
@@ -137,35 +136,46 @@ const Reserva = () => {
         </ModalBody>
         <ModalFooter>
           <Button color="primary" onClick={handleSubmit}>Guardar</Button>
-          <Button color="secondary" onClick={closeForm}>Cancelar</Button>
+          <Button style={{ background: '#6d0f0f' }} onClick={closeForm}>Cancelar</Button>
         </ModalFooter>
       </Modal>
 
       {/* Modal de detalles de reserva */}
       <Modal isOpen={!!selectedReserva} toggle={() => setSelectedReserva(null)}>
-        <ModalHeader toggle={() => setSelectedReserva(null)}>Detalles de Reserva</ModalHeader>
+        <ModalHeader style={{ background: '#6d0f0f' }} toggle={() => setSelectedReserva(null)}>
+          <h3 className="text-white"> Detalles de reserva</h3>
+        </ModalHeader>
         <ModalBody>
           {selectedReserva && (
             <>
-              <p><strong>Nombre:</strong> {selectedReserva.Nombre}</p>
+              <p><strong>Nombre Completo:</strong> {selectedReserva.NombreCompleto}</p>
               <p><strong>Distintivo:</strong> {selectedReserva.Distintivo}</p>
+              <p><strong>Categoría Cliente:</strong> {selectedReserva.CategoriaCliente}</p>
+              <p><strong>Correo:</strong> {selectedReserva.Correo}</p>
+              <p><strong>Celular:</strong> {selectedReserva.Celular}</p>
+              <p><strong>Dirección:</strong> {selectedReserva.Direccion}</p>
+              <p><strong>Nro de personas:</strong> {selectedReserva.Nropersonas}</p>
+              <p><strong>Cantidad de mesas:</strong> {selectedReserva.Cantidadmesas}</p>
               <p><strong>Evento:</strong> {selectedReserva.Evento}</p>
-              <p><strong>Fecha y Hora:</strong> {selectedReserva.Fechahora}</p>
-              <p><strong>Cantidad de Mesas:</strong> {selectedReserva.Cantidadmesas}</p>
-              <p><strong>Número de Personas:</strong> {selectedReserva.Nropersonas}</p>
-              <p><strong>Estado:</strong> {selectedReserva.Estado}</p>
-              <p><strong>Total a Pagar:</strong> {selectedReserva.Totalpag}</p>
+              <p><strong>Duración del evento:</strong> {selectedReserva.Duracionevento}</p>
+              <p><strong>Fecha y hora:</strong> {selectedReserva.Fecha_Hora}</p>
+              <p><strong>Servicio:</strong> {selectedReserva.Servicio}</p>
+              <p><strong>Observaciones:</strong> {selectedReserva.Observaciones}</p>
+              <p><strong>Monto de decoración:</strong> {selectedReserva.Montodeco}</p>
+              <p><strong>Total a pagar:</strong> {selectedReserva.Totalpag}</p>
+              <p><strong>Abono:</strong> {selectedReserva.Abono}</p>
+              <p><strong>Restante:</strong> {selectedReserva.Restante}</p>
+              <p><strong>Forma de pago:</strong> {selectedReserva.Formapag}</p>
+              <p><strong>Estado:</strong> {selectedReserva.Estado ? 'Activo' : 'Inactivo'}</p>
             </>
           )}
         </ModalBody>
         <ModalFooter>
-          <Button color="warning" onClick={handleEdit}>Editar</Button>
-          <Button color="danger" onClick={handleCancel}>Cancelar</Button>
-          <Button color="primary" onClick={() => handleReprogram("2024-09-20T18:00")}>Reprogramar</Button>
+          <Button style={{ background: '#2e8329' }} onClick={handleEdit}>Editar</Button>
+          <Button style={{ background: '#6d0f0f' }} onClick={handleCancel}>Cancelar</Button>
+          <Button style={{ background: '#4682B4' }} onClick={handleReprogram}>Reprogramar</Button>
         </ModalFooter>
       </Modal>
     </Container>
   );
 };
-
-export default Reserva;
