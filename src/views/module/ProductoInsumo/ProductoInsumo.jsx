@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import  { useState } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Row, Col, FormGroup, Label, Input, Button } from 'reactstrap';
+import { Row, Col, FormGroup, Label, Input, Button} from 'reactstrap';
 
 const initialFormState = {
   productName: '',
@@ -21,7 +21,9 @@ const ProductForm = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
-
+  const [isEditing]= useState('');
+  const [Snackbar]=useState('');
+  
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormData((prevData) => ({ ...prevData, [name]: value }));
@@ -207,3 +209,4 @@ const ProductForm = () => {
     </div>
   );
 }
+export default ProductForm;

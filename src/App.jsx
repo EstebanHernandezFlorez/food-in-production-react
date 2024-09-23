@@ -32,7 +32,8 @@ import ManoDeObra from "./views/module/ManoDeObra/ManoDeObra";
 import RecoveryPassword from "./views/module/Auth/olvidoContraseña"; // Nombre
 import { NavDropdown } from "react-bootstrap";
 import Calendario from "./views/module/Calendario/Calendario";
-
+      
+      
 const users = [
   {
     id: 1,
@@ -49,6 +50,7 @@ const users = [
 ];
 
 const { Header, Sider, Content } = Layout;
+
 
 export default function App() {
   const handleSelectcted = (eventKey) =>
