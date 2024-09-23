@@ -32,6 +32,8 @@ import ManoDeObra from "./views/module/ManoDeObra/ManoDeObra";
 import RecoveryPassword from "./views/module/Auth/olvidoContraseña"; // Nombre
 import { NavDropdown } from "react-bootstrap";
 import Calendario from "./views/module/Calendario/Calendario";
+import TablaGastos from "./views/module/ManoDeObra/TablaGastos"
+import RendimientoEmpleado from "./views/module/ManoDeObra/RendimientoEmpleado"
 
 const users = [
   {
@@ -106,7 +108,9 @@ export default function App() {
                     style={{
                       padding: '3px',
                       borderBottom: '5px solid #800020',
-                      position: 'relative',
+                      position: 'fixed', // Fija el header en la parte superior
+                      width: '100%', // Asegúrate de que ocupe todo el ancho
+                      zIndex: 1000, // Asegúrate de que esté encima de otros elementos
                     }}
                     className="header"
                   >
@@ -124,7 +128,7 @@ export default function App() {
                           transition: 'font-size 0.3s',
                         }}
                       />
-                      <div style={{ position: 'absolute', right: '20px' }}>
+                      <div style={{ position: 'absolute', right: '18%', zIndex: 2000 }}>
                         <NavDropdown
                           title={
                             <span>
@@ -142,8 +146,9 @@ export default function App() {
                       </div>
                     </div>
                   </Header>
+
                   <Content
-                    style={{ padding: '24px', minHeight: 'calc(100vh - 64px)' }}
+                    style={{ padding: '80px 24px 24px', minHeight: 'calc(100vh - 64px)' }} // Ajusta el padding superior
                   >
                     <Routes>
                       <Route path="/dashboard" element={<Dashboard />} />
@@ -160,6 +165,8 @@ export default function App() {
                       <Route path="/servicios" element={<Servicios />} />
                       <Route path="/mano_de_obra" element={<ManoDeObra />} />
                       <Route path="/calendario" element={<Calendario />} />
+                      <Route path="/tabla-gastos" element={<TablaGastos/>}/>
+                      <Route path="/rendimiento-empleado" element={<RendimientoEmpleado/>}/>
                       {/* Añade más rutas según sea necesario */}
                     </Routes>
                   </Content>

@@ -1,0 +1,37 @@
+.date-picker {
+    width: 100%; /* Asegura que el DatePicker ocupe todo el ancho disponible */
+  }
+  
+  .react-datepicker {
+    font-size: 0.8rem; /* Ajusta el tamaño del calendario */
+  }
+  
+  .react-datepicker__header {
+    font-size: 0.8rem; /* Ajusta el tamaño del encabezado del calendario */
+  }
+  
+  .react-datepicker__day, .react-datepicker__day-name {
+    font-size: 0.8rem; /* Ajusta el tamaño de los días y nombres de los días */
+  }
+  
+  .graphs-right {
+    display: flex;
+    justify-content: flex-end;
+  }
+  
+  .graphs-container {
+    flex: 1;
+  }
+/* Asegúrate de que el label esté en una nueva línea arriba del input */
+.form-group label {
+  display: block;
+  margin-bottom: .5rem; /* Espacio entre el label y el input */
+}
+
+/* Si es necesario ajustar el estilo de los inputs */
+.date-picker {
+  width: 100%; /* Asegura que el input ocupe todo el ancho del contenedor */
+}
+
+
+  

@@ -148,6 +148,7 @@ const MenuList = ({ darkTheme }) => {
             Mano de Obra
           </Link>
         </Menu.Item>
+
         <Menu.Item
           key="logout"
           icon={<LogoutOutlined style={{ color: itemStyle.color }} />}
