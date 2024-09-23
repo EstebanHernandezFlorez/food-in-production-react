@@ -19,8 +19,7 @@ import ToggleThemeButton from "./views/module/ToggleThemeButton";
 import Dashboard from "./views/module/Dashboard/dashboard";
 import Roles from "./views/module/roles/roles";
 import Usuarios from "./views/module/usuarios/usuarios";
-import Produccion from "./views/module/Produccion/produccion";
-import OrdenProduccion from "./views/module/OrdenProduccion/OrdenProduccion";
+import Produccion from "./views/module/Produccion/produccion";  
 import ProductoInsumo from "./views/module/ProductoInsumo/ProductoInsumo";
 import Insumo from "./views/module/Insumo/Insumo";
 import Empleados from "./views/module/Empleados/Empleados";
@@ -32,6 +31,8 @@ import ManoDeObra from "./views/module/ManoDeObra/ManoDeObra";
 import RecoveryPassword from "./views/module/Auth/olvidoContraseña"; // Nombre
 import { NavDropdown } from "react-bootstrap";
 import Calendario from "./views/module/Calendario/Calendario";
+import TablaGastos from "./views/module/ManoDeObra/TablaGastos"
+import RendimientoEmpleado from "./views/module/ManoDeObra/RendimientoEmpleado"
       
       
 const users = [
@@ -108,7 +109,9 @@ export default function App() {
                     style={{
                       padding: '3px',
                       borderBottom: '5px solid #800020',
-                      position: 'relative',
+                      position: 'fixed', // Fija el header en la parte superior
+                      width: '100%', // Asegúrate de que ocupe todo el ancho
+                      zIndex: 1000, // Asegúrate de que esté encima de otros elementos
                     }}
                     className="header"
                   >
@@ -126,7 +129,7 @@ export default function App() {
                           transition: 'font-size 0.3s',
                         }}
                       />
-                      <div style={{ position: 'absolute', right: '20px' }}>
+                      <div style={{ position: 'absolute', right: '18%', zIndex: 2000 }}>
                         <NavDropdown
                           title={
                             <span>
@@ -144,15 +147,15 @@ export default function App() {
                       </div>
                     </div>
                   </Header>
+
                   <Content
-                    style={{ padding: '24px', minHeight: 'calc(100vh - 64px)' }}
+                    style={{ padding: '80px 24px 24px', minHeight: 'calc(100vh - 64px)' }} // Ajusta el padding superior
                   >
                     <Routes>
                       <Route path="/dashboard" element={<Dashboard />} />
                       <Route path="/roles" element={<Roles />} />
                       <Route path="/usuarios" element={<Usuarios />} />
                       <Route path="/produccion" element={<Produccion />} />
-                      <Route path="/orden_produccion" element={<OrdenProduccion />} />
                       <Route path="/producto_insumo" element={<ProductoInsumo />} />
                       <Route path="/insumo" element={<Insumo />} />
                       <Route path="/empleados" element={<Empleados />} />
@@ -162,6 +165,8 @@ export default function App() {
                       <Route path="/servicios" element={<Servicios />} />
                       <Route path="/mano_de_obra" element={<ManoDeObra />} />
                       <Route path="/calendario" element={<Calendario />} />
+                      <Route path="/tabla-gastos" element={<TablaGastos/>}/>
+                      <Route path="/rendimiento-empleado" element={<RendimientoEmpleado/>}/>
                       {/* Añade más rutas según sea necesario */}
                     </Routes>
                   </Content>

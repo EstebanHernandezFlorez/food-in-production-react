@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Table, Button, Container, Row, Col, Form, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
-import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { FaTrashAlt } from 'react-icons/fa';
 import { PlusOutlined } from '@ant-design/icons';
 import { Snackbar, Alert } from '@mui/material';
 import FondoForm from '../../../assets/login.jpg'

@@ -237,7 +237,9 @@ const Empleados = () => {
               onChange={handleTableSearch}
               style={{ width: '50%' }}
             />
-            <Button style={{backgroundColor:'#228b22', color:'black'}} onClick={() => { setForm({ id: '', Nombre: '', Document: '', FechaIni: '', ContactoEmerg:'', Parentesco:'', NombreFamiliar:'',GrupoSang:'', NumeroSS: '', Direccion: '', TipoContrato: '', Estado: true }); setIsEditing(false); setShowForm(true); }}>
+            <Button style={{backgroundColor:'#228b22', color:'black'}} onClick={() => { setForm({ id: '', Nombre: '', Document: '',
+               FechaIni: '', ContactoEmerg:'', Parentesco:'', NombreFamiliar:'',GrupoSang:'', NumeroSS: '', Direccion: '', 
+               TipoContrato: '', Estado: true }); setIsEditing(false); setShowForm(true); }}>
               Agregar empleado
               <PlusOutlined style={{ fontSize: '16px', color: 'black', padding:'5px' }} />
             </Button>
