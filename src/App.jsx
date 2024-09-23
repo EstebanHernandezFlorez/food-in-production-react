@@ -19,8 +19,7 @@ import ToggleThemeButton from "./views/module/ToggleThemeButton";
 import Dashboard from "./views/module/Dashboard/dashboard";
 import Roles from "./views/module/roles/roles";
 import Usuarios from "./views/module/usuarios/usuarios";
-import Produccion from "./views/module/Produccion/produccion";
-import OrdenProduccion from "./views/module/OrdenProduccion/OrdenProduccion";
+import Produccion from "./views/module/Produccion/produccion";  
 import ProductoInsumo from "./views/module/ProductoInsumo/ProductoInsumo";
 import Insumo from "./views/module/Insumo/Insumo";
 import Empleados from "./views/module/Empleados/Empleados";
@@ -32,6 +31,8 @@ import ManoDeObra from "./views/module/ManoDeObra/ManoDeObra";
 import RecoveryPassword from "./views/module/Auth/olvidoContraseña"; // Nombre
 import { NavDropdown } from "react-bootstrap";
 import Calendario from "./views/module/Calendario/Calendario";
+import EditarPerfil from "./views/module/EditarPerfil/EditarPerfil";
+import  Redire from "./views/module/EditarPerfil/Editar/redire";
 
 const users = [
   {
@@ -124,24 +125,10 @@ export default function App() {
                           transition: 'font-size 0.3s',
                         }}
                       />
-                      <div style={{ position: 'absolute', right: '20px' }}>
-                        <NavDropdown
-                          title={
-                            <span>
-                              <UserOutlined
-                                style={{ marginRight: '8px', fontSize: '20px' }}
-                              />
-                              Lina Marcela - Admin
-                            </span>
-                          }
-                          id="nav-dropdown"
-                        >
-                          <NavDropdown.Item href="#action1">Perfil</NavDropdown.Item>
-                          <NavDropdown.Item href="#action2">Cerrar Sesión</NavDropdown.Item>
-                        </NavDropdown>
-                      </div>
+                      
                     </div>
                   </Header>
+                  <Redire/>
                   <Content
                     style={{ padding: '24px', minHeight: 'calc(100vh - 64px)' }}
                   >
@@ -150,7 +137,6 @@ export default function App() {
                       <Route path="/roles" element={<Roles />} />
                       <Route path="/usuarios" element={<Usuarios />} />
                       <Route path="/produccion" element={<Produccion />} />
-                      <Route path="/orden_produccion" element={<OrdenProduccion />} />
                       <Route path="/producto_insumo" element={<ProductoInsumo />} />
                       <Route path="/insumo" element={<Insumo />} />
                       <Route path="/empleados" element={<Empleados />} />
@@ -160,6 +146,7 @@ export default function App() {
                       <Route path="/servicios" element={<Servicios />} />
                       <Route path="/mano_de_obra" element={<ManoDeObra />} />
                       <Route path="/calendario" element={<Calendario />} />
+                      <Route path="/perfil" element={<EditarPerfil />} />
                       {/* Añade más rutas según sea necesario */}
                     </Routes>
                   </Content>
