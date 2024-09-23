@@ -121,7 +121,8 @@ const Insumos = () => {
           <Input type="text" placeholder="Buscar insumo" value={searchText} onChange={handleSearch} style={{ width: '50%' }} />
         </Col>
         <Col md={4}>
-          <Button color="success" onClick={() => { setForm({ id: '', nombreInsumo: '', cantidad: '', tipoGramaje: '', proveedor: '', Estado: true }); setIsEditing(false); }}>
+          <Button color="success" onClick={() => { setForm({ id: '', nombreInsumo: '', cantidad: '', 
+            tipoGramaje: '', proveedor: '', Estado: true }); setIsEditing(false); }}>
             Limpiar
           </Button>
         </Col>
