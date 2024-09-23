@@ -31,8 +31,8 @@ import ManoDeObra from "./views/module/ManoDeObra/ManoDeObra";
 import RecoveryPassword from "./views/module/Auth/olvidoContraseña"; // Nombre
 import { NavDropdown } from "react-bootstrap";
 import Calendario from "./views/module/Calendario/Calendario";
-import EditarPerfil from "./views/module/EditarPerfil/EditarPerfil";
-import  Redire from "./views/module/EditarPerfil/Editar/redire";
+import TablaGastos from "./views/module/ManoDeObra/TablaGastos"
+import RendimientoEmpleado from "./views/module/ManoDeObra/RendimientoEmpleado"
 
 const users = [
   {
@@ -107,7 +107,9 @@ export default function App() {
                     style={{
                       padding: '3px',
                       borderBottom: '5px solid #800020',
-                      position: 'relative',
+                      position: 'fixed', // Fija el header en la parte superior
+                      width: '100%', // Asegúrate de que ocupe todo el ancho
+                      zIndex: 1000, // Asegúrate de que esté encima de otros elementos
                     }}
                     className="header"
                   >
@@ -125,12 +127,27 @@ export default function App() {
                           transition: 'font-size 0.3s',
                         }}
                       />
-                      
+                      <div style={{ position: 'absolute', right: '18%', zIndex: 2000 }}>
+                        <NavDropdown
+                          title={
+                            <span>
+                              <UserOutlined
+                                style={{ marginRight: '8px', fontSize: '20px' }}
+                              />
+                              Lina Marcela - Admin
+                            </span>
+                          }
+                          id="nav-dropdown"
+                        >
+                          <NavDropdown.Item href="#action1">Perfil</NavDropdown.Item>
+                          <NavDropdown.Item href="#action2">Cerrar Sesión</NavDropdown.Item>
+                        </NavDropdown>
+                      </div>
                     </div>
                   </Header>
-                  <Redire/>
+
                   <Content
-                    style={{ padding: '24px', minHeight: 'calc(100vh - 64px)' }}
+                    style={{ padding: '80px 24px 24px', minHeight: 'calc(100vh - 64px)' }} // Ajusta el padding superior
                   >
                     <Routes>
                       <Route path="/dashboard" element={<Dashboard />} />
@@ -146,7 +163,8 @@ export default function App() {
                       <Route path="/servicios" element={<Servicios />} />
                       <Route path="/mano_de_obra" element={<ManoDeObra />} />
                       <Route path="/calendario" element={<Calendario />} />
-                      <Route path="/perfil" element={<EditarPerfil />} />
+                      <Route path="/tabla-gastos" element={<TablaGastos/>}/>
+                      <Route path="/rendimiento-empleado" element={<RendimientoEmpleado/>}/>
                       {/* Añade más rutas según sea necesario */}
                     </Routes>
                   </Content>
