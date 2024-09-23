@@ -92,7 +92,6 @@ const Produccion = () => {
     horayfechafinal: "",
     estado: "",
     horayfechadeestado: "",
-   
   });
   const [isEditing, setIsEditing] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -459,133 +458,147 @@ const Produccion = () => {
         <div>
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h2 className="text-star">
-              {isEditing ? "Editar orden de produccion" : "Agregar orden de produccion"}
+              {isEditing
+                ? "Editar orden de producción"
+                : "Agregar orden de producción"}
             </h2>
           </div>
           <br />
-          <Row>
-            <Col md={4}>
-              <FormGroup>
-                <label style={{ fontSize: "15px", padding: "5px" }}>
-                  Elija el nombre del producto
-                </label>
-                <Input
-                  type="select" // Cambiado a "select"
-                  name="producto"
-                  value={form.producto}
-                  onChange={handleChange}
-                  className={`form-control ${
-                    formErrors.Producto ? "is-invalid" : ""
-                  }`}
-                >
-                  <option value="">Producto</option>
-                  {Producto.map((producto) => (
-                    <option key={producto.value} value={producto.value}>
-                      {producto.label}
-                    </option>
-                  ))}
-                </Input>
-                {formErrors.Producto && (
-                  <div className="invalid-feedback">
-                    Este campo es obligatorio.
-                  </div>
-                )}
-              </FormGroup>
-            </Col>
+          <div className="d-flex align-items-center flex-nowrap">
+            <div className="d-flex align-items-center flex-wrap w-100">
+              <Col md={2} className="mb-2 col-md-4" >
+                <FormGroup className="d-flex align-items-center">
+                  <label
+                    style={{
+                      fontSize: "15px",
+                      paddingRight: "10px",
+                      whiteSpace: "nowrap",
+                      marginTop: "8px", 
+                    }}
+                  >
+                    Elija el nombre del producto
+                  </label>
+                  <Input
+                    type="select"
+                    name="Produco"
+                    value={form.producto}
+                    onChange={handleChange}
+                    className={`form-control ${
+                      formErrors.Producto ? "is-invalid" : ""
+                    }`}
+                    style={{ width: "100%" }}
+                  >
+                    <option value="">PRODUCTO</option>
+                    {Producto.map((producto) => (
+                      <option key={producto.id} value={producto.nombreproducto}>
+                        {producto.nombreproducto}
+                      </option>
+                    ))}
+                  </Input>
+                  {formErrors.Producto && (
+                    <div className="invalid-feedback">
+                      Este campo es obligatorio.
+                    </div>
+                  )}
+                </FormGroup>
+              </Col>
 
-            <Col md={4}>
-              <FormGroup>
-                <label style={{ fontSize: "15px", padding: "5px" }}>
-                Receta
-                </label>
-                <Input
-                  type="text"
-                  name="receta"
-                  value={form.receta}
-                  onChange={handleChange}
-                  placeholder="receta"
-                  className={`form-control ${
-                    formErrors.receta ? "is-invalid" : ""
-                  }`}
-                />
-                {formErrors.receta && (
-                  <div className="invalid-feedback">
-                    Este campo es obligatorio.
-                  </div>
-                )}
-              </FormGroup>
-            </Col>
-            <Col md={4}>
-              <FormGroup>
-                <label style={{ fontSize: "15px", padding: "5px" }}>
-                Cantidad a producir
-                </label>
-                <Input
-                  type="number"
-                  name="cantidadaproducir"
-                  value={form.cantidadaproducir}
-                  onChange={handleChange}
-                  
-                  className={`form-control ${
-                    formErrors.cantidadaproducir ? "is-invalid" : ""
-                  }`}
-                />
-                {formErrors.cantidadaproducir && (
-                  <div className="invalid-feedback">
-                    Este campo es obligatorio.
-                  </div>
-                )}
-              </FormGroup>
-            </Col>
-          </Row>
+              <Col md={2} className="mb-2 col-md-2" >
+                <FormGroup>
+                  <label style={{ fontSize: "15px", padding: "5px" }}>
+                    Receta
+                  </label>
+                  <Input
+                    type="text"
+                    name="receta"
+                    value={form.receta}
+                    onChange={handleChange}
+                    placeholder="Receta"
+                    className={`form-control ${
+                      formErrors.receta ? "is-invalid" : ""
+                    }`}
+                  />
+                  {formErrors.receta && (
+                    <div className="invalid-feedback">
+                      Este campo es obligatorio.
+                    </div>
+                  )}
+                </FormGroup>
+              </Col>
+
+              <Col md={2} className="mb-2  col-md-2">
+                <FormGroup>
+                  <label style={{ fontSize: "15px", padding: "5px" }}>
+                    Cantidad a producir
+                  </label>
+                  <Input
+                    type="number"
+                    name="cantidadaproducir"
+                    value={form.cantidadaproducir}
+                    onChange={handleChange}
+                    className={`form-control ${
+                      formErrors.cantidadaproducir ? "is-invalid" : ""
+                    }`}
+                  />
+                  {formErrors.cantidadaproducir && (
+                    <div className="invalid-feedback">
+                      Este campo es obligatorio.
+                    </div>
+                  )}
+                </FormGroup>
+              </Col>
+
+              <Col md={2} className="mb-2">
+                <FormGroup>
+                  <label style={{ fontSize: "15px", padding: "5px" }}>
+                    Peso final por unidad
+                  </label>
+                  <Input
+                    type="number"
+                    name="pesofinalporunidad"
+                    value={form.pesofinalporunidad}
+                    onChange={handleChange}
+                    className={`form-control ${
+                      formErrors.pesofinalporunidad ? "is-invalid" : ""
+                    }`}
+                  />
+                  {formErrors.pesofinalporunidad && (
+                    <div className="invalid-feedback">
+                      Este campo es obligatorio.
+                    </div>
+                  )}
+                </FormGroup>
+              </Col>
+
+              <Col md={2} className="mb-2">
+                <FormGroup>
+                  <label style={{ fontSize: "15px", padding: "5px" }}>
+                    Cantidad final
+                  </label>
+                  <Input
+                    type="number"
+                    name="cantidadfinal"
+                    value={form.cantidadfinal}
+                    onChange={handleChange}
+                    className={`form-control ${
+                      formErrors.cantidadfinal ? "is-invalid" : ""
+                    }`}
+                  />
+                  {formErrors.cantidadfinal && (
+                    <div className="invalid-feedback">
+                      Este campo es obligatorio.
+                    </div>
+                  )}
+                </FormGroup>
+              </Col>
+            </div>
+          </div>
           <Row>
             <Col md={4}>
               <FormGroup>
                 <label style={{ fontSize: "15px", padding: "5px" }}>
-                Peso final por unidad
+                  Hora y fecha de terminacion
                 </label>
-                <Input
-                  type="number"
-                  name="pesofinalporunidad"
-                  value={form.pesofinalporunidad}
-                  onChange={handleChange}
-                 
-                  className={`form-control ${
-                    formErrors.pesofinalporunidad ? "is-invalid" : ""
-                  }`}
-                />
-                {formErrors.pesofinalporunidad && (
-                  <div className="invalid-feedback">
-                    Este campo es obligatorio.
-                  </div>
-                )}
-              </FormGroup>
-            </Col>
-            <Col md={4}>
-              <FormGroup>
-                <label style={{ fontSize: "15px", padding: "5px" }}>
-                Cantidad final
-                </label>
-                <Input
-                  type="number"
-                  name="cantidadfinal"
-                  value={form.cantidadfinal}
-                  onChange={handleChange}
-                 
-                  className={`form-control ${
-                    formErrors.cantidadfinal ? "is-invalid" : ""
-                  }`}
-                />
-                {formErrors.cantidadfinal && (
-                  <div className="invalid-feedback">
-                    Este campo es obligatorio.
-                  </div>
-                )}
-              </FormGroup>
-            </Col>
-            <Col md={4}>
-              <FormGroup>
-                <label style={{ fontSize: "15px", padding: "5px" }}>Hora y fecha de terminacion</label>
                 <Input
                   type="text" // Cambiado a "select"
                   name="horayfechafinal"
@@ -594,8 +607,7 @@ const Produccion = () => {
                   className={`form-control ${
                     formErrors.horayfechafinal ? "is-invalid" : ""
                   }`}
-                >
-                </Input> 
+                ></Input>
                 {formErrors.horayfechafinal && (
                   <div className="invalid-feedback">
                     Este campo es obligatorio.
@@ -607,25 +619,24 @@ const Produccion = () => {
             <Col md={4}>
               <FormGroup>
                 <label style={{ fontSize: "15px", padding: "5px" }}>
-                Estado
+                  Estado
                 </label>
                 <Input
-                  type="password" // Cambiado a "password"
-                  name="Contraseña"
-                  value={form.Contraseña}
+                  type="estado" // Cambiado a "password"
+                  name="estado"
+                  value={form.estado}
                   onChange={handleChange}
-                  placeholder="Contraseña"
+                  placeholder="estado"
                   className={`form-control ${
-                    formErrors.Contraseña ? "is-invalid" : ""
+                    formErrors.estado ? "is-invalid" : ""
                   }`}
                 />
-                {formErrors.Contraseña && (
-                  <div className="invalid-feedback">
-                    {formErrors.Contraseña}
-                  </div>
+                {formErrors.estado && (
+                  <div className="invalid-feedback">{formErrors.estado}</div>
                 )}
               </FormGroup>
             </Col>
+
             <Col md={4}>
               <FormGroup>
                 <label style={{ fontSize: "15px", padding: "5px" }}>

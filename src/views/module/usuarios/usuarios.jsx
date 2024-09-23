@@ -387,11 +387,11 @@ const Usuario = () => {
                     <td>{item.Rol}</td>
                     <td>
                       <Button
-                        color={item.Estado ? "success" : "danger"}
+                        color={item.Estado ? "success" : "secondary"}
                         onClick={() => cambiarEstado(item.id)}
-                        className="me-2 btn-sm"
+                        className=" btn-sm" // Usa btn-sm para botones más pequeños
                       >
-                        {item.Estado ? "On" : "Off"}
+                        {item.Estado ? "Activo" : "Inactivo"}
                       </Button>
                     </td>
                     <td>
