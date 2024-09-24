@@ -189,12 +189,13 @@ class Servicios extends React.Component {
       <>
         <Container>
           <br />
+          <br />
           <h2 className="text-right">Lista de Servicios Adicionales</h2>
           <br />
           <br />
           <br />
 
-          <div className="d-flex justify-content-between align-items-center mb-3 mx-auto" style={{ maxWidth: '700px' }}>
+          <div className="d-flex justify-content-between align-items-center mb-3 mx-auto" style={{ maxWidth: '900px' }}>
             <Input
               type="text"
               placeholder="Buscar servicio adicional"
@@ -205,6 +206,7 @@ class Servicios extends React.Component {
             />
             <Button style={{ background: '#2e8322' }} onClick={this.mostrarModalInsertar}>Agregar Servicio </Button>
           </div>
+      <br />
 
           {/*  tabla  limitar ancho */}
           <div className="table-responsive mx-auto" style={{ maxWidth: '700px' }}>

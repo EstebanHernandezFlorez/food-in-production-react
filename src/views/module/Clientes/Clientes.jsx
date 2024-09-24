@@ -189,6 +189,7 @@ const Clientes = () => {
           <h2>Lista de Clientes</h2>
           <br />
           <div className="d-flex justify-content-between align-items-center mb-3">
+            {/* buscar clientes */}
             <Input
               type="text"
               placeholder="Buscar cliente"
@@ -196,6 +197,8 @@ const Clientes = () => {
               onChange={handleSearch}
               style={{ width: '20%' }}
             />
+
+            {/* agregar cliente */}
             <Button style={{ background: '#2e8329' }} onClick={() => { setForm({ id: '', NombreCompleto: '', Distintivo: '', CategoriaCliente: '', Celular: '', Correo: '', Direccion: '', Estado: true }); setIsEditing(false); setShowForm(true); }}>
               Agregar Cliente
             </Button>
@@ -379,7 +382,7 @@ const Clientes = () => {
                 <Button style={{ background: '#2e8329', marginRight: '10px' }} onClick={handleSubmit}>
                   Guardar
                 </Button>
-                <Button editar onClick={() => setShowForm(false)}>
+                <Button style={{background:'#6d0f0f'}} editar onClick={() => setShowForm(false)}>
                   Cancelar
                 </Button>
               </div>
@@ -387,13 +390,14 @@ const Clientes = () => {
           </Col>
         </Row>
       )}
-
+       {/* cierra tocando fuera del modal */}
       <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={closeSnackbar}>
         <Alert onClose={closeSnackbar} severity={snackbarSeverity}>
           {snackbarMessage}
         </Alert>
       </Snackbar>
 
+      {/* Modal para edición del cliente */}
       <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)}>
         <ModalHeader style={{background:'#6d0f0f'}} toggle={() => setModalOpen(!modalOpen)}>
         <h3 className="text-white"> Editar cliente</h3>
@@ -468,12 +472,8 @@ const Clientes = () => {
           </FormGroup>
         </ModalBody>
         <ModalFooter>
-          <Button style={{ background: '#2e8329' }} onClick={editar}>
-            Guardar 
-          </Button>{' '}
-          <Button style={{background:'#6d0f0f'}} onClick={() => setModalOpen(!modalOpen)}>
-            Cancelar
-          </Button>
+          <Button style={{ background: '#2e8329' }} onClick={editar}>Guardar </Button>{' '}
+          <Button style={{background:'#6d0f0f'}} onClick={() => setModalOpen(!modalOpen)}>Cancelar</Button>
         </ModalFooter>
       </Modal>
 
