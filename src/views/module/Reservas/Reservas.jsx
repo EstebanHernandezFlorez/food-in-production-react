@@ -1,619 +1,657 @@
-// Importa los hooks y bibliotecas necesarias para el componente
-import { useState } from "react"; 
-import 'bootstrap/dist/css/bootstrap.min.css'; // Importa estilos de Bootstrap
-import { Table, Button, Container, Row, Col, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap'; // Importa componentes de Reactstrap para manejar el layout y el modal
-import { FaEdit, FaTrashAlt,FaEye } from 'react-icons/fa'; // Importa iconos para botones de editar y eliminar
-import { Snackbar, Alert } from '@mui/material'; // Importa la Snackbar y Alert de Material UI para notificaciones
-import PropTypes from 'prop-types'; // Para definir las propiedades que el componente puede recibir
+import  { useEffect, useState } from "react";
+import { Container, Button, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter, Row, Col, Label } from 'reactstrap';
+import FullCalendar from '@fullcalendar/react';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import interactionPlugin from "@fullcalendar/interaction";
+import { utils, writeFile } from "xlsx";
+import Swal from 'sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
 
-// Datos iniciales (ejemplo de clientes cargados al inicio)
-const initialData = [
-  { id: 1, NombreCompleto: "Juan Pérez", Distintivo: "7867", CategoriaCliente: "regular", Celular: "3123456789", Correo: "juan.perez@example.com", Direccion: "Cl 76 j 12b 55",Nropersonas:'',
-    Cantidadmesas:1,
-    Evento:"boda" ,
-    Duracionevento:"2 hrs",
-    Fecha_Hora: '',
-    Servicio: '',
-    Observaciones: '',
-    Montodeco:'',
-    Totalpag: '',
-    Abono: '',
-    Restante: '',
-    Formapag: '', Estado: true },
-  { id: 2, NombreCompleto: "Ana Torres", Distintivo: "7576", CategoriaCliente: "familiar", Celular: "3109876543", Correo: "ana.torres@example.com", Direccion: "Av. El Dorado 92-45", Estado: true },
+const initialReservas = [
+  {
+    id: 1,
+    nombre: "Boda Juan y María",
+    distintivo: "7867",
+    categoriaCliente: "Privado",
+    correo: "juan.maria@example.com",
+    celular: "1234567890",
+    direccion: "Calle Falsa 123",
+    evento: "Boda",
+    fechaHora: "2024-09-01T18:00",
+    cantidadMesas: "15",
+    duracionEvento: "5",
+    tipoEvento: "Celebración",
+    nroPersonas: "150",
+    observaciones: "Decoración elegante",
+    servicios: "DJ, Fotografía",
+    montoDecoracion: "200",
+    abono: "500",
+    totalPago: "1500",
+    restante: "1000",
+    formaPago: "Tarjeta",
+    estado: "terminada"
+  },
+  {
+    id: 2,
+    nombre: "Fiesta de Empresa",
+    distintivo: "7576",
+    categoriaCliente: "Corporativo",
+    correo: "empresa@example.com",
+    celular: "0987654321",
+    direccion: "Avenida Siempre Viva 456",
+    evento: "Corporativo",
+    fechaHora: "2024-09-15T20:00",
+    cantidadMesas: "20",
+    duracionEvento: "6",
+    tipoEvento: "Conferencia",
+    nroPersonas: "200",
+    observaciones: "Requiere equipo audiovisual",
+    servicios: "Catering, Audio",
+    montoDecoracion: "300",
+    abono: "700",
+    totalPago: "2000",
+    restante: "1300",
+    formaPago: "Transferencia",
+    estado: "confirmada"
+  }
 ];
 
-// Componente principal
-const Reservas = () => {
-  // Manejo del estado para datos, formularios y otros controles
-  const [data, setData] = useState(initialData); // Estado que almacena la lista de clientes
+export default function Calendario() {
+  const [data, setData] = useState(initialReservas);
+  const [selectedReserva, setSelectedReserva] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(null);
   const [form, setForm] = useState({
     id: '',
-    NombreCompleto: '',
-    Distintivo: '',
-    CategoriaCliente: '',
-    Correo: '',
-    Celular: '',
-    Direccion: '',
-    Nropersonas:'',
-    Cantidadmesas: '',
-    Evento: '',
-    Duracionevento: '',
-    Fecha_Hora: '',
-    Servicio: '',
-    Observaciones: '',
-    Montodeco:'',
-    Totalpag: '',
-    Abono: '',
-    Restante: '',
-    Formapag: '',
-    Estado: true
-  }); // Estado del formulario de cliente
-  const [isEditing, setIsEditing] = useState(false); // Bandera para saber si se está editando un cliente
-  const [showForm, setShowForm] = useState(false); // Controla la visibilidad del formulario de agregar/editar cliente
-  const [searchText, setSearchText] = useState(''); // Almacena el texto de búsqueda
-  const [snackbarOpen, setSnackbarOpen] = useState(false); // Controla la visibilidad de la Snackbar
-  const [snackbarMessage, setSnackbarMessage] = useState(''); // Mensaje que se muestra en la Snackbar
-  const [snackbarSeverity, setSnackbarSeverity] = useState('success'); // Tipo de alerta en la Snackbar (success, error, etc.)
-  const [currentPage, setCurrentPage] = useState(1); // Página actual para paginación
-  const [modalOpen, setModalOpen] = useState(false); // Controla la visibilidad del modal de edición
-  const [deleteAlertOpen, setDeleteAlertOpen] = useState(false); // Controla la visibilidad del modal de eliminación
-  const [deleteReserva, setDeleteReserva] = useState(null); // reserva que se está eliminando
-  const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
+    nombre: '',
+    distintivo: '',
+    categoriaCliente: '',
+    correo: '',
+    celular: '',
+    direccion: '',
+    evento: '',
+    fechaHora: '',
+    cantidadMesas: '',
+    duracionEvento: '',
+    tipoEvento: '',
+    nroPersonas: '',
+    observaciones: '',
+    servicios: '',
+    montoDecoracion: '',
+    abono: '',
+    totalPago: '',
+    restante: '',
+    formaPago: '',
+    estado: 'pendiente'
+  });
+  const [errors, setErrors] = useState({});
 
-
-  const itemsPerPage = 7; // Número de clientes por página
-
- //ver detalle
-
-  const toggleDetailModal = () => setDetailModalOpen(!detailModalOpen);
-
-  const viewDetails = (item) => {
-    setSelectedItem(item);
-    toggleDetailModal();
-  };
- 
-  // Función para manejar cambios en el campo de búsqueda
-  const handleSearch = (e) => {
-    setSearchText(e.target.value.toLowerCase()); // Convierte el texto a minúsculas para buscar
+  const handleDateClick = (arg) => {
+    setSelectedDate(arg.dateStr);
+    setSelectedReserva(null);
+    setForm({...form, fechaHora: arg.dateStr + 'T00:00'});
+    setModalOpen(true);
   };
 
-  // Función para manejar cambios en los campos del formulario
+  const handleEventClick = (info) => {
+    const reserva = data.find(res => res.id.toString() === info.event.id);
+    if (reserva) {
+      setSelectedReserva(reserva);
+      setForm(reserva);
+      setSelectedDate(null);
+      setModalOpen(true);
+    }
+  };
+
+  const colorMap = {
+    terminada: '#28a745',  // Green
+    anulada: '#dc3545',    // Red
+    pendiente: '#ffc107',  // Yellow
+    en_proceso: '#fd7e14', // Orange
+    confirmada: '#007bff'  // Blue
+  };
+
+  const events = data.map(reserva => ({
+    id: reserva.id.toString(),
+    title: reserva.nombre,
+    start: reserva.fechaHora,
+    backgroundColor: colorMap[reserva.estado],
+    borderColor: colorMap[reserva.estado],
+    textColor: reserva.estado === 'pendiente' ? '#000' : '#fff'  // Black text for yellow background
+  }));
+
+  useEffect(() => {
+    if (!modalOpen) {
+      setSelectedReserva(null);
+      setSelectedDate(null);
+      setForm({
+        id: '',
+        nombre: '',
+        distintivo: '',
+        categoriaCliente: '',
+        correo: '',
+        celular: '',
+        direccion: '',
+        evento: '',
+        fechaHora: '',
+        cantidadMesas: '',
+        duracionEvento: '',
+        tipoEvento: '',
+        nroPersonas: '',
+        observaciones: '',
+        servicios: '',
+        montoDecoracion: '',
+        abono: '',
+        totalPago: '',
+        restante: '',
+        formaPago: '',
+        estado: 'pendiente'
+      });
+      setErrors({});
+    }
+  }, [modalOpen]);
+
+  const handleDownloadExcel = () => {
+    const worksheet = utils.json_to_sheet(data);
+    const workbook = utils.book_new();
+    utils.book_append_sheet(workbook, worksheet, 'Reservas');
+    writeFile(workbook, 'Reservas.xlsx');
+  };
+
+  const validateField = (name, value) => {
+    switch (name) {
+      case 'nombre':
+        return value.trim() ? '' : 'El nombre es requerido.';
+      case 'distintivo':
+        return /^\d+$/.test(value) ? '' : 'Distintivo solo debe contener números.';
+      case 'categoriaCliente':
+        return value.trim() ? '' : 'Categoría Cliente es requerida.';
+      case 'celular':
+        return /^\d{10}$/.test(value) ? '' : 'Celular debe tener exactamente 10 dígitos.';
+      case 'correo':
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? '' : 'Correo electrónico inválido.';
+      case 'direccion':
+        return value.trim() ? '' : 'Dirección es requerida.';
+      case 'evento':
+        return value.trim() ? '' : 'Evento es requerido.';
+      case 'fechaHora':
+        return value ? '' : 'Fecha y hora son requeridas.';
+      case 'cantidadMesas':
+        return parseInt(value) > 0 ? '' : 'Cantidad de mesas debe ser mayor a 0.';
+      case 'duracionEvento':
+        return parseFloat(value) > 0 ? '' : 'Duración del evento debe ser mayor a 0.';
+      case 'tipoEvento':
+        return value.trim() ? '' : 'Tipo de Evento es requerido.';
+      case 'nroPersonas':
+        return parseInt(value) > 0 ? '' : 'Número de personas debe ser mayor a 0.';
+      case 'servicios':
+        return value.trim() ? '' : 'Servicios es requerido.';
+      case 'montoDecoracion':
+        return parseFloat(value) >= 0 ? '' : 'Monto de decoración no puede ser negativo.';
+      case 'abono':
+        return parseFloat(value) >= 0 ? '' : 'El abono no puede ser negativo.';
+      case 'totalPago':
+        return parseFloat(value) > 0 ? '' : 'Total a pagar debe ser mayor a 0.';
+      case 'restante':
+        return parseFloat(value) >= 0 ? '' : 'El monto restante no puede ser negativo.';
+      case 'formaPago':
+        return value.trim() ? '' : 'Forma de Pago es requerida.';
+      default:
+        return '';
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prevForm => ({
       ...prevForm,
-      [name]: value // Actualiza el campo correspondiente en el estado del formulario
+      [name]: value
+    }));
+    setErrors(prevErrors => ({
+      ...prevErrors,
+      [name]: validateField(name, value)
     }));
   };
 
-  // Cambia la página actual en la paginación
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
-  };
-
-  // Muestra una alerta Snackbar con un mensaje y tipo
-  const openSnackbar = (message, severity) => {
-    setSnackbarMessage(message);
-    setSnackbarSeverity(severity);
-    setSnackbarOpen(true); // Abre la Snackbar
-  };
-
-  // Cierra la Snackbar
-  const closeSnackbar = () => {
-    setSnackbarOpen(false);
-  };
-
-  // Valida el formulario antes de agregar o editar un cliente
   const validateForm = () => {
-    const { NombreCompleto, Distintivo, CategoriaCliente, Celular, Correo, Direccion,
-      Nropersonas, Cantidadmesas, Evento, Duracionevento, Fecha_Hora, Servicio, Observaciones, Montodeco,
-      Totalpag, Abono, Restante, Formapag
-     } = form;
-    let errors = [];
+    const newErrors = {};
+    let isValid = true;
 
-    // Valida cada campo y agrega errores a la lista si faltan datos o son inválidos
-    if (!NombreCompleto) errors.push("Nombre Completo es requerido.");
-    if (!Distintivo) errors.push("Distintivo es requerido.");
-    if (!CategoriaCliente) errors.push("Categoría Cliente es requerida.");
-    if (!Celular || !/^\d{10}$/.test(Celular)) errors.push("Celular debe tener 10 dígitos.");
-    if (!Correo || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(Correo)) errors.push("Correo inválido.");
-    if (!Direccion) errors.push("Direccion es requerida.");
-    if (!Nropersonas || !/^\d{1}$/.test(Nropersonas)) errors.push("El nro de personas es requerido .");
-    if (!Cantidadmesas || isNaN(Cantidadmesas)) errors.push("La cantidad de mesas debe ser un número válido.");
-    if (!Evento) errors.push("Evento es requerido.");
-    if (!Duracionevento) errors.push("La duracion del eveto es requerida.");
-    if (!Fecha_Hora) errors.push("La fecha y la hora es requerida.");
-    if (!Servicio) errors.push("Servicio es requerido.");
-    if (!Observaciones) errors.push("Observaciones es requerida.");
-    if (!Montodeco || !/^\d{1}$/.test(Montodeco)) errors.push("El monto del deco es requerido .");
-    if (!Totalpag || !/^\d{1}$/.test(Totalpag)) errors.push("El total del pago es requerido .");
-    if (!Abono || !/^\d{1}$/.test(Abono)) errors.push("El abono es requerido .");
-    if (!Restante || !/^\d{1}$/.test(Restante)) errors.push("El restante es requerido .");
-    if (!Formapag) errors.push("Forma de pago es requerida.");
-    if (!form.Estado) errors.push("Estado es requerido.");
-   
-    if (errors.length) {
-      openSnackbar(errors.join(' '), 'warning'); // Muestra los errores en la Snackbar
-      return false; // El formulario no es válido
-    }
-    return true; // El formulario es válido
-  };
-
-  // Agrega una nueva reserva si el formulario es válido
-  const handleSubmit = () => {
-    if (!validateForm()) return; // Si la validación falla, sale de la función
-
-    const { Distintivo } = form;
-    // Verifica si ya existe una reserva con el mismo distintivo
-    const reservaExistente = data.find(registro => registro.Distintivo.toString() === Distintivo.toString());
-    if (reservaExistente) {
-      openSnackbar("La reserva ya existe. Por favor, ingrese un distintivo diferente.", 'error');
-      return;
-    }
-
-    // Crea una nueva reserva con los datos del formulario
-    const nuevareserva = {
-      ...form,
-      id: data.length ? Math.max(...data.map(reservas => reservas.id)) + 1 : 1 // Asigna un nuevo ID
-    };
-
-    setData([...data, nuevareserva]); // Agrega la nueva reserva a la lista
-
-    // Reinicia el formulario
-    setForm({
-      NombreCompleto: '',
-    Distintivo: '',
-    CategoriaCliente: '',
-    Correo: '',
-    Celular: '',
-    Direccion: '',
-    Nropersonas:'',
-    Cantidadmesas: '',
-    Evento: '',
-    Duracionevento: '',
-    Fecha_Hora: '',
-    Servicio: '',
-    Observaciones: '',
-    Montodeco:'',
-    Totalpag: '',
-    Abono: '',
-    Restante: '',
-    Formapag: '', 
-      Estado: true
-    });
-    setShowForm(false); // Oculta el formulario
-    openSnackbar("Reserva creada exitosamente", 'success');
-  };
-
-  // Edita una reserva existente
-  const editar = () => {
-    if (!validateForm()) return; // Valida el formulario
-
-    const { Distintivo, id } = form;
-    // Verifica si ya existe otra reserva con el mismo distintivo
-    const reservaExistente = data.find(
-      (registro) => registro.Distintivo.toString() === Distintivo.toString() &&
-      registro.id !== id
-    );
-    if (reservaExistente) {
-      openSnackbar("Ya existe una reserva con el mismo distintivo. Por favor, ingresa un distintivo diferente.", 'error');
-      return;
-    }
-
-    // Actualiza los datos de la reserva
-    const updatedData = data.map((registro) =>
-      registro.id === id ? { ...form } : registro
-    );
-
-    setData(updatedData); // Actualiza la lista de reservas
-    setIsEditing(false); // Deja de estar en modo edición
-    setModalOpen(false); // Cierra el modal
-    openSnackbar("Reserva editada exitosamente", 'success');
-  };
-
-  // Elimina una reserva
-  const handleDelete = (dato) => {
-    setDeleteReserva(dato); // Almacena la reserva a eliminar
-    setDeleteAlertOpen(true); // Muestra el modal de confirmación de eliminación
-  };
-
-  // Confirma la eliminación de la reserva
-  const confirmDelete = () => {
-    if (deleteReserva) {
-      const updatedData = data.filter(registro => registro.id !== deleteReserva.id); // Filtra el cliente a eliminar
-      setData(updatedData); // Actualiza la lista de clientes
-      openSnackbar("Reserva eliminada exitosamente", 'success');
-      setDeleteAlertOpen(false); // Cierra el modal de confirmación
-    }
-  };
-
-  // Cancela la eliminación de la reserva 
-  const cancelDelete = () => {
-    setDeleteAlertOpen(false); // Cierra el modal de confirmación
-  };
-
-  // Cambia el estado de una reserva (Activo/Inactivo)
-  const cambiarEstado = (id) => {
-    const updatedData = data.map((registro) => {
-      if (registro.id === id) {
-        registro.Estado = !registro.Estado; // Cambia el estado de la reserva
+    Object.keys(form).forEach(key => {
+      if (key !== 'id' && key !== 'observaciones') {
+        const error = validateField(key, form[key]);
+        newErrors[key] = error;
+        if (error) isValid = false;
       }
-      return registro;
     });
 
-    setData(updatedData); // Actualiza la lista de reservas
-    openSnackbar("Estado de la reserva actualizada exitosamente", 'success');
+    setErrors(newErrors);
+    return isValid;
   };
 
-  // Filtra las reservas según el texto de búsqueda
-  const filteredData = data.filter(item =>
-    item.NombreCompleto.toLowerCase().includes(searchText) ||
-    item.Distintivo.toLowerCase().includes(searchText) ||
-    item.CategoriaCliente.toLowerCase().includes(searchText) ||
-    item.Celular.toLowerCase().includes(searchText) ||
-    item.Correo.toLowerCase().includes(searchText) ||
-    item.Direccion.toLowerCase().includes(searchText)
-  );
-  // Calcula el índice inicial y final para la paginación
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentData = filteredData.slice(indexOfFirstItem, indexOfLastItem); // Datos a mostrar en la página actual
+  const handleSaveReserva = async () => {
+    if (!validateForm()) {
+      Swal.fire({
+        title: "Error",
+        text: "Por favor, corrija los errores en el formulario.",
+        icon: "error",
+        confirmButtonColor: '#3085d6',
+      });
+      return;
+    }
 
-  // Calcula el número total de páginas
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-  console.log({totalPages})
+    const result = await Swal.fire({
+      title: selectedReserva ? '¿Desea editar esta reserva?' : '¿Desea agregar esta reserva?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: selectedReserva ? 'Sí, editar' : 'Sí, agregar',
+      cancelButtonText: 'Cancelar'
+    });
 
- 
+    if (result.isConfirmed) {
+      if (selectedReserva) {
+        // Editar reserva existente
+        setData(data.map(reserva => reserva.id === form.id ? form : reserva));
+      } else {
+        // Agregar nueva reserva
+        const newId = Math.max(...data.map(r => r.id)) + 1;
+        setData([...data, { ...form, id: newId }]);
+      }
+      setModalOpen(false);
+      Swal.fire({
+        title: selectedReserva ? "Reserva editada" : "Reserva agregada",
+        text: selectedReserva ? "La reserva ha sido editada exitosamente." : "La reserva ha sido agregada exitosamente.",
+        icon: "success",
+        confirmButtonColor: '#3085d6',
+      });
+    }
+  };
 
+  const handleReschedule = async (id) => {
+    const result = await Swal.fire({
+      title: '¿Desea reprogramar esta reserva?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, reprogramar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      console.log('Reprogramar reserva', id);
+      setModalOpen(false);
+      Swal.fire({
+        title: "Reserva reprogramada",
+        text: "La reserva ha sido reprogramada exitosamente.",
+        icon: "success",
+        confirmButtonColor: '#3085d6',
+      });
+    }
+  };
+
+  const handleCancel = async (id) => {
+    const result = await Swal.fire({
+      title: '¿Está seguro de cancelar esta reserva?',
+      text: "Esta acción no se puede deshacer",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, cancelar reserva',
+      cancelButtonText: 'No, mantener reserva'
+    });
+
+    if (result.isConfirmed) {
+      setData(data.map(reserva => reserva.id === id ? {...reserva, estado: 'anulada'} : reserva));
+      setModalOpen(false);
+      Swal.fire({
+        title: "Reserva cancelada",
+        text: "La reserva ha sido cancelada exitosamente.",
+        icon: "success",
+        confirmButtonColor: '#3085d6',
+      });
+    }
+  };
 
   return (
-    <Container>
-      <Row>
-        <Col>
-          <h1 className="my-3">Lista de Reservas</h1>
-          <Input
-            type="text"
-            placeholder="Buscar reserva..."
-            value={searchText}
-            onChange={handleSearch}
-            style={{ width: '20%' }}
-            className="mb-3"
-          />
-          <Table striped responsive>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nombre Completo</th>
-                <th>Distintivo</th>
-                <th>Categoría</th>
-                <th>Celular</th>
-                <th>Correo</th>
-                <th>Dirección</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentData.map((reservas) => (
-                <tr key={reservas.id}>
-                  <td>{reservas.id}</td>
-                  <td>{reservas.NombreCompleto}</td>
-                  <td>{reservas.Distintivo}</td>
-                  <td>{reservas.CategoriaCliente}</td>
-                  <td>{reservas.Celular}</td>
-                  <td>{reservas.Correo}</td>
-                  <td>{reservas.Direccion}</td>
-                  <td>
-                    <Button
-                      color={reservas.Estado ? "success" : "danger"}
-                      onClick={() => cambiarEstado(reservas.id)}
-                    >
-                      {reservas.Estado ? "Activo" : "Inactivo"}
-                    </Button>
-                  </td>
-                  <td>
-                    <Button
-                     style={{ background: '#1a1918', marginRight: '5px' }}
-                      onClick={() => {
-                        setForm(reservas);
-                        setIsEditing(true);
-                        setModalOpen(true);
-                      }}
-                    >
-                      <FaEdit />
-                    </Button>
+    <Container className="d-flex flex-column justify-content-center align-items-center" style={{ minHeight: '80vh' }}>
+      <h2>Calendario de Reservas</h2>
+      <div style={{ width: '100%', maxWidth: '900px', overflow: 'hidden' }}>
+        <FullCalendar
+          plugins={[dayGridPlugin, interactionPlugin]}
+          initialView="dayGridMonth"
+          events={events}
+          dateClick={handleDateClick}
+          eventClick={handleEventClick}
+        />
+      </div>
 
-                    <Button
-                      style={{background:'#8d0f0f'}}
-                      className="ms-2"
-                      onClick={() => handleDelete(reservas)}
-                    >
-                      <FaTrashAlt />
-                    </Button>
+      <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)} style={{ maxWidth: '900px', width: '80%',overflowX: 'auto',maxHeight: '93vh' }}>
+        <ModalHeader style={{background:'#6d0f0f'}} toggle={() => setModalOpen(!modalOpen)}>
+          <h3 className="text-white">{selectedReserva ? 'Editar Reserva' : 'Nueva Reserva'}</h3>
+        </ModalHeader>
+        <ModalBody>
+          <FormGroup>
+            <Row>
+              <Col md={6}>
+                <Label for="nombre"><b>Nombre</b></Label>
+                <Input
+                  id="nombre"
+                  style={{ border: '2px solid #000000' }}
+                  type="text"
+                  name="nombre"
+                  value={form.nombre}
+                  onChange={handleChange}
+                  invalid={!!errors.nombre}
+                />
+                {errors.nombre && <span className="text-danger">{errors.nombre}</span>}
+              </Col>
+              <Col md={6}>
+                <Label for="distintivo"><b>Distintivo</b></Label>
+                <Input
+                  id="distintivo"
+                  style={{ border: '2px solid #000000' }}
+                  type="text"
+                  name="distintivo"
+                  value={form.distintivo}
+                  onChange={handleChange}
+                  invalid={!!errors.distintivo}
+                />
+                {errors.distintivo && <span className="text-danger">{errors.distintivo}</span>}
+              </Col>
+            </Row>
+            <Row className="mt-3">
+              <Col md={6}>
+                <Label for="categoriaCliente"><b>Categoría Cliente</b></Label>
+                <Input
+                  id="categoriaCliente"
+                  style={{ border: '2px solid #000000' }}
+                  type="select"
+                  name="categoriaCliente"
+                  value={form.categoriaCliente}
+                  onChange={handleChange}
+                  invalid={!!errors.categoriaCliente}
+                >
+                  <option value="VIP">VIP</option>
+                  <option value="Frecuente">Frecuente</option>
+                  <option value="Regular">Regular</option>
+                  <option value="Nuevo">Nuevo</option>
                   
-                    <Button 
-        onClick={() => viewDetails(item)}
-        className="me-2 btn-sm" 
-        style={{ 
-          backgroundColor: '#696969',
-          border: 'none',
-          padding: '0.55rem',
-        }}
-      >
-        <FaEye style={{ color: 'white', fontSize: '1.30rem' }} /> 
-      </Button>
-                      
-                      
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-          {/* Paginación */}
-        
-          <div className="d-flex justify-content-center">
-            <nav>
-              <ul className="pagination">
-                {totalPages && Array(totalPages).map((_,number) => (
-                  <li
-                    key={number}
-                    className={`page-item ${number === currentPage ? 'active' : ''}`}
-                    onClick={() => handlePageChange(number)}
-                  >
-                    <span className="page-link">{number}</span>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          </div>
-        </Col>
-      </Row>
-      {/* Formulario de agregar/editar reserva */}
-      {showForm && (
-        <div>
-          <h3>{isEditing ? "Editar Reserva" : "Agregar Reserva"}</h3>
-          <form>
-            <FormGroup>
-              <label>Nombre Completo</label>
-              <Input type="text" name="NombreCompleto" value={form.NombreCompleto} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label>Distintivo</label>
-              <Input type="text" name="Distintivo" value={form.Distintivo} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label>Categoría Cliente</label>
-              <Input type="text" name="CategoriaCliente" value={form.CategoriaCliente} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label>Celular</label>
-              <Input type="text" name="Celular" value={form.Celular} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label>Correo</label>
-              <Input type="text" name="Correo" value={form.Correo} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label>Dirección</label>
-              <Input type="text" name="Direccion" value={form.Direccion} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label>Nro Personas</label>
-              <Input type="number" name="Nropersonas" value={form.Nropersonas} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label>Cantidad de mesas </label>
-              <Input type="number" name="cantidadmesas" value={form.Cantidadmesas} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label>Evento </label>
-              <Input type="text" name="Evento" value={form.Evento} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label>Duración del evento </label>
-              <Input type="time" name="duracionevento" value={form.Duracionevento} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label>Fecha y Hora</label>
-              <Input type="datetime-local" name="Fecha_Hora" value={form.Fecha_Hora} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label>Servicio adicional</label>
-              <Input type="text" name="servicio" value={form.Servicio} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label>Observaciones </label>
-              <Input type="text" name="observaciones" value={form.Observaciones} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label>Monto decoración </label>
-              <Input type="number" name="montodeco" value={form.Montodeco} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label>Total a pagar </label>
-              <Input type="number" name="totalpag" value={form.Totalpag} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label>Abono</label>
-              <Input type="number" name="abono" value={form.Abono} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label>Restante  </label>
-              <Input type="number" name="restante" value={form.Restante} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label>Forma de pago </label>
-              <Input type="number" name="formapag" value={form.Formapag} onChange={handleChange} />
-            </FormGroup>
-            <Button color="primary" onClick={isEditing ? editar : handleSubmit}>
-              {isEditing ? "Actualizar" : "Agregar"}
-            </Button>
-            <Button color="secondary" onClick={() => setShowForm(false)}>
-              Cancelar
-            </Button>
-          </form>
-        </div>
-      )}
+                
+                {errors.categoriaCliente && <span className="text-danger">{errors.categoriaCliente}</span>}
+                </Input>
+               
+              </Col>
+              <Col md={6}>
+                <Label for="correo"><b>Correo</b></Label>
+                <Input
+                  id="correo"
+                  style={{ border: '2px solid #000000' }}
+                  type="email"
+                  name="correo"
+                  value={form.correo}
+                  onChange={handleChange}
+                  invalid={!!errors.correo}
+                />
+                {errors.correo && <span className="text-danger">{errors.correo}</span>}
+              </Col>
+            </Row>
+            <Row className="mt-3">
+              <Col md={6}>
+                <Label for="celular"><b>Celular</b></Label>
+                <Input
+                  id="celular"
+                  style={{ border: '2px solid #000000' }}
+                  type="text"
+                  name="celular"
+                  value={form.celular}
+                  onChange={handleChange}
+                  invalid={!!errors.celular}
+                />
+                {errors.celular && <span className="text-danger">{errors.celular}</span>}
+              </Col>
+              <Col md={6}>
+                <Label for="direccion"><b>Dirección</b></Label>
+                <Input
+                  id="direccion"
+                  style={{ border: '2px solid #000000' }}
+                  type="text"
+                  name="direccion"
+                  value={form.direccion}
+                  onChange={handleChange}
+                  invalid={!!errors.direccion}
+                />
+                {errors.direccion && <span className="text-danger">{errors.direccion}</span>}
+              </Col>
+            </Row>
+            <Row className="mt-3">
+            
+                <Label for="fechaHora"><b>Fecha y Hora</b></Label>
+                <Input
+                  id="fechaHora"
+                  style={{ border: '2px solid #000000' }}
+                  type="datetime-local"
+                  name="fechaHora"
+                  value={form.fechaHora}
+                  onChange={handleChange}
+                  invalid={!!errors.fechaHora}
+                />
+                {errors.fechaHora && <span className="text-danger">{errors.fechaHora}</span>}
+              
+            </Row>
+            <Row className="mt-3">
+              <Col md={6}>
+                <Label for="cantidadMesas"><b>Cantidad de Mesas</b></Label>
+                <Input
+                  id="cantidadMesas"
+                  style={{ border: '2px solid #000000' }}
+                  type="number"
+                  name="cantidadMesas"
+                  value={form.cantidadMesas}
+                  onChange={handleChange}
+                  invalid={!!errors.cantidadMesas}
+                />
+                {errors.cantidadMesas && <span className="text-danger">{errors.cantidadMesas}</span>}
+              </Col>
+              <Col md={6}>
+                <Label for="duracionEvento"><b>Duración del Evento (horas)</b></Label>
+                <Input
+                  id="duracionEvento"
+                  style={{ border: '2px solid #000000' }}
+                  type="number"
+                  name="duracionEvento"
+                  value={form.duracionEvento}
+                  onChange={handleChange}
+                  invalid={!!errors.duracionEvento}
+                />
+                {errors.duracionEvento && <span className="text-danger">{errors.duracionEvento}</span>}
+              </Col>
+            </Row>
+            <Row className="mt-3">
 
-      {/* Modal para edición de la reserva */}
-      <Modal isOpen={modalOpen}>
-        <ModalHeader style={{background:'#8d0f0f'}}>{isEditing ? <h3 className="text-white"> Editar reserva</h3>: "Agregar Reserva"}</ModalHeader>
-        <ModalBody>
-          <FormGroup>
-            <label><b>Nombre Completo</b></label>
-            <Input style={{ border: '2px solid #000000' }} type="text" name="NombreCompleto" value={form.NombreCompleto} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <label><b>Distintivo</b></label>
-            <Input style={{ border: '2px solid #000000' }} type="text" name="Distintivo" value={form.Distintivo} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <label><b>Categoría Cliente</b></label>
-            <Input style={{ border: '2px solid #000000' }} type="text" name="CategoriaCliente" value={form.CategoriaCliente} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <label><b>Celular</b></label>
-            <Input style={{ border: '2px solid #000000' }} type="text" name="Celular" value={form.Celular} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <label><b>Correo</b></label>
-            <Input style={{ border: '2px solid #000000' }} type="text" name="Correo" value={form.Correo} onChange={handleChange} />
-          </FormGroup>
-          <FormGroup>
-            <label><b>Dirección</b></label>
-            <Input style={{ border: '2px solid #000000' }} type="text" name="Direccion" value={form.Direccion} onChange={handleChange} />
+              <Col md={6}>
+                <Label for="tipoEvento"><b>Tipo de Evento</b></Label>
+                <Input
+                  id="tipoEvento"
+                  style={{ border: '2px solid #000000' }}
+                  type="select"
+                  name="tipoEvento"
+                  value={form.tipoEvento}
+                  onChange={handleChange}
+                  invalid={!!errors.tipoEvento}
+                >
+                  <option value="Empresarial">Empresarial</option>
+                  <option value="Cumpleaños">Cumpleaños</option>
+                  <option value="Grado">En Grado</option>
+                  <option value="Aniversario">Aniversario</option>
+                  <option value="Bautizo">Bautizo</option>
+                  <option value="PrimeraComunion">Primera Comunion</option>
+                  <option value="Matrimonio">Matrimonio</option>
+                </Input>
+                {errors.tipoEvento && <span className="text-danger">{errors.tipoEvento}</span>}
+                
+              </Col>
+
+              <Col md={6}>
+                <Label for="nroPersonas"><b>Número de Personas</b></Label>
+                <Input
+                  id="nroPersonas"
+                  style={{ border: '2px solid #000000' }}
+                  type="number"
+                  name="nroPersonas"
+                  value={form.nroPersonas}
+                  onChange={handleChange}
+                  invalid={!!errors.nroPersonas}
+                />
+                {errors.nroPersonas && <span className="text-danger">{errors.nroPersonas}</span>}
+              </Col>
+            </Row>
+            <Row className="mt-3">
+              <Col md={12}>
+                <Label for="observaciones"><b>Observaciones</b></Label>
+                <Input
+                  id="observaciones"
+                  style={{ border: '2px solid #000000' }}
+                  type="textarea"
+                  name="observaciones"
+                  value={form.observaciones}
+                  onChange={handleChange}
+                  rows="3"
+                />
+              </Col>
+            </Row>
+            <Row className="mt-3">
+
+              <Col md={6}>
+                <Label for="servicios"><b>Servicios</b></Label>
+                <Input
+                  id="servicios"
+                  style={{ border: '2px solid #000000' }}
+                  type="select"
+                  name="servicios"
+                  value={form.servicios}
+                  onChange={handleChange}
+                  invalid={!!errors.servicios}
+                >
+                    <option value="Decoracion">Decoracion</option>
+                  {errors.servicios && <span className="text-danger">{errors.servicios}</span>}
+                </Input>
+                {errors.servicios && <span className="text-danger">{errors.servicios}</span>}
+              </Col>
+              <Col md={6}>
+                <Label for="montoDecoracion"><b>Monto Decoración</b></Label>
+                <Input
+                  id="montoDecoracion"
+                  style={{ border: '2px solid #000000' }}
+                  type="select"
+                  name="montoDecoracion"
+                  value={form.montoDecoracion}
+                  onChange={handleChange}
+                  invalid={!!errors.montoDecoracion}
+                >
+                  <option value="2 a 15 personas">$70.000</option>
+                  <option value="16 a 40 personas">$90.000</option>
+                  {errors.montoDecoracion && <span className="text-danger">{errors.montoDecoracion}</span>}
+                </Input>
+              </Col>
+            </Row>
+            <Row className="mt-3">
+              <Col md={4}>
+                <Label for="abono"><b>Abono</b></Label>
+                <Input
+                  id="abono"
+                  style={{ border: '2px solid #000000' }}
+                  type="number"
+                  name="abono"
+                  value={form.abono}
+                  onChange={handleChange}
+                  invalid={!!errors.abono}
+                />
+                {errors.abono && <span className="text-danger">{errors.abono}</span>}
+              </Col>
+              <Col md={4}>
+                <Label for="totalPago"><b>Total a Pagar</b></Label>
+                <Input
+                  id="totalPago"
+                  style={{ border: '2px solid #000000' }}
+                  type="number"
+                  name="totalPago"
+                  value={form.totalPago}
+                  onChange={handleChange}
+                  invalid={!!errors.totalPago}
+                />
+                {errors.totalPago && <span className="text-danger">{errors.totalPago}</span>}
+              </Col>
+              <Col md={4}>
+                <Label for="restante"><b>Restante</b></Label>
+                <Input
+                  id="restante"
+                  style={{ border: '2px solid #000000' }}
+                  type="number"
+                  name="restante"
+                  value={form.restante}
+                  onChange={handleChange}
+                  invalid={!!errors.restante}
+                />
+                {errors.restante && <span className="text-danger">{errors.restante}</span>}
+              </Col>
+            </Row>
+            <Row className="mt-3">
+              <Col md={6}>
+                <Label for="formaPago"><b>Forma de Pago</b></Label>
+                <Input
+                  id="formaPago"
+                  style={{ border: '2px solid #000000' }}
+                  type="select"
+                  name="formaPago"
+                  value={form.formaPago}
+                  onChange={handleChange}
+                  invalid={!!errors.formaPago}
+                >
+                   <option value="Bancolombia">Bancolombia</option>
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Tarjeta">Tarjeta</option>
+                </Input>
+                {errors.formaPago && <span className="text-danger">{errors.formaPago}</span>}
+              </Col>
+              <Col md={6}>
+                <Label for="estado"><b>Estado</b></Label>
+                <Input
+                  id="estado"
+                  style={{ border: '2px solid #000000' }}
+                  type="select"
+                  name="estado"
+                  value={form.estado}
+                  onChange={handleChange}
+                >
+                  <option value="pendiente">Pendiente</option>
+                  <option value="confirmada">Confirmada</option>
+                  <option value="en_proceso">En Proceso</option>
+                  <option value="terminada">Terminada</option>
+                  <option value="anulada">Anulada</option>
+                </Input>
+              </Col>
+            </Row>
           </FormGroup>
         </ModalBody>
-        <FormGroup>
-              <label><b>Nro Personas</b></label>
-              <Input style={{ border: '2px solid #000000' }} type="number" name="Nropersonas" value={form.Nropersonas} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label><b>Cantidad de mesas </b></label>
-              <Input style={{ border: '2px solid #000000' }} type="number" name="cantidadmesas" value={form.Cantidadmesas} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label><b>Evento</b> </label>
-              <Input style={{ border: '2px solid #000000' }} type="text" name="Evento" value={form.Evento} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label><b>Duración del evento</b> </label>
-              <Input style={{ border: '2px solid #000000' }} type="time" name="duracionevento" value={form.Duracionevento} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label><b>Fecha y Hora</b></label>
-              <Input style={{ border: '2px solid #000000' }} type="datetime" name="Fechayhora" value={form.Fecha_Hora} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label><b>Servicio adicional</b></label>
-              <Input style={{ border: '2px solid #000000' }} type="text" name="servicio" value={form.Servicio} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label><b>Observaciones</b> </label>
-              <Input style={{ border: '2px solid #000000' }} type="text" name="observaciones" value={form.Observaciones} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label><b>Monto decoración</b> </label>
-              <Input style={{ border: '2px solid #000000' }} type="number" name="montodeco" value={form.Montodeco} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label><b>Total a pagar</b> </label>
-              <Input  style={{ border: '2px solid #000000' }} type="number" name="totalpag" value={form.Totalpag} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label><b>Abono</b></label>
-              <Input style={{ border: '2px solid #000000' }} type="number" name="abono" value={form.Abono} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label><b>Restante</b>  </label>
-              <Input style={{ border: '2px solid #000000' }} type="number" name="restante" value={form.Restante} onChange={handleChange} />
-            </FormGroup>
-            <FormGroup>
-              <label><b>Forma de pago</b> </label>
-              <Input style={{ border: '2px solid #000000' }} type="number" name="formapag" value={form.Formapag} onChange={handleChange} />
-            </FormGroup>
         <ModalFooter>
-          <Button style={{ background: '#2e8329' }} onClick={editar}>
-            Guardar
+          <Button style={{ background: '#2e8329' }} onClick={handleSaveReserva}>
+            {selectedReserva ? 'Guardar Cambios' : 'Crear Reserva'}
           </Button>
-          <Button style={{background:'#8d0f0f'}} onClick={() => setModalOpen(false)}>
-            Cancelar
-          </Button>
-        </ModalFooter>
-      </Modal>
-
-      {/* Modal para confirmación de eliminación */}
-      <Modal isOpen={deleteAlertOpen}>
-        <ModalHeader style={{background:'#8d0f0f'}}><h3 className="text-white">Eliminar reserva  </h3></ModalHeader>
-        <ModalBody>
-          ¿Estás seguro que deseas eliminar la reserva "{deleteReserva?.NombreCompleto}"?
-        </ModalBody>
-        <ModalFooter>
-          <Button style={{background:'#8d0f0f'}} onClick={confirmDelete}>
-            Eliminar
-          </Button>
-          <Button style={{ background: '#2e8329' }} onClick={cancelDelete}>
-            Cancelar
-          </Button>
-        </ModalFooter>
-      </Modal>
-
- {/* Modal de detalle */}
- <Modal 
-        show={detailModalOpen} 
-        onHide={toggleDetailModal} 
-        style={{ maxWidth: '40%', marginTop: '10px', marginBottom: '3px' }}
-      >
-        <Modal.Header closeButton style={{ color: '#8C1616' }}>
-          <Modal.Title>Detalles de la reserva</Modal.Title>
-        </Modal.Header>
-        <Modal.Body style={{ overflowY: 'auto', maxHeight: 'calc(120vh - 120px)' }}>
-          {selectedItem ? (
-            <div style={{ padding: '10px' }}>
-              <p><strong>Nombre Completo:</strong> {selectedItem.NombreCompleto}</p>
-              <p><strong>Distintivo:</strong> {selectedItem.Distintivo}</p>
-              <p><strong>Categoría Cliente:</strong> {selectedItem.CategoriaCliente}</p>
-              <p><strong>Correo:</strong> {selectedItem.Correo}</p>
-              <p><strong>Celular:</strong> {selectedItem.Celular}</p>
-              <p><strong>Dirección:</strong> {selectedItem.Direccion}</p>
-              <p><strong>Nro de personas:</strong> {selectedItem.Nropersonas}</p>
-              <p><strong>Cantidad de mesas:</strong> {selectedItem.Cantidadmesas}</p>
-              <p><strong>Evento:</strong> {selectedItem.Evento}</p>
-              <p><strong>Duración del evento:</strong> {selectedItem.Duracionevento}</p>
-              <p><strong>Fecha y hora:</strong> {selectedItem.Fecha_Hora}</p>
-              <p><strong>Servicio:</strong> {selectedItem.Servicio}</p>
-              <p><strong>Observaciones:</strong> {selectedItem.Observaciones}</p>
-              <p><strong>Monto de decoración:</strong> {selectedItem.Montodeco}</p>
-              <p><strong>Total a pagar:</strong> {selectedItem.Totalpag}</p>
-              <p><strong>Abono:</strong> {selectedItem.Abono}</p>
-              <p><strong>Restante:</strong> {selectedItem.Restante}</p>
-              <p><strong>Forma de pago:</strong> {selectedItem.Formapag}</p>
-              <p><strong>Estado:</strong> {selectedItem.Estado ? 'Activo' : 'Inactivo'}</p>
-            </div>
-          ) : (
-            <p>No se encontraron detalles.</p>
+          {selectedReserva && (
+            <>
+              <Button color="warning" onClick={() => handleReschedule(selectedReserva.id)}>Reprogramar</Button>
+              <Button color="danger" onClick={() => handleCancel(selectedReserva.id)}>Cancelar Reserva</Button>
+            </>
           )}
-        </Modal.Body>
-        <Modal.Footer style={{ display: 'flex', justifyContent: 'flex-end', padding: 0 }}>
-          <Button style={{ background: '#6d0f0f' }} onClick={toggleDetailModal}>Cerrar</Button>
-        </Modal.Footer>
+          <Button style={{background:'#6d0f0f'}} onClick={() => setModalOpen(false)}>Cerrar</Button>
+        </ModalFooter>
       </Modal>
-      
-      {/* Snackbar para mensajes */}
-      <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={closeSnackbar}>
-        <Alert onClose={closeSnackbar} severity={snackbarSeverity}>
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
+
+      <Button style={{ background: '#2e8329' }} className="mt-3" onClick={handleDownloadExcel}>Descargar Excel</Button>
     </Container>
   );
-};
-
-// Define las propTypes del componente
-Reservas.propTypes = {
-  initialData: PropTypes.array
-};
-
-export default Reservas;
+}
