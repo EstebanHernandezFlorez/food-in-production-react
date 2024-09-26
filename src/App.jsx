@@ -33,6 +33,7 @@ import { NavDropdown } from "react-bootstrap";
 import Calendario from "./views/module/Calendario/Calendario";
 import TablaGastos from "./views/module/ManoDeObra/TablaGastos"
 import RendimientoEmpleado from "./views/module/ManoDeObra/RendimientoEmpleado"
+import EditarPerfil from "./views/module/EditarPerfil/EditarPerfil";
 
 
 const users = [
@@ -166,6 +167,7 @@ export default function App() {
                       <Route path="/calendario" element={<Calendario />} />
                       <Route path="/tabla-gastos" element={<TablaGastos/>}/>
                       <Route path="/rendimiento-empleado" element={<RendimientoEmpleado/>}/>
+                      <Route path="/editar-perfil" element={<EditarPerfil/>}/>
                       {/* Añade más rutas según sea necesario */}
                     </Routes>
                   </Content>

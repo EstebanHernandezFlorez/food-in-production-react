@@ -546,48 +546,50 @@ const Produccion = () => {
                   </FormGroup>
                 </Col>
 
+                <Col md={2} className="mb-2 mx-3 d-flex align-items-center">
+                  <FormGroup>
+                    <label style={{ fontSize: "15px", padding: "5px" }}>
+                      Cantidad a producir
+                    </label>
+                    <Input
+                      type="number"
+                      name="cantidadaproducir"
+                      value={form.cantidadaproducir}
+                      onChange={handleChange}
+                      className={`form-control ${
+                        formErrors.cantidadaproducir ? "is-invalid" : ""
+                      }`}
+                      style={{ width: "80px" }} // Ajuste del ancho del input
+                    />
+                    {formErrors.cantidadaproducir && (
+                      <div className="invalid-feedback">
+                        Este campo es obligatorio.
+                      </div>
+                    )}
+                  </FormGroup>
+                </Col>
+
                 <Col md={2} className="mb-2 mx-3">
-  <FormGroup>
-    <label style={{ fontSize: "15px", paddingRight: "5px" }}>
-      Cantidad a producir
-    </label>
-    <Input
-      type="number"
-      name="cantidadaproducir"
-      value={form.cantidadaproducir}
-      onChange={handleChange}
-      className={`form-control ${
-        formErrors.cantidadaproducir ? "is-invalid" : ""
-      }`}
-      style={{ width: "100px" }} // Ajuste del ancho del input
-    />
-    {formErrors.cantidadaproducir && (
-      <div className="invalid-feedback">Este campo es obligatorio.</div>
-    )}
-  </FormGroup>
-</Col>
-
-<Col md={2} className="mb-2 mx-3">
-  <FormGroup>
-    <label style={{ fontSize: "15px", paddingRight: "5px" }}>
-      Peso final por unidad
-    </label>
-    <Input
-      type="text"
-      name="pesofinalporunidad"
-      value={form.pesofinalporunidad}
-      onChange={handleChange}
-      className={`form-control ${
-        formErrors.pesofinalporunidad ? "is-invalid" : ""
-      }`}
-      style={{ width: "100px" }} // Ajuste del ancho del input
-    />
-    {formErrors.pesofinalporunidad && (
-      <div className="invalid-feedback">Este campo es obligatorio.</div>
-    )}
-  </FormGroup>
-</Col>
-
+                  <FormGroup>
+                    <label style={{ fontSize: "15px", padding: "5px" }}>
+                      Peso final por unidad
+                    </label>
+                    <Input
+                      type="text"
+                      name="pesofinalporunidad"
+                      value={form.pesofinalporunidad}
+                      onChange={handleChange}
+                      className={`form-control ${
+                        formErrors.pesofinalporunidad ? "is-invalid" : ""
+                      }`}
+                    />
+                    {formErrors.pesofinalporunidad && (
+                      <div className="invalid-feedback">
+                        Este campo es obligatorio.
+                      </div>
+                    )}
+                  </FormGroup>
+                </Col>
 
                 <Col md={2} className="mb-2">
                   <FormGroup>
