@@ -673,6 +673,7 @@ const Proveedores = () => {
   )
 };
 
-export default Proveedores;
+
+export default ProductoInsumo;
 
 

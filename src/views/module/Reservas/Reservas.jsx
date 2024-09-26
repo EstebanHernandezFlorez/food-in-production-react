@@ -1,409 +1,607 @@
-import { useState } from "react";
-import { Table, Button, Container, Row, Col, FormGroup, Input } from 'reactstrap';
-import { FaEdit, FaTrashAlt } from 'react-icons/fa';
-import { Snackbar, Alert } from '@mui/material';
+// Importa los hooks y bibliotecas necesarias para el componente
+import { useState } from "react"; 
+import 'bootstrap/dist/css/bootstrap.min.css'; // Importa estilos de Bootstrap
+import { Table, Button, Container, Row, Col, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap'; // Importa componentes de Reactstrap para manejar el layout y el modal
+import { FaEdit, FaTrashAlt,FaEye } from 'react-icons/fa'; // Importa iconos para botones de editar y eliminar
+import { Snackbar, Alert } from '@mui/material'; // Importa la Snackbar y Alert de Material UI para notificaciones
+import PropTypes from 'prop-types'; // Para definir las propiedades que el componente puede recibir
 
+// Datos iniciales (ejemplo de clientes cargados al inicio)
 const initialData = [
-  { id: 1, Nombre: "Boda Juan y María", Distintivo: "7867", Evento: "Boda", Fechahora: "2024-09-01T18:00", Cantidadmesas: "15", Nropersonas: "150", Abono: "500", Totalpag: "1500", Restante: "1000" },
-  { id: 2, Nombre: "Fiesta de Empresa", Distintivo: "7576", Evento: "Corporativo", Fechahora: "2024-09-15T20:00", Cantidadmesas: "20", Nropersonas: "200", Abono: "700", Totalpag: "2000", Restante: "1300" },
+  { id: 1, NombreCompleto: "Juan Pérez", Distintivo: "7867", CategoriaCliente: "regular", Celular: "3123456789", Correo: "juan.perez@example.com", Direccion: "Cl 76 j 12b 55",Nropersonas:'',
+    Cantidadmesas:1,
+    Evento:"boda" ,
+    Duracionevento:"2 hrs",
+    Fecha_Hora: '',
+    Servicio: '',
+    Observaciones: '',
+    Montodeco:'',
+    Totalpag: '',
+    Abono: '',
+    Restante: '',
+    Formapag: '', Estado: true },
+  { id: 2, NombreCompleto: "Ana Torres", Distintivo: "7576", CategoriaCliente: "familiar", Celular: "3109876543", Correo: "ana.torres@example.com", Direccion: "Av. El Dorado 92-45", Estado: true },
 ];
 
-const Reserva = () => {
-  const [data, setData] = useState(initialData);
+// Componente principal
+const Reservas = () => {
+  // Manejo del estado para datos, formularios y otros controles
+  const [data, setData] = useState(initialData); // Estado que almacena la lista de clientes
   const [form, setForm] = useState({
     id: '',
-    Nombre: '',
+    NombreCompleto: '',
     Distintivo: '',
-    Evento: '',
-    Fechahora: '',
-    Cantidadmesas: '',
-    Nropersonas: '',
     CategoriaCliente: '',
     Correo: '',
     Celular: '',
     Direccion: '',
-    DuracionEvento: '',
-    ServiciosAdicionales: '',
+    Nropersonas:'',
+    Cantidadmesas: '',
+    Evento: '',
+    Duracionevento: '',
+    Fecha_Hora: '',
+    Servicio: '',
     Observaciones: '',
-    MontoDecoracion: '',
-    Abono: '',
+    Montodeco:'',
     Totalpag: '',
+    Abono: '',
     Restante: '',
-    FormaPago: ''
-  });
+    Formapag: '',
+    Estado: true
+  }); // Estado del formulario de cliente
+  const [isEditing, setIsEditing] = useState(false); // Bandera para saber si se está editando un cliente
+  const [showForm, setShowForm] = useState(false); // Controla la visibilidad del formulario de agregar/editar cliente
+  const [searchText, setSearchText] = useState(''); // Almacena el texto de búsqueda
+  const [snackbarOpen, setSnackbarOpen] = useState(false); // Controla la visibilidad de la Snackbar
+  const [snackbarMessage, setSnackbarMessage] = useState(''); // Mensaje que se muestra en la Snackbar
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success'); // Tipo de alerta en la Snackbar (success, error, etc.)
+  const [currentPage, setCurrentPage] = useState(1); // Página actual para paginación
+  const [modalOpen, setModalOpen] = useState(false); // Controla la visibilidad del modal de edición
+  const [deleteAlertOpen, setDeleteAlertOpen] = useState(false); // Controla la visibilidad del modal de eliminación
+  const [deleteReserva, setDeleteReserva] = useState(null); // reserva que se está eliminando
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [formErrors, setFormErrors] = useState({});
-  const [searchText, setSearchText] = useState('');
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
 
+  const itemsPerPage = 7; // Número de clientes por página
+
+ //ver detalle
+
+  const toggleDetailModal = () => setDetailModalOpen(!detailModalOpen);
+
+  const viewDetails = (item) => {
+    setSelectedItem(item);
+    toggleDetailModal();
+  };
+ 
+  // Función para manejar cambios en el campo de búsqueda
   const handleSearch = (e) => {
-    setSearchText(e.target.value.toLowerCase());
+    setSearchText(e.target.value.toLowerCase()); // Convierte el texto a minúsculas para buscar
   };
 
+  // Función para manejar cambios en los campos del formulario
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prevForm => ({
       ...prevForm,
-      [name]: value
+      [name]: value // Actualiza el campo correspondiente en el estado del formulario
     }));
   };
 
-  const validateForm = () => {
-    let errors = {};
-    if (!form.Nombre) errors.Nombre = 'El nombre es obligatorio';
-    if (!form.Distintivo) errors.Distintivo = 'El distintivo es obligatorio';
-    if (!form.Evento) errors.Evento = 'El evento es obligatorio';
-    if (!form.Fechahora) errors.Fechahora = 'La fecha y hora son obligatorias';
-    if (!form.Cantidadmesas) errors.Cantidadmesas = 'La cantidad de mesas es obligatoria';
-    if (!form.Nropersonas) errors.Nropersonas = 'El número de personas es obligatorio';
-    if (!form.CategoriaCliente) errors.CategoriaCliente = 'La categoria del cliente es obligatoria';
-    if (!form.Correo) errors.Correo = 'El correo es obligatorio';
-    if (!form.Celular) errors.Celular = 'El número de celular es obligatorio';
-    if (!form.Direccion) errors.Direccion = 'La dirección es obligatoria';
-    if (!form.DuracionEvento) errors.DuracionEvento = 'La duración del evento es obligatorio';
-    if (!form.ServiciosAdicionales) errors.ServiciosAdicionales = 'El servicio adicional es obligatorio';
-    if (!form.Observaciones) errors.Observaciones = 'Las observacionnes son obligatorias';
-    if (!form.MontoDecoracion) errors.MontoDecoracion = 'El monto de la decoracion es obligatoria';
-    if (!form.Abono) errors.Abono = 'El abono es obligatorio';
-    if (!form.Totalpag) errors.Totalpag = 'El total a pagar es obligatorio';
-    if (!form.Restante) errors.Restante = 'El restante es obligatorio';
-    if (!form.FormaPago) errors.FormaPago = 'La forma de pago es obligatoria';
-
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
+  // Cambia la página actual en la paginación
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
   };
 
-  const handleSubmit = () => {
-    if (!validateForm()) {
-      openSnackbar("Por favor, complete todos los campos obligatorios", 'warning');
-      return;
-    }
-
-    if (isEditing) {
-      // Actualiza la reserva existente
-      setData(data.map(item => (item.id === form.id ? form : item)));
-      openSnackbar("Reserva actualizada exitosamente", 'success');
-    } else {
-      // Crea una nueva reserva
-      const nuevaReserva = { ...form, id: data.length ? Math.max(...data.map(res => res.id)) + 1 : 1 };
-      setData([...data, nuevaReserva]);
-      openSnackbar("Reserva agregada exitosamente", 'success');
-    }
-
-    setShowForm(false);
-    resetForm();
-  };
-
-  const handleDelete = (id) => {
-    if (window.confirm("¿Está seguro de que desea eliminar esta reserva?")) {
-      setData(data.filter(item => item.id !== id));
-      openSnackbar("Reserva eliminada exitosamente", 'success');
-    }
-  };
-
-  const resetForm = () => {
-    setForm({
-      id: '',
-      Nombre: '',
-      Distintivo: '',
-      Evento: '',
-      Fechahora: '',
-      Cantidadmesas: '',
-      Nropersonas: '',
-      CategoriaCliente: '',
-      Correo: '',
-      Celular: '',
-      Direccion: '',
-      DuracionEvento: '',
-      ServiciosAdicionales: '',
-      Observaciones: '',
-      MontoDecoracion: '',
-      Abono: '',
-      Totalpag: '',
-      Restante: '',
-      FormaPago: ''
-    });
-    setFormErrors({});
-    setIsEditing(false);
-  };
-
+  // Muestra una alerta Snackbar con un mensaje y tipo
   const openSnackbar = (message, severity) => {
     setSnackbarMessage(message);
     setSnackbarSeverity(severity);
-    setSnackbarOpen(true);
+    setSnackbarOpen(true); // Abre la Snackbar
   };
 
+  // Cierra la Snackbar
   const closeSnackbar = () => {
     setSnackbarOpen(false);
   };
 
+  // Valida el formulario antes de agregar o editar un cliente
+  const validateForm = () => {
+    const { NombreCompleto, Distintivo, CategoriaCliente, Celular, Correo, Direccion,
+      Nropersonas, Cantidadmesas, Evento, Duracionevento, Fecha_Hora, Servicio, Observaciones, Montodeco,
+      Totalpag, Abono, Restante, Formapag
+     } = form;
+    let errors = [];
+
+    // Valida cada campo y agrega errores a la lista si faltan datos o son inválidos
+    if (!NombreCompleto) errors.push("Nombre Completo es requerido.");
+    if (!Distintivo) errors.push("Distintivo es requerido.");
+    if (!CategoriaCliente) errors.push("Categoría Cliente es requerida.");
+    if (!Celular || !/^\d{10}$/.test(Celular)) errors.push("Celular debe tener 10 dígitos.");
+    if (!Correo || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(Correo)) errors.push("Correo inválido.");
+    if (!Direccion) errors.push("Direccion es requerida.");
+    if (!Nropersonas || !/^\d{1}$/.test(Nropersonas)) errors.push("El nro de personas es requerido .");
+    if (!Cantidadmesas || isNaN(Cantidadmesas)) errors.push("La cantidad de mesas debe ser un número válido.");
+    if (!Evento) errors.push("Evento es requerido.");
+    if (!Duracionevento) errors.push("La duracion del eveto es requerida.");
+    if (!Fecha_Hora) errors.push("La fecha y la hora es requerida.");
+    if (!Servicio) errors.push("Servicio es requerido.");
+    if (!Observaciones) errors.push("Observaciones es requerida.");
+    if (!Montodeco || !/^\d{1}$/.test(Montodeco)) errors.push("El monto del deco es requerido .");
+    if (!Totalpag || !/^\d{1}$/.test(Totalpag)) errors.push("El total del pago es requerido .");
+    if (!Abono || !/^\d{1}$/.test(Abono)) errors.push("El abono es requerido .");
+    if (!Restante || !/^\d{1}$/.test(Restante)) errors.push("El restante es requerido .");
+    if (!Formapag) errors.push("Forma de pago es requerida.");
+    if (!form.Estado) errors.push("Estado es requerido.");
+   
+    if (errors.length) {
+      openSnackbar(errors.join(' '), 'warning'); // Muestra los errores en la Snackbar
+      return false; // El formulario no es válido
+    }
+    return true; // El formulario es válido
+  };
+
+  // Agrega una nueva reserva si el formulario es válido
+  const handleSubmit = () => {
+    if (!validateForm()) return; // Si la validación falla, sale de la función
+
+    const { Distintivo } = form;
+    // Verifica si ya existe una reserva con el mismo distintivo
+    const reservaExistente = data.find(registro => registro.Distintivo.toString() === Distintivo.toString());
+    if (reservaExistente) {
+      openSnackbar("La reserva ya existe. Por favor, ingrese un distintivo diferente.", 'error');
+      return;
+    }
+
+    // Crea una nueva reserva con los datos del formulario
+    const nuevareserva = {
+      ...form,
+      id: data.length ? Math.max(...data.map(reservas => reservas.id)) + 1 : 1 // Asigna un nuevo ID
+    };
+
+    setData([...data, nuevareserva]); // Agrega la nueva reserva a la lista
+
+    // Reinicia el formulario
+    setForm({
+      NombreCompleto: '',
+    Distintivo: '',
+    CategoriaCliente: '',
+    Correo: '',
+    Celular: '',
+    Direccion: '',
+    Nropersonas:'',
+    Cantidadmesas: '',
+    Evento: '',
+    Duracionevento: '',
+    Fecha_Hora: '',
+    Servicio: '',
+    Observaciones: '',
+    Montodeco:'',
+    Totalpag: '',
+    Abono: '',
+    Restante: '',
+    Formapag: '', 
+      Estado: true
+    });
+    setShowForm(false); // Oculta el formulario
+    openSnackbar("Reserva creada exitosamente", 'success');
+  };
+
+  // Edita una reserva existente
+  const editar = () => {
+    if (!validateForm()) return; // Valida el formulario
+
+    const { Distintivo, id } = form;
+    // Verifica si ya existe otra reserva con el mismo distintivo
+    const reservaExistente = data.find(
+      (registro) => registro.Distintivo.toString() === Distintivo.toString() &&
+      registro.id !== id
+    );
+    if (reservaExistente) {
+      openSnackbar("Ya existe una reserva con el mismo distintivo. Por favor, ingresa un distintivo diferente.", 'error');
+      return;
+    }
+
+    // Actualiza los datos de la reserva
+    const updatedData = data.map((registro) =>
+      registro.id === id ? { ...form } : registro
+    );
+
+    setData(updatedData); // Actualiza la lista de reservas
+    setIsEditing(false); // Deja de estar en modo edición
+    setModalOpen(false); // Cierra el modal
+    openSnackbar("Reserva editada exitosamente", 'success');
+  };
+
+  // Elimina una reserva
+  const handleDelete = (dato) => {
+    setDeleteReserva(dato); // Almacena la reserva a eliminar
+    setDeleteAlertOpen(true); // Muestra el modal de confirmación de eliminación
+  };
+
+  // Confirma la eliminación de la reserva
+  const confirmDelete = () => {
+    if (deleteReserva) {
+      const updatedData = data.filter(registro => registro.id !== deleteReserva.id); // Filtra el cliente a eliminar
+      setData(updatedData); // Actualiza la lista de clientes
+      openSnackbar("Reserva eliminada exitosamente", 'success');
+      setDeleteAlertOpen(false); // Cierra el modal de confirmación
+    }
+  };
+
+  // Cancela la eliminación de la reserva 
+  const cancelDelete = () => {
+    setDeleteAlertOpen(false); // Cierra el modal de confirmación
+  };
+
+  // Cambia el estado de una reserva (Activo/Inactivo)
+  const cambiarEstado = (id) => {
+    const updatedData = data.map((registro) => {
+      if (registro.id === id) {
+        registro.Estado = !registro.Estado; // Cambia el estado de la reserva
+      }
+      return registro;
+    });
+
+    setData(updatedData); // Actualiza la lista de reservas
+    openSnackbar("Estado de la reserva actualizada exitosamente", 'success');
+  };
+
+  // Filtra las reservas según el texto de búsqueda
   const filteredData = data.filter(item =>
-    item.Nombre.toLowerCase().includes(searchText) ||
+    item.NombreCompleto.toLowerCase().includes(searchText) ||
     item.Distintivo.toLowerCase().includes(searchText) ||
-    item.Evento.toLowerCase().includes(searchText)
+    item.CategoriaCliente.toLowerCase().includes(searchText) ||
+    item.Celular.toLowerCase().includes(searchText) ||
+    item.Correo.toLowerCase().includes(searchText) ||
+    item.Direccion.toLowerCase().includes(searchText)
   );
+  // Calcula el índice inicial y final para la paginación
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentData = filteredData.slice(indexOfFirstItem, indexOfLastItem); // Datos a mostrar en la página actual
+
+  // Calcula el número total de páginas
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  console.log({totalPages})
+
+ 
+
 
   return (
-    <Container fluid>
+    <Container>
       <Row>
-        <Col md={8}>
-          <h2>Lista de Reservas</h2>
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <Input
-              type="text"
-              placeholder="Buscar..."
-              value={searchText}
-              onChange={handleSearch}
-              style={{ width: '300px' }}
-            />
-            <Button color="primary" onClick={() => {
-              resetForm();
-              setShowForm(true);
-            }}>
-              Agregar Reserva
-            </Button>
-          </div>
-          <Table striped>
+        <Col>
+          <h1 className="my-3">Lista de Reservas</h1>
+          <Input
+            type="text"
+            placeholder="Buscar reserva..."
+            value={searchText}
+            onChange={handleSearch}
+            style={{ width: '20%' }}
+            className="mb-3"
+          />
+          <Table striped responsive>
             <thead>
               <tr>
-                <th>Nombre</th>
+                <th>ID</th>
+                <th>Nombre Completo</th>
                 <th>Distintivo</th>
-                <th>Evento</th>
-                <th>Fecha y Hora</th>
-                <th>Cantidad de Mesas</th>
-                <th>Número de Personas</th>
+                <th>Categoría</th>
+                <th>Celular</th>
+                <th>Correo</th>
+                <th>Dirección</th>
+                <th>Estado</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {filteredData.map((item) => (
-                <tr key={item.id}>
-                  <td>{item.Nombre}</td>
-                  <td>{item.Distintivo}</td>
-                  <td>{item.Evento}</td>
-                  <td>{item.Fechahora}</td>
-                  <td>{item.Cantidadmesas}</td>
-                  <td>{item.Nropersonas}</td>
+              {currentData.map((reservas) => (
+                <tr key={reservas.id}>
+                  <td>{reservas.id}</td>
+                  <td>{reservas.NombreCompleto}</td>
+                  <td>{reservas.Distintivo}</td>
+                  <td>{reservas.CategoriaCliente}</td>
+                  <td>{reservas.Celular}</td>
+                  <td>{reservas.Correo}</td>
+                  <td>{reservas.Direccion}</td>
                   <td>
-                    <Button color="warning" onClick={() => {
-                      setForm(item);
-                      setIsEditing(true);
-                      setShowForm(true);
-                    }}>
+                    <Button
+                      color={reservas.Estado ? "success" : "danger"}
+                      onClick={() => cambiarEstado(reservas.id)}
+                    >
+                      {reservas.Estado ? "Activo" : "Inactivo"}
+                    </Button>
+                  </td>
+                  <td>
+                    <Button
+                     style={{ background: '#1a1918', marginRight: '5px' }}
+                      onClick={() => {
+                        setForm(reservas);
+                        setIsEditing(true);
+                        setModalOpen(true);
+                      }}
+                    >
                       <FaEdit />
-                    </Button>{' '}
-                    <Button color="danger" onClick={() => handleDelete(item.id)}>
+                    </Button>
+
+                    <Button
+                      style={{background:'#8d0f0f'}}
+                      className="ms-2"
+                      onClick={() => handleDelete(reservas)}
+                    >
                       <FaTrashAlt />
                     </Button>
+                  
+                    <Button 
+        onClick={() => viewDetails(item)}
+        className="me-2 btn-sm" 
+        style={{ 
+          backgroundColor: '#696969',
+          border: 'none',
+          padding: '0.55rem',
+        }}
+      >
+        <FaEye style={{ color: 'white', fontSize: '1.30rem' }} /> 
+      </Button>
+                      
+                      
                   </td>
                 </tr>
               ))}
             </tbody>
           </Table>
+          {/* Paginación */}
+        
+          <div className="d-flex justify-content-center">
+            <nav>
+              <ul className="pagination">
+                {totalPages && Array(totalPages).map((_,number) => (
+                  <li
+                    key={number}
+                    className={`page-item ${number === currentPage ? 'active' : ''}`}
+                    onClick={() => handlePageChange(number)}
+                  >
+                    <span className="page-link">{number}</span>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
         </Col>
-
-        {showForm && (
-          <Col md={4}>
-            <h2>{isEditing ? 'Editar Reserva' : 'Agregar Reserva'}</h2>
-
-            {/* Formulario con todos los campos */}
+      </Row>
+      {/* Formulario de agregar/editar reserva */}
+      {showForm && (
+        <div>
+          <h3>{isEditing ? "Editar Reserva" : "Agregar Reserva"}</h3>
+          <form>
             <FormGroup>
-              <label>Nombre</label>
-              <Input
-                type="text"
-                name="Nombre"
-                value={form.Nombre}
-                onChange={handleChange}
-                invalid={!!formErrors.Nombre}
-              />
-              {formErrors.Nombre && <div className="text-danger">{formErrors.Nombre}</div>}
+              <label>Nombre Completo</label>
+              <Input type="text" name="NombreCompleto" value={form.NombreCompleto} onChange={handleChange} />
             </FormGroup>
-
             <FormGroup>
               <label>Distintivo</label>
-              <Input
-                type="text"
-                name="Distintivo"
-                value={form.Distintivo}
-                onChange={handleChange}
-                invalid={!!formErrors.Distintivo}
-              />
-              {formErrors.Distintivo && <div className="text-danger">{formErrors.Distintivo}</div>}
+              <Input type="text" name="Distintivo" value={form.Distintivo} onChange={handleChange} />
             </FormGroup>
-
             <FormGroup>
-              <label>Evento</label>
-              <Input
-                type="text"
-                name="Evento"
-                value={form.Evento}
-                onChange={handleChange}
-                invalid={!!formErrors.Evento}
-              />
-              {formErrors.Evento && <div className="text-danger">{formErrors.Evento}</div>}
+              <label>Categoría Cliente</label>
+              <Input type="text" name="CategoriaCliente" value={form.CategoriaCliente} onChange={handleChange} />
             </FormGroup>
-
-            <FormGroup>
-              <label>Fecha y Hora</label>
-              <Input
-                type="datetime-local"
-                name="Fechahora"
-                value={form.Fechahora}
-                onChange={handleChange}
-                invalid={!!formErrors.Fechahora}
-              />
-              {formErrors.Fechahora && <div className="text-danger">{formErrors.Fechahora}</div>}
-            </FormGroup>
-
-            <FormGroup>
-              <label>Cantidad de Mesas</label>
-              <Input
-                type="number"
-                name="Cantidadmesas"
-                value={form.Cantidadmesas}
-                onChange={handleChange}
-                invalid={!!formErrors.Cantidadmesas}
-              />
-              {formErrors.Cantidadmesas && <div className="text-danger">{formErrors.Cantidadmesas}</div>}
-            </FormGroup>
-
-            <FormGroup>
-              <label>Número de Personas</label>
-              <Input
-                type="number"
-                name="Nropersonas"
-                value={form.Nropersonas}
-                onChange={handleChange}
-                invalid={!!formErrors.Nropersonas}
-              />
-              {formErrors.Nropersonas && <div className="text-danger">{formErrors.Nropersonas}</div>}
-            </FormGroup>
-
-            <FormGroup>
-              <label>Correo</label>
-              <Input
-                type="email"
-                name="Correo"
-                value={form.Correo}
-                onChange={handleChange}
-              />
-            </FormGroup>
-
             <FormGroup>
               <label>Celular</label>
-              <Input
-                type="tel"
-                name="Celular"
-                value={form.Celular}
-                onChange={handleChange}
-              />
+              <Input type="text" name="Celular" value={form.Celular} onChange={handleChange} />
             </FormGroup>
-
+            <FormGroup>
+              <label>Correo</label>
+              <Input type="text" name="Correo" value={form.Correo} onChange={handleChange} />
+            </FormGroup>
             <FormGroup>
               <label>Dirección</label>
-              <Input
-                type="text"
-                name="Direccion"
-                value={form.Direccion}
-                onChange={handleChange}
-              />
+              <Input type="text" name="Direccion" value={form.Direccion} onChange={handleChange} />
             </FormGroup>
-
             <FormGroup>
-              <label>Duración del Evento</label>
-              <Input
-                type="text"
-                name="DuracionEvento"
-                value={form.DuracionEvento}
-                onChange={handleChange}
-              />
+              <label>Nro Personas</label>
+              <Input type="number" name="Nropersonas" value={form.Nropersonas} onChange={handleChange} />
             </FormGroup>
-
             <FormGroup>
-              <label>Servicios Adicionales</label>
-              <Input
-                type="textarea"
-                name="ServiciosAdicionales"
-                value={form.ServiciosAdicionales}
-                onChange={handleChange}
-              />
+              <label>Cantidad de mesas </label>
+              <Input type="number" name="cantidadmesas" value={form.Cantidadmesas} onChange={handleChange} />
             </FormGroup>
-
             <FormGroup>
-              <label>Observaciones</label>
-              <Input
-                type="textarea"
-                name="Observaciones"
-                value={form.Observaciones}
-                onChange={handleChange}
-              />
+              <label>Evento </label>
+              <Input type="text" name="Evento" value={form.Evento} onChange={handleChange} />
             </FormGroup>
-
             <FormGroup>
-              <label>Monto de Decoración</label>
-              <Input
-                type="number"
-                name="MontoDecoracion"
-                value={form.MontoDecoracion}
-                onChange={handleChange}
-              />
+              <label>Duración del evento </label>
+              <Input type="time" name="duracionevento" value={form.Duracionevento} onChange={handleChange} />
             </FormGroup>
-
+            <FormGroup>
+              <label>Fecha y Hora</label>
+              <Input type="datetime-local" name="Fecha_Hora" value={form.Fecha_Hora} onChange={handleChange} />
+            </FormGroup>
+            <FormGroup>
+              <label>Servicio adicional</label>
+              <Input type="text" name="servicio" value={form.Servicio} onChange={handleChange} />
+            </FormGroup>
+            <FormGroup>
+              <label>Observaciones </label>
+              <Input type="text" name="observaciones" value={form.Observaciones} onChange={handleChange} />
+            </FormGroup>
+            <FormGroup>
+              <label>Monto decoración </label>
+              <Input type="number" name="montodeco" value={form.Montodeco} onChange={handleChange} />
+            </FormGroup>
+            <FormGroup>
+              <label>Total a pagar </label>
+              <Input type="number" name="totalpag" value={form.Totalpag} onChange={handleChange} />
+            </FormGroup>
             <FormGroup>
               <label>Abono</label>
-              <Input
-                type="number"
-                name="Abono"
-                value={form.Abono}
-                onChange={handleChange}
-              />
+              <Input type="number" name="abono" value={form.Abono} onChange={handleChange} />
             </FormGroup>
-
             <FormGroup>
-              <label>Total a Pagar</label>
-              <Input
-                type="number"
-                name="Totalpag"
-                value={form.Totalpag}
-                onChange={handleChange}
-              />
+              <label>Restante  </label>
+              <Input type="number" name="restante" value={form.Restante} onChange={handleChange} />
             </FormGroup>
-
             <FormGroup>
-              <label>Restante</label>
-              <Input
-                type="number"
-                name="Restante"
-                value={form.Restante}
-                onChange={handleChange}
-              />
+              <label>Forma de pago </label>
+              <Input type="number" name="formapag" value={form.Formapag} onChange={handleChange} />
             </FormGroup>
-
-            <FormGroup>
-              <label>Forma de Pago</label>
-              <Input
-                type="text"
-                name="FormaPago"
-                value={form.FormaPago}
-                onChange={handleChange}
-              />
-            </FormGroup>
-
-            <Button color="primary" onClick={handleSubmit}>
-              {isEditing ? 'Guardar Cambios' : 'Agregar'}
-            </Button>{' '}
+            <Button color="primary" onClick={isEditing ? editar : handleSubmit}>
+              {isEditing ? "Actualizar" : "Agregar"}
+            </Button>
             <Button color="secondary" onClick={() => setShowForm(false)}>
               Cancelar
             </Button>
-          </Col>
-        )}
-      </Row>
+          </form>
+        </div>
+      )}
 
+      {/* Modal para edición de la reserva */}
+      <Modal isOpen={modalOpen}>
+        <ModalHeader style={{background:'#8d0f0f'}}>{isEditing ? <h3 className="text-white"> Editar reserva</h3>: "Agregar Reserva"}</ModalHeader>
+        <ModalBody>
+          <FormGroup>
+            <label><b>Nombre Completo</b></label>
+            <Input style={{ border: '2px solid #000000' }} type="text" name="NombreCompleto" value={form.NombreCompleto} onChange={handleChange} />
+          </FormGroup>
+          <FormGroup>
+            <label><b>Distintivo</b></label>
+            <Input style={{ border: '2px solid #000000' }} type="text" name="Distintivo" value={form.Distintivo} onChange={handleChange} />
+          </FormGroup>
+          <FormGroup>
+            <label><b>Categoría Cliente</b></label>
+            <Input style={{ border: '2px solid #000000' }} type="text" name="CategoriaCliente" value={form.CategoriaCliente} onChange={handleChange} />
+          </FormGroup>
+          <FormGroup>
+            <label><b>Celular</b></label>
+            <Input style={{ border: '2px solid #000000' }} type="text" name="Celular" value={form.Celular} onChange={handleChange} />
+          </FormGroup>
+          <FormGroup>
+            <label><b>Correo</b></label>
+            <Input style={{ border: '2px solid #000000' }} type="text" name="Correo" value={form.Correo} onChange={handleChange} />
+          </FormGroup>
+          <FormGroup>
+            <label><b>Dirección</b></label>
+            <Input style={{ border: '2px solid #000000' }} type="text" name="Direccion" value={form.Direccion} onChange={handleChange} />
+          </FormGroup>
+        </ModalBody>
+        <FormGroup>
+              <label><b>Nro Personas</b></label>
+              <Input style={{ border: '2px solid #000000' }} type="number" name="Nropersonas" value={form.Nropersonas} onChange={handleChange} />
+            </FormGroup>
+            <FormGroup>
+              <label><b>Cantidad de mesas </b></label>
+              <Input style={{ border: '2px solid #000000' }} type="number" name="cantidadmesas" value={form.Cantidadmesas} onChange={handleChange} />
+            </FormGroup>
+            <FormGroup>
+              <label><b>Evento</b> </label>
+              <Input style={{ border: '2px solid #000000' }} type="text" name="Evento" value={form.Evento} onChange={handleChange} />
+            </FormGroup>
+            <FormGroup>
+              <label><b>Duración del evento</b> </label>
+              <Input style={{ border: '2px solid #000000' }} type="time" name="duracionevento" value={form.Duracionevento} onChange={handleChange} />
+            </FormGroup>
+            <FormGroup>
+              <label><b>Fecha y Hora</b></label>
+              <Input style={{ border: '2px solid #000000' }} type="datetime" name="Fechayhora" value={form.Fecha_Hora} onChange={handleChange} />
+            </FormGroup>
+            <FormGroup>
+              <label><b>Servicio adicional</b></label>
+              <Input style={{ border: '2px solid #000000' }} type="text" name="servicio" value={form.Servicio} onChange={handleChange} />
+            </FormGroup>
+            <FormGroup>
+              <label><b>Observaciones</b> </label>
+              <Input style={{ border: '2px solid #000000' }} type="text" name="observaciones" value={form.Observaciones} onChange={handleChange} />
+            </FormGroup>
+            <FormGroup>
+              <label><b>Monto decoración</b> </label>
+              <Input style={{ border: '2px solid #000000' }} type="number" name="montodeco" value={form.Montodeco} onChange={handleChange} />
+            </FormGroup>
+            <FormGroup>
+              <label><b>Total a pagar</b> </label>
+              <Input  style={{ border: '2px solid #000000' }} type="number" name="totalpag" value={form.Totalpag} onChange={handleChange} />
+            </FormGroup>
+            <FormGroup>
+              <label><b>Abono</b></label>
+              <Input style={{ border: '2px solid #000000' }} type="number" name="abono" value={form.Abono} onChange={handleChange} />
+            </FormGroup>
+            <FormGroup>
+              <label><b>Restante</b>  </label>
+              <Input style={{ border: '2px solid #000000' }} type="number" name="restante" value={form.Restante} onChange={handleChange} />
+            </FormGroup>
+            <FormGroup>
+              <label><b>Forma de pago</b> </label>
+              <Input style={{ border: '2px solid #000000' }} type="number" name="formapag" value={form.Formapag} onChange={handleChange} />
+            </FormGroup>
+        <ModalFooter>
+          <Button style={{ background: '#2e8329' }} onClick={editar}>
+            Guardar
+          </Button>
+          <Button style={{background:'#8d0f0f'}} onClick={() => setModalOpen(false)}>
+            Cancelar
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Modal para confirmación de eliminación */}
+      <Modal isOpen={deleteAlertOpen}>
+        <ModalHeader style={{background:'#8d0f0f'}}><h3 className="text-white">Eliminar reserva  </h3></ModalHeader>
+        <ModalBody>
+          ¿Estás seguro que deseas eliminar la reserva "{deleteReserva?.NombreCompleto}"?
+        </ModalBody>
+        <ModalFooter>
+          <Button style={{background:'#8d0f0f'}} onClick={confirmDelete}>
+            Eliminar
+          </Button>
+          <Button style={{ background: '#2e8329' }} onClick={cancelDelete}>
+            Cancelar
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+ {/* Modal de detalle */}
+ <Modal 
+        show={detailModalOpen} 
+        onHide={toggleDetailModal} 
+        style={{ maxWidth: '40%', marginTop: '10px', marginBottom: '3px' }}
+      >
+        <Modal.Header closeButton style={{ color: '#8C1616' }}>
+          <Modal.Title>Detalles de la reserva</Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{ overflowY: 'auto', maxHeight: 'calc(120vh - 120px)' }}>
+          {selectedItem ? (
+            <div style={{ padding: '10px' }}>
+              <p><strong>Nombre Completo:</strong> {selectedItem.NombreCompleto}</p>
+              <p><strong>Distintivo:</strong> {selectedItem.Distintivo}</p>
+              <p><strong>Categoría Cliente:</strong> {selectedItem.CategoriaCliente}</p>
+              <p><strong>Correo:</strong> {selectedItem.Correo}</p>
+              <p><strong>Celular:</strong> {selectedItem.Celular}</p>
+              <p><strong>Dirección:</strong> {selectedItem.Direccion}</p>
+              <p><strong>Nro de personas:</strong> {selectedItem.Nropersonas}</p>
+              <p><strong>Cantidad de mesas:</strong> {selectedItem.Cantidadmesas}</p>
+              <p><strong>Evento:</strong> {selectedItem.Evento}</p>
+              <p><strong>Duración del evento:</strong> {selectedItem.Duracionevento}</p>
+              <p><strong>Fecha y hora:</strong> {selectedItem.Fecha_Hora}</p>
+              <p><strong>Servicio:</strong> {selectedItem.Servicio}</p>
+              <p><strong>Observaciones:</strong> {selectedItem.Observaciones}</p>
+              <p><strong>Monto de decoración:</strong> {selectedItem.Montodeco}</p>
+              <p><strong>Total a pagar:</strong> {selectedItem.Totalpag}</p>
+              <p><strong>Abono:</strong> {selectedItem.Abono}</p>
+              <p><strong>Restante:</strong> {selectedItem.Restante}</p>
+              <p><strong>Forma de pago:</strong> {selectedItem.Formapag}</p>
+              <p><strong>Estado:</strong> {selectedItem.Estado ? 'Activo' : 'Inactivo'}</p>
+            </div>
+          ) : (
+            <p>No se encontraron detalles.</p>
+          )}
+        </Modal.Body>
+        <Modal.Footer style={{ display: 'flex', justifyContent: 'flex-end', padding: 0 }}>
+          <Button style={{ background: '#6d0f0f' }} onClick={toggleDetailModal}>Cerrar</Button>
+        </Modal.Footer>
+      </Modal>
+      
+      {/* Snackbar para mensajes */}
       <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={closeSnackbar}>
         <Alert onClose={closeSnackbar} severity={snackbarSeverity}>
           {snackbarMessage}
@@ -413,4 +611,9 @@ const Reserva = () => {
   );
 };
 
-export default Reserva;
+// Define las propTypes del componente
+Reservas.propTypes = {
+  initialData: PropTypes.array
+};
+
+export default Reservas;
