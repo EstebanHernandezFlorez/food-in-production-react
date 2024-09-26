@@ -9,25 +9,24 @@ import { FiEdit } from "react-icons/fi";
 import '../../../App.css'
 
 const initialData = [
-  {id: 1, NombreCompleto: "Carolina Guzman", TipoDocument: 13132312, Document: 16514416, Telefono: 3527158372, Empresa: "Sena"},
-  {id: 2, NombreCompleto: "Andra Torres", TipoDocument: 0, Document: 18761919, Telefono: 0, Empresa: "Desconocida"},
-  {id: 3, NombreCompleto: "Natalia Muriel", TipoDocument: 0, Document: 1016177143, Telefono: 0, Empresa: "Desconocida"},
-  {id: 4, NombreCompleto: "Luis Pérez", TipoDocument: 0, Document: 12345678, Telefono: 0, Empresa: "Desconocida"},
-  {id: 5, NombreCompleto: "María Gómez", TipoDocument: 0, Document: 23456789, Telefono: 0, Empresa: "Desconocida"},
-  {id: 6, NombreCompleto: "Pedro Martínez", TipoDocument: 0, Document: 34567890, Telefono: 0, Empresa: "Desconocida"},
-  {id: 7, NombreCompleto: "Laura Fernández", TipoDocument: 0, Document: 45678901, Telefono: 0, Empresa: "Desconocida"},
-  {id: 8, NombreCompleto: "Carlos Rodríguez", TipoDocument: 0, Document: 56789012, Telefono: 0, Empresa: "Desconocida"}  
+  {id: 1, NombreProducto: "Producto A", Version: "1.0", Cantidad: 100, TipoGramaje: "Grueso", Tarea: "Empaque", Tiempo: "2h", TiempoTotal: "20h", Proveedor: "Proveedor X"},
+  {id: 2, NombreProducto: "Producto B", Version: "2.0", Cantidad: 200, TipoGramaje: "Fino", Tarea: "Ensamblaje", Tiempo: "3h", TiempoTotal: "30h", Proveedor: "Proveedor Y"},
+  {id: 3, NombreProducto: "Producto C", Version: "1.5", Cantidad: 150, TipoGramaje: "Medio", Tarea: "Calibración", Tiempo: "1h", TiempoTotal: "15h", Proveedor: "Proveedor Z"},
+  {id: 4, NombreProducto: "Producto D", Version: "2.5", Cantidad: 250, TipoGramaje: "Grueso", Tarea: "Pruebas", Tiempo: "4h", TiempoTotal: "40h", Proveedor: "Proveedor W"}
 ];
 
 const Proveedores = () => {
   const [data, setData] = useState(initialData);
   const [form, setForm] = useState({
     id: '',
-    NombreCompleto: '',
-    TipoDocument:'',
-    Document:'',
-    Telefono:'',
-    Empresa:'',
+    NombreProducto: '',
+    Version: '',
+    Cantidad: '',
+    TipoGramaje: '',
+    Tarea: '',
+    Tiempo: '',
+    TiempoTotal: '',
+    Proveedor: '',
     Estado: true
   });
   
@@ -38,39 +37,37 @@ const Proveedores = () => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
   const [currentPage, setCurrentPage] = useState(1);
-  const [modalOpen, setModalOpen] = useState(false); // Estado para el modal de edición
+  const [modalOpen, setModalOpen] = useState(false);
   const [selectedProveedor, setSelectedProveedor] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const itemsPerPage = 7;
 
-  // States for validation
+  // Estados para la validación
   const [formErrors, setFormErrors] = useState({
-    NombreCompleto: false,
-    TipoDocument: false,
-    Document: false,
-    Telefono: false,
-    Empresa: false,
+    NombreProducto: false,
+    Version: false,
+    Cantidad: false,
+    TipoGramaje: false,
+    Proveedor: false,
   });
 
   const handleOk = () => {
     if (selectedProveedor) {
       const updatedData = data.filter(registro => registro.id !== selectedProveedor.id);
       setData(updatedData);
-      notification.success({
-        message: 'Éxito',
-        description: 'Empleado eliminado exitosamente',
-      });
+      openSnackbar("Producto eliminado exitosamente", 'success');
     }
-    setModalOpen(false); // Cierra el modal
-    setSelectedProveedor(null); // Limpia el empleado seleccionado
-  };
-    const handleCancel = () => {
     setModalOpen(false);
     setSelectedProveedor(null);
   };
 
-  const openDeleteModal = (employee) => {
-    setSelectedProveedor(employee);
+  const handleCancel = () => {
+    setModalOpen(false);
+    setSelectedProveedor(null);
+  };
+
+  const openDeleteModal = (producto) => {
+    setSelectedProveedor(producto);
     setIsDeleteModalOpen(true);
   };
   
@@ -107,11 +104,11 @@ const Proveedores = () => {
 
   const validateForm = () => {
     const errors = {
-      NombreCompleto: !form.NombreCompleto,
-      TipoDocument: !form.TipoDocument,
-      Document: !form.Document,
-      Telefono: !form.Telefono,
-      Empresa: !form.Empresa
+      NombreProducto: !form.NombreProducto,
+      Version: !form.Version,
+      Cantidad: !form.Cantidad,
+      TipoGramaje: !form.TipoGramaje,
+      Proveedor: !form.Proveedor
     };
     setFormErrors(errors);
     return !Object.values(errors).includes(true);
@@ -123,31 +120,34 @@ const Proveedores = () => {
       return;
     }
 
-    const { NombreCompleto, TipoDocument,  Document, Telefono, Empresa} = form;
+    const { Cantidad } = form;
   
-    const empleadoExistente = data.find(registro => registro.Document.toString() === Document.toString());
-    if (empleadoExistente) {
-      openSnackbar("El empleado ya existe. Por favor, ingrese un documento de empleado diferente.", 'error');
+    const productoExistente = data.find(registro => registro.Cantidad.toString() === Cantidad.toString());
+    if (productoExistente) {
+      openSnackbar("El producto ya existe. Por favor, ingrese una cantidad diferente.", 'error');
       return;
     }
   
-    const nuevoEmpleado = {
+    const nuevoProducto = {
       ...form,
       id: data.length ? Math.max(...data.map(emp => emp.id)) + 1 : 1
     };
   
-    setData([...data, nuevoEmpleado]);
+    setData([...data, nuevoProducto]);
     setForm({
       id: '',
-      NombreCompleto: '',
-      TipoDocument:'',
-      Document: '',
-      Telefono:'',
-      Empresa:'',
+      NombreProducto: '',
+      Version: '',
+      Cantidad: '',
+      TipoGramaje: '',
+      Tarea: '',
+      Tiempo: '',
+      TiempoTotal: '',
+      Proveedor: '',
       Estado: true
     });
     setShowForm(false);
-    openSnackbar("Empleado agregado exitosamente", 'success');
+    openSnackbar("Producto agregado exitosamente", 'success');
   };
 
   const editar = () => {
@@ -156,13 +156,13 @@ const Proveedores = () => {
       return;
     }
   
-    const empleadoExistente = data.find(
-      (registro) => registro.Document.toString() === form.Document.toString() &&
+    const productoExistente = data.find(
+      (registro) => registro.Cantidad.toString() === form.Cantidad.toString() &&
       registro.id !== form.id
     );
   
-    if (empleadoExistente) {
-      openSnackbar("Ya existe un empleado con el mismo documento. Por favor, ingresa un documento diferente.", 'error');
+    if (productoExistente) {
+      openSnackbar("Ya existe un producto con la misma cantidad. Por favor, ingresa una cantidad diferente.", 'error');
       return;
     }
   
@@ -172,16 +172,8 @@ const Proveedores = () => {
   
     setData(updatedData);
     setIsEditing(false);
-    setModalOpen(false); // Cierra el modal después de actualizar
-    openSnackbar("Empleado editado exitosamente", 'success');
-  };
-
-  const eliminar = (dato) => {
-    if (window.confirm(`¿Realmente desea eliminar el registro ${dato.id}?`)) {
-      const updatedData = data.filter(registro => registro.id !== dato.id);
-      setData(updatedData);
-      openSnackbar("Empleado eliminado exitosamente", 'success');
-    }
+    setModalOpen(false);
+    openSnackbar("Producto editado exitosamente", 'success');
   };
 
   const cambiarEstado = (id) => {
@@ -193,14 +185,13 @@ const Proveedores = () => {
     });
   
     setData(updatedData);
-    openSnackbar("Estado del empleado actualizado exitosamente", 'success');
+    openSnackbar("Estado del producto actualizado exitosamente", 'success');
   };
-  
 
   const filteredData = data.filter(item =>
-    item.NombreCompleto.toLowerCase().includes(tableSearchText) ||
-    item.Document.toString().includes(tableSearchText) ||
-    item.Empresa.toLowerCase().includes(tableSearchText)
+    item.NombreProducto.toLowerCase().includes(tableSearchText) ||
+    item.Cantidad.toString().includes(tableSearchText) ||
+    item.Proveedor.toLowerCase().includes(tableSearchText)
   );
 
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -215,20 +206,19 @@ const Proveedores = () => {
   return (
     <Container>
       <br />
-      {/* Mostrar la sección de búsqueda y el botón solo si no se está mostrando el formulario */}
       {!showForm && (
         <>
-          <h2>Lista de Proveedores</h2>
+          <h2>Lista de Productos</h2>
           <div className="d-flex justify-content-between align-items-center mb-3">
             <Input
               type="text"
-              placeholder="Buscar proveedor"
+              placeholder="Buscar producto"
               value={tableSearchText}
               onChange={handleTableSearch}
               style={{ width: '50%' }}
             />
-            <Button style={{backgroundColor:'#228b22', color:'black'}} onClick={() => { setForm({ id: '', NombreCompleto: '', TipoDocument:'', Document: '', Telefono:'',Empresa:'', Estado: true }); setIsEditing(false); setShowForm(true); }}>
-              Agregar Proveedor
+            <Button style={{backgroundColor:'#228b22', color:'black'}} onClick={() => { setForm({ id: '', NombreProducto: '', Version:'', Cantidad: '', TipoGramaje:'', Tarea:'', Tiempo:'', TiempoTotal:'', Proveedor:'', Estado: true }); setIsEditing(false); setShowForm(true); }}>
+              Agregar Producto
               <PlusOutlined style={{ fontSize: '16px', color: 'black', padding:'5px' }} />
             </Button>
           </div>
@@ -236,11 +226,14 @@ const Proveedores = () => {
             <thead>
               <tr>
                 <th>id</th>
-                <th>Nombre Completo</th>
-                <th>Tipo documento</th>
-                <th>Documento</th>
-                <th>Telefono</th>
-                <th>Empresa</th>
+                <th>Nombre del Producto</th>
+                <th>Versión</th>
+                <th>Cantidad</th>
+                <th>Tipo Gramaje</th>
+                <th>Tarea</th>
+                <th>Tiempo</th>
+                <th>Tiempo Total</th>
+                <th>Proveedor</th>
                 <th>Estado</th>
                 <th>Acciones</th>
               </tr>
@@ -250,16 +243,19 @@ const Proveedores = () => {
                 currentItems.map((item) => (
                   <tr key={item.id}>
                     <td>{item.id}</td>
-                    <td>{item.NombreCompleto}</td>
-                    <td>{item.TipoDocument}</td>
-                    <td>{item.Document}</td>
-                    <td>{item.Telefono}</td>
-                    <td>{item.Empresa}</td>
+                    <td>{item.NombreProducto}</td>
+                    <td>{item.Version}</td>
+                    <td>{item.Cantidad}</td>
+                    <td>{item.TipoGramaje}</td>
+                    <td>{item.Tarea}</td>
+                    <td>{item.Tiempo}</td>
+                    <td>{item.TiempoTotal}</td>
+                    <td>{item.Proveedor}</td>
                     <td>
                       <Button
                         color={item.Estado ? "success" : "secondary"}
                         onClick={() => cambiarEstado(item.id)}
-                        className=" btn-sm" // Usa btn-sm para botones más pequeños
+                        className="btn-sm"
                       >
                         {item.Estado ? "Activo" : "Inactivo"}
                       </Button>
@@ -269,265 +265,380 @@ const Proveedores = () => {
                         <Button 
                           color="dark" 
                           onClick={() => { setForm(item); setIsEditing(true); setModalOpen(true); }} 
-                          className="me-2 " // Usa btn-sm para botones más pequeños
-                          style={{ padding: '0.25rem 0.5rem' }} // Ajusta el relleno si es necesario
+                          className="me-2 btn-sm"
+                          style={{ padding: '0.25rem 0.5rem' }}
                         >
-                          <FiEdit style={{ fontSize: '0.75rem' }} /> {/* Tamaño del ícono reducido */}
+                          <FiEdit style={{ fontSize: '0.75rem' }} />
                         </Button>
                         <Button 
                           color="danger" 
                           onClick={() => openDeleteModal(item)}
-                          className="btn-sm" // Usa btn-sm para botones más pequeños
-                          style={{ padding: '0.25rem 0.5rem' }} // Ajusta el relleno si es necesario
+                          className="btn-sm"
+                          style={{ padding: '0.25rem 0.5rem' }}
                         >
-                          <FaTrashAlt style={{ fontSize: '0.75rem' }} /> {/* Tamaño del ícono reducido */}
+                          <FaTrashAlt style={{ fontSize: '0.75rem' }} />
                         </Button>
                       </div>
                     </td>
-
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="9" className="text-center">No hay datos disponibles</td>
+                  <td colSpan="11" className="text-center">No hay datos disponibles</td>
                 </tr>
               )}
             </tbody>
           </Table>
 
           <ul className="pagination">
-        {pageNumbers.map(number => (
-          <li key={number} className={`page-item ${currentPage === number ? 'active' : ''}`}>
-            <Button className="page-link" onClick={() => handlePageChange(number)}>
-              {number}
-            </Button>
-          </li>
-        ))}
-      </ul>
-
-
+            {pageNumbers.map(number => (
+              <li key={number} className={`page-item ${currentPage === number ? 'active' : ''}`}>
+                <Button className="page-link" onClick={() => handlePageChange(number)}>
+                  {number}
+                </Button>
+              </li>
+            ))}
+          </ul>
         </>
       )}
 
-      {/* Formulario de inserción */}
+  
       {showForm && (
-        {/* <div className="container">
-          <h1 className="text-start left-2">Crear Proveedores</h1>
+        <div className="container">
+          <h1 className="text-start left-2">Informacion del producto</h1>
           <br />
           <Row>
-            <Col md={8}>
-              <Form>
-                <Row className="justify-content-center">
-                  <Col md={12}>
-                    <FormGroup>
-                      <label style={{ fontSize: '15px', padding: '5px' }}>
-                        Nombre Completo
-                      </label>
-                      <Input
-                        type="text"
-                        name="NombreCompleto"
-                        value={form.NombreCompleto}
-                        onChange={handleChange}
-                        placeholder="Nombre Completo del empleado"
-                        className={`form-control ${formErrors.NombreCompleto ? 'is-invalid' : ''}`}
-                        style={{ border: '2px solid black', width: '100%' }}
-                      />
-                      {formErrors.NombreCompleto && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-                    </FormGroup>
-                  </Col>
-                </Row>
-        
-                <Row className="justify-content-center">
-                  <Col md={6}>
-                    <FormGroup>
-                      <label style={{ fontSize: '15px', padding: '5px' }}>
-                        Tipo de Documento
-                      </label>
-                      <Input
-                        type="text"
-                        name="TipoDocument"
-                        value={form.TipoDocument}
-                        onChange={handleChange}
-                        placeholder="Tipo de documento"
-                        className={`form-control ${formErrors.TipoDocument ? 'is-invalid' : ''}`}
-                        style={{ border: '2px solid black', width: '100%' }}
-                      />
-                      {formErrors.TipoDocument && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-                    </FormGroup>
-                  </Col>
-        
-                  <Col md={6}>
-                    <FormGroup>
-                      <label style={{ fontSize: '15px', padding: '5px' }}>
-                        Documento
-                      </label>
-                      <Input
-                        type="text"
-                        name="Document"
-                        value={form.Document}
-                        onChange={handleChange}
-                        placeholder="Número de documento"
-                        className={`form-control ${formErrors.Document ? 'is-invalid' : ''}`}
-                        style={{ border: '2px solid black', width: '100%' }}
-                      />
-                      {formErrors.Document && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-                    </FormGroup>
-                  </Col>
-                </Row>
-        
-                <Row className="justify-content-center">
-                  <Col md={6}>
-                    <FormGroup>
-                      <label style={{ fontSize: '15px', padding: '5px' }}>
-                        Teléfono
-                      </label>
-                      <Input
-                        type="text"
-                        name="Telefono"
-                        value={form.Telefono}
-                        onChange={handleChange}
-                        placeholder="Número de contacto"
-                        className={`form-control ${formErrors.Telefono ? 'is-invalid' : ''}`}
-                        style={{ border: '2px solid black', width: '100%' }}
-                      />
-                      {formErrors.Telefono && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-                    </FormGroup>
-                  </Col>
-        
-                  <Col md={6}>
-                    <FormGroup>
-                      <label style={{ fontSize: '15px', padding: '5px' }}>
-                        Empresa
-                      </label>
-                      <Input
-                        type="text"
-                        name="Empresa"
-                        value={form.Empresa}
-                        onChange={handleChange}
-                        placeholder="Nombre de la empresa"
-                        className={`form-control ${formErrors.Empresa ? 'is-invalid' : ''}`}
-                        style={{ border: '2px solid black', width: '100%' }}
-                      />
-                      {formErrors.Empresa && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-                    </FormGroup>
-                  </Col>
-                </Row>
-        
-                <Row className="justify-content-center mt-3">
-                  <Col md={12} className="d-flex justify-content-end">
-                    <Button style={{ background: '#2e8322' }} onClick={handleSubmit}>
-                      {isEditing ? 'Actualizar' : 'Agregar'}
-                    </Button>
-                    <Button style={{ background: '#6d0f0f' }} onClick={() => { setShowForm(false); setIsEditing(false); }}>
-                      Cancelar
-                    </Button>
-                  </Col>
-                </Row>
-              </Form>
-            </Col>
-        
-            <Col md={4} className="d-flex align-items-center justify-content-center">
-              <img
-                src={FondoForm} // Usa el atributo src para proporcionar la URL de la imagen
-                alt="Descripción de la Imagen" // Agrega una descripción adecuada para la accesibilidad
-                style={{
-                  width: '100%',       
-                  height: '60vh',     
-                  objectFit: 'cover',  
-                }}
+          <Col md={9}>
+            <Row>
+              <Col md={2}>
+                <FormGroup>
+                  <Label for="productName">Nombre del producto</Label>
+                  <Input
+                    type="text"
+                    name="productName"
+                    id="productName"
+                    value={formData.productName}
+                    onChange={handleChange}
+                    placeholder="product name"
+                    required
+                  />
+                </FormGroup>
+              </Col>
+              <Col md={2}>
+                <FormGroup>
+                  <Label for="quantity">Cantidad</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    name="quantity"
+                    id="quantity"
+                    value={formData.quantity}
+                    onChange={handleChange}
+                    placeholder="Enter quantity"
+                    required
+                  />
+                </FormGroup>
+              </Col>
+              <Col md={2}>
+                <FormGroup>
+                  <Label for="typeGrams">Tipo gramaje</Label>
+                  <Input
+                    type="text"
+                    name="typeGrams"
+                    id="typeGrams"
+                    value={formData.typeGrams}
+                    onChange={handleChange}
+                    placeholder="type (grams)"
+                    required
+                  />
+                </FormGroup>
+              </Col>
+              <Col md={2}>
+                <FormGroup>
+                  <Label for="startDate">Inicio</Label>
+                  <Input
+                    type="date"
+                    name="startDate"
+                    id="startDate"
+                    value={formData.startDate}
+                    onChange={handleChange}
+                    required
+                  />
+                </FormGroup>
+              </Col>
+              <Col md={2}>
+                <FormGroup>
+                  <Label for="endDate">Fin</Label>
+                  <Input
+                    type="date"
+                    name="endDate"
+                    id="endDate"
+                    value={formData.endDate}
+                    onChange={handleChange}
+                    required
+                  />
+                </FormGroup>
+              </Col>
+            </Row>
+            <Row>
+              <Col md={3}>
+                <FormGroup>
+                  <Label for="insumo">Insumo</Label>
+                  <Input
+                    type="text"
+                    name="insumo"
+                    id="insumo"
+                    value={ingredientData.insumo}
+                    onChange={handleIngredientChange}
+                  />
+                </FormGroup>
+              </Col>
+              <Col md={3}>
+                <FormGroup>
+                  <Label for="cantidadPorPorcion">Cantidad por porcion</Label>
+                  <Input
+                    type="number"
+                    name="cantidadPorPorcion"
+                    id="cantidadPorPorcion"
+                    value={ingredientData.cantidadPorPorcion}
+                    onChange={handleIngredientChange}
+                  />
+                </FormGroup>
+              </Col>
+              <Col md={3}>
+                <FormGroup>
+                  <Label for="cantidad">Cantidad</Label>
+                  <Input
+                    type="number"
+                    name="cantidad"
+                    id="cantidad"
+                    value={ingredientData.cantidad}
+                    onChange={handleIngredientChange}
+                  />
+                </FormGroup>
+              </Col>
+              <Col md={3}>
+                <FormGroup>
+                  <Label for="tipoGramaje">Tipo gramaje</Label>
+                  <Input
+                    type="text"
+                    name="tipoGramaje"
+                    id="tipoGramaje"
+                    value={ingredientData.tipoGramaje}
+                    onChange={handleIngredientChange}
+                  />
+                </FormGroup>
+              </Col>
+              <Col md={3}>
+                <FormGroup>
+                  <Label for="proveedor">Proveedor</Label>
+                  <Input
+                    type="text"
+                    name="proveedor"
+                    id="proveedor"
+                    value={ingredientData.proveedor}
+                    onChange={handleIngredientChange}
+                  />
+                </FormGroup>
+              </Col>
+            </Row>
+            <Button
+              color="primary"
+              className="ms-2 rounded-circle"
+              onClick={addIngredient}
+              style={{ width: '38px', height: '38px', padding: '0' }}
+            >
+              <FaPlus />
+            </Button>
+          </Col>
+          <Col md={3}>
+            <FormGroup>
+              <Label for="recipeDetails">Proceso de elaboracion</Label>
+              <Input
+                type="textarea"
+                name="recipeDetails"
+                id="recipeDetails"
+                value={formData.recipeDetails}
+                onChange={handleChange}
+                placeholder="recipe details"
               />
-            </Col>
+            </FormGroup>
+          </Col>
+        </Row>
+        
+        <ListGroup className="mb-3">
+          {ingredients.map((ingredient, index) => (
+            <ListGroupItem key={index}>
+              {`${ingredient.insumo} - ${ingredient.cantidadPorPorcion} por porción - ${ingredient.cantidad} ${ingredient.tipoGramaje} - ${ingredient.proveedor}`}
+            </ListGroupItem>
+          ))}
+        </ListGroup>
 
-          </Row>
-        </div> */}
-      )}
+        <h3>Tareas de orden de produccion</h3>
+        <Row>
+          <Col md={5}>
+            <FormGroup>
+              <Label for="task">Tarea</Label>
+              <Input
+                type="text"
+                name="task"
+                id="task"
+                value={taskData.task}
+                onChange={handleTaskChange}
+                placeholder="Tarea"
+                required
+              />
+            </FormGroup>
+          </Col>
+
+          <Col md={5}>
+            <FormGroup>
+              <Label for="time">Tiempo</Label>
+              <Input
+                type="text"
+                name="time"
+                id="time"
+                value={taskData.time}
+                onChange={handleTaskChange}
+                placeholder="Tiempo"
+                required
+              />
+            </FormGroup>
+          </Col>
+
+          <Col md={2}>
+            <FormGroup>
+              <Label for="totalTime">Tiempo total</Label>
+              <Input
+                type="text"
+                name="totalTime"
+                id="totalTime"
+                value={`${totalTime} minutos`}
+                readOnly
+              />
+            </FormGroup>
+          </Col>
+        </Row>
+        
+        <Button
+          color="primary"
+          className="ms-2 rounded-circle"
+          onClick={addTask}
+          style={{ width: '38px', height: '38px', padding: '0' }}
+        >
+          <FaPlus />
+        </Button>
+
+        <ListGroup className="mb-3">
+          {tasks.map((task, index) => (
+            <ListGroupItem key={index}>
+              {`${task.task} - ${task.time}`}
+            </ListGroupItem>
+          ))}
+        </ListGroup>
+
+        <Row>
+          <Col md={12}>
+            <Button color="primary" type="submit">
+              Add Product
+            </Button>
+          </Col>
+        </Row>
+        </div>
+        
+        )
+      }
+
+      
+
+
 
       {/* Modal de edición */}
       <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)}>
         <ModalHeader toggle={() => setModalOpen(!modalOpen)}>
-          Editar Empleado
+          Editar Producto
         </ModalHeader>
         <ModalBody>
-        <Row>
+          <Row>
             <Col md={4}>
               <FormGroup>
                 <label style={{fontSize:'15px', padding:'5px'}}>
-                  Nombre Completo 
+                  Nombre del Producto 
                 </label>
                 <Input
                   type="text"
-                  name="NombreCompleto"
-                  value={form.NombreCompleto}
+                  name="NombreProducto"
+                  value={form.NombreProducto}
                   onChange={handleChange}
-                  placeholder="Nombre Completo del empleado"
-                  className={`form-control ${formErrors.NombreCompleto ? 'is-invalid' : ''}`}
+                  placeholder="Nombre del producto"
+                  className={`form-control ${formErrors.NombreProducto ? 'is-invalid' : ''}`}
                 />
-                {formErrors.NombreCompleto && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.NombreProducto && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
             <Col md={4}>
               <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Tipo de Documento</label>
+                <label style={{fontSize:'15px', padding:'5px'}}>Versión</label>
                 <Input
                   type="text"
-                  name="TipoDocument"
-                  value={form.TipoDocument}
+                  name="Version"
+                  value={form.Version}
                   onChange={handleChange}
-                  placeholder="Número de documento"
-                  className={`form-control ${formErrors.TipoDocument ? 'is-invalid' : ''}`}
+                  placeholder="Versión"
+                  className={`form-control ${formErrors.Version ? 'is-invalid' : ''}`}
                 />
-                {formErrors.TipoDocument && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.Version && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
             <Col md={4}>
               <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Documento</label>
+                <label style={{fontSize:'15px', padding:'5px'}}>Cantidad</label>
                 <Input
                   type="text"
-                  name="Document"
-                  value={form.Document}
+                  name="Cantidad"
+                  value={form.Cantidad}
                   onChange={handleChange}
-                  placeholder="Número de documento"
-                  className={`form-control ${formErrors.Document ? 'is-invalid' : ''}`}
+                  placeholder="Cantidad"
+                  className={`form-control ${formErrors.Cantidad ? 'is-invalid' : ''}`}
                 />
-                {formErrors.Document && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.Cantidad && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
           </Row>
           <Row>
             <Col md={4}>
               <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Telefono</label>
+                <label style={{fontSize:'15px', padding:'5px'}}>Tipo Gramaje</label>
                 <Input
                   type="text"
-                  name="Telefono"
-                  value={form.Telefono}
+                  name="TipoGramaje"
+                  value={form.TipoGramaje}
                   onChange={handleChange}
-                  placeholder="Número de contacto de emergencia"
-                  className={`form-control ${formErrors.Telefono ? 'is-invalid' : ''}`}
+                  placeholder="Tipo de gramaje"
+                  className={`form-control ${formErrors.TipoGramaje ? 'is-invalid' : ''}`}
                 />
-                {formErrors.Telefono && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.TipoGramaje && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
             <Col md={4}>
               <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Empresa</label>
+                <label style={{fontSize:'15px', padding:'5px'}}>Proveedor</label>
                 <Input
                   type="text"
-                  name="Empresa"
-                  value={form.Empresa}
+                  name="Proveedor"
+                  value={form.Proveedor}
                   onChange={handleChange}
-                  placeholder="Número de Empresa"
-                  className={`form-control ${formErrors.Empresa ? 'is-invalid' : ''}`}
+                  placeholder="Proveedor"
+                  className={`form-control ${formErrors.Proveedor ? 'is-invalid' : ''}`}
                 />
-                {formErrors.Empresa && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.Proveedor && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
           </Row>
         </ModalBody>
         <ModalFooter>
           <Button color="primary" onClick={isEditing ? editar : handleSubmit}>
-            {isEditing ? 'Update' : 'Submit'}
+            {isEditing ? 'Actualizar' : 'Agregar'}
           </Button>
           <Button color="danger" onClick={handleCancel}>
             Cancelar
@@ -540,7 +651,7 @@ const Proveedores = () => {
           Confirmar Eliminación
         </ModalHeader>
         <ModalBody>
-          ¿Está seguro de que desea eliminar al empleado seleccionado <strong>{selectedProveedor?.NombreCompleto}</strong>?
+          ¿Está seguro de que desea eliminar el producto seleccionado <strong>{selectedProveedor?.NombreProducto}</strong>?
         </ModalBody>
         <ModalFooter>
           <Button color="danger" onClick={handleOk}>
@@ -559,7 +670,9 @@ const Proveedores = () => {
         </Alert>
       </Snackbar>
     </Container>
-  );
+  )
 };
 
 export default Proveedores;
+
+
