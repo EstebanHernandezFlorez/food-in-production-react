@@ -33,6 +33,7 @@ import { NavDropdown } from "react-bootstrap";
 import Calendario from "./views/module/Calendario/Calendario";
 import TablaGastos from "./views/module/ManoDeObra/TablaGastos"
 import RendimientoEmpleado from "./views/module/ManoDeObra/RendimientoEmpleado"
+import EditarPerfil from "./views/module/EditarPerfil/EditarPerfil";
 
 const users = [
   {

@@ -16,48 +16,49 @@ import {
 } from "reactstrap";
 import { FaEdit, FaTrashAlt } from "react-icons/fa";
 import { Snackbar, Alert } from "@mui/material";
+import axios from "axios";
 
-const initialData = [
-  {
-    id: 1,
-    TipoDocumento: "Cedula",
-    Documento: 16514416,
-    Celular: 3104561250,
-    NombreCompleto: "Carolina Guzman",
-    Correo: "Carito@gmail.com",
-    Rol: "Administrador",
-  },
-  {
-    id: 2,
-    TipoDocumento: "PPT",
-    Documento: 16514416,
-    Celular: 3004561250,
-    NombreCompleto: "Daniela Martinez",
-    Correo: "daniela@gmail.com",
-    Rol: "Administrador",
-  },
-  {
-    id: 3,
-    TipoDocumento: "Cedula",
-    Documento: 16514416,
-    Celular: 3004561250,
-    NombreCompleto: "Daniela Martinez",
-    Correo: "daniela@gmail.com",
-    Rol: "Administrador",
-  },
-  {
-    id: 4,
-    TipoDocumento: "PPE",
-    Documento: 16514416,
-    Celular: 3004561250,
-    NombreCompleto: "Daniela Martinez",
-    Correo: "daniela@gmail.com",
-    Rol: "Administrador",
-  },
-];
+// const initialData = [
+  // {
+  //   id: 1,
+  //   TipoDocumento: "Cedula",
+  //   Documento: 16514416,
+  //   Celular: 3104561250,
+  //   NombreCompleto: "Carolina Guzman",
+  //   Correo: "Carito@gmail.com",
+  //   Rol: "Administrador",
+  // },
+  // {
+  //   id: 2,
+  //   TipoDocumento: "PPT",
+  //   Documento: 16514416,
+  //   Celular: 3004561250,
+  //   NombreCompleto: "Daniela Martinez",
+  //   Correo: "daniela@gmail.com",
+  //   Rol: "Administrador",
+  // },
+  // {
+  //   id: 3,
+  //   TipoDocumento: "Cedula",
+  //   Documento: 16514416,
+  //   Celular: 3004561250,
+  //   NombreCompleto: "Daniela Martinez",
+  //   Correo: "daniela@gmail.com",
+  //   Rol: "Administrador",
+  // },
+  // {
+  //   id: 4,
+  //   TipoDocumento: "PPE",
+  //   Documento: 16514416,
+  //   Celular: 3004561250,
+  //   NombreCompleto: "Daniela Martinez",
+  //   Correo: "daniela@gmail.com",
+  //   Rol: "Administrador",
+  // },
+// ];
 
 const Usuario = () => {
-  const [data, setData] = useState(initialData);
+  const [data, setData] = useState([]);
   const [form, setForm] = useState({
     id: "",
     TipoDocumento: "",
@@ -67,6 +68,8 @@ const Usuario = () => {
     Correo: "",
     Rol: "",
     Estado: true,
+    Contraseña: "",
+    Confirmarcontraseña: "",
   });
   const [isEditing, setIsEditing] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -75,7 +78,7 @@ const Usuario = () => {
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
   const [currentPage, setCurrentPage] = useState(1);
-  const [modalOpen, setModalOpen] = useState(false); // Estado para el modal de edición
+  const [modalOpen, setModalOpen] = useState(false);
   const itemsPerPage = 7;
 
   // States for validation
@@ -92,6 +95,20 @@ const Usuario = () => {
 
   const handleTableSearch = (e) =>
     setTableSearchText(e.target.value.toLowerCase());
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const response = await axios.get('http://localhost:3000/user');
+      setData(response.data);
+    } catch (error) {
+      console.error(error);
+      Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -130,78 +147,59 @@ const Usuario = () => {
     return !Object.values(errors).includes(true);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateForm()) {
       openSnackbar("Por favor, ingrese todos los campos", "warning");
       return;
     }
-    const { Documento } = form;
 
-    const usuarioExistente = data.find(
-      (registro) => registro.Documento.toString() === Documento.toString()
-    );
-    if (usuarioExistente) {
-      openSnackbar(
-        "El usuario ya existe. Por favor, ingrese un documento de usuario diferente.",
-        "error"
-      );
-      return;
+    try {
+      const response = await axios.post('http://localhost:3000/user', form);
+      setData([...data, response.data]);
+      setForm({
+        id: "",
+        TipoDocumento: "",
+        Documento: "",
+        Celular: "",
+        NombreCompleto: "",
+        Correo: "",
+        Rol: "",
+        Estado: true,
+        Contraseña: "",
+        Confirmarcontraseña: "",
+      });
+      setShowForm(false);
+      openSnackbar("Usuario agregado exitosamente", "success");
+    } catch (error) {
+      console.error(error);
+      openSnackbar("Error al agregar usuario", "error");
     }
-
-    const nuevoUsuario = {
-      ...form,
-      id: data.length ? Math.max(...data.map((user) => user.id)) + 1 : 1,
-    };
-
-    setData([...data, nuevoUsuario]);
-    setForm({
-      id: "",
-      TipoDocumento: "",
-      Documento: "",
-      Celular: "",
-      NombreCompleto: "",
-      Correo: "",
-      Rol: "",
-      Estado: true,
-    });
-    setShowForm(false);
-    openSnackbar("Usuario agregado exitosamente", "success");
   };
 
+  
+  //Se puso el "_id" para referirse al id del objeto de la base de datos
+  //Adicionalmente se agrega el "fecthData" para refrescar la tabla
   const editar = async () => {
-    const { Documento, Celular, NombreCompleto, Correo } = form;
-
-    // Verifica si todos los campos requeridos están llenos
-    if (!Documento || !Celular || !NombreCompleto || !Correo) {
+    if (form.NombreCompleto === "" || form.Celular === "" || form.Correo === "") {
       openSnackbar("Por favor, ingrese todos los campos", "warning");
       return;
     }
 
-    // Mapea los datos para actualizar el registro correcto
-    const updatedData = data.map((registro) =>
-      registro.id === form.id ? { ...form } : registro
-    );
-
-    // Muestra la alerta de confirmación y espera la respuesta
-    const response = await Swal.fire({
-      title: "¿Desea editar el usuario?",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Editar",
-      cancelButtonText: "Cancelar",
-    });
-
-    // Verifica si el usuario confirmó la acción antes de continuar
-    if (response.isConfirmed) {
-      setData(updatedData); // Actualiza los datos
-      setIsEditing(false); // Sale del modo de edición
-      setModalOpen(false); // Cierra el modal
+    try {
+      const response = await axios.put(`http://localhost:3000/user/${form._id}`, form);
+      const updatedData = data.map(item => item._id === form._id ? response.data : item);
+      setData(updatedData);
+      setIsEditing(false);
+      setModalOpen(false);
+      fetchData(); // Refresca la tabla <------------------------------------
       openSnackbar("Usuario editado exitosamente", "success");
+    } catch (error) {
+      console.error(error);
+      openSnackbar("Error al editar usuario", "error");
     }
   };
 
+  //Aquí se cambio el "id" por "_id" también, no fue necesario el "fetchData" para refrescar la tabla (Aún no se porqué XD)
   const eliminar = async (dato) => {
     const response = await Swal.fire({
       title: "¿Desea eliminar el usuario?",
@@ -213,13 +211,21 @@ const Usuario = () => {
       cancelButtonText: "Cancelar",
     });
     if (response.isConfirmed) {
-      const updatedData = data.filter((registro) => registro.id !== dato.id);
-      setData(updatedData);
-      openSnackbar("Usuario eliminado exitosamente", "success");
+      try {
+        await axios.delete(`http://localhost:3000/user/${dato._id}`);
+        
+        const updatedData = data.filter((registro) => registro._id !== dato._id);
+        setData(updatedData);
+        openSnackbar("Usuario eliminado exitosamente", "success");
+      } catch (error) {
+        console.error(error);
+        openSnackbar("Error al eliminar usuario", "error");
+      }
     }
   };
 
-  const cambiarEstado = async (id) => {
+  //Se puso el "_id" para referirse al id del objeto de la base de datos y también se cambió el dato que recibía en el botón de cambiar estado
+  const cambiarEstado = async (_id) => {
     const response = await Swal.fire({
       title: "¿Desea cambiar el estado del usuario?",
       icon: "warning",
@@ -230,15 +236,22 @@ const Usuario = () => {
       cancelButtonText: "Cancelar",
     });
     if (response.isConfirmed) {
-      const updatedData = data.map((registro) => {
-        if (registro.id === id) {
-          registro.Estado = !registro.Estado;
-        }
-        return registro;
-      });
-
-      setData(updatedData);
-      openSnackbar("Estado del usuario actualizado exitosamente", "success");
+      try {
+        const userToUpdate = data.find(user => user._id === _id);
+        const updatedUser = { ...userToUpdate, Estado: !userToUpdate.Estado };
+        await axios.put(`http://localhost:3000/user/${_id}`, updatedUser);
+        const updatedData = data.map((registro) => {
+          if (registro._id === _id) {
+            registro.Estado = !registro.Estado;
+          }
+          return registro;
+        });
+        setData(updatedData);
+        openSnackbar("Estado del usuario actualizado exitosamente", "success");
+      } catch (error) {
+        console.error(error);
+        openSnackbar("Error al actualizar el estado del usuario", "error");
+      }
     }
   };
 
@@ -377,7 +390,7 @@ const Usuario = () => {
             <tbody>
               {currentItems.length > 0 ? (
                 currentItems.map((item) => (
-                  <tr key={item.id}>
+                  <tr key={item._id}>
                     <td>{item.id}</td>
                     <td>{item.TipoDocumento}</td>
                     <td>{item.Documento}</td>
@@ -388,7 +401,8 @@ const Usuario = () => {
                     <td>
                       <Button
                         color={item.Estado ? "success" : "secondary"}
-                        onClick={() => cambiarEstado(item.id)}
+                        // Aquí se cambió el "item.id" por "item._id" <--------------------------------
+                        onClick={() => cambiarEstado(item._id)}
                         className=" btn-sm" // Usa btn-sm para botones más pequeños
                       >
                         {item.Estado ? "Activo" : "Inactivo"}
@@ -591,7 +605,7 @@ const Usuario = () => {
                 >
                   <option value="">Seleccione un rol</option>
                   {roles.map((role) => (
-                    <option key={role.id_role} value={role.id_role}>
+                    <option key={role.id_role} value={role.name}>
                       {role.name}
                     </option>
                   ))}

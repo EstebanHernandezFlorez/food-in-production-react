@@ -25,7 +25,7 @@ const initialData = [
     Producto: "Carne de hamburguesa",
     CantidadInicial: "10",
     CantidadFinal: "10",
-    Estado: "",
+    Estado: "Por iniciar",
     HorayFechadeEstado: "07:30am 04/09/2024",
   },
   {
@@ -35,7 +35,7 @@ const initialData = [
     Producto: "Guacamole",
     CantidadInicial: "10",
     CantidadFinal: "10",
-    Estado: "",
+    Estado: "En produccion",
     HorayFechadeEstado: "07:30am 04/09/2024",
   },
   {
@@ -45,7 +45,7 @@ const initialData = [
     Producto: "Postre",
     CantidadInicial: "10",
     CantidadFinal: "10",
-    Estado: "",
+    Estado: "En pausa",
     HorayFechadeEstado: "07:30am 04/09/2024",
   },
   {
@@ -55,7 +55,7 @@ const initialData = [
     Producto: "Cañon",
     CantidadInicial: "10",
     CantidadFinal: "10",
-    Estado: "",
+    Estado: "Terminado",
     HorayFechadeEstado: "07:30am 04/09/2024",
   },
   {
@@ -65,7 +65,7 @@ const initialData = [
     Producto: "Postre",
     CantidadInicial: "10",
     CantidadFinal: "10",
-    Estado: "",
+    Estado: "Cancelado",
     HorayFechadeEstado: "07:30am 04/09/2024",
   },
   {
@@ -243,32 +243,32 @@ const Produccion = () => {
   );
 
   const Producto = [
-    { id: 1, nombreproducto: "LOMODECERDOAHUMADO" },
+    { id: 1, nombreproducto: "LOMO DE CERDO AHUMADO" },
     { id: 2, nombreproducto: "ROASTBEEF" },
     { id: 3, nombreproducto: "PULLEDPORK" },
     { id: 4, nombreproducto: "COSTILLAS" },
-    { id: 5, nombreproducto: "CARNEHAMBURGUESA" },
-    { id: 6, nombreproducto: "POLLODESMECHADO" },
-    { id: 7, nombreproducto: "ZABALETADESMECHADA" },
-    { id: 8, nombreproducto: "FILETESDEPOLLOCONADOBOALPASTOR" },
-    { id: 9, nombreproducto: "ALBÓNDIGASDERES" },
-    { id: 10, nombreproducto: "FILETESDECERDOCONADOBOALPASTOR" },
-    { id: 11, nombreproducto: "SALSABBQ" },
-    { id: 12, nombreproducto: "SALSAMARACUYÁDULCEPYPICANTE" },
-    { id: 13, nombreproducto: "SALSACHILANGA" },
-    { id: 14, nombreproducto: "SALSADELIMON" },
-    { id: 15, nombreproducto: "SALSADEALBAHACA" },
-    { id: 16, nombreproducto: "SALSAMIELMOSTAZA" },
-    { id: 17, nombreproducto: "SALSACARAMELODECOCO" },
-    { id: 18, nombreproducto: "ADOBOPASTOR" },
-    { id: 19, nombreproducto: "SALSADEVEGETALESROSTIZADOS" },
-    { id: 20, nombreproducto: "PRELIMINARLIMONADADECOCO" },
+    { id: 5, nombreproducto: "CARNE HAMBURGUESA" },
+    { id: 6, nombreproducto: "POLLO DE SMECHADO" },
+    { id: 7, nombreproducto: "ZABALETA DESMECHADA" },
+    { id: 8, nombreproducto: "FILETES DE POLLO CON ADOBO AL PASTOR" },
+    { id: 9, nombreproducto: "ALBÓNDIGAS DE RES" },
+    { id: 10, nombreproducto: "FILETES DE CERDO CON ADOBO AL PASTOR" },
+    { id: 11, nombreproducto: "SALSA BBQ" },
+    { id: 12, nombreproducto: "SALSA MARACUYÁ DULCE PYPICANTE" },
+    { id: 13, nombreproducto: "SALSA CHILANGA" },
+    { id: 14, nombreproducto: "SALSA DE LIMON" },
+    { id: 15, nombreproducto: "SALSA DE ALBAHACA" },
+    { id: 16, nombreproducto: "SALSA MIEL MOSTAZA" },
+    { id: 17, nombreproducto: "SALSA CARAMELO DE COCO" },
+    { id: 18, nombreproducto: "ADOBO PASTOR" },
+    { id: 19, nombreproducto: "SALSA DE VEGETALES ROSTIZADOS" },
+    { id: 20, nombreproducto: "PRELIMINAR LIMONADA DE COCO" },
     { id: 21, nombreproducto: "BIZCOCHUELO" },
     { id: 22, nombreproducto: "BROWNIE" },
     { id: 23, nombreproducto: "FLANES" },
     {
       id: 24,
-      nombreproducto: "FRUTAPROCESADAPARAJUGOS",
+      nombreproducto: "FRUTA PROCESADA PARAJUGOS",
       frutas: ["MANGO", "FRESA", "UVA", "PIÑA", "MORA"],
     },
   ];
@@ -321,6 +321,30 @@ const Produccion = () => {
     // Genera un archivo Excel
     XLSX.writeFile(workbook, "datos.xlsx");
   };
+
+  // Lista de tareas y tiempos correspondientes
+  const tareas = [
+    "Buscar y pesar ingredientes",
+    "Mezclar en licuadora",
+    "Inyectar",
+    "Sumergir en salmuera",
+    "Refrigerar",
+    "Colocar en horno",
+    "Reposar",
+    "Buscar y pesar ingredientes",
+    "Cortar",
+    "Pesar",
+    "Empacar al vacío",
+    "Rotular",
+    "Congelar",
+  ];
+
+  // Tiempos correspondientes para cada tarea en minutos
+  const tiempos = [10, 15, 20, 25, 30, 45, 50, 60, 10, 15, 20, 25, 30];
+
+  // Calcular el tiempo total sumando todos los tiempos
+  const tiempoTotal = tiempos.reduce((acc, curr) => acc + curr, 0);
+
   return (
     <Container>
       <br />
@@ -329,337 +353,474 @@ const Produccion = () => {
         <>
           <h2 className="mb-5 text-center">Ordenes de producciòn</h2>
           <div>
-            <div className="d-flex justify-content-between  mb-4">
-              <Input
-                type="text"
-                placeholder="Buscar orden de producciòn en la tabla"
-                value={tableSearchText}
-                onChange={handleTableSearch}
-                style={{ width: "50%" }}
-              />
+              <div className="d-flex justify-content-between  mb-4">
+                <Input
+                  type="text"
+                  placeholder="Buscar orden de producciòn"
+                  value={tableSearchText}
+                  onChange={handleTableSearch}
+                  style={{ width: "50%" }}
+                />
 
-              <button
-                className="btn btn-success"
-                onClick={() => {
-                  handleDownloadExcel();
-                  setForm({});
-                  setIsEditing(false);
-                  setShowForm(true);
-                }}
-              >
-                Descargar Excel
-              </button>
-              <Button
-                color="success"
-                onClick={() => {
-                  setForm({
-                    id: "",
-                    HorayFechaInicial: "",
-                    HorayFechaFinal: "",
-                    Producto: "",
-                    CantidadInicial: "",
-                    CantidadFinal: "",
-                    Estado: "",
-                    HorayFechadeEstado: "",
-                  });
-                  setIsEditing(false);
-                  setShowForm(true);
-                }}
-              >
-                Crear orden de producciòn
-              </Button>
+                <button
+                  className="btn btn-success"
+                  onClick={() => {
+                    handleDownloadExcel();
+                  }}
+                >
+                  Descargar Excel
+                </button>
+                <Button
+                  color="success"
+                  onClick={() => {
+                    setForm({
+                      id: "",
+                      HorayFechaInicial: "",
+                      HorayFechaFinal: "",
+                      Producto: "",
+                      CantidadInicial: "",
+                      CantidadFinal: "",
+                      Estado: "",
+                      HorayFechadeEstado: "",
+                    });
+                    setIsEditing(false);
+                    setShowForm(true);
+                  }}
+                >
+                  Crear orden de producciòn
+                </Button>
+              </div>
+
+              <Row className="mb-3 justify-content-center d-flex flex-wrap">
+                {meses.map((mes, index) => (
+                  <Col key={index} xs="auto">
+                    <div className="mes">{mes}</div>
+                  </Col>
+                ))}
+              </Row>
             </div>
 
-            <Row className="mb-3 justify-content-center d-flex flex-wrap">
-              {meses.map((mes, index) => (
-                <Col key={index} xs="auto">
-                  <div className="mes">{mes}</div>
-                </Col>
-              ))}
-            </Row>
-          </div>
+            <Table className="table table-sm table-hover">
+              <thead>
+                <tr>
+                  <th>Id</th>
+                  <th>Hora y Fecha Inicio</th>
+                  <th>Hora y Fecha Final</th>
+                  <th>Producto</th>
+                  <th>Cantidad Inicial</th>
+                  <th>Cantidad Final</th>
+                  <th>Estado</th>
+                  <th>Hora y Fecha de Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentItems.length > 0 ? (
+                  currentItems.map((item) => (
+                    <tr key={item.id}>
+                      <td>{item.id}</td>
+                      <td>{item.HorayFechaInicial}</td>
+                      <td>{item.HorayFechaFinal}</td>
+                      <td>{item.Producto}</td>
+                      <td>{item.CantidadInicial}</td>
+                      <td>{item.CantidadFinal}</td>
+                      <td>{item.Estado}</td>
+                      <td>{item.HorayFechadeEstado}</td>
 
-          <Table className="table table-sm table-hover">
-            <thead>
-              <tr>
-                <th>Id</th>
-                <th>Hora y Fecha Inicio</th>
-                <th>Hora y Fecha Final</th>
-                <th>Producto</th>
-                <th>Cantidad Inicial</th>
-                <th>Cantidad Final</th>
-                <th>Estado</th>
-                <th>Hora y Fecha de Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentItems.length > 0 ? (
-                currentItems.map((item) => (
-                  <tr key={item.id}>
-                    <td>{item.id}</td>
-                    <td>{item.HorayFechaInicial}</td>
-                    <td>{item.HorayFechaFinal}</td>
-                    <td>{item.Producto}</td>
-                    <td>{item.CantidadInicial}</td>
-                    <td>{item.CantidadFinal}</td>
-                    <td>{item.Estado}</td>
-                    <td>{item.HorayFechadeEstado}</td>
-
-                    <td>
-                      <div className="d-flex align-items-center">
-                        <Button
-                          color="info"
-                          onClick={() => {
-                            setForm(item);
-                            setIsEditing(true);
-                            setModalOpen(true);
-                          }}
-                          className="me-2 btn-sm"
-                        >
-                          <FaEdit />
-                        </Button>
-                      </div>
+                      <td>
+                        <div className="d-flex align-items-center">
+                          <Button
+                            color="info"
+                            onClick={() => {
+                              setForm(item);
+                              setIsEditing(true);
+                              setModalOpen(true);
+                            }}
+                            className="me-2 btn-sm"
+                          >
+                            <FaEdit />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="9" className="text-center">
+                      No hay datos disponibles
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="9" className="text-center">
-                    No hay datos disponibles
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </Table>
+                )}
+              </tbody>
+            </Table>
 
-          <ul className="pagination">
-            {pageNumbers.map((number) => (
-              <li
-                key={number}
-                className={`page-item ${
-                  currentPage === number ? "active" : ""
-                }`}
-              >
-                <Button
-                  className="page-link"
-                  onClick={() => handlePageChange(number)}
+            <ul className="pagination">
+              {pageNumbers.map((number) => (
+                <li
+                  key={number}
+                  className={`page-item ${
+                    currentPage === number ? "active" : ""
+                  }`}
                 >
-                  {number}
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-
-      {/* Formulario de inserción */}
-      {showForm && (
-        <div>
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <h2 className="text-star">
-              {isEditing
-                ? "Editar orden de producción"
-                : "Agregar orden de producción"}
-            </h2>
-          </div>
-          <br />
-          <div className="d-flex align-items-center flex-nowrap">
-            <div className="d-flex align-items-center flex-wrap w-100">
-              <Col md={2} className="mb-2 col-md-4" >
-                <FormGroup className="d-flex align-items-center">
-                  <label
-                    style={{
-                      fontSize: "15px",
-                      paddingRight: "10px",
-                      whiteSpace: "nowrap",
-                      marginTop: "8px", 
-                    }}
+                  <Button
+                    className="page-link"
+                    onClick={() => handlePageChange(number)}
                   >
-                    Elija el nombre del producto
-                  </label>
-                  <Input
-                    type="select"
-                    name="Produco"
-                    value={form.producto}
-                    onChange={handleChange}
-                    className={`form-control ${
-                      formErrors.Producto ? "is-invalid" : ""
-                    }`}
-                    style={{ width: "100%" }}
-                  >
-                    <option value="">PRODUCTO</option>
-                    {Producto.map((producto) => (
-                      <option key={producto.id} value={producto.nombreproducto}>
-                        {producto.nombreproducto}
-                      </option>
-                    ))}
-                  </Input>
-                  {formErrors.Producto && (
-                    <div className="invalid-feedback">
-                      Este campo es obligatorio.
-                    </div>
-                  )}
-                </FormGroup>
-              </Col>
+                    {number}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
 
-              <Col md={2} className="mb-2 col-md-2" >
-                <FormGroup>
-                  <label style={{ fontSize: "15px", padding: "5px" }}>
-                    Receta
-                  </label>
-                  <Input
-                    type="text"
-                    name="receta"
-                    value={form.receta}
-                    onChange={handleChange}
-                    placeholder="Receta"
-                    className={`form-control ${
-                      formErrors.receta ? "is-invalid" : ""
-                    }`}
-                  />
-                  {formErrors.receta && (
-                    <div className="invalid-feedback">
-                      Este campo es obligatorio.
-                    </div>
-                  )}
-                </FormGroup>
-              </Col>
-
-              <Col md={2} className="mb-2  col-md-2">
-                <FormGroup>
-                  <label style={{ fontSize: "15px", padding: "5px" }}>
-                    Cantidad a producir
-                  </label>
-                  <Input
-                    type="number"
-                    name="cantidadaproducir"
-                    value={form.cantidadaproducir}
-                    onChange={handleChange}
-                    className={`form-control ${
-                      formErrors.cantidadaproducir ? "is-invalid" : ""
-                    }`}
-                  />
-                  {formErrors.cantidadaproducir && (
-                    <div className="invalid-feedback">
-                      Este campo es obligatorio.
-                    </div>
-                  )}
-                </FormGroup>
-              </Col>
-
-              <Col md={2} className="mb-2">
-                <FormGroup>
-                  <label style={{ fontSize: "15px", padding: "5px" }}>
-                    Peso final por unidad
-                  </label>
-                  <Input
-                    type="number"
-                    name="pesofinalporunidad"
-                    value={form.pesofinalporunidad}
-                    onChange={handleChange}
-                    className={`form-control ${
-                      formErrors.pesofinalporunidad ? "is-invalid" : ""
-                    }`}
-                  />
-                  {formErrors.pesofinalporunidad && (
-                    <div className="invalid-feedback">
-                      Este campo es obligatorio.
-                    </div>
-                  )}
-                </FormGroup>
-              </Col>
-
-              <Col md={2} className="mb-2">
-                <FormGroup>
-                  <label style={{ fontSize: "15px", padding: "5px" }}>
-                    Cantidad final
-                  </label>
-                  <Input
-                    type="number"
-                    name="cantidadfinal"
-                    value={form.cantidadfinal}
-                    onChange={handleChange}
-                    className={`form-control ${
-                      formErrors.cantidadfinal ? "is-invalid" : ""
-                    }`}
-                  />
-                  {formErrors.cantidadfinal && (
-                    <div className="invalid-feedback">
-                      Este campo es obligatorio.
-                    </div>
-                  )}
-                </FormGroup>
-              </Col>
+        {/* Formulario de inserción */}
+        {showForm && (
+          <div>
+            <div className="d-flex justify-content-between align-items-center mb-3 text-center">
+              <h4 className="text-center">
+                {isEditing
+                  ? "Editar orden de producción"
+                  : "ORDEN DE PRODUCCIÒN Nº XXX"}
+              </h4>
             </div>
+            <br />
+            <div className="d-flex align-items-center flex-nowrap">
+              <div className="d-flex align-items-center">
+                <Col md={2} className="mb-2 col-md-4">
+                  <FormGroup className="d-flex align-items-center">
+                    <label
+                      style={{
+                        
+                      
+                    
+                      }}
+                    >
+                      Elija el nombre del producto
+                    </label>
+                    <Input
+                      type="select"
+                      name="Produco"
+                      value={form.producto}
+                      onChange={handleChange}
+                      className={`form-control  ${
+                        formErrors.Producto ? "is-invalid" : ""
+                      }`}
+                      style={{ width: "50%" }}
+                    >
+                      <option value="">PRODUCTO</option>
+                      {Producto.map((producto) => (
+                        <option key={producto.id} value={producto.nombreproducto}>
+                          {producto.nombreproducto}
+                        </option>
+                      ))}
+                    </Input>
+                    {formErrors.Producto && (
+                      <div className="invalid-feedback">
+                        Este campo es obligatorio.
+                      </div>
+                    )}
+                  </FormGroup>
+                </Col>
+
+                <Col md={2} className="mb-2 m-2">
+                  <FormGroup>
+                    <label style={{ fontSize: "15px", padding: "5px" }}>
+                      Receta
+                    </label>
+                    <Input
+                      type="text"
+                      name="receta"
+                      value={form.receta}
+                      onChange={handleChange}
+                      placeholder="Receta"
+                      className={`form-control ${
+                        formErrors.receta ? "is-invalid" : ""
+                      }`}
+                    />
+                    {formErrors.receta && (
+                      <div className="invalid-feedback">
+                        Este campo es obligatorio.
+                      </div>
+                    )}
+                  </FormGroup>
+                </Col>
+
+                <Col md={2} className="mb-2 mx-3">
+  <FormGroup>
+    <label style={{ fontSize: "15px", paddingRight: "5px" }}>
+      Cantidad a producir
+    </label>
+    <Input
+      type="number"
+      name="cantidadaproducir"
+      value={form.cantidadaproducir}
+      onChange={handleChange}
+      className={`form-control ${
+        formErrors.cantidadaproducir ? "is-invalid" : ""
+      }`}
+      style={{ width: "100px" }} // Ajuste del ancho del input
+    />
+    {formErrors.cantidadaproducir && (
+      <div className="invalid-feedback">Este campo es obligatorio.</div>
+    )}
+  </FormGroup>
+</Col>
+
+<Col md={2} className="mb-2 mx-3">
+  <FormGroup>
+    <label style={{ fontSize: "15px", paddingRight: "5px" }}>
+      Peso final por unidad
+    </label>
+    <Input
+      type="text"
+      name="pesofinalporunidad"
+      value={form.pesofinalporunidad}
+      onChange={handleChange}
+      className={`form-control ${
+        formErrors.pesofinalporunidad ? "is-invalid" : ""
+      }`}
+      style={{ width: "100px" }} // Ajuste del ancho del input
+    />
+    {formErrors.pesofinalporunidad && (
+      <div className="invalid-feedback">Este campo es obligatorio.</div>
+    )}
+  </FormGroup>
+</Col>
+
+
+                <Col md={2} className="mb-2">
+                  <FormGroup>
+                    <label style={{ fontSize: "15px", padding: "5px" }}>
+                      Cantidad final
+                    </label>
+                    <Input
+                      type="number"
+                      name="cantidadfinal"
+                      value={form.cantidadfinal}
+                      onChange={handleChange}
+                      className={`form-control ${
+                        formErrors.cantidadfinal ? "is-invalid" : ""
+                      }`}
+                      style={{ width: "80px" }} // Ajuste del ancho del input
+                    />
+                    {formErrors.cantidadfinal && (
+                      <div className="invalid-feedback">
+                        Este campo es obligatorio.
+                      </div>
+                    )}
+                  </FormGroup>
+                </Col>
+              </div>
+            </div>
+          <hr
+            style={{
+              width: "100%",
+              margin: "20px 0",
+              border: "none",
+              height: "2px", // Ajusta el grosor de la línea
+              backgroundColor: "black", // Color negro
+            }}
+          />
+          <div>
+            <div className="container mt-4">
+              {/* Título alineado a la izquierda */}
+              <h2 className="text-left">Tareas de orden de producción</h2>
+
+              {/* Encabezado para las columnas de tiempo */}
+              <div className="row">
+                <div className="col-md-2"></div>{" "}
+                {/* Espacio vacío para alinearlo con los tiempos */}
+                <div className="col-md-2 text-center">
+                  <h5>Tiempo</h5>
+                </div>
+                <div className="col-md-2"></div>
+                <div className="col-md-2 text-center">
+                  <h5>Tiempo</h5>
+                </div>
+                <div className="col-md-2"></div>
+                <div className="col-md-2 text-center">
+                  <h5>Tiempo</h5>
+                </div>
+              </div>
+
+              {/* Filas de contenido con 6 columnas */}
+              <div className="row">
+                {/* Primera columna de tareas (1-5) */}
+                <div className="col-md-2">
+                  {tareas.slice(0, 5).map((tarea, index) => (
+                    <p key={index}>
+                      {index + 1}. {tarea}
+                    </p>
+                  ))}
+                </div>
+
+                {/* Segunda columna de tiempos (1-5) */}
+                <div className="col-md-2">
+                  {tiempos.slice(0, 5).map((tiempo, index) => (
+                    <div key={index} className="border p-2 text-center">
+                      <strong>{tiempo}</strong> minutos
+                    </div>
+                  ))}
+                </div>
+
+                {/* Tercera columna de tareas (6-10) */}
+                <div className="col-md-2">
+                  {tareas.slice(5, 10).map((tarea, index) => (
+                    <p key={index + 5}>
+                      {index + 6}. {tarea}
+                    </p>
+                  ))}
+                </div>
+
+                {/* Cuarta columna de tiempos (6-10) */}
+                <div className="col-md-2">
+                  {tiempos.slice(5, 10).map((tiempo, index) => (
+                    <div key={index} className="border p-2 text-center">
+                      <strong>{tiempo}</strong> minutos
+                    </div>
+                  ))}
+                </div>
+
+                {/* Quinta columna de tareas (11-13) */}
+                <div className="col-md-2">
+                  {tareas.slice(10, 13).map((tarea, index) => (
+                    <p key={index + 10}>
+                      {index + 11}. {tarea}
+                    </p>
+                  ))}
+                </div>
+
+                {/* Sexta columna de tiempos (11-13) */}
+                <div className="col-md-2">
+                  {tiempos.slice(10, 13).map((tiempo, index) => (
+                    <div key={index} className="border p-2 text-center">
+                      <strong>{tiempo}</strong> minutos
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tiempo total al final */}
+              <div className="row mt-4">
+                <div className="col text-right">
+                  <h4>Tiempo total: {tiempoTotal} minutos</h4>
+                </div>
+              </div>
+            </div>
+
+            <hr
+              style={{
+                width: "100%",
+                margin: "20px 0",
+                border: "none",
+                height: "2px", // Ajusta el grosor de la línea
+                backgroundColor: "black", // Color negro
+              }}
+            />
           </div>
-          <Row>
-            <Col md={4}>
-              <FormGroup>
-                <label style={{ fontSize: "15px", padding: "5px" }}>
-                  Hora y fecha de terminacion
-                </label>
-                <Input
-                  type="text" // Cambiado a "select"
-                  name="horayfechafinal"
-                  value={form.horayfechafinal}
-                  onChange={handleChange}
-                  className={`form-control ${
-                    formErrors.horayfechafinal ? "is-invalid" : ""
-                  }`}
-                ></Input>
-                {formErrors.horayfechafinal && (
-                  <div className="invalid-feedback">
-                    Este campo es obligatorio.
-                  </div>
-                )}
-              </FormGroup>
-            </Col>
+          <div>
+              <Row>
+                {/* Fecha y hora estimada de terminación */}
+                <Col md={6}>
+                  <FormGroup>
+                    <div className="d-flex align-items-center">
+                      <label style={{ fontSize: "15px", paddingRight: "10px" }}>
+                        Fecha y hora estimada de terminación
+                      </label>
+                      {/* Campo para seleccionar la fecha */}
+                      <Input
+                        type="date"
+                        name="fechafinal"
+                        value={form.fechafinal}
+                        onChange={handleChange}
+                        className={`form-control me-2 ${
+                          formErrors.fechafinal ? "is-invalid" : ""
+                        }`}
+                        style={{ width: "50%" }}
+                      />
+                      {/* Campo para ingresar la hora */}
+                      <Input
+                        type="time"
+                        name="horafinal"
+                        value={form.horafinal}
+                        onChange={handleChange}
+                        className={`form-control ms-2 ${
+                          formErrors.horafinal ? "is-invalid" : ""
+                        }`}
+                        style={{ width: "50%" }}
+                      />
+                    </div>
+                    {formErrors.fechafinal && (
+                      <div className="invalid-feedback">
+                        Este campo es obligatorio.
+                      </div>
+                    )}
+                    {formErrors.horafinal && (
+                      <div className="invalid-feedback">
+                        Este campo es obligatorio.
+                      </div>
+                    )}
+                  </FormGroup>
+                </Col>
+                
 
-            <Col md={4}>
-              <FormGroup>
-                <label style={{ fontSize: "15px", padding: "5px" }}>
-                  Estado
-                </label>
-                <Input
-                  type="estado" // Cambiado a "password"
-                  name="estado"
-                  value={form.estado}
-                  onChange={handleChange}
-                  placeholder="estado"
-                  className={`form-control ${
-                    formErrors.estado ? "is-invalid" : ""
-                  }`}
-                />
-                {formErrors.estado && (
-                  <div className="invalid-feedback">{formErrors.estado}</div>
-                )}
-              </FormGroup>
-            </Col>
-
-            <Col md={4}>
-              <FormGroup>
-                <label style={{ fontSize: "15px", padding: "5px" }}>
-                  Confirmar contraseña
-                </label>
-                <Input
-                  type="password" // Cambiado a "password"
-                  name="Confirmarcontraseña"
-                  value={form.Confirmarcontraseña}
-                  onChange={handleChange}
-                  placeholder="Confirmar contraseña"
-                  className={`form-control ${
-                    formErrors.Confirmarcontraseña ? "is-invalid" : ""
-                  }`}
-                />
-                {formErrors.Confirmarcontraseña && (
-                  <div className="invalid-feedback">
-                    {formErrors.Confirmarcontraseña}
+              {/* Estado con campo desplegable */}
+              <Col md={6}>
+                <FormGroup>
+                  <div className="d-flex align-items-center">
+                    <label style={{ fontSize: "15px", paddingRight: "10px" }}>
+                      Estado
+                    </label>
+                    <Input
+                      type="select"
+                      name="estado"
+                      value={form.estado}
+                      onChange={handleChange}
+                      className={`form-control ms-2 ${
+                        formErrors.estado ? "is-invalid" : ""
+                      }`}
+                      style={{ width: "50%" }}
+                    >
+                      <option value="">Seleccionar estado</option>
+                      <option value="por_iniciar">Por iniciar</option>
+                      <option value="en_produccion">En producción</option>
+                      <option value="en_pausa">En pausa</option>
+                      <option value="terminado">Terminado</option>
+                      <option value="cancelado">Cancelado</option>
+                    </Input>
                   </div>
-                )}
-              </FormGroup>
-            </Col>
-          </Row>
+                  {formErrors.estado && (
+                    <div className="invalid-feedback">{formErrors.estado}</div>
+                  )}
+                </FormGroup>
+              </Col>
+            </Row>
+          </div>
+          {/* Observaciones */}
+          <Col md={6}>
+  <FormGroup style={{ display: "flex", alignItems: "flex-start" }}>
+    <label
+      style={{ fontSize: "15px", paddingRight: "10px", whiteSpace: "nowrap" }}
+    >
+      Observaciones
+    </label>
+    <textarea
+      className="form-control"
+      rows="3"
+      name="observaciones"
+      value={form.observaciones}
+      onChange={handleChange}
+      style={{ flexGrow: 1 }}
+    />
+  </FormGroup>
+</Col>
+
+  {/* Fecha y hora estimada de terminación */}
+  <Col md={6}>
+    {/* ... Resto del código existente ... */}
+  </Col>
+
           <div className="d-flex justify-content-star mt-3">
             <Button style={{ background: "#2e8322" }} onClick={handleSubmit}>
               {isEditing ? "Actualizar" : "Agregar"}
