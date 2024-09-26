@@ -30,7 +30,7 @@ import Servicios from "./views/module/Servicios/Servicios";
 import ManoDeObra from "./views/module/ManoDeObra/ManoDeObra";
 import RecoveryPassword from "./views/module/Auth/olvidoContraseña"; // Nombre
 import { NavDropdown } from "react-bootstrap";
-import Calendario from "./views/module/Calendario/Calendario";
+
 import TablaGastos from "./views/module/ManoDeObra/TablaGastos"
 import RendimientoEmpleado from "./views/module/ManoDeObra/RendimientoEmpleado"
       
@@ -164,7 +164,7 @@ export default function App() {
                       <Route path="/reservas" element={<Reservas />} />
                       <Route path="/servicios" element={<Servicios />} />
                       <Route path="/mano_de_obra" element={<ManoDeObra />} />
-                      <Route path="/calendario" element={<Calendario />} />
+                     
                       <Route path="/tabla-gastos" element={<TablaGastos/>}/>
                       <Route path="/rendimiento-empleado" element={<RendimientoEmpleado/>}/>
                       {/* Añade más rutas según sea necesario */}
