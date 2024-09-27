@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Table, Button, Container, Row, Col, Form, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
 import { FaTrashAlt } from 'react-icons/fa';
@@ -7,30 +8,20 @@ import { Snackbar, Alert } from '@mui/material';
 import FondoForm from '../../../assets/login.jpg'
 import { FiEdit } from "react-icons/fi";
 import '../../../App.css'
-
-const initialData = [
-  {id: 1, NombreCompleto: "Carolina Guzman", TipoDocument: 13132312, Document: 16514416, Telefono: 3527158372, Empresa: "Sena"},
-  {id: 2, NombreCompleto: "Andra Torres", TipoDocument: 0, Document: 18761919, Telefono: 0, Empresa: "Desconocida"},
-  {id: 3, NombreCompleto: "Natalia Muriel", TipoDocument: 0, Document: 1016177143, Telefono: 0, Empresa: "Desconocida"},
-  {id: 4, NombreCompleto: "Luis Pérez", TipoDocument: 0, Document: 12345678, Telefono: 0, Empresa: "Desconocida"},
-  {id: 5, NombreCompleto: "María Gómez", TipoDocument: 0, Document: 23456789, Telefono: 0, Empresa: "Desconocida"},
-  {id: 6, NombreCompleto: "Pedro Martínez", TipoDocument: 0, Document: 34567890, Telefono: 0, Empresa: "Desconocida"},
-  {id: 7, NombreCompleto: "Laura Fernández", TipoDocument: 0, Document: 45678901, Telefono: 0, Empresa: "Desconocida"},
-  {id: 8, NombreCompleto: "Carlos Rodríguez", TipoDocument: 0, Document: 56789012, Telefono: 0, Empresa: "Desconocida"}  
-];
+import Swal from "sweetalert2";
 
 const Proveedores = () => {
-  const [data, setData] = useState(initialData);
+  const [data, setData] = useState([]);
   const [form, setForm] = useState({
     id: '',
     NombreCompleto: '',
-    TipoDocument:'',
-    Document:'',
-    Telefono:'',
-    Empresa:'',
+    TipoDocument: '',
+    Document: '',
+    Telefono: '',
+    Empresa: '',
     Estado: true
   });
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [tableSearchText, setTableSearchText] = useState('');
@@ -41,7 +32,7 @@ const Proveedores = () => {
   const [modalOpen, setModalOpen] = useState(false); // Estado para el modal de edición
   const [selectedProveedor, setSelectedProveedor] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const itemsPerPage = 7;
+  const itemsPerPage = 10;
 
   // States for validation
   const [formErrors, setFormErrors] = useState({
@@ -52,20 +43,38 @@ const Proveedores = () => {
     Empresa: false,
   });
 
-  const handleOk = () => {
-    if (selectedProveedor) {
-      const updatedData = data.filter(registro => registro.id !== selectedProveedor.id);
-      setData(updatedData);
-      notification.success({
-        message: 'Éxito',
-        description: 'Empleado eliminado exitosamente',
-      });
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const response = await axios.get('http://localhost:3000/provider');
+      setData(response.data);
+    } catch (error) {
+      console.error(error);
+      Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
     }
-    setModalOpen(false); // Cierra el modal
-    setSelectedProveedor(null); // Limpia el empleado seleccionado
   };
-    const handleCancel = () => {
+
+  const handleCancel = () => {
     setModalOpen(false);
+    setSelectedEmployee(null);
+  };
+
+  const handleOk = async () => {
+    if (selectedProveedor) {
+      try {
+        await axios.delete(`http://localhost:3000/provider/${selectedProveedor._id}`);
+        const updatedData = data.filter(registro => registro._id !== selectedProveedor._id);
+        setData(updatedData);
+        fetchData()
+        openSnackbar('Éxito', 'Empleado eliminado exitosamente');
+      } catch (error) {
+        console.error('Error deleting provider:', error);
+      }
+    }
+    setIsDeleteModalOpen(false);
     setSelectedProveedor(null);
   };
 
@@ -73,11 +82,11 @@ const Proveedores = () => {
     setSelectedProveedor(employee);
     setIsDeleteModalOpen(true);
   };
-  
+
   const handleDeleteModalClose = () => {
     setIsDeleteModalOpen(false);
     setSelectedProveedor(null);
-  };  
+  };
 
   const handleTableSearch = (e) => {
     setTableSearchText(e.target.value.toLowerCase());
@@ -116,86 +125,122 @@ const Proveedores = () => {
     setFormErrors(errors);
     return !Object.values(errors).includes(true);
   };
-  
-  const handleSubmit = () => {
+
+  const tiposDocumentos = [
+    { value: "CC", label: "Cédula de Ciudadanía" },
+    { value: "CE", label: "Cédula de Extranjería" },
+    { value: "PA", label: "Pasaporte" },
+    { value: "PEP", label: "Permiso Especial de Permanencia" },
+  ];
+
+  const handleSubmit = async () => {
     if (!validateForm()) {
-      openSnackbar("Por favor, ingrese todos los campos", 'warning');
+        openSnackbar("Por favor, ingrese todos los campos", 'warning');
+        return;
+    }
+
+    try {
+        const { NombreCompleto, TipoDocument, Document, Telefono, Empresa } = form;
+        const empleadoExistente = data.find(registro => registro.Document.toString() === Document.toString());
+        if (empleadoExistente) {
+            openSnackbar("El empleado ya existe. Por favor, ingrese un documento de empleado diferente.", 'error');
+            return;
+        }
+
+        // Generar ID auto-incrementable
+        const nuevoId = data.length ? Math.max(...data.map(emp => emp.id)) + 1 : 1;
+
+        const nuevoProveedor = {
+            ...form,
+            id: nuevoId // Agregar el nuevo ID generado
+        };
+
+        const response = await axios.post('http://localhost:3000/provider', nuevoProveedor); // Asegúrate de enviar el nuevo objeto
+        setData([...data, response.data]);
+        setForm({
+            id: "",
+            NombreCompleto: "",
+            TipoDocument: "",
+            Document: "",
+            Telefono: "",
+            Empresa: "",
+            Estado: true,
+        });
+        setShowForm(false);
+        openSnackbar("Usuario agregado exitosamente", "success");
+    } catch (error) {
+        console.error(error);
+        openSnackbar("Error al agregar usuario", "error");
+    }
+};
+
+  const editar = async () => {
+    if (!validateForm()) {
+      openSnackbar("Por favor, ingrese todos los campos", "warning");
       return;
     }
 
-    const { NombreCompleto, TipoDocument,  Document, Telefono, Empresa} = form;
-  
-    const empleadoExistente = data.find(registro => registro.Document.toString() === Document.toString());
-    if (empleadoExistente) {
-      openSnackbar("El empleado ya existe. Por favor, ingrese un documento de empleado diferente.", 'error');
-      return;
-    }
-  
-    const nuevoEmpleado = {
-      ...form,
-      id: data.length ? Math.max(...data.map(emp => emp.id)) + 1 : 1
-    };
-  
-    setData([...data, nuevoEmpleado]);
-    setForm({
-      id: '',
-      NombreCompleto: '',
-      TipoDocument:'',
-      Document: '',
-      Telefono:'',
-      Empresa:'',
-      Estado: true
-    });
-    setShowForm(false);
-    openSnackbar("Empleado agregado exitosamente", 'success');
-  };
-
-  const editar = () => {
-    if (!validateForm()) {
-      openSnackbar("Por favor, ingrese todos los campos", 'warning');
-      return;
-    }
-  
     const empleadoExistente = data.find(
       (registro) => registro.Document.toString() === form.Document.toString() &&
-      registro.id !== form.id
+        registro._id !== form._id
     );
-  
     if (empleadoExistente) {
-      openSnackbar("Ya existe un empleado con el mismo documento. Por favor, ingresa un documento diferente.", 'error');
+      openSnackbar("Ya existe un empleado con el mismo documento. Por favor, ingresa un documento diferente.", "error");
       return;
     }
-  
-    const updatedData = data.map((registro) =>
-      registro.id === form.id ? { ...form } : registro
-    );
-  
-    setData(updatedData);
-    setIsEditing(false);
-    setModalOpen(false); // Cierra el modal después de actualizar
-    openSnackbar("Empleado editado exitosamente", 'success');
-  };
 
-  const eliminar = (dato) => {
-    if (window.confirm(`¿Realmente desea eliminar el registro ${dato.id}?`)) {
-      const updatedData = data.filter(registro => registro.id !== dato.id);
+    try {
+      const response = await axios.put(`http://localhost:3000/provider/${form._id}`, form);
+      const updatedData =
+        data.map
+          (item => item._id === form._id ?
+            response.data
+            : item);
       setData(updatedData);
-      openSnackbar("Empleado eliminado exitosamente", 'success');
+      setIsEditing(false);
+      setModalOpen(false);
+      fetchData(); // Refresca la tabla <------------------------------------
+      openSnackbar("Usuario editado exitosamente", "success");
+    } catch (error) {
+      console.error(error);
+      openSnackbar("Error al editar usuario", "error");
     }
   };
 
-  const cambiarEstado = (id) => {
-    const updatedData = data.map((registro) => {
-      if (registro.id === id) {
-        registro.Estado = !registro.Estado;
+  const cambiarEstado = async (_id) => {
+    const response = await
+      Swal.fire
+        ({
+          title: "¿Desea cambiar el estado del usuario?",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#3085d6",
+          cancelButtonColor: "#d33",
+          confirmButtonText: "Cambiar",
+          cancelButtonText: "Cancelar",
+        });
+    if (response.isConfirmed) {
+      try {
+        const userToUpdate = data.find(user => user._id === _id);
+        const updatedUser = { ...userToUpdate, Estado: !userToUpdate.Estado };
+        await axios.put(`http://localhost:3000/provider/${_id}`, updatedUser);
+        const updatedData =
+          data.map
+            ((registro) => {
+              if (registro._id === _id) {
+                registro.Estado = !registro.Estado;
+              }
+              return registro;
+            });
+        setData(updatedData);
+        openSnackbar("Estado del usuario actualizado exitosamente", "success");
+      } catch (error) {
+        console.error(error);
+        openSnackbar("Error al actualizar el estado del usuario", "error");
       }
-      return registro;
-    });
-  
-    setData(updatedData);
-    openSnackbar("Estado del empleado actualizado exitosamente", 'success');
+    }
   };
-  
+
 
   const filteredData = data.filter(item =>
     item.NombreCompleto.toLowerCase().includes(tableSearchText) ||
@@ -227,9 +272,9 @@ const Proveedores = () => {
               onChange={handleTableSearch}
               style={{ width: '50%' }}
             />
-            <Button style={{backgroundColor:'#228b22', color:'black'}} onClick={() => { setForm({ id: '', NombreCompleto: '', TipoDocument:'', Document: '', Telefono:'',Empresa:'', Estado: true }); setIsEditing(false); setShowForm(true); }}>
+            <Button style={{ backgroundColor: '#228b22', color: 'black' }} onClick={() => { setForm({ id: '', NombreCompleto: '', TipoDocument: '', Document: '', Telefono: '', Empresa: '', Estado: true }); setIsEditing(false); setShowForm(true); }}>
               Agregar Proveedor
-              <PlusOutlined style={{ fontSize: '16px', color: 'black', padding:'5px' }} />
+              <PlusOutlined style={{ fontSize: '16px', color: 'black', padding: '5px' }} />
             </Button>
           </div>
           <Table className="table table-sm table-hover">
@@ -248,7 +293,7 @@ const Proveedores = () => {
             <tbody>
               {currentItems.length > 0 ? (
                 currentItems.map((item) => (
-                  <tr key={item.id}>
+                  <tr key={item._id}>
                     <td>{item.id}</td>
                     <td>{item.NombreCompleto}</td>
                     <td>{item.TipoDocument}</td>
@@ -258,7 +303,7 @@ const Proveedores = () => {
                     <td>
                       <Button
                         color={item.Estado ? "success" : "secondary"}
-                        onClick={() => cambiarEstado(item.id)}
+                        onClick={() => cambiarEstado(item._id)}
                         className=" btn-sm" // Usa btn-sm para botones más pequeños
                       >
                         {item.Estado ? "Activo" : "Inactivo"}
@@ -266,16 +311,16 @@ const Proveedores = () => {
                     </td>
                     <td>
                       <div className="d-flex align-items-center">
-                        <Button 
-                          color="dark" 
-                          onClick={() => { setForm(item); setIsEditing(true); setModalOpen(true); }} 
+                        <Button
+                          color="dark"
+                          onClick={() => { setForm(item); setIsEditing(true); setModalOpen(true); }}
                           className="me-2 " // Usa btn-sm para botones más pequeños
                           style={{ padding: '0.25rem 0.5rem' }} // Ajusta el relleno si es necesario
                         >
                           <FiEdit style={{ fontSize: '0.75rem' }} /> {/* Tamaño del ícono reducido */}
                         </Button>
-                        <Button 
-                          color="danger" 
+                        <Button
+                          color="danger"
                           onClick={() => openDeleteModal(item)}
                           className="btn-sm" // Usa btn-sm para botones más pequeños
                           style={{ padding: '0.25rem 0.5rem' }} // Ajusta el relleno si es necesario
@@ -296,20 +341,19 @@ const Proveedores = () => {
           </Table>
 
           <ul className="pagination">
-        {pageNumbers.map(number => (
-          <li key={number} className={`page-item ${currentPage === number ? 'active' : ''}`}>
-            <Button className="page-link" onClick={() => handlePageChange(number)}>
-              {number}
-            </Button>
-          </li>
-        ))}
-      </ul>
+            {pageNumbers.map(number => (
+              <li key={number} className={`page-item ${currentPage === number ? 'active' : ''}`}>
+                <Button className="page-link" onClick={() => handlePageChange(number)}>
+                  {number}
+                </Button>
+              </li>
+            ))}
+          </ul>
 
 
         </>
       )}
 
-      {/* Formulario de inserción */}
       {showForm && (
         <div className="container">
           <h1 className="text-start left-2">Crear Proveedores</h1>
@@ -336,26 +380,37 @@ const Proveedores = () => {
                     </FormGroup>
                   </Col>
                 </Row>
-        
+
                 <Row className="justify-content-center">
                   <Col md={6}>
-                    <FormGroup>
-                      <label style={{ fontSize: '15px', padding: '5px' }}>
-                        Tipo de Documento
-                      </label>
-                      <Input
-                        type="text"
-                        name="TipoDocument"
-                        value={form.TipoDocument}
-                        onChange={handleChange}
-                        placeholder="Tipo de documento"
-                        className={`form-control ${formErrors.TipoDocument ? 'is-invalid' : ''}`}
-                        style={{ border: '2px solid black', width: '100%' }}
-                      />
-                      {formErrors.TipoDocument && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-                    </FormGroup>
+                  <FormGroup>
+                  <label style={{ fontSize: "15px", padding: "5px" }}>
+                    Tipo Documento
+                  </label>
+                  <Input
+                    type="select" // Cambiado a "select"
+                    name="TipoDocument"
+                    value={form.TipoDocument}
+                    onChange={handleChange}
+                    className={`form-control ${
+                      formErrors.TipoDocument ? "is-invalid" : ""
+                    }`}
+                  >
+                    <option value="">Seleccione un tipo de documento</option>
+                    {tiposDocumentos.map((tipo) => (
+                      <option key={tipo.value} value={tipo.value}>
+                        {tipo.label}
+                      </option>
+                    ))}
+                  </Input>
+                  {formErrors.TipoDocumento && (
+                    <div className="invalid-feedback">
+                      Este campo es obligatorio.
+                    </div>
+                  )}
+                </FormGroup>
                   </Col>
-        
+
                   <Col md={6}>
                     <FormGroup>
                       <label style={{ fontSize: '15px', padding: '5px' }}>
@@ -374,7 +429,7 @@ const Proveedores = () => {
                     </FormGroup>
                   </Col>
                 </Row>
-        
+
                 <Row className="justify-content-center">
                   <Col md={6}>
                     <FormGroup>
@@ -393,7 +448,7 @@ const Proveedores = () => {
                       {formErrors.Telefono && <div className="invalid-feedback">Este campo es obligatorio.</div>}
                     </FormGroup>
                   </Col>
-        
+
                   <Col md={6}>
                     <FormGroup>
                       <label style={{ fontSize: '15px', padding: '5px' }}>
@@ -412,7 +467,7 @@ const Proveedores = () => {
                     </FormGroup>
                   </Col>
                 </Row>
-        
+
                 <Row className="justify-content-center mt-3">
                   <Col md={12} className="d-flex justify-content-end">
                     <Button style={{ background: '#2e8322' }} onClick={handleSubmit}>
@@ -425,15 +480,15 @@ const Proveedores = () => {
                 </Row>
               </Form>
             </Col>
-        
+
             <Col md={4} className="d-flex align-items-center justify-content-center">
               <img
                 src={FondoForm} // Usa el atributo src para proporcionar la URL de la imagen
                 alt="Descripción de la Imagen" // Agrega una descripción adecuada para la accesibilidad
                 style={{
-                  width: '100%',       
-                  height: '60vh',     
-                  objectFit: 'cover',  
+                  width: '100%',
+                  height: '60vh',
+                  objectFit: 'cover',
                 }}
               />
             </Col>
@@ -448,11 +503,11 @@ const Proveedores = () => {
           Editar Empleado
         </ModalHeader>
         <ModalBody>
-        <Row>
+          <Row>
             <Col md={4}>
               <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>
-                  Nombre Completo 
+                <label style={{ fontSize: '15px', padding: '5px' }}>
+                  Nombre Completo
                 </label>
                 <Input
                   type="text"
@@ -467,7 +522,7 @@ const Proveedores = () => {
             </Col>
             <Col md={4}>
               <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Tipo de Documento</label>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Tipo de Documento</label>
                 <Input
                   type="text"
                   name="TipoDocument"
@@ -481,7 +536,7 @@ const Proveedores = () => {
             </Col>
             <Col md={4}>
               <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Documento</label>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Documento</label>
                 <Input
                   type="text"
                   name="Document"
@@ -497,7 +552,7 @@ const Proveedores = () => {
           <Row>
             <Col md={4}>
               <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Telefono</label>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Telefono</label>
                 <Input
                   type="text"
                   name="Telefono"
@@ -511,7 +566,7 @@ const Proveedores = () => {
             </Col>
             <Col md={4}>
               <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Empresa</label>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Empresa</label>
                 <Input
                   type="text"
                   name="Empresa"

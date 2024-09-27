@@ -4,7 +4,8 @@ import { Table, Button, Container, Row, Col, FormGroup, Input, Modal, ModalHeade
 import { FaEye } from 'react-icons/fa';
 import { PlusCircleOutlined } from '@ant-design/icons';
 import { SelectOutlined, EditOutlined, TeamOutlined }  from '@ant-design/icons';
-import { Snackbar, Alert } from '@mui/material';
+import { Snackbar, Alert } from "@mui/material";
+import Swal from "sweetalert2";
 import FondoIcono from '../../../assets/logoFIP.png'
 import { useNavigate } from 'react-router-dom';
 
@@ -288,7 +289,7 @@ const ManoDeObra = () => {
     return total;
   };
   
-  const editar = () => {
+  const editar = async () => {
     if (!validateForm()) {
       openSnackbar("Por favor, ingrese todos los campos", 'warning');
       return;
@@ -308,22 +309,46 @@ const ManoDeObra = () => {
       registro.id === form.id ? { ...form } : registro
     );
   
-    setData(updatedData);
-    setIsEditing(false);
-    setModalOpen(false); // Cierra el modal después de actualizar
-    openSnackbar("Gasto mensual editado exitosamente", 'success');
+    const response = await Swal.fire({
+      title: "¿Desea editar el usuario?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Editar",
+      cancelButtonText: "Cancelar",
+    });
+
+    // Verifica si el usuario confirmó la acción antes de continuar
+    if (response.isConfirmed) {
+      setData(updatedData); // Actualiza los datos
+      setIsEditing(false); // Sale del modo de edición
+      setModalOpen(false); // Cierra el modal
+      openSnackbar("Usuario editado exitosamente", "success");
+    }
   };
 
-  const cambiarEstado = (id) => {
-    const updatedData = data.map((registro) => {
-      if (registro.id === id) {
-        registro.Estado = !registro.Estado;
-      }
-      return registro;
+  const cambiarEstado = async (id) => {
+    const response = await Swal.fire({
+      title: "¿Desea cambiar el estado del gasto mensual?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Cambiar",
+      cancelButtonText: "Cancelar",
     });
-  
-    setData(updatedData);
-    openSnackbar("Estado del gasto mensual actualizado exitosamente", 'success');
+    if (response.isConfirmed) {
+      const updatedData = data.map((registro) => {
+        if (registro.id === id) {
+          registro.Estado = !registro.Estado;
+        }
+        return registro;
+      });
+
+      setData(updatedData);
+      openSnackbar("Estado del gasto mensual actualizado exitosamente", "success");
+    }
   };
   
   const filteredData = data.filter(item =>
@@ -346,6 +371,7 @@ const ManoDeObra = () => {
     setSelectedItem(item);
     toggleDetailModal();
   };
+
   return (
     <Container>
       <br />
@@ -805,407 +831,219 @@ const ManoDeObra = () => {
         )}
 
       {/* Modal de edición */}
-      <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)} style={{ maxWidth: '50%' }}>
+      <Modal
+        isOpen={modalOpen}
+        toggle={() => setModalOpen(!modalOpen)}
+        style={{
+          maxWidth: '80%',
+          height: 'auto', 
+          maxHeight: '97vh',
+          overflow: 'hidden', // Evitar scroll
+        }}
+      >
         <ModalHeader toggle={() => setModalOpen(!modalOpen)}>
           Editar Empleado
         </ModalHeader>
         <ModalBody>
           <Row>
-            <Col md={4}>
-              <FormGroup>
-                <label>Mes</label>
-                <Input
-                  type="text"
-                  name="Mes"
-                  value={form.Mes}
-                  onChange={handleChange}
-                  style={{ border: '2px solid black' }}
-                  placeholder="Mes del empleado"
-                  className={`form-control ${formErrors.Mes ? 'is-invalid' : ''}`}
-                />
-                {formErrors.Mes && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-            </Col>
-            <Col md={4}>
-              <FormGroup>
-                <label>Año</label>
-                <Input
-                  type="text"
-                  name="Año"
-                  value={form.Año}
-                  onChange={handleChange}
-                  style={{ border: '2px solid black' }}
-                  placeholder="Número de Año"
-                  className={`form-control ${formErrors.Año ? 'is-invalid' : ''}`}
-                />
-                {formErrors.Año && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-            </Col>
-            <Col md={4}>
-              <FormGroup>
-                <label>Novedades del mes</label>
-                <Input
-                  type="textarea"
-                  name="Novedades"
-                  value={form.Novedades}
-                  onChange={handleChange}
-                  style={{
-                    border: '2px solid black', // Borde negro
-                    maxHeight: '130px', // Altura máxima del textarea
-                    overflowY: 'auto', // Muestra una barra de desplazamiento vertical si el contenido excede la altura máxima
-                }}
-                  placeholder="Novedades del mes"
-                  className={`form-control ${formErrors.Novedades ? 'is-invalid' : ''}`}
-                />
-                {formErrors.Novedades && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-            </Col>
+            {/* Tres columnas para los inputs */}
+            {['Mes', 'Año', 'Novedades', 'Alquiler', 'Seguro', 'Internet', 'Servicios', 'TramitadoraSS', 'PlanCelular'].map((field, index) => (
+              <Col md={4} key={index}>
+                <FormGroup>
+                  <label>{field}</label>
+                  <Input
+                    type={field === 'Novedades' ? 'textarea' : 'text'}
+                    name={field}
+                    value={form[field]}
+                    onChange={handleChange}
+                    placeholder={field}
+                    className={`form-control ${formErrors[field] ? 'is-invalid' : ''}`}
+                    style={{ border: '2px solid black' }}
+                  />
+                  {formErrors[field] && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                </FormGroup>
+              </Col>
+            ))}
           </Row>
+          
           <Row>
-          <Col md={4}>
-              <FormGroup>
-              <label style={{ fontSize: '15px', padding: '5px' }}>Alquiler</label>
-              <Input
-                  type="number"
-                  name="Alquiler"
-                  value={form.Alquiler}
-                  onChange={handleChange}
-                  placeholder="Alquiler"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.Alquiler ? 'is-invalid' : ''}`}
-              />
-              {formErrors.Alquiler && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-              <FormGroup>
-              <label style={{ fontSize: '15px', padding: '5px' }}>Seguro</label>
-              <Input
-                  type="number"
-                  name="Seguro"
-                  value={form.Seguro}
-                  onChange={handleChange}
-                  placeholder="Seguro"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.Seguro ? 'is-invalid' : ''}`}
-              />
-              {formErrors.Seguro && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-              <FormGroup>
-              <label style={{ fontSize: '15px', padding: '5px' }}>Internet</label>
-              <Input
-                  type="number"
-                  name="Internet"
-                  value={form.Internet}
-                  onChange={handleChange}
-                  placeholder="Internet"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.Internet ? 'is-invalid' : ''}`}
-              />
-              {formErrors.Internet && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-              <FormGroup>
-              <label style={{ fontSize: '15px', padding: '5px' }}>Servicios</label>
-              <Input
-                  type="number"
-                  name="Servicios"
-                  value={form.Servicios}
-                  onChange={handleChange}
-                  placeholder="Servicios"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.Servicios ? 'is-invalid' : ''}`}
-              />
-              {formErrors.Servicios && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-              <FormGroup>
-              <label style={{ fontSize: '15px', padding: '5px' }}>Tramitadora SS</label>
-              <Input
-                  type="number"
-                  name="TramitadoraSS"
-                  value={form.TramitadoraSS}
-                  onChange={handleChange}
-                  placeholder="Tramitadora SS"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.TramitadoraSS ? 'is-invalid' : ''}`}
-              />
-              {formErrors.TramitadoraSS && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-              <FormGroup>
-              <label style={{ fontSize: '15px', padding: '5px' }}>Plan Celular</label>
-              <Input
-                  type="number"
-                  name="PlanCelular"
-                  value={form.PlanCelular}
-                  onChange={handleChange}
-                  placeholder="Plan Celular"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.PlanCelular ? 'is-invalid' : ''}`}
-              />
-              {formErrors.PlanCelular && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-          </Col>
-          <Col md={4}>
-              <FormGroup>
-              <label style={{ fontSize: '15px', padding: '5px' }}>Contador</label>
-              <Input
-                  type="number"
-                  name="Contador"
-                  value={form.Contador}
-                  onChange={handleChange}
-                  placeholder="Contador"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.Contador ? 'is-invalid' : ''}`}
-              />
-              {formErrors.Contador && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-              <FormGroup>
-              <label style={{ fontSize: '15px', padding: '5px' }}>Publicidad</label>
-              <Input
-                  type="number"
-                  name="Publicidad"
-                  value={form.Publicidad}
-                  onChange={handleChange}
-                  placeholder="Publicidad"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.Publicidad ? 'is-invalid' : ''}`}
-              />
-              {formErrors.Publicidad && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-              <FormGroup>
-              <label style={{ fontSize: '15px', padding: '5px' }}>Sueldo Empleado</label>
-              <Input
-                  type="text"
-                  name="SueldoEmple"
-                  value={form.SueldoEmple}
-                  onChange={handleChange}
-                  placeholder="Sueldo Empleado"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.SueldoEmple ? 'is-invalid' : ''}`}
-              />
-              {formErrors.SueldoEmple && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-
-              <FormGroup>
-              <label style={{ fontSize: '15px', padding: '5px' }}>Cantidad de Empleados</label>
-              <Input
-                  type="number"
-                  name="CantidadEmpl"
-                  value={form.CantidadEmpl}
-                  onChange={handleChange}
-                  placeholder="Cantidad Empleados"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.CantidadEmpl ? 'is-invalid' : ''}`}
-              />
-              {formErrors.CantidadEmpl && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-              <FormGroup>
-              <label style={{ fontSize: '15px', padding: '5px' }}>Sueldo Jefe de Cocina</label>
-              <Input
-                  type="text"
-                  name="SueldoEmplea"
-                  value={form.SueldoEmplea}
-                  onChange={handleChange}
-                  placeholder="Sueldo Jefe de cocina"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.SueldoEmplea ? 'is-invalid' : ''}`}
-              />
-              {formErrors.SueldoEmplea && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-              <FormGroup>
-              <label style={{ fontSize: '15px', padding: '5px' }}>Control IP Plag</label>
-              <Input
-                  type="number"
-                  name="ControlIPlag"
-                  value={form.ControlIPlag}
-                  onChange={handleChange}
-                  placeholder="Control IP Plag"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.ControlIPlag ? 'is-invalid' : ''}`}
-              />
-              {formErrors.ControlIPlag && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-          </Col>
-            <Col md={4}>
-            <FormGroup style={{ visibility: 'hidden', height: 'auto', margin: '0', padding: '0' }}>
-            <label style={{ fontSize: '15px', padding: '5px' }}>Valor calculado de cantidad empl por val</label>
-              <Input
-                type="number"
-                name="valorSueld"
-                value={form.Calulado}
-                onChange={handleChange}
-                placeholder="Valor Sueldo"
-                style={{ border: '2px solid black', width:'50%' }} // Borde negro
-                />
-            </FormGroup>                
-            <FormGroup style={{ visibility: 'hidden', height: 'auto', margin: '0', padding: '0' }}>
-              <label style={{ fontSize: '15px', padding: '5px' }}>Valor calculado de cantidad empl por val</label>
-              <Input
-                type="number"
-                name="valorSueld"
-                value={form.Calulado}
-                onChange={handleChange}
-                placeholder="Valor Sueldo"
-                style={{ border: '2px solid black', width:'50%' }} // Borde negro
-              />
-            </FormGroup>
-            <FormGroup>
-              <label style={{ fontSize: '15px', padding: '5px' }}>Valor Sueldo</label>
-              <Input
-                  type="number"
-                  name="valorSueld"
-                  value={form.valorSueld}
-                  onChange={handleChange}
-                  placeholder="Valor Sueldo"
-                  style={{ border: '2px solid black', width:'50%' }} // Borde negro
-                  className={`form-control ${formErrors.valorSueld ? 'is-invalid' : ''}`}
-              />
-              {formErrors.valorSueld && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-            </FormGroup>
-            <FormGroup style={{ visibility: 'hidden', height: 'auto', margin: '0', padding: '0' }}>
-              <label style={{ fontSize: '15px', padding: '5px' }}>Valor calculado de cantidad empl por val</label>
-              <Input
-                  type="number"
-                  name="valorSueld"
-                  value={form.Calulado}
-                  onChange={handleChange}
-                  placeholder="Valor Sueldo"
-                  style={{ border: '2px solid black', width:'50%' }} // Borde negro
-              />
-            </FormGroup>
-            <FormGroup>
-            <label style={{ fontSize: '15px', padding: '5px' }}>Valor Sueldo</label>
-            <Input
-                type="number"
-                name="valorSueldoJ" // Nombre del campo debe coincidir con el estado
-                value={form.valorSueldoJ} // Valor del estado
-                onChange={handleChange} // Manejo del cambio del input
-                placeholder="Valor Sueldo"
-                style={{ border: '2px solid black', width:'50%' }}
-                className={`form-control ${formErrors.valorSueldoJ ? 'is-invalid' : ''}`} // Clase condicional para errores
-            />
-            {formErrors.valorSueldoJ && <div className="invalid-feedback">Este campo es obligatorio.</div>}  
-            </FormGroup>
-          <FormGroup>
-            <label style={{ fontSize: '15px', padding: '5px' }}>Bono Adicional</label>
-            <Input
-                type="number"
-                name="bonoAdi"
-                value={form.bonoAdi}
-                onChange={handleChange}
-                placeholder="Valor Sueldo"
-                style={{ border: '2px solid black', width:'50%' }} // Borde negro
-                className={`form-control ${formErrors.bonoAdi ? 'is-invalid' : ''}`}
-            />
-            {formErrors.bonoAdi && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-            </FormGroup>
-            </Col>
+            {/* Más campos de entrada */}
+            {['Contador', 'Publicidad', 'SueldoEmple', 'CantidadEmpl', 'SueldoEmplea', 'ControlIPlag', 'valorSueld', 'bonoAdi'].map((field, index) => (
+              <Col md={4} key={index}>
+                <FormGroup>
+                  <label>{field}</label>
+                  <Input
+                    type="number"
+                    name={field}
+                    value={form[field]}
+                    onChange={handleChange}
+                    placeholder={field}
+                    className={`form-control ${formErrors[field] ? 'is-invalid' : ''}`}
+                    style={{ border: '2px solid black' }}
+                  />
+                  {formErrors[field] && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                </FormGroup>
+              </Col>
+            ))}
           </Row>
         </ModalBody>
         <ModalFooter>
-        <Button style={{ background: '#2e8322' }} onClick={isEditing ? editar : handleSubmit}>
-              {isEditing ? 'Actualizar' : 'Guardar'}
-            </Button>
+          <Button style={{ background: '#2e8322' }} onClick={isEditing ? editar : handleSubmit}>
+            {isEditing ? 'Actualizar' : 'Guardar'}
+          </Button>
           <Button style={{ background: '#6d0f0f' }} onClick={handleCancel}>
             Cancelar
           </Button>
         </ModalFooter>
       </Modal>
 
-      {/* Modal de detalle */}
       <Modal 
         isOpen={detailModalOpen} 
         toggle={toggleDetailModal} 
-        style={{ maxWidth: '40%', marginTop:'10px', marginBottom:'3px'}}
+        style={{ maxWidth: '50%', marginTop: '10px', marginBottom: '3px' }}
       >
-        <ModalHeader toggle={toggleDetailModal} style={{ color: '#8C1616' }}>
+        <ModalHeader toggle={toggleDetailModal} style={{ color: '#8C1616', fontWeight: 'bold' }}>
           Detalles del Empleado
         </ModalHeader>
-        <ModalBody style={{ overflowY: 'auto', maxHeight: 'calc(120vh - 120px)' }}>
+        <ModalBody style={{ padding: '20px' }}>
           {selectedItem && (
             <div style={{ padding: '10px' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              {/* Tabla de Información Básica */}
+              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px', border: '1px solid #ddd' }}>
+                <thead style={{ backgroundColor: '#cccccc' }}>
+                  <tr>
+                    <th colSpan={2} style={{ textAlign: 'left', fontWeight: 'bold' }}>Información Básica</th>
+                  </tr>
+                </thead>
                 <tbody>
-                  <tr>
-                    <td><strong>Mes:</strong></td>
-                    <td>{selectedItem.Mes}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Año:</strong></td>
-                    <td>{selectedItem.Año}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Novedades:</strong></td>
-                    <td>{selectedItem.Novedades}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Alquiler:</strong></td>
-                    <td>{selectedItem.Alquiler}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Seguro:</strong></td>
-                    <td>{selectedItem.Seguro}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Internet:</strong></td>
-                    <td>{selectedItem.Internet}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Servicios:</strong></td>
-                    <td>{selectedItem.Servicios}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Contador:</strong></td>
-                    <td>{selectedItem.Contador}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Publicidad:</strong></td>
-                    <td>{selectedItem.Publicidad}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Tramitadora SS:</strong></td>
-                    <td>{selectedItem.TramitadoraSS}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Plan Celular:</strong></td>
-                    <td>{selectedItem.PlanCelular}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Control IP Plag:</strong></td>
-                    <td>{selectedItem.ControlIPlag}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Sueldo Empleado:</strong></td>
-                    <td>{selectedItem.SueldoEmple}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Valor Sueldo:</strong></td>
-                    <td>{selectedItem.valorSueld}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Cantidad Empleados:</strong></td>
-                    <td>{selectedItem.CantidadEmpl}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Sueldo Empleado Adicional:</strong></td>
-                    <td>{selectedItem.SueldoEmplea}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Valor Sueldo Jefe:</strong></td>
-                    <td>{selectedItem.valorSueldoJ}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Bono Adicional:</strong></td>
-                    <td>{selectedItem.bonoAdi}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          )}
-          <ModalFooter style={{ display: 'flex', justifyContent: 'flex-end', padding: 0 }}>
-            <Button style={{ background: '#6d0f0f' }} onClick={toggleDetailModal}>Cerrar</Button>
-          </ModalFooter>
-        </ModalBody>
-      </Modal>
+            <tr>
+              <td style={{ padding: '8px', fontWeight: 'bold', textAlign: 'left' }}>Mes:</td>
+              <td style={{ padding: '8px', textAlign: 'left' }}>{selectedItem.Mes}</td>
+            </tr>
+            <tr>
+              <td style={{ padding: '8px', fontWeight: 'bold', textAlign: 'left' }}>Año:</td>
+              <td style={{ padding: '8px', textAlign: 'left' }}>{selectedItem.Año}</td>
+            </tr>
+            <tr>
+              <td style={{ padding: '8px', fontWeight: 'bold', textAlign: 'left' }}>Novedades:</td>
+              <td style={{ padding: '8px', textAlign: 'left' }}>{selectedItem.Novedades}</td>
+            </tr>
+          </tbody>
+        </table>
 
+        {/* Tabla de Gastos */}
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px', border: '1px solid #ddd' }}>
+          <thead style={{ backgroundColor: '#cccccc' }}>
+            <tr>
+              <th colSpan={2} style={{ textAlign: 'left', fontWeight: 'bold' }}>Gastos</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={{ padding: '8px', fontWeight: 'bold', textAlign: 'left' }}>Alquiler:</td>
+              <td style={{ padding: '8px', textAlign: 'right' }}>${new Intl.NumberFormat().format(selectedItem.Alquiler)}</td>
+            </tr>
+            <tr>
+              <td style={{ padding: '8px', fontWeight: 'bold', textAlign: 'left' }}>Seguro:</td>
+              <td style={{ padding: '8px', textAlign: 'right' }}>${new Intl.NumberFormat().format(selectedItem.Seguro)}</td>
+            </tr>
+            <tr>
+              <td style={{ padding: '8px', fontWeight: 'bold', textAlign: 'left' }}>Internet:</td>
+              <td style={{ padding: '8px', textAlign: 'right' }}>${new Intl.NumberFormat().format(selectedItem.Internet)}</td>
+            </tr>
+            <tr>
+              <td style={{ padding: '8px', fontWeight: 'bold', textAlign: 'left' }}>Servicios:</td>
+              <td style={{ padding: '8px', textAlign: 'right' }}>${new Intl.NumberFormat().format(selectedItem.Servicios)}</td>
+            </tr>
+          </tbody>
+        </table>
 
+        {/* Tabla de Sueldos */}
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px', border: '1px solid #ddd' }}>
+          <thead style={{ backgroundColor: '#cccccc' }}>
+            <tr>
+              <th colSpan={2} style={{ textAlign: 'left', fontWeight: 'bold' }}>Sueldos</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={{ padding: '8px', fontWeight: 'bold', textAlign: 'left' }}>Sueldo Empleado:</td>
+              <td style={{ padding: '8px', textAlign: 'right' }}>${new Intl.NumberFormat().format(selectedItem.SueldoEmple)}</td>
+            </tr>
+            <tr>
+              <td style={{ padding: '8px', fontWeight: 'bold', textAlign: 'left' }}>Valor Sueldo:</td>
+              <td style={{ padding: '8px', textAlign: 'right' }}>${new Intl.NumberFormat().format(selectedItem.valorSueld)}</td>
+            </tr>
+            <tr>
+              <td style={{ padding: '8px', fontWeight: 'bold', textAlign: 'left' }}>Cantidad Empleados:</td>
+              <td style={{ padding: '8px', textAlign: 'left' }}>{selectedItem.CantidadEmpl}</td>
+            </tr>
+            <tr>
+              <td style={{ padding: '8px', fontWeight: 'bold', textAlign: 'left' }}>Sueldo Empleado Adicional:</td>
+              <td style={{ padding: '8px', textAlign: 'right' }}>${new Intl.NumberFormat().format(selectedItem.SueldoEmplea)}</td>
+            </tr>
+            <tr>
+              <td style={{ padding: '8px', fontWeight: 'bold', textAlign: 'left' }}>Valor Sueldo Jefe:</td>
+              <td style={{ padding: '8px', textAlign: 'right' }}>${new Intl.NumberFormat().format(selectedItem.valorSueldoJ)}</td>
+            </tr>
+            <tr>
+              <td style={{ padding: '8px', fontWeight: 'bold', textAlign: 'left' }}>Bono Adicional:</td>
+              <td style={{ padding: '8px', textAlign: 'right' }}>${new Intl.NumberFormat().format(selectedItem.bonoAdi)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* Tabla de Otros Datos */}
+        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #ddd' }}>
+          <thead style={{ backgroundColor: '#cccccc' }}>
+            <tr>
+              <th colSpan={2} style={{ textAlign: 'left', fontWeight: 'bold' }}>Otros Datos</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={{ padding: '8px', fontWeight: 'bold', textAlign: 'left' }}>Contador:</td>
+              <td style={{ padding: '8px', textAlign: 'left' }}>{selectedItem.Contador}</td>
+            </tr>
+            <tr>
+              <td style={{ padding: '8px', fontWeight: 'bold', textAlign: 'left' }}>Publicidad:</td>
+              <td style={{ padding: '8px', textAlign: 'right' }}>${new Intl.NumberFormat().format(selectedItem.Publicidad)}</td>
+            </tr>
+            <tr>
+              <td style={{ padding: '8px', fontWeight: 'bold', textAlign: 'left' }}>Tramitadora SS:</td>
+              <td style={{ padding: '8px', textAlign: 'right' }}>${new Intl.NumberFormat().format(selectedItem.TramitadoraSS)}</td>
+            </tr>
+            <tr>
+              <td style={{ padding: '8px', fontWeight: 'bold', textAlign: 'left' }}>Plan Celular:</td>
+              <td style={{ padding: '8px', textAlign: 'right' }}>${new Intl.NumberFormat().format(selectedItem.PlanCelular)}</td>
+            </tr>
+            <tr>
+              <td style={{ padding: '8px', fontWeight: 'bold', textAlign: 'left' }}>Control IP Plag:</td>
+              <td style={{ padding: '8px', textAlign: 'right' }}>${new Intl.NumberFormat().format(selectedItem.ControlIPlag)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* Tabla de Total */}
+        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #ddd' }}>
+          <thead style={{ backgroundColor: '#cccccc' }}>
+            <tr>
+              <th style={{ textAlign: 'left', fontWeight: 'bold' }}>Total de Valores Calculados</th>
+              <th style={{ textAlign: 'right', fontWeight: 'bold' }}>
+                ${new Intl.NumberFormat().format(selectedItem.ValorTotalG)}
+              </th>
+            </tr>
+          </thead>
+        </table>          
+      </div>
+    )}
+  </ModalBody>
+  <ModalFooter style={{ display: 'flex', justifyContent: 'flex-end', padding: '0' }}>
+    <Button style={{ background: '#6d0f0f' }} onClick={toggleDetailModal}>
+      Cerrar
+    </Button>
+  </ModalFooter>
+</Modal>
       {/* Snackbar */}
       <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={closeSnackbar}>
         <Alert onClose={closeSnackbar} severity={snackbarSeverity}>
@@ -1215,6 +1053,4 @@ const ManoDeObra = () => {
     </Container>
   );
 };
-
-
 export default ManoDeObra

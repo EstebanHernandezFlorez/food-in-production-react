@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Table, Button, Container, Row, Col, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
 import { FaTrashAlt, FaEye } from 'react-icons/fa';
@@ -6,7 +7,7 @@ import { FiEdit } from "react-icons/fi";
 import { IoSearchOutline } from "react-icons/io5";
 import { PlusOutlined } from '@ant-design/icons';
 import { Snackbar, Alert } from '@mui/material';
-import { notification } from 'antd';
+import Swal from "sweetalert2";
 
 const initialData = [
   {id: 1, Nombre: "Carolina Guzman", Document: 16514416,FechaIni: "15-07-2020",ContactoEmerg: "319898119",Parentesco: "Madre",NombreFamiliar: "Carolina Zapata", GrupoSang: "O+",NumeroSS: 61515371,Direccion: "cl 76 j 12b 55",TipoContrato: "doble tiempo"},
@@ -24,7 +25,10 @@ const Empleados = () => {
   const [form, setForm] = useState({
     id: '',
     Nombre: '',
+    tipoDocument: '',
     Document: '',
+    Celular:'',
+    Correo:'',
     FechaIni: '',
     ContactoEmerg: '',
     Parentesco: '',
@@ -33,6 +37,7 @@ const Empleados = () => {
     NumeroSS: '',
     Direccion: '',
     TipoContrato: '',
+    Rol:'',
     Estado: true
   });
   const [isEditing, setIsEditing] = useState(false);
@@ -47,11 +52,14 @@ const Empleados = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const itemsPerPage = 7;
+  const itemsPerPage = 10;
   // States for validation
   const [formErrors, setFormErrors] = useState({
     Nombre: false,
+    tipoDocument: false,
     Document: false,
+    Celular: false,
+    Correo:false,
     FechaIni: false,
     ContactoEmerg: false,
     Parentesco: false,
@@ -59,7 +67,8 @@ const Empleados = () => {
     GrupoSang: false,
     NumeroSS: false,
     Direccion: false,
-    TipoContrato: false
+    TipoContrato: false,
+    Rol: false
   });
 
   const handleOk = () => {
@@ -73,7 +82,9 @@ const Empleados = () => {
   const handleCancel = () => {
     setModalOpen(false);
     setSelectedEmployee(null);
+    resetForm();
   };
+
 
   const openDeleteModal = (employee) => {
     setSelectedEmployee(employee);
@@ -109,7 +120,10 @@ const Empleados = () => {
   const validateForm = () => {
     const errors = {
       Nombre: !form.Nombre,
+      tipoDocument: !form.tipoDocument,
       Document: !form.Document,
+      Celular: !form.Celular,
+      Correo:!form.Correo,
       FechaIni: !form.FechaIni,
       ContactoEmerg: !form.ContactoEmerg,
       Parentesco: !form.Parentesco,
@@ -117,7 +131,8 @@ const Empleados = () => {
       GrupoSang: !form.GrupoSang,
       NumeroSS: !form.NumeroSS,
       Direccion: !form.Direccion,
-      TipoContrato: !form.TipoContrato
+      TipoContrato: !form.TipoContrato,
+      Rol: !form.Rol
     };
     setFormErrors(errors);
     return !Object.values(errors).includes(true);
@@ -132,7 +147,7 @@ const Empleados = () => {
       openSnackbar("Por favor, ingrese todos los campos", 'warning');
       return;
     }
-    const { Nombre, Document, FechaIni, ContactoEmerg, Parentesco, NombreFamiliar, GrupoSang,  NumeroSS, Direccion, TipoContrato } = form;
+    const { Nombre, tipoDocument, Document, Celular,Correo, FechaIni, ContactoEmerg, Parentesco, NombreFamiliar, GrupoSang,  NumeroSS, Direccion, TipoContrato, Rol } = form;
   
     const empleadoExistente = data.find(registro => registro.Document.toString() === Document.toString());
     if (empleadoExistente) {
@@ -149,7 +164,10 @@ const Empleados = () => {
     setForm({
       id: '',
       Nombre: '',
+      tipoDocument:'',
       Document: '',
+      Celular: '',
+      Correo:'',
       FechaIni: '',
       ContactoEmerg: '',
       Parentesco: '',
@@ -158,12 +176,13 @@ const Empleados = () => {
       NumeroSS: '',
       Direccion: '',
       TipoContrato: '',
+      Rol: '',
       Estado: true
     });
     setShowForm(false);
     openSnackbar("Empleado agregado exitosamente", 'success');
   };
-  const editar = () => {
+  const editar = async () => {
     if (!validateForm()) {
       openSnackbar("Por favor, ingrese todos los campos", 'warning');
       return;
@@ -183,29 +202,83 @@ const Empleados = () => {
       registro.id === form.id ? { ...form } : registro
     );
   
-    setData(updatedData);
-    setIsEditing(false);
-    setModalOpen(false); // Cierra el modal después de actualizar
-    openSnackbar("Empleado editado exitosamente", 'success');
+    const response = await Swal.fire({
+      title: "¿Desea editar el usuario?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Editar",
+      cancelButtonText: "Cancelar",
+    });
+
+    // Verifica si el usuario confirmó la acción antes de continuar
+    if (response.isConfirmed) {
+      setData(updatedData); // Actualiza los datos
+      setIsEditing(false); // Sale del modo de edición
+      setModalOpen(false); // Cierra el modal
+      openSnackbar("Usuario editado exitosamente", "success");
+    }
   };
 
-  const cambiarEstado = (id) => {
-    const updatedData = data.map((registro) => {
-      if (registro.id === id) {
-        registro.Estado = !registro.Estado;
-      }
-      return registro;
+  const cambiarEstado = async (id) => {
+    const response = await Swal.fire({
+      title: "¿Desea cambiar el estado del empleado?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Cambiar",
+      cancelButtonText: "Cancelar",
     });
-  
-    setData(updatedData);
-    openSnackbar("Estado del empleado actualizado exitosamente", 'success');
+    if (response.isConfirmed) {
+      const updatedData = data.map((registro) => {
+        if (registro.id === id) {
+          registro.Estado = !registro.Estado;
+        }
+        return registro;
+      });
+
+      setData(updatedData);
+      openSnackbar("Estado del empleado actualizado exitosamente", "success");
+    }
   };
+
+  const eliminar = async (dato) => {
+    const response = await Swal.fire({
+      title: "¿Desea eliminar el empleado?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Eliminar",
+      cancelButtonText: "Cancelar",
+    });
+    if (response.isConfirmed) {
+      const updatedData = data.filter((registro) => registro.id !== dato.id);
+      setData(updatedData);
+      openSnackbar("Empleado eliminado exitosamente", "success");
+    }
+  };
+
+  const tiposDocumento = [
+    { value: "CC", label: "Cédula de Ciudadanía" },
+    { value: "CE", label: "Cédula de Extranjería" },
+    { value: "PA", label: "Pasaporte" },
+    { value: "PEP", label: "Permiso Especial de Permanencia" },
+  ];
+  const roles = [
+    { id_role: 1, name: "Administrador", state: true },
+    { id_role: 2, name: "Jefe de cocina", state: true },
+    { id_role: 3, name: "Auxiliar de cocina", state: true },
+  ];
   
   const filteredData = data.filter(item =>
     item.Nombre.toLowerCase().includes(tableSearchText) ||
     item.Document.toString().includes(tableSearchText) ||
     item.FechaIni.toLowerCase().includes(tableSearchText) ||
-    item.NumeroSS.toString().includes(tableSearchText)
+    item.NumeroSS.toString().includes(tableSearchText) ||
+    item.Rol.toString().includes(tableSearchText)
   );
   
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -222,6 +295,7 @@ const Empleados = () => {
     setSelectedItem(item);
     toggleDetailModal();
   };
+
   return (
     <Container>
       <br />
@@ -252,8 +326,6 @@ const Empleados = () => {
                 <th>Nombre</th>
                 <th>Documento</th>
                 <th>Fecha de Ingreso</th>
-                <th>Grupo Sanguíneo</th>
-                <th>Numero de SS</th>
                 <th>Dirección</th>
                 <th>Tipo de Contrato</th>
                 <th>Estado</th>
@@ -261,6 +333,7 @@ const Empleados = () => {
               </tr>
             </thead>
             <tbody>
+              
               {currentItems.length > 0 ? (
                 currentItems.map((item) => (
                   <tr key={item.id}>
@@ -268,8 +341,6 @@ const Empleados = () => {
                     <td>{item.Nombre}</td>
                     <td >{item.Document}</td>
                     <td style={{ textAlign: 'center' }}>{item.FechaIni}</td>
-                    <td style={{ textAlign: 'center' }}>{item.GrupoSang}</td>
-                    <td style={{ textAlign: 'center' }}>{item.NumeroSS}</td>
                     <td style={{ textAlign: 'center' }}>{item.Direccion}</td>
                     <td style={{ textAlign: 'center' }}>{item.TipoContrato}</td>
                     <td>
@@ -293,7 +364,7 @@ const Empleados = () => {
                         </Button>
                         <Button 
                           color="danger" 
-                          onClick={() => openDeleteModal(item)}
+                          onClick={() => eliminar(item)}
                           className="btn-sm" // Usa btn-sm para botones más pequeños
                           style={{ padding: '0.25rem 0.5rem' }} // Ajusta el relleno si es necesario
                         >
@@ -343,18 +414,8 @@ const Empleados = () => {
       {/* Formulario de inserción */}
       {showForm && (
         <div>
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <h2 className="text-star">{isEditing ? 'Editar Empleado' : 'Agregar Empleado'}</h2>
-            <div className="d-flex align-items-center">
-              <Input
-                type="text"
-                placeholder="Buscar documento de usuario"
-                value={tableSearchText}
-                onChange={handleTableSearch}
-                style={{ width: '60vh', marginRight: '8px', border: '2px solid #353535' }} // Ajustar ancho y margen según sea necesario
-              />
-              <IoSearchOutline size={24} />
-            </div>
+          <div className="d-flex justify-content-center align-items-center mb-3">
+            <h2 className="text-end">{isEditing ? 'Editar Empleado' : 'Agregar Empleado'}</h2>
           </div>
           <br />
           <Row>
@@ -374,9 +435,68 @@ const Empleados = () => {
                 />
                 {formErrors.Nombre && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
+              <FormGroup>
+                <label style={{ fontSize: '15px', padding: '5px' }}>
+                  Celular
+                </label>
+                <Input
+                  type="Number"
+                  name="Celular"
+                  value={form.Celular}
+                  onChange={handleChange}
+                  placeholder="Celular del Empleado"
+                  style={{ border: '2px solid black' }} // Borde negro
+                  className={`form-control ${formErrors.Celular ? 'is-invalid' : ''}`}
+                />
+                {formErrors.Celular && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+              </FormGroup>
             </Col>
             <Col md={4}>
-              <FormGroup>
+            <FormGroup>
+                  <label style={{ fontSize: "15px", padding: "5px" }}>
+                    Tipo Documento
+                  </label>
+                  <Input
+                    type="select" // Cambiado a "select"
+                    name="TipoDocumento"
+                    value={form.tipoDocument}
+                    onChange={handleChange}
+                    className={`form-control ${
+                      formErrors.tipoDocument ? "is-invalid" : ""
+                    }`}
+                  >
+                    <option value="">Seleccione un tipo de documento</option>
+                    {tiposDocumento.map((tipo) => (
+                      <option key={tipo.value} value={tipo.value}>
+                        {tipo.label}
+                      </option>
+                    ))}
+                  </Input>
+                  {formErrors.TipoDocumento && (
+                    <div className="invalid-feedback">
+                      Este campo es obligatorio.
+                    </div>
+                  )}
+                </FormGroup>
+                <FormGroup>
+                <label style={{ fontSize: '15px', padding: '5px' }}>
+                  Correo
+                </label>
+                <Input
+                  type="email"
+                  name="Correo"
+                  value={form.Correo}
+                  onChange={handleChange}
+                  placeholder="Correo del Empleado"
+                  style={{ border: '2px solid black' }} // Borde negro
+                  className={`form-control ${formErrors.Correo ? 'is-invalid' : ''}`}
+                />
+                {formErrors.Correo && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+              </FormGroup>
+              
+            </Col>
+            <Col md={4}>
+            <FormGroup>
                 <label style={{ fontSize: '15px', padding: '5px' }}>Documento</label>
                 <Input
                   type="text"
@@ -389,8 +509,6 @@ const Empleados = () => {
                 />
                 {formErrors.Document && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
-            </Col>
-            <Col md={4}>
               <FormGroup>
                 <label style={{ fontSize: '15px', padding: '5px' }}>Fecha de Ingreso</label>
                 <Input
@@ -483,6 +601,30 @@ const Empleados = () => {
                 />
                 {formErrors.NumeroSS && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
+              <FormGroup>
+                <label style={{ fontSize: "15px", padding: "5px" }}>Rol</label>
+                <Input
+                  type="select" // Cambiado a "select"
+                  name="Rol"
+                  value={form.Rol}
+                  onChange={handleChange}
+                  className={`form-control ${
+                    formErrors.Rol ? "is-invalid" : ""
+                  }`}
+                >
+                  <option value="">Seleccione un rol</option>
+                  {roles.map((role) => (
+                    <option key={role.id_role} value={role.id_role}>
+                      {role.name}
+                    </option>
+                  ))}
+                </Input>
+                {formErrors.Rol && (
+                  <div className="invalid-feedback">
+                    Este campo es obligatorio.
+                  </div>
+                )}
+              </FormGroup>
             </Col>
             <Col md={4}>
               <FormGroup>
@@ -515,6 +657,7 @@ const Empleados = () => {
                 />
                 {formErrors.TipoContrato && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
+              
             </Col>
           </Row>
         <div className="d-flex justify-content-start mt-3">
@@ -690,23 +833,6 @@ const Empleados = () => {
               {isEditing ? 'Actualizar' : 'Guardar'}
             </Button>
           <Button style={{ background: '#6d0f0f' }} onClick={handleCancel}>
-            Cancelar
-          </Button>
-        </ModalFooter>
-      </Modal>
-
-      <Modal isOpen={isDeleteModalOpen} toggle={handleDeleteModalClose}>
-        <ModalHeader toggle={handleDeleteModalClose}>
-          Confirmar Eliminación
-        </ModalHeader>
-        <ModalBody>
-          ¿Está seguro de que desea eliminar al empleado seleccionado <strong>{selectedEmployee?.Nombre}</strong>?
-        </ModalBody>
-        <ModalFooter>
-          <Button style={{ background: '#6d0f0f' }} onClick={handleOk}>
-            Eliminar
-          </Button>
-          <Button style={{ background: '#2e8322' }} onClick={handleDeleteModalClose}>
             Cancelar
           </Button>
         </ModalFooter>
