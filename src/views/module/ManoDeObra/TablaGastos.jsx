@@ -3,7 +3,8 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { Table, Button, Container, FormGroup, Input, Modal, ModalHeader, ModalBody } from 'reactstrap';
 import { FaEye } from 'react-icons/fa';
 import { PlusCircleOutlined, SelectOutlined, EditOutlined, TeamOutlined } from '@ant-design/icons';
-import { Snackbar, Alert } from '@mui/material';
+import { Snackbar, Alert } from "@mui/material";
+import Swal from "sweetalert2";
 import { FiEdit } from "react-icons/fi";
 import FondoIcono from '../../../assets/logoFIP.png';
 import { useNavigate } from 'react-router-dom';
@@ -161,13 +162,16 @@ const TablaGastos = () => {
     return !Object.values(errors).includes(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Verifica si el formulario es válido
     if (!validateForm()) {
       openSnackbar("Por favor, ingrese todos los campos correctamente", 'warning');
       return;
     }
   
+    // Prepara el nuevo ítem
     const newItem = { 
       ...form, 
       opciones: form.options,
@@ -175,14 +179,31 @@ const TablaGastos = () => {
     };
   
     if (isEditing) {
-      setData(data.map(item => item.id === form.id ? newItem : item));
-      openSnackbar("Registro actualizado exitosamente", 'success');
+      // Muestra el modal de confirmación de edición
+      const response = await Swal.fire({
+        title: "¿Desea editar el usuario?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Editar",
+        cancelButtonText: "Cancelar",
+      });
+  
+      // Verifica si el usuario confirmó la acción
+      if (response.isConfirmed) {
+        setData(data.map(item => item.id === form.id ? newItem : item));
+        openSnackbar("Registro actualizado exitosamente", 'success');
+      }
     } else {
+      // Agregar nuevo ítem si no está en modo de edición
       setData([...data, newItem]);
       openSnackbar("Registro creado exitosamente", 'success');
     }
+    
     handleCloseModal();
   };
+  
 
   const openSnackbar = (message, severity) => {
     setSnackbarMessage(message);
@@ -194,16 +215,27 @@ const TablaGastos = () => {
     setSnackbarOpen(false);
   };
 
-  const cambiarEstado = (id) => {
-    const updatedData = data.map((registro) => {
-      if (registro.id === id) {
-        registro.Estado = !registro.Estado;
-      }
-      return registro;
+  const cambiarEstado = async (id) => {
+    const response = await Swal.fire({
+      title: "¿Desea cambiar el estado del tipo de gasto?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Cambiar",
+      cancelButtonText: "Cancelar",
     });
-  
-    setData(updatedData);
-    openSnackbar("Estado del gasto mensual actualizado exitosamente", 'success');
+    if (response.isConfirmed) {
+      const updatedData = data.map((registro) => {
+        if (registro.id === id) {
+          registro.Estado = !registro.Estado;
+        }
+        return registro;
+      });
+
+      setData(updatedData);
+      openSnackbar("Estado del tipo de gasto actualizado exitosamente", "success");
+    }
   };
 
   const filteredData = data.filter(item =>

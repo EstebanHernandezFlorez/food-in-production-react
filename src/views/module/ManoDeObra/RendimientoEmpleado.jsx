@@ -6,6 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'rec
 import { IoSearchOutline } from "react-icons/io5";
 import { useNavigate } from 'react-router-dom';
 
+
 const RendimientoEmpleado = () => {
     const [startDate, setStartDate] = useState(null);
     const [endDate, setEndDate] = useState(null);
@@ -253,9 +254,8 @@ const RendimientoEmpleado = () => {
             <p>{modalMessage}</p>
           </ModalBody>
           <ModalFooter>
-            <Button color="primary" onClick={handleOk}>Sí</Button>
-            <Button color="secondary" onClick={handleCancel}>No</Button>
-            <Button color="secondary" onClick={handleBack}>Volver</Button>
+            <Button color="primary" onClick={handleOk}>Aceptar</Button>
+            <Button color="secondary" onClick={handleCancel}>Cancelar</Button>
           </ModalFooter>
         </Modal>
         <Button onClick={handleClick}>
