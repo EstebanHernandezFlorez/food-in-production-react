@@ -126,9 +126,6 @@ const MenuList = ({ darkTheme }) => {
           title="Reservas"
           style={subMenuStyle} // Estilo aplicado al SubMenu
         >
-          <Menu.Item key="Calendario" style={submenuStyle}>
-            <Link to="/Calendario" style={itemStyle}>Calendario</Link>
-          </Menu.Item>
           <Menu.Item key="clientes" style={submenuStyle}>
             <Link to="/clientes" style={submenuStyle}>Clientes</Link>
           </Menu.Item>
