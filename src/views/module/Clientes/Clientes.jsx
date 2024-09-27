@@ -1,67 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState,  } from "react"; 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Table, Button, Container, Row, Col, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
-import { FaEdit, FaTrashAlt } from 'react-icons/fa';
-import PropTypes from 'prop-types';
+import { FaEdit, FaTrashAlt } from 'react-icons/fa'; 
+import PropTypes from 'prop-types'; 
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
-import axios from 'axios';
 
-// const initialData = [
-//   { id: 1, NombreCompleto: "Juan Pérez", Distintivo: "7867", CategoriaCliente: "regular", Celular: "3123456789", Correo: "juan.perez@example.com", Direccion: "Cl 76 j 12b 55", Estado: true },
-//   { id: 2, NombreCompleto: "Ana Torres", Distintivo: "7576", CategoriaCliente: "familiar", Celular: "3109876543", Correo: "ana.torres@example.com", Direccion: "Av. El Dorado 92-45", Estado: true },
-// ];
+
+const initialData = [
+  { id: 1, NombreCompleto: "Juan Pérez", Distintivo: "7867", CategoriaCliente: "regular", Celular: "3123456789", Correo: "juan.perez@example.com", Direccion: "Cl 76 j 12b 55", Estado: true },
+  { id: 2, NombreCompleto: "Ana Torres", Distintivo: "7576", CategoriaCliente: "familiar", Celular: "3109876543", Correo: "ana.torres@example.com", Direccion: "Av. El Dorado 92-45", Estado: true },
+];
 
 const Clientes = () => {
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectCustomer, setSelectCustomer] = useState(null);
-  const [customers, setCustomers] = useState([]);
-  const [newCustomer, setNewCustomer] = useState({
-    id: '',
-    NombreCompleto: '',
-    Distintivo: '',
-    CategoriaCliente: '',
-    Celular: '',
-    Correo: '',
-    Direccion: '',
-    Estado: true
-  });
-  const [filteredCustomers, setFiltersCustomers] = useState(customers);
-  const [searchTerm, setSearchTerm] = useState('');
-  // useEffect(() => {
-  //   fetch('http://localhost:3000/customers')
-  //     .then(response => response.json())
-  //     .then(data => setClientes(data))
-  //     .catch(error => console.error('Error al obtener clientes:', error));
-  // }, []);
 
-  // const handleChange = (e) => {
-  //   const { name, value } = e.target;
-  //   setFormData({
-  //     ...formData,
-  //     [name]: value
-  //   });
-  // };
-
-  // const handleSubmit = (e) => {
-  //   e.preventDefault();
-  //   fetch('http://localhost:3000/customers', {
-  //     method: 'POST',
-  //     headers: {
-  //       'Content-Type': 'application/json',
-  //     },
-  //     body: JSON.stringify(formData),
-  //   })
-  //     .then(response => response.json())
-  //     .then(data => {
-  //       console.log('Cliente agregado:', data);
-  //     })
-  //     .catch(error => console.error('Error al agregar cliente:', error));
-  // };
-
-  const [data, setData] = useState([]);
+  const [data, setData] = useState(initialData);
   const [form, setForm] = useState({
     id: '',
     NombreCompleto: '',
@@ -92,26 +45,12 @@ const Clientes = () => {
     setSearchText(e.target.value.toLowerCase());
   };
 
-  useEffect(() => {
-    fetchData();
-  });
-
-  const fetchData = async () => {
-    try {
-      const response = await axios.get('http://localhost:3000/customers');
-      console.log(response.data);
-      setData(response.data);
-    } catch (error) {
-      console.error('Error al obtener clientes:', error);
-    }
-  };
-
   const validateField = (name, value) => {
     switch (name) {
       case 'NombreCompleto':
         return /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value) ? '' : 'Nombre Completo solo debe contener letras y espacios.';
       case 'Distintivo':
-        return /^\d+$/.test(value) ? '' : 'Distintivo solo debe contener números.';
+        return /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value) ? '' : 'Distintivo solo debe contener letras.';
       case 'CategoriaCliente':
         return /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value) ? '' : 'Categoría Cliente solo debe contener letras y espacios.';
       case 'Celular':
@@ -172,7 +111,7 @@ const Clientes = () => {
     }
 
     const { Distintivo } = form;
-    const clienteExistente = data.find(registro => registro.Distintivo == Distintivo);
+    const clienteExistente = data.find(registro => registro.Distintivo === Distintivo);
     if (clienteExistente) {
       showAlert("El cliente ya existe. Por favor, ingrese un distintivo diferente.", 'error');
       return;
@@ -193,7 +132,6 @@ const Clientes = () => {
         ...form,
         id: data.length ? Math.max(...data.map(cli => cli.id)) + 1 : 1
       };
-      await axios.post('http://localhost:3000/customers', nuevoCliente);
 
       setData([...data, nuevoCliente]);
 
@@ -218,9 +156,9 @@ const Clientes = () => {
       return;
     }
 
-    const { Distintivo, _id } = form;
+    const { Distintivo, id } = form;
     const clienteExistente = data.find(
-      (registro) => registro.Distintivo === Distintivo && registro._id !== _id
+      (registro) => registro.Distintivo === Distintivo && registro.id !== id
     );
     if (clienteExistente) {
       showAlert("Ya existe un cliente con el mismo distintivo. Por favor, ingresa un distintivo diferente.", 'error');
@@ -238,10 +176,10 @@ const Clientes = () => {
     });
 
     if (result.isConfirmed) {
-      await axios.put(`http://localhost:3000/customers/${_id}`, form);
       const updatedData = data.map((registro) =>
-        registro._id === _id ? { ...form } : registro
+        registro.id === id ? { ...form } : registro
       );
+
       setData(updatedData);
       setIsEditing(false);
       setModalOpen(false);
@@ -252,7 +190,7 @@ const Clientes = () => {
   const handleDelete = async (dato) => {
     const result = await Swal.fire({
       title: '¿Está seguro?',
-      text: (`¿Desea eliminar el cliente "${dato.NombreCompleto}"?`),
+      text: `¿Desea eliminar el cliente "${dato.NombreCompleto}"?`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
@@ -262,20 +200,19 @@ const Clientes = () => {
     });
 
     if (result.isConfirmed) {
-      const updatedData = data.filter(registro => registro._id !== dato._id);
-      await axios.delete(`http://localhost:3000/customers/${dato._id}`);
-      setData(updatedData)
+      const updatedData = data.filter(registro => registro.id !== dato.id);
+      setData(updatedData);
       showAlert("Cliente eliminado exitosamente", 'success');
     }
   };
 
   const cambiarEstado = async (id) => {
-    const cliente = data.find(c => c._id === id);
-    const nuevoEstado = { ...cliente, Estado: !cliente.Estado };
+    const cliente = data.find(c => c.id === id);
+    const nuevoEstado = !cliente.Estado;
 
     const result = await Swal.fire({
       title: "¿Desea cambiar el estado del cliente?",
-      text: (`El cliente "${cliente.NombreCompleto}" pasará de ${cliente.Estado ? 'Activo' : 'Inactivo'} a ${nuevoEstado ? 'Activo' : 'Inactivo'}`),
+      text: `El cliente "${cliente.NombreCompleto}" pasará de ${cliente.Estado ? 'Activo' : 'Inactivo'} a ${nuevoEstado ? 'Activo' : 'Inactivo'}`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#3085d6",
@@ -285,20 +222,15 @@ const Clientes = () => {
     });
 
     if (result.isConfirmed) {
-      try {
-        await axios.put(`http://localhost:3000/customers/${id}`, nuevoEstado);
-        const updatedData = data.map((registro) => {
-          if (registro._id === id) {
-            return { ...registro, Estado: nuevoEstado };
-          }
-          return registro;
-        });
-        setData(updatedData);
-        showAlert(`Estado del cliente actualizado`, 'success');
-      } catch (error) {
-        console.error('Error al cambiar el estado del cliente:', error);
-        showAlert('Error al cambiar el estado del cliente', error);
-      }
+      const updatedData = data.map((registro) => {
+        if (registro.id === id) {
+          return { ...registro, Estado: nuevoEstado };
+        }
+        return registro;
+      });
+
+      setData(updatedData);
+      showAlert(`Estado del cliente actualizado a ${nuevoEstado ? 'Activo' : 'Inactivo'}`, 'success');
     }
   };
 
@@ -358,7 +290,7 @@ const Clientes = () => {
             <tbody className="text-center">
               {currentItems.length > 0 ? (
                 currentItems.map((dato) => (
-                  <tr key={dato._id}>
+                  <tr key={dato.id}>
                     <td>{dato.id}</td>
                     <td>{dato.NombreCompleto}</td>
                     <td>{dato.Distintivo}</td>
@@ -373,7 +305,7 @@ const Clientes = () => {
                           borderColor: dato.Estado ? '#2e8322' : '#8d0f0f',
                           color: '#fff'
                         }}
-                        onClick={() => cambiarEstado(dato._id)}
+                        onClick={() => cambiarEstado(dato.id)}
                       >
                         {dato.Estado ? "Activo" : "Inactivo"}
                       </Button>
@@ -382,7 +314,7 @@ const Clientes = () => {
                       <Button style={{ background: '#1a1918', marginRight: '5px' }} onClick={() => { setForm(dato); setIsEditing(true); setModalOpen(true); }}>
                         <FaEdit />
                       </Button>
-                      <Button style={{ background: '#8d0f0f' }} onClick={() => handleDelete(dato)}>
+                      <Button style={{background:'#8d0f0f'}} onClick={() => handleDelete(dato)}>
                         <FaTrashAlt />
                       </Button>
                     </td>
@@ -418,7 +350,7 @@ const Clientes = () => {
         <Row>
           <Col md={12}>
             <h2>{isEditing ? 'Editar Cliente' : 'Agregar Cliente'}</h2>
-
+            
             <br />
             <FormGroup>
               <Row>
@@ -446,7 +378,7 @@ const Clientes = () => {
                     placeholder="Distintivo"
                     invalid={!!errors.Distintivo}
                   />
-                  {errors.Distintivo && <span className="text-danger">{errors.Distintivo}</span>}
+                  {errors.Distintivo &&  <span className="text-danger">{errors.Distintivo}</span>}
                 </Col>
               </Row>
               <Row>
@@ -461,11 +393,11 @@ const Clientes = () => {
                     placeholder="Categoría Cliente"
                     invalid={!!errors.CategoriaCliente}
                   >
-                  <option value="VIP">VIP</option>
-                  <option value="Frecuente">Frecuente</option>
-                  <option value="Regular">Regular</option>
-                  <option value="Nuevo">Nuevo</option>
-                  
+                  <option value="">Seleccione una categoría</option>
+                  <option value="Familiar">Familiar</option>
+                  <option value="Empresarial">Empresarial</option>
+                  <option value="Preferencial">Preferencial</option>
+                  <option value="Frecuente">Nuevo</option>
                 </Input>
                   {errors.CategoriaCliente && <span className="text-danger">{errors.CategoriaCliente}</span>}
                 </Col>
@@ -519,7 +451,7 @@ const Clientes = () => {
                 <Button style={{ background: '#2e8329', marginRight: '10px' }} onClick={handleSubmit}>
                   Guardar
                 </Button>
-                <Button style={{ background: '#6d0f0f' }} onClick={() => setShowForm(false)}>
+                <Button style={{background:'#6d0f0f'}} onClick={() => setShowForm(false)}>
                   Cancelar
                 </Button>
               </div>
@@ -530,15 +462,15 @@ const Clientes = () => {
 
       {/* Modal para edición del cliente */}
       <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)}>
-        <ModalHeader style={{ background: '#6d0f0f' }} toggle={() => setModalOpen(!modalOpen)}>
-          <h3 className="text-white"> Editar cliente</h3>
+        <ModalHeader style={{background:'#6d0f0f'}} toggle={() => setModalOpen(!modalOpen)}>
+        <h3 className="text-white"> Editar cliente</h3>
         </ModalHeader>
         <ModalBody>
           <FormGroup>
-            <label ><b>Nombre Completo:</b></label>
-            <br />
+          <label ><b>Nombre Completo:</b></label>
+          <br />
             <Input
-              style={{ border: '2px solid #000000' }}
+            style={{ border: '2px solid #000000' }}
               type="text"
               name="NombreCompleto"
               value={form.NombreCompleto}
@@ -551,7 +483,7 @@ const Clientes = () => {
             <label ><b>Distintivo:</b></label>
             <br />
             <Input
-              style={{ border: '2px solid #000000' }}
+            style={{ border: '2px solid #000000' }}
               type="text"
               name="Distintivo"
               value={form.Distintivo}
@@ -564,25 +496,20 @@ const Clientes = () => {
             <label ><b>Categoria cliente:</b></label>
             <br />
             <Input
-              style={{ border: '2px solid #000000' }}
-              type="select"
+            style={{ border: '2px solid #000000' }}
+              type="text"
               name="CategoriaCliente"
               value={form.CategoriaCliente}
               onChange={handleChange}
               placeholder="Categoría Cliente"
               invalid={!!errors.CategoriaCliente}
-            >
-                  <option value="VIP">VIP</option>
-                  <option value="Frecuente">Frecuente</option>
-                  <option value="Regular">Regular</option>
-                  <option value="Nuevo">Nuevo</option>
-                </Input>
+            />
             {errors.CategoriaCliente && <span className="text-danger">{errors.CategoriaCliente}</span>}
             <br />
             <label ><b>Celular:</b></label>
             <br />
             <Input
-              style={{ border: '2px solid #000000' }}
+            style={{ border: '2px solid #000000' }}
               type="text"
               name="Celular"
               value={form.Celular}
@@ -595,7 +522,7 @@ const Clientes = () => {
             <label ><b>Correo:</b></label>
             <br />
             <Input
-              style={{ border: '2px solid #000000' }}
+            style={{ border: '2px solid #000000' }}
               type="email"
               name="Correo"
               value={form.Correo}
@@ -608,7 +535,7 @@ const Clientes = () => {
             <label ><b>Dirección:</b></label>
             <br />
             <Input
-              style={{ border: '2px solid #000000' }}
+            style={{ border: '2px solid #000000' }}
               type="text"
               name="Direccion"
               value={form.Direccion}
@@ -621,7 +548,7 @@ const Clientes = () => {
         </ModalBody>
         <ModalFooter>
           <Button style={{ background: '#2e8329' }} onClick={editar}>Guardar </Button>{' '}
-          <Button style={{ background: '#6d0f0f' }} onClick={() => setModalOpen(!modalOpen)}>Cancelar</Button>
+          <Button style={{background:'#6d0f0f'}} onClick={() => setModalOpen(!modalOpen)}>Cancelar</Button>
         </ModalFooter>
       </Modal>
     </Container>

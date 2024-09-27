@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import  { useEffect, useState } from "react";
 import { Container, Button, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter, Row, Col, Label, InputGroup, InputGroupText } from 'reactstrap';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -263,7 +263,7 @@ export default function Calendario() {
       case 'nombre':
         return value.trim() && /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value) ? '' : 'El nombre es requerido y solo debe contener letras.';
       case 'distintivo':
-        return /^\d+$/.test(value) ? '' : 'Distintivo es requerido y solo debe contener números.';
+        return value.trim() && /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value) ? '' : 'Distintivo es requerido y solo debe  contener letras.';
       case 'categoriaCliente':
         return value.trim() ? '' : 'Categoría Cliente es requerida.';
       case 'celular':
@@ -553,10 +553,10 @@ export default function Calendario() {
                   invalid={!!errors.categoriaCliente}
                 >
                   <option value="">Seleccione una categoría</option>
-                  <option value="VIP">VIP</option>
-                  <option value="Frecuente">Frecuente</option>
-                  <option value="Regular">Regular</option>
-                  <option value="Nuevo">Nuevo</option>
+                  <option value="Familiar">Familiar</option>
+                  <option value="Empresarial">Empresarial</option>
+                  <option value="Preferencial">Preferencial</option>
+                  <option value="Frecuente">Nuevo</option>
                 </Input>
                 {errors.categoriaCliente && <span className="text-danger">{errors.categoriaCliente}</span>}
               </Col>
@@ -710,9 +710,6 @@ export default function Calendario() {
                 >
                   <option value="">Seleccione un servicio</option>
                   <option value="Decoracion">Decoración</option>
-                  <option value="DJ">DJ</option>
-                  <option value="Catering">Catering</option>
-                  <option value="Fotografia">Fotografía</option>
                 </Input>
                 {errors.servicios && <span className="text-danger">{errors.servicios}</span>}
               </Col>
@@ -757,7 +754,7 @@ export default function Calendario() {
                       />
                     </Col>
                     <Col md={2}>
-                      <Button color="danger" onClick={() => removeAbono(index)}>
+                      <Button style={{background:'#6d0f0f'}} onClick={() => removeAbono(index)}>
                         <FaTrash />
                       </Button>
                     </Col>
@@ -767,7 +764,7 @@ export default function Calendario() {
                 {form.abonos.map((_, index) => (
                   errors[`abono${index}`] && <span key={index} className="text-danger d-block">{errors[`abono${index}`]}</span>
                 ))}
-                <Button color="primary" onClick={addAbono}>Agregar Abono</Button>
+                <Button style={{background:'#7ea9d1'}} onClick={addAbono} >+</Button>
               </Col>
             </Row>
             <Row className="mt-3">
