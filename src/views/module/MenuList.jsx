@@ -101,22 +101,22 @@ const MenuList = ({ darkTheme }) => {
           style={subMenuStyle} // Estilo aplicado al SubMenu
         >
           <Menu.Item key="produccion" style={submenuStyle}>
-            <Link to="/produccion" style={submenuStyle}>Producción</Link>
+            <Link to="/proveedores" style={submenuStyle}>Proveedores</Link> 
           </Menu.Item>
           <Menu.Item key="orden_produccion" style={submenuStyle}>
-            <Link to="/orden_produccion" style={submenuStyle}>Orden de Producción</Link>
-          </Menu.Item>
-          <Menu.Item key="producto_insumo" style={submenuStyle}>
-            <Link to="/producto_insumo" style={submenuStyle}>Producto Insumo</Link>
-          </Menu.Item>
-          <Menu.Item key="insumo" style={submenuStyle}>
-            <Link to="/insumo" style={submenuStyle}>Insumo</Link>
-          </Menu.Item>
-          <Menu.Item key="empleados" style={submenuStyle}>
             <Link to="/empleados" style={submenuStyle}>Empleados</Link>
           </Menu.Item>
+          <Menu.Item key="producto_insumo" style={submenuStyle}>
+            <Link to="/insumo" style={submenuStyle}>Insumo</Link>
+          </Menu.Item>
+          <Menu.Item key="insumo" style={submenuStyle}>
+            <Link to="/producto_insumo" style={submenuStyle}>Producto Insumo</Link>
+          </Menu.Item>
+          <Menu.Item key="empleados" style={submenuStyle}>
+          <Link to="/orden_produccion" style={submenuStyle}>Orden de Producción</Link>
+          </Menu.Item>
           <Menu.Item key="proveedores" style={submenuStyle}>
-            <Link to="/proveedores" style={submenuStyle}>Proveedores</Link>
+          <Link to="/produccion" style={submenuStyle}>Producción</Link>
           </Menu.Item>
         </Menu.SubMenu>
         <Menu.SubMenu
