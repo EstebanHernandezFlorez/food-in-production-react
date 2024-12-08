@@ -24,6 +24,7 @@
     "axios": "^1.7.7",
     "bootstrap": "^5.3.3",
     "calendar": "^0.1.1",
+    "cors": "^2.8.5",
     "date-fns": "^3.6.0",
     "full": "^1.0.1",
     "heroicons": "^2.1.5",
