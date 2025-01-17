@@ -1,11 +1,12 @@
 import  { useEffect, useState } from "react";
-import { Container, Button, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter, Row, Col, Label } from 'reactstrap';
+import { Container, Button, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter, Row, Col, Label, InputGroup, InputGroupText } from 'reactstrap';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from "@fullcalendar/interaction";
 import { utils, writeFile } from "xlsx";
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
+import { FaSearch, FaTrash, FaFileExcel } from 'react-icons/fa';
 
 const initialReservas = [
   {
@@ -15,7 +16,7 @@ const initialReservas = [
     categoriaCliente: "Privado",
     correo: "juan.maria@example.com",
     celular: "1234567890",
-    direccion: "Calle Falsa 123",
+    direccion: "Cl 76 j 12b 55",
     evento: "Boda",
     fechaHora: "2024-09-01T18:00",
     cantidadMesas: "15",
@@ -24,10 +25,10 @@ const initialReservas = [
     nroPersonas: "150",
     observaciones: "Decoración elegante",
     servicios: "DJ, Fotografía",
-    montoDecoracion: "200",
-    abono: "500",
-    totalPago: "1500",
-    restante: "1000",
+    montoDecoracion: "200000",
+    abonos: [{ fecha: "2024-08-01", cantidad: "500000" }],
+    totalPago: "1500000",
+    restante: "1000000",
     formaPago: "Tarjeta",
     estado: "terminada"
   },
@@ -47,49 +48,69 @@ const initialReservas = [
     nroPersonas: "200",
     observaciones: "Requiere equipo audiovisual",
     servicios: "Catering, Audio",
-    montoDecoracion: "300",
-    abono: "700",
-    totalPago: "2000",
-    restante: "1300",
+    montoDecoracion: "300000",
+    abonos: [{ fecha: "2024-08-15", cantidad: "700000" }],
+    totalPago: "2000000",
+    restante: "1300000",
     formaPago: "Transferencia",
     estado: "confirmada"
   }
 ];
+
+const mockClientes = [
+  { id: 1, nombre: "Juan Pérez", distintivo: "7867", categoriaCliente: "VIP", correo: "juan@example.com", celular: "1234567890", direccion: "Calle 123" },
+  { id: 2, nombre: "María López", distintivo: "7576", categoriaCliente: "Regular", correo: "maria@example.com", celular: "0987654321", direccion: "Avenida 456" },
+];
+
+const emptyForm = {
+  id: '',
+  nombre: '',
+  distintivo: '',
+  categoriaCliente: '',
+  correo: '',
+  celular: '',
+  direccion: '',
+  evento: '',
+  fechaHora: '',
+  cantidadMesas: '',
+  duracionEvento: '',
+  tipoEvento: '',
+  nroPersonas: '',
+  observaciones: '',
+  servicios: '',
+  montoDecoracion: '',
+  abonos: [],
+  totalPago: '',
+  restante: '',
+  formaPago: '',
+  estado: 'pendiente'
+};
 
 export default function Calendario() {
   const [data, setData] = useState(initialReservas);
   const [selectedReserva, setSelectedReserva] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
-  const [form, setForm] = useState({
-    id: '',
-    nombre: '',
-    distintivo: '',
-    categoriaCliente: '',
-    correo: '',
-    celular: '',
-    direccion: '',
-    evento: '',
-    fechaHora: '',
-    cantidadMesas: '',
-    duracionEvento: '',
-    tipoEvento: '',
-    nroPersonas: '',
-    observaciones: '',
-    servicios: '',
-    montoDecoracion: '',
-    abono: '',
-    totalPago: '',
-    restante: '',
-    formaPago: '',
-    estado: 'pendiente'
-  });
+  const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState({});
+  const [searchText, setSearchText] = useState('');
+  const [clientSearchText, setClientSearchText] = useState('');
+  const [clientSearchResults, setClientSearchResults] = useState([]);
+  const [showClientSearch, setShowClientSearch] = useState(false);
 
   const handleDateClick = (arg) => {
+    if (new Date(arg.dateStr) < new Date()) {
+      Swal.fire({
+        title: "Error",
+        text: "No se pueden crear reservas en fechas pasadas.",
+        icon: "error",
+        confirmButtonColor: '#3085d6',
+      });
+      return;
+    }
     setSelectedDate(arg.dateStr);
     setSelectedReserva(null);
-    setForm({...form, fechaHora: arg.dateStr + 'T00:00'});
+    setForm({...emptyForm, fechaHora: arg.dateStr + 'T00:00'});
     setModalOpen(true);
   };
 
@@ -103,12 +124,59 @@ export default function Calendario() {
     }
   };
 
+  const handleEventDrop = (info) => {
+    const { event } = info;
+    const updatedReserva = data.find(res => res.id.toString() === event.id);
+    if (updatedReserva) {
+      const newDate = new Date(event.start);
+      if (newDate < new Date()) {
+        Swal.fire({
+          title: "Error",
+          text: "No se pueden reprogramar reservas a fechas pasadas.",
+          icon: "error",
+          confirmButtonColor: '#3085d6',
+        });
+        info.revert();
+        return;
+      }
+      
+      const conflictingReserva = data.find(res => 
+        res.id.toString() !== event.id && 
+        new Date(res.fechaHora).toDateString() === newDate.toDateString()
+      );
+      
+      if (conflictingReserva) {
+        Swal.fire({
+          title: "Error",
+          text: "Ya existe una reserva en esta fecha y hora.",
+          icon: "error",
+          confirmButtonColor: '#3085d6',
+        });
+        info.revert();
+        return;
+      }
+
+      const updatedData = data.map(res => 
+        res.id.toString() === event.id 
+          ? {...res, fechaHora: event.start.toISOString().slice(0, 16)} 
+          : res
+      );
+      setData(updatedData);
+      Swal.fire({
+        title: "Reserva reprogramada",
+        text: "La reserva ha sido reprogramada exitosamente.",
+        icon: "success",
+        confirmButtonColor: '#3085d6',
+      });
+    }
+  };
+
   const colorMap = {
-    terminada: '#28a745',  // Green
-    anulada: '#dc3545',    // Red
-    pendiente: '#ffc107',  // Yellow
-    en_proceso: '#fd7e14', // Orange
-    confirmada: '#007bff'  // Blue
+    terminada: '#28a745',
+    anulada: '#dc3545',
+    pendiente: '#ffc107',
+    en_proceso: '#fd7e14',
+    confirmada: '#007bff'
   };
 
   const events = data.map(reserva => ({
@@ -117,83 +185,113 @@ export default function Calendario() {
     start: reserva.fechaHora,
     backgroundColor: colorMap[reserva.estado],
     borderColor: colorMap[reserva.estado],
-    textColor: reserva.estado === 'pendiente' ? '#000' : '#fff'  // Black text for yellow background
+    textColor: reserva.estado === 'pendiente' ? '#000' : '#fff'
   }));
 
-  useEffect(() => {
-    if (!modalOpen) {
-      setSelectedReserva(null);
-      setSelectedDate(null);
-      setForm({
-        id: '',
-        nombre: '',
-        distintivo: '',
-        categoriaCliente: '',
-        correo: '',
-        celular: '',
-        direccion: '',
-        evento: '',
-        fechaHora: '',
-        cantidadMesas: '',
-        duracionEvento: '',
-        tipoEvento: '',
-        nroPersonas: '',
-        observaciones: '',
-        servicios: '',
-        montoDecoracion: '',
-        abono: '',
-        totalPago: '',
-        restante: '',
-        formaPago: '',
-        estado: 'pendiente'
-      });
-      setErrors({});
-    }
-  }, [modalOpen]);
+  const handleSearchChange = (e) => {
+    setSearchText(e.target.value);
+  };
 
-  const handleDownloadExcel = () => {
-    const worksheet = utils.json_to_sheet(data);
-    const workbook = utils.book_new();
-    utils.book_append_sheet(workbook, worksheet, 'Reservas');
-    writeFile(workbook, 'Reservas.xlsx');
+  const filteredEvents = events.filter(event => 
+    event.title.toLowerCase().includes(searchText.toLowerCase())
+  );
+
+  const handleClientSearch = (e) => {
+    const searchValue = e.target.value;
+    setClientSearchText(searchValue);
+    const results = mockClientes.filter(cliente => 
+      cliente.nombre.toLowerCase().includes(searchValue.toLowerCase()) ||
+      cliente.distintivo.includes(searchValue)
+    );
+    setClientSearchResults(results);
+  };
+
+  const selectClient = (cliente) => {
+    setForm(prevForm => ({
+      ...prevForm,
+      nombre: cliente.nombre,
+      distintivo: cliente.distintivo,
+      categoriaCliente: cliente.categoriaCliente,
+      correo: cliente.correo,
+      celular: cliente.celular,
+      direccion: cliente.direccion
+    }));
+    setClientSearchText('');
+    setClientSearchResults([]);
+    setShowClientSearch(false);
+  };
+
+  const handleAbonoChange = (index, field, value) => {
+    const newAbonos = [...form.abonos];
+    newAbonos[index] = { ...newAbonos[index], [field]: value };
+    setForm(prevForm => ({
+      ...prevForm,
+      abonos: newAbonos
+    }));
+    updateRestante(prevForm.totalPago, newAbonos);
+  };
+
+  const addAbono = () => {
+    setForm(prevForm => ({
+      ...prevForm,
+      abonos: [...prevForm.abonos, { fecha: '', cantidad: '' }]
+    }));
+  };
+
+  const removeAbono = (index) => {
+    setForm(prevForm => {
+      const newAbonos = prevForm.abonos.filter((_, i) => i !== index);
+      updateRestante(prevForm.totalPago, newAbonos);
+      return {
+        ...prevForm,
+        abonos: newAbonos
+      };
+    });
+  };
+
+  const updateRestante = (totalPago, abonos) => {
+    const totalAbonos = abonos.reduce((sum, abono) => sum + parseFloat(abono.cantidad || 0), 0);
+    const restante = parseFloat(totalPago || 0) - totalAbonos;
+    setForm(prevForm => ({
+      ...prevForm,
+      restante: restante.toFixed(0)
+    }));
   };
 
   const validateField = (name, value) => {
     switch (name) {
       case 'nombre':
-        return value.trim() ? '' : 'El nombre es requerido.';
+        return value.trim() && /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value) ? '' : 'El nombre es requerido y solo debe contener letras.';
       case 'distintivo':
-        return /^\d+$/.test(value) ? '' : 'Distintivo solo debe contener números.';
+        return value.trim() && /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value) ? '' : 'Distintivo es requerido y solo debe  contener letras.';
       case 'categoriaCliente':
         return value.trim() ? '' : 'Categoría Cliente es requerida.';
       case 'celular':
-        return /^\d{10}$/.test(value) ? '' : 'Celular debe tener exactamente 10 dígitos.';
+        return /^\d{10}$/.test(value) ? '' : 'Celular es requerido y debe tener exactamente 10 dígitos.';
       case 'correo':
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? '' : 'Correo electrónico inválido.';
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? '' : 'Correo electrónico es requerido y debe ser válido.';
       case 'direccion':
         return value.trim() ? '' : 'Dirección es requerida.';
       case 'evento':
-        return value.trim() ? '' : 'Evento es requerido.';
+        return value.trim() && /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value) ? '' : 'Evento es requerido y solo debe contener letras.';
       case 'fechaHora':
-        return value ? '' : 'Fecha y hora son requeridas.';
+        return value && new Date(value) > new Date() ? '' : 'Fecha y hora son requeridas y deben ser futuras.';
       case 'cantidadMesas':
-        return parseInt(value) > 0 ? '' : 'Cantidad de mesas debe ser mayor a 0.';
+        return parseInt(value) > 0 ? '' : 'Cantidad de mesas es requerida y debe ser mayor a 0.';
       case 'duracionEvento':
-        return parseFloat(value) > 0 ? '' : 'Duración del evento debe ser mayor a 0.';
+        return parseFloat(value) > 0 ? '' : 'Duración del evento es requerida y debe ser mayor a 0.';
       case 'tipoEvento':
         return value.trim() ? '' : 'Tipo de Evento es requerido.';
       case 'nroPersonas':
-        return parseInt(value) > 0 ? '' : 'Número de personas debe ser mayor a 0.';
+        return parseInt(value) > 0 ? '' : 'Número de personas es requerido y debe ser mayor a 0.';
       case 'servicios':
         return value.trim() ? '' : 'Servicios es requerido.';
       case 'montoDecoracion':
-        return parseFloat(value) >= 0 ? '' : 'Monto de decoración no puede ser negativo.';
-      case 'abono':
-        return parseFloat(value) >= 0 ? '' : 'El abono no puede ser negativo.';
+        return parseFloat(value) >= 0 ? '' : 'Monto de decoración es requerido y no puede ser negativo.';
       case 'totalPago':
-        return parseFloat(value) > 0 ? '' : 'Total a pagar debe ser mayor a 0.';
+        return parseFloat(value) > 0 ? '' : 'Total a pagar es requerido y debe ser mayor a 0.';
       case 'restante':
-        return parseFloat(value) >= 0 ? '' : 'El monto restante no puede ser negativo.';
+        return parseFloat(value) >= 0 ? '' : 'El monto restante es requerido y no puede ser negativo.';
       case 'formaPago':
         return value.trim() ? '' : 'Forma de Pago es requerida.';
       default:
@@ -203,10 +301,16 @@ export default function Calendario() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm(prevForm => ({
-      ...prevForm,
-      [name]: value
-    }));
+    setForm(prevForm => {
+      const updatedForm = {
+        ...prevForm,
+        [name]: value
+      };
+      if (name === 'totalPago') {
+        updateRestante(value, prevForm.abonos);
+      }
+      return updatedForm;
+    });
     setErrors(prevErrors => ({
       ...prevErrors,
       [name]: validateField(name, value)
@@ -218,12 +322,25 @@ export default function Calendario() {
     let isValid = true;
 
     Object.keys(form).forEach(key => {
-      if (key !== 'id' && key !== 'observaciones') {
+      if (key !== 'id' && key !== 'observaciones' && key !== 'abonos') {
         const error = validateField(key, form[key]);
         newErrors[key] = error;
         if (error) isValid = false;
       }
     });
+
+    // Validate abonos
+    if (form.abonos.length === 0) {
+      newErrors.abonos = 'Debe agregar al menos un abono.';
+      isValid = false;
+    } else {
+      form.abonos.forEach((abono, index) => {
+        if (!abono.fecha || !abono.cantidad) {
+          newErrors[`abono${index}`] = 'Fecha y cantidad son requeridas para cada abono.';
+          isValid = false;
+        }
+      });
+    }
 
     setErrors(newErrors);
     return isValid;
@@ -234,6 +351,22 @@ export default function Calendario() {
       Swal.fire({
         title: "Error",
         text: "Por favor, corrija los errores en el formulario.",
+        icon: "error",
+        confirmButtonColor: '#3085d6',
+      });
+      return;
+    }
+
+    // Check for conflicting reservations
+    const conflictingReserva = data.find(res => 
+      res.id !== form.id && 
+      new Date(res.fechaHora).toDateString() === new Date(form.fechaHora).toDateString()
+    );
+    
+    if (conflictingReserva) {
+      Swal.fire({
+        title: "Error",
+        text: "Ya existe una reserva en esta fecha y hora.",
         icon: "error",
         confirmButtonColor: '#3085d6',
       });
@@ -252,10 +385,8 @@ export default function Calendario() {
 
     if (result.isConfirmed) {
       if (selectedReserva) {
-        // Editar reserva existente
         setData(data.map(reserva => reserva.id === form.id ? form : reserva));
       } else {
-        // Agregar nueva reserva
         const newId = Math.max(...data.map(r => r.id)) + 1;
         setData([...data, { ...form, id: newId }]);
       }
@@ -263,29 +394,6 @@ export default function Calendario() {
       Swal.fire({
         title: selectedReserva ? "Reserva editada" : "Reserva agregada",
         text: selectedReserva ? "La reserva ha sido editada exitosamente." : "La reserva ha sido agregada exitosamente.",
-        icon: "success",
-        confirmButtonColor: '#3085d6',
-      });
-    }
-  };
-
-  const handleReschedule = async (id) => {
-    const result = await Swal.fire({
-      title: '¿Desea reprogramar esta reserva?',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Sí, reprogramar',
-      cancelButtonText: 'Cancelar'
-    });
-
-    if (result.isConfirmed) {
-      console.log('Reprogramar reserva', id);
-      setModalOpen(false);
-      Swal.fire({
-        title: "Reserva reprogramada",
-        text: "La reserva ha sido reprogramada exitosamente.",
         icon: "success",
         confirmButtonColor: '#3085d6',
       });
@@ -316,20 +424,58 @@ export default function Calendario() {
     }
   };
 
-  return (
-    <Container className="d-flex flex-column justify-content-center align-items-center" style={{ minHeight: '80vh' }}>
-      <h2>Calendario de Reservas</h2>
-      <div style={{ width: '100%', maxWidth: '900px', overflow: 'hidden' }}>
-        <FullCalendar
-          plugins={[dayGridPlugin, interactionPlugin]}
-          initialView="dayGridMonth"
-          events={events}
-          dateClick={handleDateClick}
-          eventClick={handleEventClick}
-        />
-      </div>
+  const handleDownloadExcel = () => {
+    const worksheet = utils.json_to_sheet(data);
+    const workbook = utils.book_new();
+    utils.book_append_sheet(workbook, worksheet, 'Reservas');
+    writeFile(workbook, 'Reservas.xlsx');
+  };
 
-      <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)} style={{ maxWidth: '900px', width: '80%',overflowX: 'auto',maxHeight: '93vh' }}>
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value);
+  };
+
+  return (
+    <Container fluid className="p-0">
+      <Row className="mb-3 align-items-center">
+        <Col>
+          <h2>Calendario de Reservas</h2>
+        </Col>
+        <Col xs="auto">
+          <Button color="success" onClick={handleDownloadExcel}>
+            <FaFileExcel className="me-2" />
+            Descargar Excel
+          </Button>
+        </Col>
+      </Row>
+      <Row className="mb-3">
+        <Col>
+          <Input
+            type="text"
+            style={{ width: '300px' }} placeholder="Buscar reservas..."
+            value={searchText}
+            onChange={handleSearchChange}
+          />
+        </Col>
+      </Row>
+      <Row>
+        <Col>
+          <div style={{ height: 'calc(100vh - 200px)' }}>
+            <FullCalendar
+              plugins={[dayGridPlugin, interactionPlugin]}
+              initialView="dayGridMonth"
+              events={filteredEvents}
+              dateClick={handleDateClick}
+              eventClick={handleEventClick}
+              editable={true}
+              eventDrop={handleEventDrop}
+              height="100%"
+            />
+          </div>
+        </Col>
+      </Row>
+
+      <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)} size="lg">
         <ModalHeader style={{background:'#6d0f0f'}} toggle={() => setModalOpen(!modalOpen)}>
           <h3 className="text-white">{selectedReserva ? 'Editar Reserva' : 'Nueva Reserva'}</h3>
         </ModalHeader>
@@ -338,15 +484,20 @@ export default function Calendario() {
             <Row>
               <Col md={6}>
                 <Label for="nombre"><b>Nombre</b></Label>
-                <Input
-                  id="nombre"
-                  style={{ border: '2px solid #000000' }}
-                  type="text"
-                  name="nombre"
-                  value={form.nombre}
-                  onChange={handleChange}
-                  invalid={!!errors.nombre}
-                />
+                <InputGroup>
+                  <Input
+                    id="nombre"
+                    style={{ border: '2px solid #000000' }}
+                    type="text"
+                    name="nombre"
+                    value={form.nombre}
+                    onChange={handleChange}
+                    invalid={!!errors.nombre}
+                  />
+                  <InputGroupText style={{ cursor: 'pointer' }} onClick={() => setShowClientSearch(!showClientSearch)}>
+                    <FaSearch />
+                  </InputGroupText>
+                </InputGroup>
                 {errors.nombre && <span className="text-danger">{errors.nombre}</span>}
               </Col>
               <Col md={6}>
@@ -363,6 +514,32 @@ export default function Calendario() {
                 {errors.distintivo && <span className="text-danger">{errors.distintivo}</span>}
               </Col>
             </Row>
+            {showClientSearch && (
+              <Row className="mt-2">
+                <Col md={12}>
+                  <Input
+                    type="text"
+                    
+                    placeholder="Buscar cliente..."
+                    value={clientSearchText}
+                    onChange={handleClientSearch}
+                  />
+                  {clientSearchResults.length > 0 && (
+                    <div className="border rounded mt-1 p-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                      {clientSearchResults.map(cliente => (
+                        <div 
+                          key={cliente.id} 
+                          className="p-2 hover-bg-light cursor-pointer"
+                          onClick={() => selectClient(cliente)}
+                        >
+                          {cliente.nombre} - {cliente.distintivo}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Col>
+              </Row>
+            )}
             <Row className="mt-3">
               <Col md={6}>
                 <Label for="categoriaCliente"><b>Categoría Cliente</b></Label>
@@ -375,15 +552,13 @@ export default function Calendario() {
                   onChange={handleChange}
                   invalid={!!errors.categoriaCliente}
                 >
-                  <option value="VIP">VIP</option>
-                  <option value="Frecuente">Frecuente</option>
-                  <option value="Regular">Regular</option>
-                  <option value="Nuevo">Nuevo</option>
-                  
-                
-                {errors.categoriaCliente && <span className="text-danger">{errors.categoriaCliente}</span>}
+                  <option value="">Seleccione una categoría</option>
+                  <option value="Familiar">Familiar</option>
+                  <option value="Empresarial">Empresarial</option>
+                  <option value="Preferencial">Preferencial</option>
+                  <option value="Frecuente">Nuevo</option>
                 </Input>
-               
+                {errors.categoriaCliente && <span className="text-danger">{errors.categoriaCliente}</span>}
               </Col>
               <Col md={6}>
                 <Label for="correo"><b>Correo</b></Label>
@@ -428,7 +603,7 @@ export default function Calendario() {
               </Col>
             </Row>
             <Row className="mt-3">
-            
+              <Col md={12}>
                 <Label for="fechaHora"><b>Fecha y Hora</b></Label>
                 <Input
                   id="fechaHora"
@@ -440,7 +615,7 @@ export default function Calendario() {
                   invalid={!!errors.fechaHora}
                 />
                 {errors.fechaHora && <span className="text-danger">{errors.fechaHora}</span>}
-              
+              </Col>
             </Row>
             <Row className="mt-3">
               <Col md={6}>
@@ -471,7 +646,6 @@ export default function Calendario() {
               </Col>
             </Row>
             <Row className="mt-3">
-
               <Col md={6}>
                 <Label for="tipoEvento"><b>Tipo de Evento</b></Label>
                 <Input
@@ -483,18 +657,17 @@ export default function Calendario() {
                   onChange={handleChange}
                   invalid={!!errors.tipoEvento}
                 >
+                  <option value="">Seleccione un tipo</option>
                   <option value="Empresarial">Empresarial</option>
                   <option value="Cumpleaños">Cumpleaños</option>
-                  <option value="Grado">En Grado</option>
+                  <option value="Grado">Grado</option>
                   <option value="Aniversario">Aniversario</option>
                   <option value="Bautizo">Bautizo</option>
-                  <option value="PrimeraComunion">Primera Comunion</option>
+                  <option value="PrimeraComunion">Primera Comunión</option>
                   <option value="Matrimonio">Matrimonio</option>
                 </Input>
                 {errors.tipoEvento && <span className="text-danger">{errors.tipoEvento}</span>}
-                
               </Col>
-
               <Col md={6}>
                 <Label for="nroPersonas"><b>Número de Personas</b></Label>
                 <Input
@@ -524,7 +697,6 @@ export default function Calendario() {
               </Col>
             </Row>
             <Row className="mt-3">
-
               <Col md={6}>
                 <Label for="servicios"><b>Servicios</b></Label>
                 <Input
@@ -536,8 +708,8 @@ export default function Calendario() {
                   onChange={handleChange}
                   invalid={!!errors.servicios}
                 >
-                    <option value="Decoracion">Decoracion</option>
-                  {errors.servicios && <span className="text-danger">{errors.servicios}</span>}
+                  <option value="">Seleccione un servicio</option>
+                  <option value="Decoracion">Decoración</option>
                 </Input>
                 {errors.servicios && <span className="text-danger">{errors.servicios}</span>}
               </Col>
@@ -552,26 +724,50 @@ export default function Calendario() {
                   onChange={handleChange}
                   invalid={!!errors.montoDecoracion}
                 >
-                  <option value="2 a 15 personas">$70.000</option>
-                  <option value="16 a 40 personas">$90.000</option>
-                  {errors.montoDecoracion && <span className="text-danger">{errors.montoDecoracion}</span>}
+                  <option value="">Seleccione un monto</option>
+                  <option value="70000">$70.000 (2 a 15 personas)</option>
+                  <option value="90000">$90.000 (16 a 40 personas)</option>
                 </Input>
+                {errors.montoDecoracion && <span className="text-danger">{errors.montoDecoracion}</span>}
               </Col>
             </Row>
             <Row className="mt-3">
-              <Col md={4}>
-                <Label for="abono"><b>Abono</b></Label>
-                <Input
-                  id="abono"
-                  style={{ border: '2px solid #000000' }}
-                  type="number"
-                  name="abono"
-                  value={form.abono}
-                  onChange={handleChange}
-                  invalid={!!errors.abono}
-                />
-                {errors.abono && <span className="text-danger">{errors.abono}</span>}
+              <Col md={12}>
+                <Label><b>Abonos</b></Label>
+                {form.abonos.map((abono, index) => (
+                  <Row key={index} className="mb-2">
+                    <Col md={5}>
+                      <Input
+                        type="date"
+                        value={abono.fecha}
+                        onChange={(e) => handleAbonoChange(index, 'fecha', e.target.value)}
+                        style={{ border: '2px solid #000000' }}
+                      />
+                    </Col>
+                    <Col md={5}>
+                      <Input
+                        type="number"
+                        value={abono.cantidad}
+                        onChange={(e) => handleAbonoChange(index, 'cantidad', e.target.value)}
+                        placeholder="Cantidad"
+                        style={{ border: '2px solid #000000' }}
+                      />
+                    </Col>
+                    <Col md={2}>
+                      <Button style={{background:'#6d0f0f'}} onClick={() => removeAbono(index)}>
+                        <FaTrash />
+                      </Button>
+                    </Col>
+                  </Row>
+                ))}
+                {errors.abonos && <span className="text-danger">{errors.abonos}</span>}
+                {form.abonos.map((_, index) => (
+                  errors[`abono${index}`] && <span key={index} className="text-danger d-block">{errors[`abono${index}`]}</span>
+                ))}
+                <Button style={{background:'#7ea9d1'}} onClick={addAbono} >+</Button>
               </Col>
+            </Row>
+            <Row className="mt-3">
               <Col md={4}>
                 <Label for="totalPago"><b>Total a Pagar</b></Label>
                 <Input
@@ -595,12 +791,11 @@ export default function Calendario() {
                   value={form.restante}
                   onChange={handleChange}
                   invalid={!!errors.restante}
+                  readOnly
                 />
                 {errors.restante && <span className="text-danger">{errors.restante}</span>}
               </Col>
-            </Row>
-            <Row className="mt-3">
-              <Col md={6}>
+              <Col md={4}>
                 <Label for="formaPago"><b>Forma de Pago</b></Label>
                 <Input
                   id="formaPago"
@@ -611,13 +806,16 @@ export default function Calendario() {
                   onChange={handleChange}
                   invalid={!!errors.formaPago}
                 >
-                   <option value="Bancolombia">Bancolombia</option>
+                  <option value="">Seleccione una forma de pago</option>
+                  <option value="Bancolombia">Bancolombia</option>
                   <option value="Efectivo">Efectivo</option>
                   <option value="Tarjeta">Tarjeta</option>
                 </Input>
                 {errors.formaPago && <span className="text-danger">{errors.formaPago}</span>}
               </Col>
-              <Col md={6}>
+            </Row>
+            <Row className="mt-3">
+              <Col md={12}>
                 <Label for="estado"><b>Estado</b></Label>
                 <Input
                   id="estado"
@@ -642,16 +840,11 @@ export default function Calendario() {
             {selectedReserva ? 'Guardar Cambios' : 'Crear Reserva'}
           </Button>
           {selectedReserva && (
-            <>
-              <Button color="warning" onClick={() => handleReschedule(selectedReserva.id)}>Reprogramar</Button>
-              <Button color="danger" onClick={() => handleCancel(selectedReserva.id)}>Cancelar Reserva</Button>
-            </>
+            <Button color="danger" onClick={() => handleCancel(selectedReserva.id)}>Cancelar Reserva</Button>
           )}
           <Button style={{background:'#6d0f0f'}} onClick={() => setModalOpen(false)}>Cerrar</Button>
         </ModalFooter>
       </Modal>
-
-      <Button style={{ background: '#2e8329' }} className="mt-3" onClick={handleDownloadExcel}>Descargar Excel</Button>
     </Container>
   );
 }

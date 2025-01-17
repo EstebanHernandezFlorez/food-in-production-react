@@ -6,12 +6,14 @@ import PropTypes from 'prop-types';
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
 
+
 const initialData = [
   { id: 1, NombreCompleto: "Juan Pérez", Distintivo: "7867", CategoriaCliente: "regular", Celular: "3123456789", Correo: "juan.perez@example.com", Direccion: "Cl 76 j 12b 55", Estado: true },
   { id: 2, NombreCompleto: "Ana Torres", Distintivo: "7576", CategoriaCliente: "familiar", Celular: "3109876543", Correo: "ana.torres@example.com", Direccion: "Av. El Dorado 92-45", Estado: true },
 ];
 
 const Clientes = () => {
+
   const [data, setData] = useState(initialData);
   const [form, setForm] = useState({
     id: '',
@@ -48,7 +50,7 @@ const Clientes = () => {
       case 'NombreCompleto':
         return /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value) ? '' : 'Nombre Completo solo debe contener letras y espacios.';
       case 'Distintivo':
-        return /^\d+$/.test(value) ? '' : 'Distintivo solo debe contener números.';
+        return /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value) ? '' : 'Distintivo solo debe contener letras.';
       case 'CategoriaCliente':
         return /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value) ? '' : 'Categoría Cliente solo debe contener letras y espacios.';
       case 'Celular':
@@ -384,13 +386,19 @@ const Clientes = () => {
                   <br />
                   <label><b>Categoria cliente</b></label>
                   <Input
-                    type="text"
+                    type="select"
                     name="CategoriaCliente"
                     value={form.CategoriaCliente}
                     onChange={handleChange}
                     placeholder="Categoría Cliente"
                     invalid={!!errors.CategoriaCliente}
-                  />
+                  >
+                  <option value="">Seleccione una categoría</option>
+                  <option value="Familiar">Familiar</option>
+                  <option value="Empresarial">Empresarial</option>
+                  <option value="Preferencial">Preferencial</option>
+                  <option value="Frecuente">Nuevo</option>
+                </Input>
                   {errors.CategoriaCliente && <span className="text-danger">{errors.CategoriaCliente}</span>}
                 </Col>
                 <Col md={6}>

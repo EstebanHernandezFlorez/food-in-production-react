@@ -180,6 +180,8 @@ const Servicios = () => {
   return (
     <Container>
       <h2 className="text-right mt-4">Lista de Servicios Adicionales</h2>
+      <br />
+      <br />
       <div className="d-flex justify-content-between align-items-center mb-3 mx-auto" style={{ maxWidth: '900px' }}>
         <Input
           type="text"
