@@ -1,102 +1,51 @@
 /* menu.css */
-/* Estilos generales para el sidebar */
-.sidebar {
-  position: fixed;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  z-index: 10;
-  height: 100vh;
-  padding-bottom: 50px;
-  overflow: hidden;
-  background-color: #FEF5C4 !important;
-  width: 250px; /* Ancho inicial */
+.ant-menu-item > a {
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
 }
 
-/* Media query para pantallas más pequeñas */
-@media (max-width: 768px) {
-  .sidebar {
-      width: 200px; /* Ancho más pequeño en pantallas pequeñas */
-  }
-}
-  
-  /* Elimina el padding interno del submenu para alinear la línea */
-  .ant-menu-sub {
-    padding: 0 !important;
-  }
-  
-  /* Elimina el margen inline de los items del menú */
-  .ant-menu-item {
-    margin-inline: 0px !important;
-  }
-  
-  /* Alinea los items del menú */
-  .ant-menu-item {
-    display: flex;
-    align-items: center;
-    padding: 0 24px; /* Ajusta el padding horizontal según sea necesario */
-    height: 40px; /* Ajusta la altura según sea necesario */
-    position: relative; /* Añadido para el posicionamiento absoluto del link */
-  }
-  
-  /* Alinea los iconos y el texto del título del submenú */
-  .ant-menu-submenu-title {
-    display: flex;
-    align-items: center;
-    padding: 0 24px; /* Ajusta el padding horizontal según sea necesario */
-    height: 40px; /* Ajusta la altura según sea necesario */
-  }
-  
-  /* Espacio entre el icono y el texto en los items y títulos de submenú */
-  .ant-menu-item .anticon,
-  .ant-menu-submenu-title .anticon {
-    margin-right: 10px; /* Ajusta el espacio según sea necesario */
-  }
-  
-  /* Alinea los items del submenú */
-  .ant-menu-sub .ant-menu-item {
-    padding-left: 48px; /* Ajusta la indentación del submenú según sea necesario */
-  }
-  
-  /* Estilos de hover y selección */
-  .ant-menu-item > a {  /* Estilos para el link dentro del MenuItem */
-    display: block;
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    top: 0;
-    left: 0;
-    padding: inherit; /* Hereda el padding del MenuItem */
-    color: inherit; /* Hereda el color del MenuItem */
-    text-decoration: none; /* Elimina el subrayado */
-  }
-
-  /* Estilos de hover y selección */
 .ant-menu-item:hover,
 .ant-menu-submenu-title:hover {
-    background-color: #7e2d2d !important; /* Vinotinto al hacer hover */
-    color: #fff !important; /* Texto blanco al hacer hover */
-}
-
-.ant-menu-item:hover a { /* Para que el color del Link cambie en el hover */
-    color: #fff !important;
-}
-
-.ant-menu-submenu-title:hover .ant-menu-title-content {
-    color: #fff !important; /* Cambia el color del título del submenú en hover */
+  background-color: #7e2d2d !important;
+  color: #fff !important;
 }
 
 .ant-menu-item-selected,
 .ant-menu-submenu-selected > .ant-menu-submenu-title {
-    background-color: #7e2d2d !important; /* Vinotinto al seleccionar */
-    color: #fff !important; /* Texto blanco al seleccionar */
+  background-color: #7e2d2d !important;
+  color: #fff !important;
 }
 
-.ant-menu-item-selected > a {  /* Para que el color del Link cambie al seleccionar */
-    color: #fff !important;
+/* Linea lateral en submenu */
+.submenu-item .ant-menu-submenu-title {
+  position: relative;
 }
 
-.ant-menu-submenu-selected > .ant-menu-submenu-title:hover {
-    background-color: #7e2d2d !important; /* Vinotinto al seleccionar y hacer hover */
-    color: #fff !important;
+.submenu-item .ant-menu-submenu-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: #7e2d2d; /* Color de la línea */
+  opacity: 0; /* Inicialmente invisible */
+  transition: opacity 0.3s ease; /* Transición suave */
 }
+
+.submenu-item:hover .ant-menu-submenu-title::before,
+.ant-menu-submenu-open.submenu-item .ant-menu-submenu-title::before {
+  opacity: 1; /* Visible al hacer hover o al desplegar el submenú */
+}
+
+/* Estilo para el contenedor del menú para evitar que el ultimo item se pegue al fondo */
+.menu-container {
+  display: flex;
+  flex-direction: column;
+  height: auto; /* Adjusted height */
+  justify-content: flex-start; /* Align items to the top */
+}
+

@@ -1,0 +1,17 @@
+/* Add this to your existing CSS file or create a new one */
+.table-borderless > thead > tr > th,
+.table-borderless > tbody > tr > th,
+.table-borderless > tfoot > tr > th,
+.table-borderless > thead > tr > td,
+.table-borderless > tbody > tr > td,
+.table-borderless > tfoot > tr > td {
+  border: none;
+}
+
+.table thead th {
+    border-bottom: 1px solid #dee2e6; /* Default Bootstrap border color */
+}
+
+.table tbody tr:last-child td {
+    border-bottom: none;
+}
