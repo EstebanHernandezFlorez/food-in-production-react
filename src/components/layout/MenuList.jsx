@@ -1,3 +1,4 @@
+// MenuList.js
 import React, { useState, useRef, useEffect } from 'react';
 import { Menu, Modal } from 'antd';
 import { Link } from 'react-router-dom';
@@ -16,20 +17,7 @@ const MenuList = ({ collapsed }) => {
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [openKeys, setOpenKeys] = useState([]);
     const menuRef = useRef(null);
-    const logoutRef = useRef(null);
 
-    const showConfirm = () => {
-        setIsModalVisible(true);
-    };
-
-    const handleOk = () => {
-        setIsModalVisible(false);
-        window.location.href = '/';
-    };
-
-    const handleCancel = () => {
-        setIsModalVisible(false);
-    };
 
     const onOpenChange = (keys) => {
         setOpenKeys(keys);
@@ -63,7 +51,7 @@ const MenuList = ({ collapsed }) => {
         { key: 'mano_de_obra', icon: <BarChartOutlined style={{ fontSize: '18px' }} />, label: 'Mano de Obra', path: '/mano_de_obra' },
     ];
 
-    const logoutItem = { key: 'logout', icon: <LogoutOutlined style={{ fontSize: '18px' }} />, label: 'Cerrar sesión', onClick: showConfirm };
+
 
     return (
         <>
@@ -90,21 +78,10 @@ const MenuList = ({ collapsed }) => {
                         </Menu.Item>
                     )
                 )}
-                <Menu.Item key="logout" onClick={logoutItem.onClick} icon={logoutItem.icon} style={{ marginTop: 'auto' }}>
-                    Cerrar sesión
-                </Menu.Item>
+
             </Menu>
 
-            <Modal
-                title="Confirmación"
-                open={isModalVisible}
-                onOk={handleOk}
-                onCancel={handleCancel}
-                okText="Sí"
-                cancelText="No"
-            >
-                <p>¿Estás seguro de que deseas cerrar sesión?</p>
-            </Modal>
+
         </>
     );
 };

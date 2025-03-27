@@ -17,3 +17,7 @@
     height: 70vh;
     display: block;
 }
+
+.logo-container {
+  background-color: #FEF5C4 !important; /* Usamos !important para asegurarnos de que se aplique */
+}

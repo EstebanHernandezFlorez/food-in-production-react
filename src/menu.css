@@ -43,7 +43,9 @@
 
 /* Estilo para el contenedor del menú para evitar que el ultimo item se pegue al fondo */
 .menu-container {
-display: flex;
-flex-direction: column;
-height: 100%;
+  display: flex;
+  flex-direction: column;
+  height: auto; /* Adjusted height */
+  justify-content: flex-start; /* Align items to the top */
 }
+
