@@ -69,7 +69,7 @@ const Proveedores = () => {
         const updatedData = data.filter(registro => registro._id !== selectedProveedor._id);
         setData(updatedData);
         fetchData()
-        openSnackbar('Éxito', 'Empleado eliminado exitosamente');
+        openSnackbar('Éxito', 'Proveedor eliminado exitosamente');
       } catch (error) {
         console.error('Error deleting provider:', error);
       }

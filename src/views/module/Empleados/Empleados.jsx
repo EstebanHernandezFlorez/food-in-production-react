@@ -4,41 +4,29 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { Table, Button, Container, Row, Col, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
 import { FaTrashAlt, FaEye } from 'react-icons/fa';
 import { FiEdit } from "react-icons/fi";
-import { IoSearchOutline } from "react-icons/io5";
 import { PlusOutlined } from '@ant-design/icons';
 import { Snackbar, Alert } from '@mui/material';
-import Swal from "sweetalert2";
+import toast, { Toaster } from 'react-hot-toast';
+import Swal from 'sweetalert2';
 
-const initialData = [
-  {id: 1, Nombre: "Carolina Guzman", Document: 16514416,FechaIni: "15-07-2020",ContactoEmerg: "319898119",Parentesco: "Madre",NombreFamiliar: "Carolina Zapata", GrupoSang: "O+",NumeroSS: 61515371,Direccion: "cl 76 j 12b 55",TipoContrato: "doble tiempo"},
-  {id: 2,Nombre: "Andra Torres",Document: 18761919,FechaIni: "01-02-2023",ContactoEmerg: "3001234567",Parentesco: "Hermano",NombreFamiliar: "Juan Torres",GrupoSang: "A+",NumeroSS: 12345678,Direccion: "Av. El Dorado 92-45",TipoContrato: "tiempo completo"}, 
-  {id: 3,Nombre: "Natalia Muriel",Document: 1016177143,FechaIni: "15-03-2022",ContactoEmerg: "3207654321",Parentesco: "Padre",NombreFamiliar: "Carlos Muriel",GrupoSang: "B+",NumeroSS: 23456789,Direccion: "Cra 15 #76-30",TipoContrato: "tiempo completo"},
-  {id: 4,Nombre: "Luis Pérez",Document: 12345678,FechaIni: "10-11-2021",ContactoEmerg: "3109876543",Parentesco: "Esposa",NombreFamiliar: "Ana Pérez",GrupoSang: "AB+",NumeroSS: 34567890,Direccion: "Cl 10 #15-20",TipoContrato: "medio tiempo"},
-  {id: 5,Nombre: "María Gómez",Document: 23456789,FechaIni: "20-09-2020",ContactoEmerg: "3134567890",Parentesco: "Hermano",NombreFamiliar: "David Gómez",GrupoSang: "O-",NumeroSS: 45678901,Direccion: "Cra 7 #22-767",TipoContrato: "medio tiempo"},
-  {id: 6,Nombre: "Pedro Martínez",Document: 34567890,FechaIni: "05-06-2021",ContactoEmerg: "3145678901",Parentesco: "Madre",NombreFamiliar: "Elena Martínez",GrupoSang: "A-",NumeroSS: 56789012,Direccion: "Cl 80 #14-05",TipoContrato: "tiempo completo"},
-  {id: 7,Nombre: "Laura Fernández",Document: 45678901,FechaIni: "12-04-2023",ContactoEmerg: "3156789012",Parentesco: "Hijo",NombreFamiliar: "Jorge Fernández",GrupoSang: "B-",NumeroSS: 67890123,Direccion: "Av. 68 #10-20",TipoContrato: "medio tiempo"},
-  {id: 8,Nombre: "Carlos Rodríguez",Document: 56789012,FechaIni: "01-01-2020",ContactoEmerg: "3167890123",Parentesco: "Esposa",NombreFamiliar: "María Rodríguez",GrupoSang: "AB-",NumeroSS: 78901234,Direccion: "Cra 50 #30-40",TipoContrato: "tiempo completo"}
-   
-];
 const Empleados = () => {
-  const [data, setData] = useState(initialData);
+  const [data, setData] = useState([]);
   const [form, setForm] = useState({
-    id: '',
-    Nombre: '',
-    tipoDocument: '',
-    Document: '',
-    Celular:'',
-    Correo:'',
-    FechaIni: '',
-    ContactoEmerg: '',
-    Parentesco: '',
-    NombreFamiliar: '',
-    GrupoSang:'',
-    NumeroSS: '',
-    Direccion: '',
-    TipoContrato: '',
-    Rol:'',
-    Estado: true
+    idEmployee: '', 
+    fullName: '', 
+    typeDocument: '', 
+    document: '', 
+    cellPhone: '',
+    email: '',
+    dateOfEntry: '', 
+    emergencyContact: '', 
+    Relationship: '',
+    nameFamilyMember: '', 
+    BloodType: '',
+    socialSecurityNumber: '', 
+    Address: '', 
+    contractType: '', 
+    status: true
   });
   const [isEditing, setIsEditing] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -53,42 +41,41 @@ const Empleados = () => {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const itemsPerPage = 10;
+  
   // States for validation
   const [formErrors, setFormErrors] = useState({
-    Nombre: false,
-    tipoDocument: false,
-    Document: false,
-    Celular: false,
-    Correo:false,
-    FechaIni: false,
-    ContactoEmerg: false,
-    Parentesco: false,
-    NombreFamiliar: false,
-    GrupoSang: false,
-    NumeroSS: false,
-    Direccion: false,
-    TipoContrato: false,
-    Rol: false
+    fullName: false,
+    typeDocument: false,
+    document: false,
+    cellPhone: false,
+    email: false,
+    dateOfEntry: false,
+    emergencyContact: false,
+    Relationship: false,
+    nameFamilyMember: false,
+    BloodType: false,
+    socialSecurityNumber: false,
+    Address: false,
+    contractType: false
   });
 
-  const handleOk = () => {
-  if (selectedEmployee) {
-    const updatedData = data.filter(registro => registro.id !== selectedEmployee.id);
-    setData(updatedData);
-  }
-  handleDeleteModalClose();
-};  
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const response = await axios.get('http://localhost:3000/employee');
+      setData(response.data);
+    } catch (error) {
+      console.error("Error fetching employees:", error);
+      Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+    }
+  };  
 
   const handleCancel = () => {
     setModalOpen(false);
     setSelectedEmployee(null);
-    resetForm();
-  };
-
-
-  const openDeleteModal = (employee) => {
-    setSelectedEmployee(employee);
-    setIsDeleteModalOpen(true);
   };
   
   const handleDeleteModalClose = () => {
@@ -99,166 +86,253 @@ const Empleados = () => {
   const handleTableSearch = (e) => {
     setTableSearchText(e.target.value.toLowerCase());
   };
+  
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm(prevForm => ({
-      ...prevForm,
-      [name]: value
-    }));
+    setForm({ ...form, [name]: value });
+    setFormErrors({ ...formErrors, [name]: false }); // Clear error for this field
   };
+  
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
   };
+  
   const openSnackbar = (message, severity) => {
     setSnackbarMessage(message);
     setSnackbarSeverity(severity);
     setSnackbarOpen(true);
   };
+  
   const closeSnackbar = () => {
     setSnackbarOpen(false);
   };
+
   const validateForm = () => {
     const errors = {
-      Nombre: !form.Nombre,
-      tipoDocument: !form.tipoDocument,
-      Document: !form.Document,
-      Celular: !form.Celular,
-      Correo:!form.Correo,
-      FechaIni: !form.FechaIni,
-      ContactoEmerg: !form.ContactoEmerg,
-      Parentesco: !form.Parentesco,
-      NombreFamiliar: !form.NombreFamiliar,
-      GrupoSang: !form.GrupoSang,
-      NumeroSS: !form.NumeroSS,
-      Direccion: !form.Direccion,
-      TipoContrato: !form.TipoContrato,
-      Rol: !form.Rol
+      fullName: !form.fullName?.trim(),
+      typeDocument: !form.typeDocument?.trim(),
+      document: !form.document?.toString().trim(),
+      cellPhone: !form.cellPhone?.toString().trim(),
+      email: !form.email?.trim(),
+      dateOfEntry: !form.dateOfEntry?.trim(),
+      emergencyContact: !form.emergencyContact?.toString().trim(),
+      Relationship: !form.Relationship?.trim(),
+      nameFamilyMember: !form.nameFamilyMember?.trim(),
+      BloodType: !form.BloodType?.trim(),
+      socialSecurityNumber: !form.socialSecurityNumber?.trim(),
+      Address: !form.Address?.trim(),
+      contractType: !form.contractType?.trim()
     };
+  
     setFormErrors(errors);
     return !Object.values(errors).includes(true);
   };
   
-  const formatDate = (date) => {
-    const [day, month, year] = date.split('-');
-    return `${year}-${month}-${day}`;
-  };
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateForm()) {
-      openSnackbar("Por favor, ingrese todos los campos", 'warning');
+      openSnackbar("Por favor, ingrese todos los campos", "warning");
       return;
     }
-    const { Nombre, tipoDocument, Document, Celular,Correo, FechaIni, ContactoEmerg, Parentesco, NombreFamiliar, GrupoSang,  NumeroSS, Direccion, TipoContrato, Rol } = form;
+    try {
+      console.log("Datos enviados a la API:", form);
+      
   
-    const empleadoExistente = data.find(registro => registro.Document.toString() === Document.toString());
-    if (empleadoExistente) {
-      openSnackbar("El empleado ya existe. Por favor, ingrese un documento de empleado diferente.", 'error');
-      return;
+      const employeeExists = data.find(emp => emp.document?.toString() === form.document?.toString());
+      
+      if (employeeExists && !isEditing) {
+        openSnackbar("El empleado ya existe. Ingrese un documento diferente.", "error");
+        return;
+      }
+  
+      const employeeData = {
+        fullName: form.fullName,
+        typeDocument: form.typeDocument,
+        document: form.document,
+        dateOfEntry: form.dateOfEntry,
+        cellPhone: form.cellPhone,
+        email: form.email,
+        emergencyContact: form.emergencyContact,
+        Relationship: form.Relationship,
+        nameFamilyMember: form.nameFamilyMember,
+        BloodType: form.BloodType,
+        socialSecurityNumber: form.socialSecurityNumber,
+        Address: form.Address,
+        contractType: form.contractType,
+        status: form.status || true
+      };
+  
+      let response;
+      if (isEditing) {
+        console.log("Editando empleado con ID:", form.idEmployee);
+        response = await axios.put(`http://localhost:3000/employee/${form.idEmployee}`, employeeData);
+      } else {
+        console.log("Creando nuevo empleado...");
+        response = await axios.post("http://localhost:3000/employee", employeeData);
+      }
+      const idEmployee = Number(form.idEmployee); // Convierte a número
+        if (!Number.isInteger(idEmployee) || idEmployee <= 0) {
+          console.error("El ID del empleado no es válido:", idEmployee);
+          return;
+        }
+
+  
+      console.log("Respuesta del servidor:", response.data);
+  
+      openSnackbar(isEditing ? "Empleado actualizado exitosamente" : "Empleado agregado exitosamente", "success");
+  
+      fetchData(); 
+      resetForm();
+      setShowForm(false);
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error en la solicitud:", error);
+      
+      if (error.response) {
+        console.error("Error en la respuesta:", error.response.data);
+        openSnackbar(`Error del servidor: ${JSON.stringify(error.response.data.errors)}`, "error");
+      } else if (error.request) {
+        console.error("No hubo respuesta del servidor");
+        openSnackbar("No hubo respuesta del servidor. Verifica la conexión", "error");
+      } else {
+        console.error("Error al configurar la solicitud");
+        openSnackbar("Error al configurar la solicitud", "error");
+      }
     }
+ };    
   
-    const nuevoEmpleado = {
-      ...form,
-      id: data.length ? Math.max(...data.map(emp => emp.id)) + 1 : 1
-    };
-  
-    setData([...data, nuevoEmpleado]);
+
+  const resetForm = () => {
     setForm({
-      id: '',
-      Nombre: '',
-      tipoDocument:'',
-      Document: '',
-      Celular: '',
-      Correo:'',
-      FechaIni: '',
-      ContactoEmerg: '',
-      Parentesco: '',
-      NombreFamiliar: '',
-      GrupoSang:'',
-      NumeroSS: '',
-      Direccion: '',
-      TipoContrato: '',
-      Rol: '',
-      Estado: true
+      idEmployee: '',
+      fullName: '',
+      typeDocument: '',
+      document: '',
+      cellPhone: '',
+      email: '',
+      dateOfEntry: '',
+      emergencyContact: '',
+      Relationship: '',
+      nameFamilyMember: '',
+      BloodType: '',
+      socialSecurityNumber: '',
+      Address: '',
+      contractType: '',
+      status: true
     });
     setShowForm(false);
-    openSnackbar("Empleado agregado exitosamente", 'success');
+    setFormErrors({});
   };
-  const editar = async () => {
-    if (!validateForm()) {
-      openSnackbar("Por favor, ingrese todos los campos", 'warning');
-      return;
-    }
   
-    const empleadoExistente = data.find(
-      (registro) => registro.Document.toString() === form.Document.toString() &&
-      registro.id !== form.id
-    );
-  
-    if (empleadoExistente) {
-      openSnackbar("Ya existe un empleado con el mismo documento. Por favor, ingresa un documento diferente.", 'error');
-      return;
-    }
-  
-    const updatedData = data.map((registro) =>
-      registro.id === form.id ? { ...form } : registro
-    );
-  
-    const response = await Swal.fire({
-      title: "¿Desea editar el usuario?",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Editar",
-      cancelButtonText: "Cancelar",
-    });
-
-    // Verifica si el usuario confirmó la acción antes de continuar
-    if (response.isConfirmed) {
-      setData(updatedData); // Actualiza los datos
-      setIsEditing(false); // Sale del modo de edición
-      setModalOpen(false); // Cierra el modal
-      openSnackbar("Usuario editado exitosamente", "success");
-    }
+  const editar = () => {
+    // Show confirmation toast
+    toast((t) => (
+      <div>
+        <p>¿Desea editar el usuario?</p>
+        <div>
+          <Button
+            color="primary"
+            onClick={() => {
+              handleSubmit(); // Use the same handler for update
+              toast.dismiss(t.id);
+            }}
+          >
+            Editar
+          </Button>
+          <Button
+            color="secondary"
+            onClick={() => toast.dismiss(t.id)}
+          >
+            Cancelar
+          </Button>
+        </div>
+      </div>
+    ), { duration: 5000 });
   };
+  
+  const cambiarEstado = async (idEmployee) => {
+    toast((t) => (
+      <div>
+        <p>¿Desea cambiar el estado del usuario?</p>
+        <div>
+          <Button
+            color="primary"
+            onClick={async () => {
+              try {
+                // Find employee to update
+                const employee = data.find(emp => emp.idEmployee === idEmployee);
+                if (!employee) {
+                  toast.error("Empleado no encontrado");
+                  toast.dismiss(t.id);
+                  return;
+                }
 
-  const cambiarEstado = async (id) => {
-    const response = await Swal.fire({
-      title: "¿Desea cambiar el estado del empleado?",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Cambiar",
-      cancelButtonText: "Cancelar",
-    });
-    if (response.isConfirmed) {
-      const updatedData = data.map((registro) => {
-        if (registro.id === id) {
-          registro.Estado = !registro.Estado;
-        }
-        return registro;
-      });
-
-      setData(updatedData);
-      openSnackbar("Estado del empleado actualizado exitosamente", "success");
-    }
+                // Toggle status
+                const updatedStatus = !employee.status;
+                
+                // Send update to API
+                await axios.patch(`http://localhost:3000/employee/${idEmployee}`, { 
+                  status: updatedStatus 
+                });
+                
+                // Update local data
+                const updatedData = data.map(emp => 
+                  emp.idEmployee === idEmployee ? { ...emp, status: updatedStatus } : emp
+                );
+                setData(updatedData);
+                
+                toast.success(`Estado actualizado a ${updatedStatus ? 'Activo' : 'Inactivo'}`);
+                toast.dismiss(t.id);
+              } catch (error) {
+                console.error("Error updating status:", error);
+                toast.error("Error al actualizar estado");
+                toast.dismiss(t.id);
+              }
+            }}
+          >
+            Cambiar
+          </Button>
+          <Button
+            color="secondary"
+            onClick={() => toast.dismiss(t.id)}
+          >
+            Cancelar
+          </Button>
+        </div>
+      </div>
+    ), { duration: 5000 });
   };
-
-  const eliminar = async (dato) => {
-    const response = await Swal.fire({
-      title: "¿Desea eliminar el empleado?",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Eliminar",
-      cancelButtonText: "Cancelar",
-    });
-    if (response.isConfirmed) {
-      const updatedData = data.filter((registro) => registro.id !== dato.id);
-      setData(updatedData);
-      openSnackbar("Empleado eliminado exitosamente", "success");
-    }
+  
+  const eliminar = (employee) => {
+    toast((t) => (
+      <div>
+        <p>¿Desea eliminar el empleado?</p>
+        <div>
+          <Button
+            color="primary"
+            onClick={async () => {
+              try {
+                await axios.delete(`http://localhost:3000/employee/${employee.idEmployee}`);
+                const updatedData = data.filter(emp => emp.idEmployee !== employee.idEmployee);
+                setData(updatedData);
+                toast.success('Empleado eliminado exitosamente');
+              } catch (error) {
+                console.error("Error deleting employee:", error);
+                toast.error('Error al eliminar el empleado');
+              }
+              toast.dismiss(t.id);
+            }}
+          >
+            Eliminar
+          </Button>
+          <Button
+            color="secondary"
+            onClick={() => toast.dismiss(t.id)}
+          >
+            Cancelar
+          </Button>
+        </div>
+      </div>
+    ), { duration: 5000 });
   };
 
   const tiposDocumento = [
@@ -267,18 +341,12 @@ const Empleados = () => {
     { value: "PA", label: "Pasaporte" },
     { value: "PEP", label: "Permiso Especial de Permanencia" },
   ];
-  const roles = [
-    { id_role: 1, name: "Administrador", state: true },
-    { id_role: 2, name: "Jefe de cocina", state: true },
-    { id_role: 3, name: "Auxiliar de cocina", state: true },
-  ];
   
   const filteredData = data.filter(item =>
-    item.Nombre.toLowerCase().includes(tableSearchText) ||
-    item.Document.toString().includes(tableSearchText) ||
-    item.FechaIni.toLowerCase().includes(tableSearchText) ||
-    item.NumeroSS.toString().includes(tableSearchText) ||
-    item.Rol.toString().includes(tableSearchText)
+    (item.fullName && item.fullName.toLowerCase().includes(tableSearchText)) ||
+    (item.document && item.document.toString().includes(tableSearchText)) ||
+    (item.dateOfEntry && item.dateOfEntry.toLowerCase().includes(tableSearchText)) ||
+    (item.socialSecurityNumber && item.socialSecurityNumber.toString().includes(tableSearchText))
   );
   
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -298,6 +366,7 @@ const Empleados = () => {
 
   return (
     <Container>
+      <Toaster position="top-center" />
       <br />
       {/* Mostrar la sección de búsqueda y el botón solo si no se está mostrando el formulario */}
       {!showForm && (
@@ -311,9 +380,23 @@ const Empleados = () => {
               onChange={handleTableSearch}
               style={{ width: '50%' }}
             />
-            <Button style={{backgroundColor:'#228b22', color:'black'}} onClick={() => { setForm({ id: '', Nombre: '', Document: '',
-               FechaIni: '', ContactoEmerg:'', Parentesco:'', NombreFamiliar:'',GrupoSang:'', NumeroSS: '', Direccion: '', 
-               TipoContrato: '', Estado: true }); setIsEditing(false); setShowForm(true); }}>
+            <Button style={{backgroundColor:'#228b22', color:'black'}} onClick={() => { setForm(
+              { idEmployee: '', 
+                fullName: '', 
+                typeDocument: '', 
+                document: '', 
+                cellPhone: '',
+                email: '',
+                dateOfEntry: '', 
+                emergencyContact: '', 
+                Relationship: '',
+                nameFamilyMember: '', 
+                BloodType: '',
+                socialSecurityNumber: '', 
+                Address: '', 
+                contractType: '', 
+                status: true
+               }); setIsEditing(false); setShowForm(true); }}>
               Agregar empleado
               <PlusOutlined style={{ fontSize: '16px', color: 'black', padding:'5px' }} />
             </Button>
@@ -336,13 +419,13 @@ const Empleados = () => {
               
               {currentItems.length > 0 ? (
                 currentItems.map((item) => (
-                  <tr key={item.id}>
-                    <td style={{ textAlign: 'center' }}>{item.id}</td>
-                    <td>{item.Nombre}</td>
+                  <tr key={item.idEmployee}>
+                    <td style={{ textAlign: 'center' }}>{item.idEmployee}</td>
+                    <td>{item.fullName}</td>
                     <td >{item.Document}</td>
-                    <td style={{ textAlign: 'center' }}>{item.FechaIni}</td>
-                    <td style={{ textAlign: 'center' }}>{item.Direccion}</td>
-                    <td style={{ textAlign: 'center' }}>{item.TipoContrato}</td>
+                    <td style={{ textAlign: 'center' }}>{item.dateOfEntry}</td>
+                    <td style={{ textAlign: 'center' }}>{item.Address}</td>
+                    <td style={{ textAlign: 'center' }}>{item.contractType}</td>
                     <td>
                       <Button
                         color={item.Estado ? "success" : "secondary"}
@@ -353,45 +436,43 @@ const Empleados = () => {
                       </Button>
                     </td>
                     <td>
-                      <div className="d-flex align-items-center">
+                      <div className="d-flex justify-content-between align-items-center w-100"> {/* Cambié a w-100 para asegurar que ocupe todo el ancho disponible */}
                         <Button 
                           color="dark" 
                           onClick={() => { setForm(item); setIsEditing(true); setModalOpen(true); }} 
-                          className="me-2 " // Usa btn-sm para botones más pequeños
+                          className="btn-sm" // Usa btn-sm para botones más pequeños
                           style={{ padding: '0.25rem 0.5rem' }} // Ajusta el relleno si es necesario
                         >
                           <FiEdit style={{ fontSize: '0.75rem' }} /> {/* Tamaño del ícono reducido */}
                         </Button>
+                        
                         <Button 
                           color="danger" 
                           onClick={() => eliminar(item)}
                           className="btn-sm" // Usa btn-sm para botones más pequeños
-                          style={{ padding: '0.25rem 0.5rem' }} // Ajusta el relleno si es necesario
+                          style={{ padding: '0.15rem 0.5rem' }} // Ajusta el relleno si es necesario
                         >
                           <FaTrashAlt style={{ fontSize: '0.75rem' }} /> {/* Tamaño del ícono reducido */}
                         </Button>
+                        
+                        <Button 
+                          onClick={() => viewDetails(item)}
+                          className="btn-sm" 
+                          style={{ 
+                            backgroundColor: '#F5C300', // Color dorado miel
+                            border: 'none', // Elimina el borde del botón
+                            padding: '0.45rem', // Ajusta el relleno para hacer el botón más pequeño
+                            display: 'flex', // Asegura que el icono esté centrado
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 'auto' // Se ajusta al contenido
+                          }}
+                        >
+                          <FaEye style={{ color: 'black', fontSize: '1.10rem', top: '5px' }} /> {/* Tamaño del ícono reducido */}
+                        </Button> 
                       </div>
                     </td>
-                    <td>
-                      <Button 
-                        onClick={() => viewDetails(item)}
-                        className="me-3 btn-sm" 
-                        style={{ 
-                          backgroundColor: '#F5C300', // Color dorado miel
-                          border: 'none', // Elimina el borde del botón
-                          padding: '0.45rem', // Ajusta el relleno para hacer el botón más pequeño
-                          display: 'flex', // Asegura que el icono esté centrado
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          // Ajusta el tamaño del texto si es necesario
-                          
-                        }}
-                      >
-                        <FaEye style={{ color: 'black', fontSize: '1.10rem', top: '5px' }} /> {/* Tamaño del ícono reducido */}
-                      </Button> 
-                    </td>
-
-                  </tr>
+                   </tr>
                 ))
               ) : (
                 <tr>
@@ -418,212 +499,92 @@ const Empleados = () => {
             <h2 className="text-end">{isEditing ? 'Editar Empleado' : 'Agregar Empleado'}</h2>
           </div>
           <br />
+
+          {/* First Row */}
           <Row>
             <Col md={4}>
               <FormGroup>
-                <label style={{ fontSize: '15px', padding: '5px' }}>
-                  Nombre Completo
-                </label>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Nombre Completo</label>
                 <Input
                   type="text"
-                  name="Nombre"
-                  value={form.Nombre}
+                  name="fullName"
+                  value={form.fullName}
                   onChange={handleChange}
                   placeholder="Nombre del Empleado"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.Nombre ? 'is-invalid' : ''}`}
+                  style={{ border: '1px solid black' }} // Borde negro de 1px
+                  className={`form-control ${formErrors.fullName ? 'is-invalid' : ''}`}
                 />
-                {formErrors.Nombre && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-              <FormGroup>
-                <label style={{ fontSize: '15px', padding: '5px' }}>
-                  Celular
-                </label>
-                <Input
-                  type="Number"
-                  name="Celular"
-                  value={form.Celular}
-                  onChange={handleChange}
-                  placeholder="Celular del Empleado"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.Celular ? 'is-invalid' : ''}`}
-                />
-                {formErrors.Celular && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-            </Col>
-            <Col md={4}>
-            <FormGroup>
-                  <label style={{ fontSize: "15px", padding: "5px" }}>
-                    Tipo Documento
-                  </label>
-                  <Input
-                    type="select" // Cambiado a "select"
-                    name="TipoDocumento"
-                    value={form.tipoDocument}
-                    onChange={handleChange}
-                    className={`form-control ${
-                      formErrors.tipoDocument ? "is-invalid" : ""
-                    }`}
-                  >
-                    <option value="">Seleccione un tipo de documento</option>
-                    {tiposDocumento.map((tipo) => (
-                      <option key={tipo.value} value={tipo.value}>
-                        {tipo.label}
-                      </option>
-                    ))}
-                  </Input>
-                  {formErrors.TipoDocumento && (
-                    <div className="invalid-feedback">
-                      Este campo es obligatorio.
-                    </div>
-                  )}
-                </FormGroup>
-                <FormGroup>
-                <label style={{ fontSize: '15px', padding: '5px' }}>
-                  Correo
-                </label>
-                <Input
-                  type="email"
-                  name="Correo"
-                  value={form.Correo}
-                  onChange={handleChange}
-                  placeholder="Correo del Empleado"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.Correo ? 'is-invalid' : ''}`}
-                />
-                {formErrors.Correo && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-              
-            </Col>
-            <Col md={4}>
-            <FormGroup>
-                <label style={{ fontSize: '15px', padding: '5px' }}>Documento</label>
-                <Input
-                  type="text"
-                  name="Documento"
-                  value={form.Document}
-                  onChange={handleChange}
-                  placeholder="Número de Documento"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.Document ? 'is-invalid' : ''}`}
-                />
-                {formErrors.Document && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-              <FormGroup>
-                <label style={{ fontSize: '15px', padding: '5px' }}>Fecha de Ingreso</label>
-                <Input
-                  type="date"
-                  name="FechaIngreso"
-                  value={formatDate(form.FechaIni)}
-                  onChange={handleChange}
-                  placeholder="Fecha de Ingreso"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.FechaIni ? 'is-invalid' : ''}`}
-                />
-                {formErrors.FechaIni && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-            </Col>
-          </Row>
-          <Row>
-            <Col md={4}>
-              <FormGroup>
-                <label style={{ fontSize: '15px', padding: '5px' }}>Contacto de Emergencia</label>
-                <Input
-                  type="text"
-                  name="ContactoEmergencia"
-                  value={form.ContactoEmerg}
-                  onChange={handleChange}
-                  placeholder="Número de Contacto de Emergencia"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.ContactoEmerg ? 'is-invalid' : ''}`}
-                />
-                {formErrors.ContactoEmerg && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.fullName && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
             <Col md={4}>
               <FormGroup>
-                <label style={{ fontSize: '15px', padding: '5px' }}>Parentesco</label>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Tipo Documento</label>
                 <Input
-                  type="text"
-                  name="Parentesco"
-                  value={form.Parentesco}
+                  type="select"
+                  name="typeDocument"
+                  value={form.typeDocument}
                   onChange={handleChange}
-                  placeholder="Parentesco"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.Parentesco ? 'is-invalid' : ''}`}
-                />
-                {formErrors.Parentesco && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-            </Col>
-            <Col md={4}>
-              <FormGroup>
-                <label style={{ fontSize: '15px', padding: '5px' }}>Nombre del Familiar</label>
-                <Input
-                  type="text"
-                  name="NombreFamiliar"
-                  value={form.NombreFamiliar}
-                  onChange={handleChange}
-                  placeholder="Nombre del Familiar"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.NombreFamiliar ? 'is-invalid' : ''}`}
-                />
-                {formErrors.NombreFamiliar && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-            </Col>
-          </Row>
-          <Row>
-            <Col md={4}>
-              <FormGroup>
-                <label style={{ fontSize: '15px', padding: '5px' }}>Grupo Sanguíneo</label>
-                <Input
-                  type="text"
-                  name="GrupoSanguineo"
-                  value={form.GrupoSang}
-                  onChange={handleChange}
-                  placeholder="Grupo Sanguíneo"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.GrupoSang ? 'is-invalid' : ''}`}
-                />
-                {formErrors.GrupoSang && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-            </Col>
-            <Col md={4}>
-              <FormGroup>
-                <label style={{ fontSize: '15px', padding: '5px' }}>Número de Seguridad Social</label>
-                <Input
-                  type="text"
-                  name="NumeroSS"
-                  value={form.NumeroSS}
-                  onChange={handleChange}
-                  placeholder="Número de Seguridad Social"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.NumeroSS ? 'is-invalid' : ''}`}
-                />
-                {formErrors.NumeroSS && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-              <FormGroup>
-                <label style={{ fontSize: "15px", padding: "5px" }}>Rol</label>
-                <Input
-                  type="select" // Cambiado a "select"
-                  name="Rol"
-                  value={form.Rol}
-                  onChange={handleChange}
-                  className={`form-control ${
-                    formErrors.Rol ? "is-invalid" : ""
-                  }`}
+                  className={`form-control ${formErrors.typeDocument ? 'is-invalid' : ''}`}
+                  style={{ border: '1px solid black' }} // Borde negro de 1px
                 >
-                  <option value="">Seleccione un rol</option>
-                  {roles.map((role) => (
-                    <option key={role.id_role} value={role.id_role}>
-                      {role.name}
+                  <option value="">Seleccione un tipo de documento</option>
+                  {tiposDocumento.map((tipo) => (
+                    <option key={tipo.value} value={tipo.value}>
+                      {tipo.label}
                     </option>
                   ))}
                 </Input>
-                {formErrors.Rol && (
-                  <div className="invalid-feedback">
-                    Este campo es obligatorio.
-                  </div>
-                )}
+                {formErrors.typeDocument && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+              </FormGroup>
+            </Col>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Documento</label>
+                <Input
+                  type="text"
+                  name="document"
+                  value={form.document}
+                  onChange={handleChange}
+                  placeholder="Número de Documento"
+                  className={`form-control ${formErrors.document ? 'is-invalid' : ''}`}
+                  style={{ border: '1px solid black' }} // Borde negro de 1px
+                />
+                {formErrors.document && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+              </FormGroup>
+            </Col>
+          </Row>
+
+          {/* Second Row */}
+          <Row>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Celular</label>
+                <Input
+                  type="number"
+                  name="cellPhone"
+                  value={form.cellPhone}
+                  onChange={handleChange}
+                  placeholder="celular del Empleado"
+                  style={{ border: '1px solid black' }} // Borde negro de 1px
+                  className={`form-control ${formErrors.cellPhone ? 'is-invalid' : ''}`}
+                />
+                {formErrors.cellPhone && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+              </FormGroup>
+            </Col>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Correo</label>
+                <Input
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  placeholder="email del Empleado"
+                  style={{ border: '1px solid black' }} // Borde negro de 1px
+                  className={`form-control ${formErrors.email ? 'is-invalid' : ''}`}
+                />
+                {formErrors.email && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
             <Col md={4}>
@@ -631,35 +592,134 @@ const Empleados = () => {
                 <label style={{ fontSize: '15px', padding: '5px' }}>Dirección</label>
                 <Input
                   type="text"
-                  name="Direccion"
-                  value={form.Direccion}
+                  name="Address"
+                  value={form.Address}
                   onChange={handleChange}
                   placeholder="Dirección"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.Direccion ? 'is-invalid' : ''}`}
+                  style={{ border: '1px solid black' }} // Borde negro de 1px
+                  className={`form-control ${formErrors.Address ? 'is-invalid' : ''}`}
                 />
-                {formErrors.Direccion && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.Address && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
           </Row>
+
+          {/* Third Row */}
           <Row>
             <Col md={4}>
+              <FormGroup>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Contacto de Emergencia</label>
+                <Input
+                  type="text"
+                  name="emergencyContact"
+                  value={form.emergencyContact}
+                  onChange={handleChange}
+                  placeholder="Número de Contacto de Emergencia"
+                  className={`form-control ${formErrors.emergencyContact ? 'is-invalid' : ''}`}
+                  style={{ border: '1px solid black' }} // Borde negro de 1px
+                />
+                {formErrors.emergencyContact && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+              </FormGroup>
+            </Col>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Nombre Familiar</label>
+                <Input
+                  type="text"
+                  name="nameFamilyMember"
+                  value={form.nameFamilyMember}
+                  onChange={handleChange}
+                  placeholder="Nombre del Familiar"
+                  style={{ border: '1px solid black' }} // Borde negro de 1px
+                  className={`form-control ${formErrors.nameFamilyMember ? 'is-invalid' : ''}`}
+                />
+                {formErrors.nameFamilyMember && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+              </FormGroup>
+            </Col>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Parentesco</label>
+                <Input
+                  type="text"
+                  name="Relationship"
+                  value={form.Relationship}
+                  onChange={handleChange}
+                  placeholder="Parentesco"
+                  style={{ border: '1px solid black' }} // Borde negro de 1px
+                  className={`form-control ${formErrors.Relationship ? 'is-invalid' : ''}`}
+                />
+                {formErrors.Relationship && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+              </FormGroup>
+            </Col>
+          </Row>
+
+          {/* Fourth Row */}
+          <Row>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Grupo Sanguíneo</label>
+                <Input
+                  type="text"
+                  name="BloodType"
+                  value={form.BloodType}
+                  onChange={handleChange}
+                  placeholder="Grupo Sanguíneo"
+                  className={`form-control ${formErrors.BloodType ? 'is-invalid' : ''}`}
+                  style={{ border: '1px solid black' }} // Borde negro de 1px
+                />
+                {formErrors.BloodType && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+              </FormGroup>
+            </Col>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Número de Seguridad Social</label>
+                <Input
+                  type="text"
+                  name="socialSecurityNumber"
+                  value={form.socialSecurityNumber}
+                  onChange={handleChange}
+                  placeholder="Número de Seguridad Social"
+                  style={{ border: '1px solid black' }} // Borde negro de 1px
+                  className={`form-control ${formErrors.socialSecurityNumber ? 'is-invalid' : ''}`}
+                />
+                {formErrors.socialSecurityNumber && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+              </FormGroup>
+            </Col>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{ fontSize: '15px', padding: '5px' }}>Fecha de Ingreso</label>
+                <Input
+                  type="date"
+                  name="dateOfEntry"
+                  value={form.dateOfEntry}
+                  onChange={handleChange}
+                  className={`form-control ${formErrors.dateOfEntry ? 'is-invalid' : ''}`}
+                  style={{ border: '1px solid black' }} // Borde negro de 1px
+                />
+                {formErrors.dateOfEntry && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+              </FormGroup>
+            </Col>
+          </Row>
+
+          {/* Fifth Row */}
+          <Row>
+            <Col md={6}>
               <FormGroup>
                 <label style={{ fontSize: '15px', padding: '5px' }}>Tipo de Contrato</label>
                 <Input
                   type="text"
-                  name="TipoContrato"
-                  value={form.TipoContrato}
+                  name="contractType"
+                  value={form.contractType}
                   onChange={handleChange}
                   placeholder="Tipo de Contrato"
-                  style={{ border: '2px solid black' }} // Borde negro
-                  className={`form-control ${formErrors.TipoContrato ? 'is-invalid' : ''}`}
+                  style={{ border: '1px solid black' }} // Borde negro de 1px
+                  className={`form-control ${formErrors.contractType ? 'is-invalid' : ''}`}
                 />
-                {formErrors.TipoContrato && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.contractType && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
-              
             </Col>
           </Row>
+      
         <div className="d-flex justify-content-start mt-3">
           <Button style={{ background: '#2e8322' }} onClick={handleSubmit}>
             {isEditing ? 'Actualizar' : 'Guardar'}
@@ -670,6 +730,7 @@ const Empleados = () => {
           </Button>
         </div>
       </div>
+      
       
       
       )}
@@ -685,13 +746,13 @@ const Empleados = () => {
                 <label>Nombre</label>
                 <Input
                   type="text"
-                  name="Nombre"
-                  value={form.Nombre}
+                  name="fullName"
+                  value={form.fullName}
                   onChange={handleChange}
                   placeholder="Nombre del empleado"
-                  className={`form-control ${formErrors.Nombre ? 'is-invalid' : ''}`}
+                  className={`form-control ${formErrors.fullName ? 'is-invalid' : ''}`}
                 />
-                {formErrors.Nombre && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.fullName && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
             <Col md={4}>
@@ -699,13 +760,13 @@ const Empleados = () => {
                 <label>Documento</label>
                 <Input
                   type="text"
-                  name="Document"
-                  value={form.Document}
+                  name="document"
+                  value={form.document}
                   onChange={handleChange}
                   placeholder="Número de documento"
-                  className={`form-control ${formErrors.Document ? 'is-invalid' : ''}`}
+                  className={`form-control ${formErrors.document ? 'is-invalid' : ''}`}
                 />
-                {formErrors.Document && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.document && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
             <Col md={4}>
@@ -713,43 +774,73 @@ const Empleados = () => {
                 <label>Fecha de Inicio</label>
                 <Input
                   type="date"
-                  name="FechaIni"
-                  value={form.FechaIni}
+                  name="dateOfEntry"
+                  value={form.dateOfEntry}
                   onChange={handleChange}
                   placeholder="Fecha de inicio"
-                  className={`form-control ${formErrors.FechaIni ? 'is-invalid' : ''}`}
+                  className={`form-control ${formErrors.dateOfEntry ? 'is-invalid' : ''}`}
                 />
-                {formErrors.FechaIni && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.dateOfEntry && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
           </Row>
           <Row>
             <Col md={4}>
               <FormGroup>
+                <label style={{fontSize:'15px', padding:'5px'}}>Celular</label>
+                <Input
+                  type="text"
+                  name="cellPhone"
+                  value={form.cellPhone}
+                  onChange={handleChange}
+                  placeholder="Número de celular"
+                  className={`form-control ${formErrors.cellPhone ? 'is-invalid' : ''}`}
+                />
+                {formErrors.cellPhone  && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+              </FormGroup>
+            </Col>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{fontSize:'15px', padding:'5px'}}>Email</label>
+                <Input
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  placeholder="Correo electrónico"
+                  className={`form-control ${formErrors.email ? 'is-invalid' : ''}`}
+                />
+                {formErrors.email && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+              </FormGroup>
+            </Col>
+            <Col md={4}>
+              <FormGroup>
                 <label style={{fontSize:'15px', padding:'5px'}}>Contacto de emergencia</label>
                 <Input
                   type="text"
-                  name="ContactoEmerg"
-                  value={form.ContactoEmerg}
+                  name="emergencyContact"
+                  value={form.emergencyContact}
                   onChange={handleChange}
                   placeholder="Número de contacto de emergencia"
-                  className={`form-control ${formErrors.ContactoEmerg ? 'is-invalid' : ''}`}
+                  className={`form-control ${formErrors.emergencyContact ? 'is-invalid' : ''}`}
                 />
-                {formErrors.ContactoEmerg && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.emergencyContact && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
+          </Row>
+          <Row>
             <Col md={4}>
               <FormGroup>
                 <label style={{fontSize:'15px', padding:'5px'}}>Parentesco</label>
                 <Input
                   type="text"
-                  name="Parentesco"
-                  value={form.Parentesco}
+                  name="Relationship"
+                  value={form.Relationship}
                   onChange={handleChange}
                   placeholder="Número de Parentesco"
-                  className={`form-control ${formErrors.Parentesco ? 'is-invalid' : ''}`}
+                  className={`form-control ${formErrors.Relationship ? 'is-invalid' : ''}`}
                 />
-                {formErrors.Parentesco && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.Relationship && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
             <Col md={4}>
@@ -757,43 +848,43 @@ const Empleados = () => {
                 <label style={{fontSize:'15px', padding:'5px'}}>Nombre del familiar</label>
                 <Input
                   type="text"
-                  name="NombreFamiliar"
-                  value={form.NombreFamiliar}
+                  name="nameFamilyMember"
+                  value={form.nameFamilyMember}
                   onChange={handleChange}
                   placeholder="Nombre del familiar"
-                  className={`form-control ${formErrors.NombreFamiliar ? 'is-invalid' : ''}`}
+                  className={`form-control ${formErrors.nameFamilyMember ? 'is-invalid' : ''}`}
                 />
-                {formErrors.NombreFamiliar && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.nameFamilyMember && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+              </FormGroup>
+            </Col>
+            <Col md={4}>
+              <FormGroup>
+                <label style={{fontSize:'15px', padding:'5px'}}>Grupo sanguineo</label>
+                <Input
+                  type="text"
+                  name="BloodType"
+                  value={form.BloodType}
+                  onChange={handleChange}
+                  placeholder="Grupo Sanguineo"
+                  className={`form-control ${formErrors.BloodType ? 'is-invalid' : ''}`}
+                />
+                {formErrors.BloodType && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
           </Row>
           <Row>
             <Col md={4}>
               <FormGroup>
-                <label style={{fontSize:'15px', padding:'5px'}}>Grupo sanguineo</label>
-                <Input
-                  type="text"
-                  name="GrupoSang"
-                  value={form.GrupoSang}
-                  onChange={handleChange}
-                  placeholder="Grupo Sanguineo"
-                  className={`form-control ${formErrors.GrupoSang ? 'is-invalid' : ''}`}
-                />
-                {formErrors.GrupoSang && <div className="invalid-feedback">Este campo es obligatorio.</div>}
-              </FormGroup>
-            </Col>
-            <Col md={4}>
-              <FormGroup>
                 <label>Número de Seguridad Social</label>
                 <Input
                   type="text"
-                  name="NumeroSS"
-                  value={form.NumeroSS}
+                  name="socialSecurityNumber"
+                  value={form.socialSecurityNumber}
                   onChange={handleChange}
                   placeholder="Número de seguridad social"
-                  className={`form-control ${formErrors.NumeroSS ? 'is-invalid' : ''}`}
+                  className={`form-control ${formErrors.socialSecurityNumber ? 'is-invalid' : ''}`}
                 />
-                {formErrors.NumeroSS && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.socialSecurityNumber && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
             <Col md={4}>
@@ -801,29 +892,27 @@ const Empleados = () => {
                 <label>Dirección</label>
                 <Input
                   type="text"
-                  name="Direccion"
-                  value={form.Direccion}
+                  name="Address"
+                  value={form.Address}
                   onChange={handleChange}
                   placeholder="Dirección"
-                  className={`form-control ${formErrors.Direccion ? 'is-invalid' : ''}`}
+                  className={`form-control ${formErrors.Address ? 'is-invalid' : ''}`}
                 />
-                {formErrors.Direccion && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.Address && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
-          </Row>
-          <Row>
-          <Col md={4}>
+            <Col md={4}>
               <FormGroup>
                 <label>Tipo de Contrato</label>
                 <Input
                   type="text"
-                  name="TipoContrato"
-                  value={form.TipoContrato}
+                  name="contractType"
+                  value={form.contractType}
                   onChange={handleChange}
                   placeholder="Tipo de contrato"
-                  className={`form-control ${formErrors.TipoContrato ? 'is-invalid' : ''}`}
+                  className={`form-control ${formErrors.contractType ? 'is-invalid' : ''}`}
                 />
-                {formErrors.TipoContrato && <div className="invalid-feedback">Este campo es obligatorio.</div>}
+                {formErrors.contractType && <div className="invalid-feedback">Este campo es obligatorio.</div>}
               </FormGroup>
             </Col>
           </Row>
@@ -850,16 +939,18 @@ const Empleados = () => {
         <ModalBody style={{ overflowY: 'auto', maxHeight: 'calc(120vh - 120px)' }}>
           {selectedItem && (
             <div style={{ padding: '10px' }}>
-              <p><strong>Nombre:</strong> {selectedItem.Nombre}</p>
-              <p><strong>Documento:</strong> {selectedItem.Document}</p>
-              <p><strong>Fecha de Ingreso:</strong> {selectedItem.FechaIni}</p>
-              <p><strong>Contacto de Emergencia:</strong> {selectedItem.ContactoEmerg}</p>
-              <p><strong>Parentesco:</strong> {selectedItem.Parentesco}</p>
-              <p><strong>Nombre del Familiar:</strong> {selectedItem.NombreFamiliar}</p>
-              <p><strong>Grupo Sanguíneo:</strong> {selectedItem.GrupoSang}</p>
-              <p><strong>Número de Seguro Social:</strong> {selectedItem.NumeroSS}</p>
-              <p><strong>Dirección:</strong> {selectedItem.Direccion}</p>
-              <p><strong>Tipo de Contrato:</strong> {selectedItem.TipoContrato}</p>
+              <p><strong>Nombre:</strong> {selectedItem.fullName}</p>
+              <p><strong>Documento:</strong> {selectedItem.document}</p>
+              <p><strong>Fecha de Ingreso:</strong> {selectedItem.dateOfEntry}</p>
+              <p><strong>Celular:</strong> {selectedItem.cellPhone}</p>
+              <p><strong>Email:</strong> {selectedItem.email}</p>
+              <p><strong>Contacto de Emergencia:</strong> {selectedItem.emergencyContact}</p>
+              <p><strong>Parentesco:</strong> {selectedItem.Relationship}</p>
+              <p><strong>Nombre del Familiar:</strong> {selectedItem.nameFamilyMember}</p>
+              <p><strong>Grupo Sanguíneo:</strong> {selectedItem.BloodType}</p>
+              <p><strong>Número de Seguro Social:</strong> {selectedItem.socialSecurityNumber}</p>
+              <p><strong>Dirección:</strong> {selectedItem.Address}</p>
+              <p><strong>Tipo de Contrato:</strong> {selectedItem.contractType}</p>
               <p><strong>Estado:</strong> {selectedItem.Estado ? 'Activo' : 'Inactivo'}</p>
             </div>
           )}
@@ -868,7 +959,6 @@ const Empleados = () => {
             </ModalFooter>
         </ModalBody>
       </Modal>
-
 
       {/* Snackbar */}
       <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={closeSnackbar}>
