@@ -1,59 +1,30 @@
-*{
-    padding: 0;
-    margin: 0;  
+/* Reseteo básico */
+* {
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
 }
 
-.comfortaa-default {
-    font-family: "Comfortaa", sans-serif;
-    font-optical-sizing: auto;
-    font-weight: 400; /* Puedes ajustar el peso aquí, por ejemplo, 300, 400, 700 */
-    font-style: normal;
-  }
-  
-
-.sidebar{
-    color: #fff;
-    background-color: black;
+/* Fuente Comfortaa */
+body {
+  font-family: "Comfortaa", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
 }
 
-.header{
-    background-color: #fff;
-    margin-left:10px;
-    color: #080A0D ;
-    display: flex;
-
+#root { /* Aplica el fondo al contenedor principal de tu aplicación */
+  background-color: #fff9e6e7;
+  min-height: 100vh; /* Asegura que el fondo cubra toda la altura de la pantalla */
 }
 
-.buttonInt{
-    margin-top: 10px;
-}
-
-.menu-bar{
-    background-color: black;
-    height: 90vh;
-    margin-top: 2rem;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    font-size: 1rem;
-    text-decoration: none;
-    position: relative;
-}
-
-.toggle-theme-btn{
-    position: absolute;
-    bottom: 30px;
-    left: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-}
-
-.toggle{
-    margin-left: 15px;
-}
-
-.submenu{
-    background-color:black;
+/* Estilos para la línea lateral en el submenú */
+.ant-menu-sub.submenu-open::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: #7e2d2d; /* Color vinotinto */
 }

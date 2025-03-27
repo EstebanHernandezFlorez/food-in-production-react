@@ -13,13 +13,17 @@ import {
   MenuFoldOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import MenuList from "./views/module/MenuList";
-import Logo from "./views/module/Logo";
-import ToggleThemeButton from "./views/module/ToggleThemeButton";
+import './index.css'
+
+// Importaciones correctas de los componentes del menú
+import MenuList from "./components/layout/MenuList";
+import Logo from "./components/layout/Logo";
+
+// Importaciones de vistas
 import Dashboard from "./views/module/Dashboard/dashboard";
 import Roles from "./views/module/roles/roles";
 import Usuarios from "./views/module/usuarios/usuarios";
-import Produccion from "./views/module/Produccion/produccion";  
+import Produccion from "./views/module/Produccion/produccion";
 import ProductoInsumo from "./views/module/ProductoInsumo/ProductoInsumo";
 import Insumo from "./views/module/Insumo/Insumo";
 import Empleados from "./views/module/Empleados/Empleados";
@@ -28,13 +32,12 @@ import Clientes from "./views/module/Clientes/Clientes";
 import Reservas from "./views/module/Reservas/Reservas";
 import Servicios from "./views/module/Servicios/Servicios";
 import ManoDeObra from "./views/module/ManoDeObra/ManoDeObra";
-import RecoveryPassword from "./views/module/Auth/olvidoContraseña"; // Nombre
+import RecoveryPassword from "./views/module/Auth/olvidoContraseña";
 import { NavDropdown } from "react-bootstrap";
 
-import TablaGastos from "./views/module/ManoDeObra/TablaGastos"
-import RendimientoEmpleado from "./views/module/ManoDeObra/RendimientoEmpleado"
-      
-      
+import TablaGastos from "./views/module/ManoDeObra/TablaGastos";
+import RendimientoEmpleado from "./views/module/ManoDeObra/RendimientoEmpleado";
+
 const users = [
   {
     id: 1,
@@ -52,19 +55,13 @@ const users = [
 
 const { Header, Sider, Content } = Layout;
 
-
 export default function App() {
   const handleSelectcted = (eventKey) =>
     alert(`sele  const handleSelectcted ${eventKey}`);
 
-  const [darkTheme, setDarkTheme] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
   const [isRecoveryOpen, setIsRecoveryOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  const toggleTheme = () => {
-    setDarkTheme(!darkTheme);
-  };
 
   const openRecoverModal = (e) => {
     e.preventDefault();
@@ -99,19 +96,20 @@ export default function App() {
                   trigger={null}
                   collapsed={collapsed}
                   onCollapse={() => setCollapsed(!collapsed)}
+                  style={{ backgroundColor: '#fff' }} // Fondo blanco en el Sider
                 >
                   <Logo collapsed={collapsed} />
-                  <MenuList darkTheme={darkTheme} />
-                  <ToggleThemeButton darkTheme={darkTheme} toggleTheme={toggleTheme} />
+                  <MenuList />
                 </Sider>
                 <Layout>
                   <Header
                     style={{
                       padding: '3px',
                       borderBottom: '5px solid #800020',
-                      position: 'fixed', // Fija el header en la parte superior
-                      width: '100%', // Asegúrate de que ocupe todo el ancho
-                      zIndex: 1000, // Asegúrate de que esté encima de otros elementos
+                      position: 'fixed',
+                      width: '100%',
+                      zIndex: 1000,
+                      backgroundColor: '#fff', // Fondo blanco en el Header
                     }}
                     className="header"
                   >
@@ -127,6 +125,7 @@ export default function App() {
                         style={{
                           fontSize: collapsed ? '16px' : '24px',
                           transition: 'font-size 0.3s',
+                          color: '#000', // Texto negro en el Button
                         }}
                       />
                       <div style={{ position: 'absolute', right: '18%', zIndex: 2000 }}>
@@ -149,7 +148,7 @@ export default function App() {
                   </Header>
 
                   <Content
-                    style={{ padding: '80px 24px 24px', minHeight: 'calc(100vh - 64px)' }} // Ajusta el padding superior
+                    style={{ padding: '80px 24px 24px', minHeight: 'calc(100vh - 64px)', backgroundColor: '#fff' }} // Fondo blanco en el Content
                   >
                     <Routes>
                       <Route path="/dashboard" element={<Dashboard />} />
@@ -164,10 +163,9 @@ export default function App() {
                       <Route path="/reservas" element={<Reservas />} />
                       <Route path="/servicios" element={<Servicios />} />
                       <Route path="/mano_de_obra" element={<ManoDeObra />} />
-                     
-                      <Route path="/tabla-gastos" element={<TablaGastos/>}/>
-                      <Route path="/rendimiento-empleado" element={<RendimientoEmpleado/>}/>
-                      {/* Añade más rutas según sea necesario */}
+
+                      <Route path="/tabla-gastos" element={<TablaGastos />} />
+                      <Route path="/rendimiento-empleado" element={<RendimientoEmpleado />} />
                     </Routes>
                   </Content>
                 </Layout>
@@ -183,8 +181,7 @@ export default function App() {
       <RecoveryPassword isOpen={isRecoveryOpen} onClose={closeRecoverModal} />
     </Router>
   );
-};
-
+}
 
 function Login({ setIsAuthenticated, openRecoverModal }) {
   const [username, setUsername] = useState("");
