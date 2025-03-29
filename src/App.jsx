@@ -24,6 +24,7 @@ import Dashboard from "./views/module/Dashboard/dashboard";
 import Roles from "./views/module/roles/roles";
 import Usuarios from "./views/module/usuarios/usuarios";
 import Produccion from "./views/module/Produccion/produccion";
+import RegistroCompra from './views/module/Compras/RegistroComprasPage'
 import ProductoInsumo from "./views/module/ProductoInsumo/ProductoInsumo";
 import Insumo from "./views/module/Insumo/Insumo";
 import Empleados from "./views/module/Empleados/Empleados";
@@ -155,6 +156,7 @@ export default function App() {
                       <Route path="/roles" element={<Roles />} />
                       <Route path="/usuarios" element={<Usuarios />} />
                       <Route path="/produccion" element={<Produccion />} />
+                      <Route path="/compras" element={<RegistroCompra />} />
                       <Route path="/producto_insumo" element={<ProductoInsumo />} />
                       <Route path="/insumo" element={<Insumo />} />
                       <Route path="/empleados" element={<Empleados />} />
