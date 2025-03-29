@@ -37,6 +37,7 @@ const MenuList = ({ collapsed }) => {
                 { key: 'producto_insumo', label: 'Producto Insumo', path: '/producto_insumo' },
                 { key: 'orden_produccion', label: 'Orden de Producción', path: '/orden_produccion' },
                 { key: 'produccion', label: 'Producción', path: '/produccion' },
+                { key: 'Registrar compra', label: 'Registro compra', path: '/compras' },
             ],
         },
         {

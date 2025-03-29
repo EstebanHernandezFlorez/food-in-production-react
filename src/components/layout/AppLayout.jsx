@@ -1,4 +1,4 @@
-// AppLayout.js
+//AppLayout.js
 import React, { useState } from 'react';
 import { Layout, Button } from 'antd';
 import { MenuUnfoldOutlined, MenuFoldOutlined } from '@ant-design/icons';
@@ -14,25 +14,26 @@ const AppLayout = ({ children }) => {
   const navigate = useNavigate();
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Sider
-        theme="light"
-        className="sidebar"
-        collapsible
-        trigger={null}
-        collapsed={collapsed}
-        onCollapse={() => setCollapsed(!collapsed)}
-        width={collapsed ? 80:250}
-        style={{
-          overflow: 'auto',
-          position: 'fixed',
-          left: 0,
-          top: 0,
-          bottom: 0,
-          backgroundColor: '#FEF5C4',
-          height: '100vh', //Important: Ensure sidebar takes full height.
-        }}
-      >
+    <Layout style={{ minHeight: '80vh' }}>
+      //AppLayout.js
+        <Sider
+          theme="light"
+          className="sidebar"
+          collapsible
+          trigger={null}
+          collapsed={collapsed}
+          onCollapse={() => setCollapsed(!collapsed)}
+          width={collapsed ? 200 : 400} // Adjust these values
+          style={{
+            overflow: 'auto', //Keep the scroll if the content is taller than the screen
+            position: 'fixed',
+            left: 0,
+            top: 0,
+            bottom: 0,
+            backgroundColor: '#FEF5C4',
+            //height: '100vh', // Remove this line.  Let content determine height.
+          }}
+        >
         <Logo collapsed={collapsed} backgroundColor="#FEF5C4" />
         <MenuList collapsed={collapsed} />
       </Sider>
