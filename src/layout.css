@@ -1,0 +1,23 @@
+/* layout.css */
+/* Header */
+.header {
+  background-color: #FEF5C4;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Botón de colapso */
+.buttonInt {
+  margin-left: 15px;
+  color: #000; /* Asegúrate de que el color del icono sea visible */
+}
+
+/* Imagen a pantalla completa */
+.full-width-image {
+    width: 100dvb;
+    height: 70vh;
+    display: block;
+}
+
+.logo-container {
+  background-color: #FEF5C4 !important; /* Usamos !important para asegurarnos de que se aplique */
+}

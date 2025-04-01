@@ -1,5 +1,17 @@
-.full-width-image {
-  width: 100dvb;            /* Asegura que la imagen ocupe el 100% del ancho del contenedor */
-  height: 70vh;          /* Mantiene la proporción de la imagen */
-  display: block;        /* Elimina el espacio extra debajo de la imagen */
+/* Add this to your existing CSS file or create a new one */
+.table-borderless > thead > tr > th,
+.table-borderless > tbody > tr > th,
+.table-borderless > tfoot > tr > th,
+.table-borderless > thead > tr > td,
+.table-borderless > tbody > tr > td,
+.table-borderless > tfoot > tr > td {
+  border: none;
+}
+
+.table thead th {
+    border-bottom: 1px solid #dee2e6; /* Default Bootstrap border color */
+}
+
+.table tbody tr:last-child td {
+    border-bottom: none;
 }
