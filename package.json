@@ -40,7 +40,7 @@
     "reactstrap": "^9.2.2",
     "recharts": "^2.12.7",
     "sweet": "^0.1.1",
-    "sweetalert2": "^11.14.1",
+    "sweetalert2": "^11.17.2",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

@@ -15,7 +15,7 @@ const initialData = [
   {id: 4, NombreProducto: "Producto D", Version: "2.5", Cantidad: 250, TipoGramaje: "Grueso", Tarea: "Pruebas", Tiempo: "4h", TiempoTotal: "40h", Proveedor: "Proveedor W"}
 ];
 
-const Proveedores = () => {
+const ProductoInsumo = () => {
   const [data, setData] = useState(initialData);
   const [form, setForm] = useState({
     id: '',
