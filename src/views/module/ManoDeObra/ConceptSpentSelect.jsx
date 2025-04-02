@@ -1,26 +1,34 @@
-// src/components/ConceptSpentSelect.jsx
-import React, { useState, useEffect } from 'react';
-import { Input, FormGroup, Label } from 'reactstrap';
+// Inside ConceptSpentSelect.jsx (Example structure)
+import React from 'react';
+import { Input, Label } from 'reactstrap'; // Assuming reactstrap Input
 
-const ConceptSpentSelect = ({ value, onChange, conceptSpents }) => {
+const ConceptSpentSelect = ({ value, onChange, conceptSpents, name, invalid, id, ...rest }) => {
     return (
-        <FormGroup>
-            <Label>Concepto de Gasto</Label>
-            <Input
-                type="select"
-                name="idConceptSpent"
-                value={value || ''}  // Use value prop, provide a default
-                onChange={onChange}    // Use onChange prop
-                style={{ border: '1px solid #ced4da' }}
-            >
-                <option value="">Seleccionar Concepto</option>
-                {conceptSpents && conceptSpents.map(concept => (
-                    <option key={concept.idConceptSpent} value={concept.idConceptSpent}>
-                        {concept.name}
-                    </option>
-                ))}
-            </Input>
-        </FormGroup>
+        // Removed FormGroup from here as it's likely in the parent
+        <>
+          {/* Removed Label as it's likely in the parent */}
+          <Input
+            type="select"
+            name={name || "idConceptSpent"} // Use passed name or default
+            id={id || name || "idConceptSpent"} // Use passed id or name or default
+            value={value}
+            onChange={onChange}
+            invalid={invalid}
+            {...rest} // Pass other props like style, etc.
+          >
+            <option value="">-- Seleccione Concepto --</option>
+            {/* Ensure conceptSpents is an array before mapping */}
+            {Array.isArray(conceptSpents) && conceptSpents.map((concept) => (
+              <option
+                // **** ADD THE KEY PROP HERE ****
+                key={concept.idExpenseType} // Use the unique ID from your data
+                value={concept.idExpenseType}
+              >
+                {concept.name} {/* Display the concept name */}
+              </option>
+            ))}
+          </Input>
+        </>
     );
 };
 

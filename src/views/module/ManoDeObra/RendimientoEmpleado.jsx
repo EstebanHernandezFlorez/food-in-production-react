@@ -1,268 +1,414 @@
-import React, { useState } from 'react';
-import { Container, FormGroup, Input, Button, Table, Row, Col, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
+import React, { useState, useCallback } from 'react';
+import {
+    Container, Row, Col, Button, FormGroup, Alert, Spinner,
+    Modal, ModalHeader, ModalBody, ModalFooter, Card, CardHeader, CardBody, Table, Input, InputGroup
+} from 'reactstrap';
 import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { IoSearchOutline } from "react-icons/io5";
 import { useNavigate } from 'react-router-dom';
+import {
+    BarChart, Bar, LineChart, Line, PieChart, Pie, ResponsiveContainer,
+    XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell
+} from 'recharts';
+import MonthlyOverallExpenseService from '../../services/gastosGeneralesService';
 
+// Colors for charts
+const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
-const RendimientoEmpleado = () => {
+const ExpenseDashboardByDate = () => {
+    const navigate = useNavigate();
+    
+    // Date state
     const [startDate, setStartDate] = useState(null);
     const [endDate, setEndDate] = useState(null);
-    const [searchText, setSearchText] = useState(''); // For "Buscar insumo"
-    const [searchEmpleado, setSearchEmpleado] = useState(''); // For "Buscar empleado"
-    const [showResults, setShowResults] = useState(false);
-    const [isModalVisible, setIsModalVisible] = useState(false);
+    
+    // Search state
+    const [searchTerm, setSearchTerm] = useState('');
+    
+    // UI state
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
     const [modalMessage, setModalMessage] = useState('');
-    const navigate = useNavigate();
-  
-    // Sample data for the charts and table
-    const data = [
-        { name: 'Enero', porcentaje: 40, gramos: 200, dinero: 300 },
-        { name: 'Febrero', porcentaje: 30, gramos: 150, dinero: 250 },
-        { name: 'Marzo', porcentaje: 50, gramos: 250, dinero: 400 },
-        { name: 'Abril', porcentaje: 60, gramos: 300, dinero: 500 }
-    ];
-  
-    // Example table data with employee and insumo IDs
-    const tableData = [
-        {
-            empleadoId: 1,
-            insumoId: 1,
-            pesoInicial: 500,
-            pesoFinal: 450,
-            porcionesIniciales: 100,
-            porcionesFinales: 80,
-            ajustamiento: 20,
-            porcentaje: ((100 - (80 / 100 * 100)).toFixed(2)),
-            dinero: (20 * 5) 
-        },
-        {
-            empleadoId: 2,
-            insumoId: 2,
-            pesoInicial: 600,
-            pesoFinal: 580,
-            porcionesIniciales: 120,
-            porcionesFinales: 100,
-            ajustamiento: 20,
-            porcentaje: ((100 - (100 / 120 * 100)).toFixed(2)),
-            dinero: (20 * 5) 
-        }
-    ];
-
-    const handleClick = () => {
-        navigate('/mano_de_obra');
-    };
-  
-    // Filtra los datos por empleado e insumo
-    const filteredData = tableData.filter(row => {
-        const inDateRange = startDate && endDate ? 
-            (new Date(row.fecha) >= startDate && new Date(row.fecha) <= endDate) :
-            true;
-        // Removed insumo and empleado matching since data is static
-        return inDateRange;
+    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [showResults, setShowResults] = useState(false);
+    
+    // Data state
+    const [filteredExpenses, setFilteredExpenses] = useState([]);
+    const [chartData, setChartData] = useState({
+        byTypeAmount: [],
+        byTime: [],
+        byTypePercentage: [],
+        totalInRange: 0
     });
-  
-    const groupedData = filteredData.reduce((acc, row) => {
-        const empleado = `Empleado ${row.empleadoId}`; // Placeholder for empleado name
-        if (!acc[empleado]) {
-            acc[empleado] = [];
-        }
-        acc[empleado].push({
-            ...row,
-            insumo: `Insumo ${row.insumoId}` // Placeholder for insumo name
-        });
-        return acc;
-    }, {});
-  
-    const handleSearch = () => {
-        // Verifica si se ha ingresado al menos un criterio de búsqueda
-        if (!searchText && !searchEmpleado) {
-            setModalMessage("Por favor, ingrese al menos un criterio de búsqueda (insumo o empleado).");
+
+    // Helper function to format dates for display
+    const formatDateKey = (date) => {
+        if (!date) return '';
+        const d = new Date(date);
+        return isNaN(d.getTime()) ? '' : d.toLocaleDateString();
+    };
+
+    // --- Data Fetching and Processing Logic ---
+    const processData = useCallback((allExpenses) => {
+        setError(null); // Clear previous errors
+        setFilteredExpenses([]);
+        setChartData({ byTypeAmount: [], byTime: [], byTypePercentage: [], totalInRange: 0 });
+        setShowResults(false); // Hide results initially for new search
+
+        if (!startDate || !endDate) {
+            setModalMessage("Por favor, seleccione las fechas de inicio y fin.");
             setIsModalVisible(true);
-            setShowResults(false);
             return;
         }
-  
-        // Verifica si hay resultados después del filtrado
-        if (filteredData.length === 0) {
-            setModalMessage("No se encontraron resultados con los criterios de búsqueda.");
+        if (startDate > endDate) {
+            setModalMessage("La fecha de inicio no puede ser posterior a la fecha de fin.");
             setIsModalVisible(true);
-            setShowResults(false);
-        } else {
-            setShowResults(true);
+            return;
         }
-    };
-  
-    const handleOk = () => {
-        setIsModalVisible(false);
-    };
-  
-    const handleCancel = () => {
-        setIsModalVisible(false);
-    };
-  
-    const handleBack = () => {
-        navigate(-1); // Redirecciona a la página anterior
-    };
-  
-    return (
-        <Container>
-            <h2>Rendimiento de Empleados</h2>
-            <Row className="mb-3">
-                <Col md={3}>
-                    <label htmlFor="startDate">Desde:</label>
-                    <FormGroup>
-                        <DatePicker
-                            id="startDate"
-                            selected={startDate}
-                            onChange={(date) => setStartDate(date)}
-                            dateFormat="dd/MM/yyyy"
-                            className="form-control form-control-sm date-picker"
-                            placeholderText="Fecha de inicio"
-                        />
-                    </FormGroup>
-                </Col>
-                <Col md={3}>
-                    <label htmlFor="endDate">Hasta:</label>
-                    <FormGroup>
-                        <DatePicker
-                            id="endDate"
-                            selected={endDate}
-                            onChange={(date) => setEndDate(date)}
-                            dateFormat="dd/MM/yyyy"
-                            className="form-control form-control-sm date-picker"
-                            placeholderText="Fecha de fin"
-                        />
-                    </FormGroup>
-                </Col>
-  
-                <Col md={6} className="d-flex align-items-center">
-                    <FormGroup className="me-2"> 
-                        <label>Buscar insumo:</label>
-                        <Input
-                            type="text"
-                            placeholder="Buscar insumo"
-                            value={searchText}
-                            onChange={(e) => setSearchText(e.target.value)}
-                            className="form-control form-control-sm"
-                        />
-                    </FormGroup>
-                    <FormGroup className="me-2"> 
-                        <label>Buscar Empleado:</label>
-                        <Input
-                            type="text"
-                            placeholder="Buscar empleado"
-                            value={searchEmpleado}
-                            onChange={(e) => setSearchEmpleado(e.target.value)}
-                            className="form-control form-control-sm"
-                        />
-                    </FormGroup>
-                    <Button
-                        onClick={handleSearch}
-                        className="btn-icon"
-                        style={{
-                            backgroundColor: '#8C1616',
-                            boxShadow: 'none',
-                            border: '1px solid transparent',
-                        }}
-                    >
-                        <IoSearchOutline style={{ color: 'white' }} />
-                    </Button>
-                </Col>
-            </Row>
-  
-            <Row className="results-graphs-container">
-                <Col md={8} className="results-column">
-                    {showResults && Object.keys(groupedData).map((empleado, index) => (
-                        <div key={index} className="mt-4">
-                            <h3>Datos de {empleado}</h3>
-                            <Table className="table table-sm table-hover">
+
+        // --- 1. Filter by Date Range ---
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0); // Normalize start date
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999); // Normalize end date to include the whole day
+
+        // *** CRITICAL: Adjust 'expense.registrationDate' if your date field is named differently ***
+        const filtered = allExpenses.filter(exp => {
+            try {
+                const expenseDate = new Date(exp.registrationDate);
+                // Basic check if date is valid before comparison
+                if (isNaN(expenseDate.getTime())) {
+                    console.warn(`Invalid date found for expense ID ${exp.idOverallMonth || 'N/A'}:`, exp.registrationDate);
+                    return false;
+                }
+                return expenseDate >= start && expenseDate <= end;
+            } catch (e) {
+                console.error("Error parsing date:", exp.registrationDate, e);
+                return false; // Exclude if date parsing fails
+            }
+        });
+
+        // --- Additional filter by search term if provided ---
+        const searchFiltered = searchTerm 
+            ? filtered.filter(exp => {
+                const searchLower = searchTerm.toLowerCase();
+                return (
+                    (exp.description && exp.description.toLowerCase().includes(searchLower)) || 
+                    (exp.expenseType?.expenseTypeName && exp.expenseType.expenseTypeName.toLowerCase().includes(searchLower))
+                );
+            }) 
+            : filtered;
+
+        setFilteredExpenses(searchFiltered);
+
+        if (searchFiltered.length === 0) {
+            setModalMessage("No se encontraron gastos para los criterios seleccionados.");
+            setIsModalVisible(true);
+            // Keep showResults false
+            return; // Stop processing if no data
+        }
+
+        // --- 2. Aggregate Data for Charts ---
+        let totalInRange = 0;
+        const aggregationByType = {};
+        const aggregationByTime = {};
+
+        searchFiltered.forEach(exp => {
+            // *** Adjust 'exp.totalAmount' if amount field is different ***
+            const amount = Number(exp.totalAmount) || 0;
+            totalInRange += amount;
+
+            // Aggregate by Type (for Money and Percentage charts)
+            // *** Adjust 'exp.expenseType.expenseTypeName' if type field is different ***
+            const typeName = exp.expenseType?.expenseTypeName || 'Sin Tipo';
+            aggregationByType[typeName] = (aggregationByType[typeName] || 0) + amount;
+
+            // Aggregate by Time (Date)
+            // *** Adjust 'exp.registrationDate' if date field is different ***
+            const dateKey = formatDateKey(exp.registrationDate);
+            if(dateKey) { // Ensure dateKey is valid
+                aggregationByTime[dateKey] = (aggregationByTime[dateKey] || 0) + amount;
+            }
+        });
+
+        // --- 3. Format Data for Recharts ---
+        const chartByTypeAmount = Object.entries(aggregationByType).map(([name, value]) => ({ name, value }));
+        const chartByTime = Object.entries(aggregationByTime)
+                                .map(([date, total]) => ({ date, total }))
+                                .sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort by date
+        const chartByTypePercentage = chartByTypeAmount.map(item => ({
+            name: item.name,
+            value: totalInRange > 0 ? parseFloat(((item.value / totalInRange) * 100).toFixed(2)) : 0,
+        }));
+
+        setChartData({
+            byTypeAmount: chartByTypeAmount,
+            byTime: chartByTime,
+            byTypePercentage: chartByTypePercentage,
+            totalInRange: totalInRange,
+        });
+
+        setShowResults(true); // Show results area now
+
+    }, [startDate, endDate, searchTerm]); // Added searchTerm as dependency
+
+    const handleSearch = useCallback(async () => {
+        setIsLoading(true);
+        setError(null);
+        setShowResults(false); // Hide previous results
+
+        if (!startDate || !endDate) {
+            setModalMessage("Por favor, seleccione las fechas de inicio y fin.");
+            setIsModalVisible(true);
+            setIsLoading(false);
+            return;
+        }
+        if (startDate > endDate) {
+            setModalMessage("La fecha de inicio no puede ser posterior a la fecha de fin.");
+            setIsModalVisible(true);
+            setIsLoading(false);
+            return;
+        }
+
+        try {
+            const allExpenses = await MonthlyOverallExpenseService.getAllMonthlyOverallExpenses();
+            console.log("Raw data from service:", allExpenses);
+            processData(allExpenses); // Process the fetched data
+        } catch (err) {
+            console.error("Error fetching monthly expenses:", err);
+            setError(err.message || "Error al cargar los datos. Verifique la conexión.");
+            setFilteredExpenses([]);
+            setChartData({ byTypeAmount: [], byTime: [], byTypePercentage: [], totalInRange: 0 });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [startDate, endDate, processData]); // Include processData in dependencies
+
+    const handleOk = () => setIsModalVisible(false);
+    const handleCancel = () => setIsModalVisible(false);
+    const handleBack = () => navigate(-1);
+
+    // --- Render Functions ---
+    const renderCharts = () => (
+        <Col md={4} className="graphs-column">
+            {/* Chart 1: Dinero (Amount by Type) */}
+            <Card className="mb-3">
+                <CardHeader>Gastos por Tipo (Monto)</CardHeader>
+                <CardBody>
+                    {chartData.byTypeAmount.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={250}>
+                            <BarChart data={chartData.byTypeAmount} layout="vertical" margin={{ top: 5, right: 30, left: 50, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis type="number" />
+                                <YAxis dataKey="name" type="category" width={80} />
+                                <Tooltip formatter={(value) => `$${value.toFixed(2)}`} />
+                                {/* <Legend /> */}
+                                <Bar dataKey="value" fill="#8884d8">
+                                    {chartData.byTypeAmount.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    ) : <p className="text-center text-muted">No hay datos para mostrar.</p>}
+                </CardBody>
+            </Card>
+
+            {/* Chart 2: Tiempo (Amount over Time) */}
+            <Card className="mb-3">
+                <CardHeader>Gastos a lo largo del Tiempo</CardHeader>
+                <CardBody>
+                    {chartData.byTime.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={250}>
+                            {/* Use LineChart for trends, BarChart for discrete daily totals */}
+                            <LineChart data={chartData.byTime} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="date" />
+                                <YAxis />
+                                <Tooltip formatter={(value) => `$${value.toFixed(2)}`} />
+                                <Legend />
+                                <Line type="monotone" dataKey="total" stroke="#82ca9d" activeDot={{ r: 8 }} name="Gasto Diario"/>
+                            </LineChart>
+                        </ResponsiveContainer>
+                    ) : <p className="text-center text-muted">No hay datos para mostrar.</p>}
+                </CardBody>
+            </Card>
+
+            {/* Chart 3: Porcentajes (Percentage by Type) */}
+            <Card>
+                <CardHeader>Distribución Porcentual por Tipo</CardHeader>
+                <CardBody>
+                    {chartData.byTypePercentage.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={250}>
+                            <PieChart>
+                                <Pie
+                                    data={chartData.byTypePercentage}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    label={({ name, percent }) => `${name}: ${percent.toFixed(1)}%`}
+                                    outerRadius={80}
+                                    fill="#8884d8"
+                                    dataKey="value"
+                                    nameKey="name"
+                                >
+                                    {chartData.byTypePercentage.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip formatter={(value) => `${value.toFixed(2)}%`} />
+                                {/* <Legend /> */} {/* Legend might be redundant with labels */}
+                            </PieChart>
+                        </ResponsiveContainer>
+                    ) : <p className="text-center text-muted">No hay datos para mostrar.</p>}
+                </CardBody>
+            </Card>
+        </Col>
+    );
+
+    const renderTable = () => (
+        <Col md={8} className="results-column">
+            <Card>
+                <CardHeader>
+                    Detalle de Gastos ({formatDateKey(startDate)} - {formatDateKey(endDate)})
+                    <span className='float-end'>Total: <strong>${chartData.totalInRange.toFixed(2)}</strong></span>
+                </CardHeader>
+                <CardBody>
+                    {filteredExpenses.length > 0 ? (
+                        <div style={{maxHeight: '700px', overflowY: 'auto'}}> {/* Add scroll for long tables */}
+                            <Table hover responsive size="sm">
                                 <thead>
                                     <tr>
-                                        <th>Insumo</th>
-                                        <th>Peso Inicial</th>
-                                        <th>Peso Final</th>
-                                        <th>Porciones Iniciales</th>
-                                        <th>Porciones Finales</th>
-                                        <th>Ajustamiento (gramos)</th>
-                                        <th>Porcentaje</th>
-                                        <th>Dinero</th>
+                                        <th>Fecha</th>
+                                        <th>Tipo Gasto</th>
+                                        <th>Descripción</th>
+                                        <th>Monto</th>
+                                        {/* Add other relevant columns */}
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {groupedData[empleado].map((row, rowIndex) => (
-                                        <tr key={rowIndex}>
-                                            <td>{row.insumo}</td>
-                                            <td>{row.pesoInicial}</td>
-                                            <td>{row.pesoFinal}</td>
-                                            <td>{row.porcionesIniciales}</td>
-                                            <td>{row.porcionesFinales}</td>
-                                            <td>{row.ajustamiento}g</td>
-                                            <td>{row.porcentaje}%</td>
-                                            <td>${row.dinero}</td>
+                                    {filteredExpenses
+                                        // Optional: sort by date within the table as well
+                                        .sort((a, b) => new Date(a.registrationDate) - new Date(b.registrationDate))
+                                        .map((expense, index) => (
+                                        <tr key={expense.idOverallMonth || index}>
+                                            {/* *** Adjust property access *** */}
+                                            <td>{expense.registrationDate ? new Date(expense.registrationDate).toLocaleDateString() : 'N/A'}</td>
+                                            <td>{expense.expenseType?.expenseTypeName || 'N/A'}</td>
+                                            <td>{expense.description || '-'}</td>
+                                            <td>${(Number(expense.totalAmount) || 0).toFixed(2)}</td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </Table>
                         </div>
-                    ))}
+                    ) : (
+                        // This case should ideally be handled by the initial check/modal
+                        <p className="text-center text-muted">No hay registros detallados para este rango.</p>
+                    )}
+                </CardBody>
+            </Card>
+        </Col>
+    );
+
+    return (
+        <Container fluid className="p-4">
+            <Row className="mb-3 align-items-center">
+                <Col md="auto">
+                    <h2>Dashboard de Gastos por Fecha</h2>
                 </Col>
-  
-          <Col md={4} className="graphs-column">
-            <h4>Gastos en Porcentajes</h4>
-            <BarChart width={300} height={200} data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="porcentaje" fill="#8884d8" />
-            </BarChart>
-  
-            <h4>Gastos en Gramos</h4>
-            <BarChart width={300} height={200} data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="gramos" fill="#82ca9d" />
-            </BarChart>
-  
-            <h4>Gastos en Dinero</h4>
-            <BarChart width={300} height={200} data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="dinero" fill="#ff7300" />
-            </BarChart>
-          </Col>
-        </Row>
-  
-        {/* Modal de confirmación */}
-        <Modal
-          isOpen={isModalVisible}
-          toggle={handleCancel}
-          className="modal-dialog-centered"
-        >
-          <ModalHeader toggle={handleCancel}>Confirmación</ModalHeader>
-          <ModalBody>
-            <p>{modalMessage}</p>
-          </ModalBody>
-          <ModalFooter>
-            <Button color="primary" onClick={handleOk}>Aceptar</Button>
-            <Button color="secondary" onClick={handleCancel}>Cancelar</Button>
-          </ModalFooter>
-        </Modal>
-        <Button onClick={handleClick}>
-          Volver
-        </Button>
-      </Container>
+                <Col md="auto" className="ms-md-auto">
+                    <Button color="secondary" onClick={handleBack}>Volver</Button>
+                </Col>
+            </Row>
+
+            {/* --- Filters --- */}
+            <Row className="mb-4 p-3 bg-light border rounded align-items-end">
+                <Col md={3}>
+                    <FormGroup>
+                        <label htmlFor="startDate">Desde:</label>
+                        <DatePicker
+                            id="startDate"
+                            selected={startDate}
+                            onChange={(date) => setStartDate(date)}
+                            dateFormat="dd/MM/yyyy"
+                            className="form-control form-control-sm" // Use sm for consistency
+                            placeholderText="Fecha de inicio"
+                            selectsStart
+                            startDate={startDate}
+                            endDate={endDate}
+                        />
+                    </FormGroup>
+                </Col>
+                <Col md={3}>
+                    <FormGroup>
+                        <label htmlFor="endDate">Hasta:</label>
+                        <DatePicker
+                            id="endDate"
+                            selected={endDate}
+                            onChange={(date) => setEndDate(date)}
+                            dateFormat="dd/MM/yyyy"
+                            className="form-control form-control-sm"
+                            placeholderText="Fecha de fin"
+                            selectsEnd
+                            startDate={startDate}
+                            endDate={endDate}
+                            minDate={startDate} // Prevent end date before start date
+                        />
+                    </FormGroup>
+                </Col>
+                <Col md={4}>
+                    <FormGroup>
+                        <label htmlFor="searchTerm">Buscar:</label>
+                        <InputGroup size="sm">
+                            <Input
+                                id="searchTerm"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                placeholder="Buscar en descripción o tipo..."
+                            />
+                        </InputGroup>
+                    </FormGroup>
+                </Col>
+                <Col md={2}>
+                    <Button color="primary" onClick={handleSearch} disabled={isLoading} className="w-100">
+                        {isLoading ? <Spinner size="sm" /> : 'Buscar'}
+                    </Button>
+                </Col>
+            </Row>
+
+            {/* --- Loading / Error --- */}
+            {isLoading && (
+                <div className="text-center p-5">
+                    <Spinner color="primary">Cargando...</Spinner>
+                    <p>Consultando gastos...</p>
+                </div>
+            )}
+            {error && !isLoading && <Alert color="danger">Error: {error}</Alert>}
+
+            {/* --- Results Area --- */}
+            {!isLoading && !error && showResults && (
+                <Row className="results-graphs-container">
+                    {renderTable()}
+                    {renderCharts()}
+                </Row>
+            )}
+            {!isLoading && !error && !showResults && (
+                // Optional: Show a placeholder message if nothing has been searched yet
+                <Alert color="info">
+                    Seleccione un rango de fechas y {searchTerm ? 'criterios de búsqueda ' : ''}haga clic en Buscar para ver los datos.
+                </Alert>
+            )}
+
+            {/* --- Modal --- */}
+            <Modal isOpen={isModalVisible} toggle={handleCancel} centered>
+                <ModalHeader toggle={handleCancel}>Información</ModalHeader>
+                <ModalBody>{modalMessage}</ModalBody>
+                <ModalFooter>
+                    <Button color="primary" onClick={handleOk}>Aceptar</Button>
+                </ModalFooter>
+            </Modal>
+        </Container>
     );
 };
-  
-export default RendimientoEmpleado;
+
+export default ExpenseDashboardByDate;

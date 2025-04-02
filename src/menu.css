@@ -1,51 +1,71 @@
 /* menu.css */
-.ant-menu-item > a {
-  display: block;
-  width: 100%;
-  height: 100%;
-  color: inherit;
-  text-decoration: none;
+
+/* ... otros estilos base que ya tienes ... */
+
+/* Color de texto base para items (debe contrastar con #EEC07D) */
+.ant-menu-light .ant-menu-item,
+.ant-menu-light .ant-menu-submenu-title {
+  color: #5C4033; /* Un marrón oscuro puede ir bien */
+  /* O puedes mantener el negro/gris oscuro: color: rgba(0, 0, 0, 0.75); */
+}
+.ant-menu-light .ant-menu-item .ant-menu-item-icon,
+.ant-menu-light .ant-menu-submenu-title .ant-menu-item-icon {
+    color: #5C4033; /* Mismo color o ligeramente diferente */
+    /* O: color: rgba(0, 0, 0, 0.65); */
 }
 
-.ant-menu-item:hover,
-.ant-menu-submenu-title:hover {
-  background-color: #7e2d2d !important;
-  color: #fff !important;
+/* --- HOVER Y SELECCIÓN CON VINO TINTO --- */
+/* Estilos cuando el mouse pasa por encima (hover) */
+.ant-menu-light .ant-menu-item:hover,
+.ant-menu-light .ant-menu-submenu-title:hover {
+  background-color: #7e2d2d !important; /* Fondo Vino Tinto */
+  color: #FFFFFF !important; /* Texto Blanco */
 }
 
-.ant-menu-item-selected,
-.ant-menu-submenu-selected > .ant-menu-submenu-title {
-  background-color: #7e2d2d !important;
-  color: #fff !important;
+/* Estilos para el item seleccionado actualmente */
+.ant-menu-light .ant-menu-item-selected,
+.ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title {
+  background-color: #7e2d2d !important; /* Fondo Vino Tinto */
+  color: #FFFFFF !important; /* Texto Blanco */
 }
 
-/* Linea lateral en submenu */
-.submenu-item .ant-menu-submenu-title {
-  position: relative;
+/* Iconos en estado hover y selected también en blanco */
+.ant-menu-light .ant-menu-item:hover .ant-menu-item-icon,
+.ant-menu-light .ant-menu-submenu-title:hover .ant-menu-item-icon,
+.ant-menu-light .ant-menu-item-selected .ant-menu-item-icon,
+.ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title .ant-menu-item-icon {
+    color: #FFFFFF !important; /* Icono Blanco */
 }
 
-.submenu-item .ant-menu-submenu-title::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background-color: #7e2d2d; /* Color de la línea */
-  opacity: 0; /* Inicialmente invisible */
-  transition: opacity 0.3s ease; /* Transición suave */
+/* Quitar el borde derecho/izquierdo azul por defecto de Ant Design en selección */
+.ant-menu-light .ant-menu-item-selected::after {
+    border-right: none !important;
+}
+.ant-menu-inline.ant-menu-root .ant-menu-item::after, /* Para inline mode */
+.ant-menu-vertical.ant-menu-root .ant-menu-item::after /* Para vertical mode */ {
+    border-right: none !important;
 }
 
-.submenu-item:hover .ant-menu-submenu-title::before,
-.ant-menu-submenu-open.submenu-item .ant-menu-submenu-title::before {
-  opacity: 1; /* Visible al hacer hover o al desplegar el submenú */
+
+/* Asegurar que el contenedor del menú no tenga fondo propio ni borde derecho */
+.menu-list-container.ant-menu-light {
+  background-color: transparent !important;
+  border-right: none !important;
 }
 
-/* Estilo para el contenedor del menú para evitar que el ultimo item se pegue al fondo */
-.menu-container {
-  display: flex;
-  flex-direction: column;
-  height: auto; /* Adjusted height */
-  justify-content: flex-start; /* Align items to the top */
+/* ... otros estilos como espaciado, centrado colapsado, etc. ... */
+.ant-menu-item .ant-menu-item-icon,
+.ant-menu-submenu-title .ant-menu-item-icon {
+  margin-right: 10px;
 }
 
+.ant-menu-inline-collapsed > .ant-menu-item .ant-menu-item-icon,
+.ant-menu-inline-collapsed > .ant-menu-submenu > .ant-menu-submenu-title .ant-menu-item-icon {
+    margin-right: 0;
+    line-height: inherit;
+}
+.ant-menu-inline-collapsed > .ant-menu-item,
+.ant-menu-inline-collapsed > .ant-menu-submenu > .ant-menu-submenu-title {
+    padding: 0 calc(50% - 18px / 2) !important; /* Centrar icono colapsado */
+    text-align: center;
+}
