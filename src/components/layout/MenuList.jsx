@@ -79,7 +79,8 @@ const MenuList = ({ collapsed, backgroundColor }) => {
         if (item.children) {
             return (
                 <Menu.SubMenu key={item.key} icon={item.icon} title={item.label} className="submenu-item">
-                    {item.children.map(renderMenuItem)} // Renderiza recursivamente los hijos
+                    {item.children.map(renderMenuItem)} 
+                    
                 </Menu.SubMenu>
             );
         }
