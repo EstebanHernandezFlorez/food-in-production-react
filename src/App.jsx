@@ -14,6 +14,9 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import './index.css'
+import "primereact/resources/themes/lara-light-indigo/theme.css"; // Theme
+import "primereact/resources/primereact.min.css";             // Core CSS
+import "primeicons/primeicons.css";      
 
 // Importaciones correctas de los componentes del menú
 import MenuList from "./components/layout/MenuList";
