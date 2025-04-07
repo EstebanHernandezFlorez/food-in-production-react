@@ -1,0 +1,109 @@
+/* src/components/common/Pagination/CustomPagination.css */
+
+:root {
+  /* Define el color dorado/mostaza */
+  --mustard-gold: #DAA520; /* Goldenrod - Color principal */
+  /* Ya no necesitamos el más oscuro para el fondo activo */
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem 0;
+  gap: 0.4rem; /* Espacio entre elementos */
+  list-style: none;
+}
+
+/* Estilos base para TODOS los botones (números y flechas) */
+.pagination-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  /* Quitamos ancho/alto fijo para que se adapten al contenido (números) */
+  /* width: 36px; */
+  /* height: 36px; */
+  /* Añadimos padding para tamaño y apariencia */
+  padding: 0.375rem 0.75rem; /* Padding similar a botones pequeños de Bootstrap */
+  margin: 0;
+  border: 1px solid #dee2e6; /* Borde sutil */
+  /* <<< Bordes redondeados suaves por defecto (no círculo) >>> */
+  border-radius: 0.25rem; /* Radio estándar pequeño */
+  background-color: #fff; /* Fondo blanco */
+  color: #212529; /* Texto negro */
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  user-select: none; /* Evitar selección de texto */
+  line-height: 1.5; /* Asegura altura consistente */
+}
+
+/* Hover para CUALQUIER botón (número o flecha) no deshabilitado/activo */
+.pagination-button:hover:not(:disabled):not(.active) {
+  background-color: var(--mustard-gold); /* Fondo dorado */
+  border-color: var(--mustard-gold);
+  color: #fff; /* Texto blanco */
+}
+
+/* Estado activo (generalmente para el botón numérico actual) */
+.pagination-button.active {
+  background-color: var(--mustard-gold); /* Fondo dorado (igual que hover o uno ligeramente diferente si prefieres) */
+  border-color: var(--mustard-gold);
+  color: #fff;
+  cursor: default;
+  box-shadow: 0 0 0 0.1rem rgba(218, 165, 32, 0.3);
+}
+
+/* Estado deshabilitado (para números o flechas) */
+.pagination-button:disabled {
+  background-color: #e9ecef;
+  border-color: #dee2e6;
+  color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Estado de foco (general) */
+.pagination-button:focus {
+   outline: none;
+   box-shadow: 0 0 0 0.2rem rgba(218, 165, 32, 0.25); /* Sombra dorada */
+}
+
+/* Evitar doble sombra en el botón activo cuando tiene foco */
+.pagination-button.active:focus {
+    box-shadow: 0 0 0 0.1rem rgba(218, 165, 32, 0.4); /* Puede ser la misma o ligeramente más fuerte */
+}
+
+
+/* --- Estilos ESPECÍFICOS para los Botones de Flecha --- */
+.pagination-arrow {
+   /* <<< Hacemos las flechas circulares >>> */
+   border-radius: 50%;
+   /* <<< Les damos dimensiones fijas para mantener la forma >>> */
+   width: 36px;
+   height: 36px;
+   /* <<< Quitamos el padding horizontal/vertical para centrar el icono >>> */
+   padding: 0;
+   /* Colores específicos para las flechas (si se desean diferentes al default) */
+   color: #6c757d; /* Icono gris */
+   border-color: #ced4da; /* Borde gris */
+}
+
+/* Hover específico para flechas (si quieres diferente al hover general) */
+.pagination-arrow:hover:not(:disabled) {
+    background-color: #f1f1f1; /* Fondo gris muy claro en hover */
+    color: #333; /* Icono más oscuro */
+    border-color: #adb5bd;
+}
+
+/* Foco específico para flechas (si quieres diferente al foco general) */
+.pagination-arrow:focus {
+     box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25); /* Sombra gris */
+}
+
+/* Deshabilitado para flechas (ya cubierto por el general, pero puedes añadir opacidad) */
+.pagination-arrow:disabled {
+    opacity: 0.5;
+}

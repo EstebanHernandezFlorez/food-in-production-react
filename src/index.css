@@ -14,7 +14,7 @@ body {
 }
 
 #root { /* Aplica el fondo al contenedor principal de tu aplicación */
-  background-color: #fff9e6e7;
+  background-color: #fff9e6e1;
   min-height: 100vh; /* Asegura que el fondo cubra toda la altura de la pantalla */
 }
 
