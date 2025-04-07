@@ -22,7 +22,7 @@
     "@mui/x-date-pickers": "^7.17.0",
     "alert": "^6.0.2",
     "antd": "^5.20.1",
-    "axios": "^1.7.7",
+    "axios": "^1.8.4",
     "bootstrap": "^5.3.3",
     "calendar": "^0.1.1",
     "cors": "^2.8.5",

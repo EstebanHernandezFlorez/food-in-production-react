@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
+import axios from "axios";
 import Swal from "sweetalert2";
 import "bootstrap/dist/css/bootstrap.min.css";
+import toast, { Toaster } from "react-hot-toast"; 
+import '../../../App.css';
 import {
   Table,
   Button,
@@ -17,56 +20,17 @@ import {
 import { FaEdit, FaTrashAlt } from "react-icons/fa";
 import { Snackbar, Alert } from "@mui/material";
 
-const initialData = [
-  {
-    id: 1,
-    TipoDocumento: "Cedula",
-    Documento: 16514416,
-    Celular: 3104561250,
-    NombreCompleto: "Carolina Guzman",
-    Correo: "Carito@gmail.com",
-    Rol: "Administrador",
-  },
-  {
-    id: 2,
-    TipoDocumento: "PPT",
-    Documento: 16514416,
-    Celular: 3004561250,
-    NombreCompleto: "Daniela Martinez",
-    Correo: "daniela@gmail.com",
-    Rol: "Administrador",
-  },
-  {
-    id: 3,
-    TipoDocumento: "Cedula",
-    Documento: 16514416,
-    Celular: 3004561250,
-    NombreCompleto: "Daniela Martinez",
-    Correo: "daniela@gmail.com",
-    Rol: "Administrador",
-  },
-  {
-    id: 4,
-    TipoDocumento: "PPE",
-    Documento: 16514416,
-    Celular: 3004561250,
-    NombreCompleto: "Daniela Martinez",
-    Correo: "daniela@gmail.com",
-    Rol: "Administrador",
-  },
-];
-
 const Usuario = () => {
-  const [data, setData] = useState(initialData);
+  const [data, setData] = useState([]); // Inicializamos data correctamente como un array vacío
   const [form, setForm] = useState({
     id: "",
-    TipoDocumento: "",
-    Documento: "",
-    Celular: "",
-    NombreCompleto: "",
-    Correo: "",
+    document_type: "",
+    document: "",
+    cellphone: "",
+    full_name: "",
+    email: "",
     Rol: "",
-    Estado: true,
+    status: true,
   });
   const [isEditing, setIsEditing] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -80,15 +44,28 @@ const Usuario = () => {
 
   // States for validation
   const [formErrors, setFormErrors] = useState({
-    TipoDocumento: false,
-    Documento: false,
-    Celular: false,
-    NombreCompleto: false,
-    Correo: false,
+    document_type: false,
+    document: false,
+    cellphone: false,
+    full_name: false,
+    email: false,
     Rol: false,
-    Contraseña: false,
+    password: false,
     Confirmarcontraseña: false,
   });
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await axios.get("http://localhost:3000/users");
+        setData(response.data); // Asumiendo que `response.data` es un array de usuarios
+      } catch (error) {
+        toast.error("Error al cargar los usuarios");
+      }
+    };
+  
+    fetchUsers();
+  }, []);
 
   const handleTableSearch = (e) =>
     setTableSearchText(e.target.value.toLowerCase());
@@ -117,72 +94,57 @@ const Usuario = () => {
 
   const validateForm = () => {
     const errors = {
-      TipoDocumento: !form.TipoDocumento,
-      Documento: !form.Documento,
-      Celular: !form.Celular,
-      NombreCompleto: !form.NombreCompleto,
-      Correo: !form.Correo,
+      document_type: !form.document_type,
+      document: !form.document,
+      cellphone: !form.cellphone,
+      full_name: !form.full_name,
+      email: !form.email,
       Rol: !form.Rol,
-      Contraseña: !form.Contraseña,
+      password: !form.password,
       Confirmarcontraseña: !form.Confirmarcontraseña,
     };
     setFormErrors(errors);
     return !Object.values(errors).includes(true);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateForm()) {
       openSnackbar("Por favor, ingrese todos los campos", "warning");
       return;
     }
-    const { Documento } = form;
-
-    const usuarioExistente = data.find(
-      (registro) => registro.Documento.toString() === Documento.toString()
-    );
-    if (usuarioExistente) {
-      openSnackbar(
-        "El usuario ya existe. Por favor, ingrese un documento de usuario diferente.",
-        "error"
-      );
-      return;
+  
+    try {
+      await axios.post("http://localhost:3000/users", form);
+      toast.success("Usuario agregado exitosamente");
+  
+      // Recargar usuarios actualizados
+      const res = await axios.get("http://localhost:3000/users");
+      setData(res.data);
+    } catch (error) {
+      toast.error("Error al agregar el usuario");
     }
-
-    const nuevoUsuario = {
-      ...form,
-      id: data.length ? Math.max(...data.map((user) => user.id)) + 1 : 1,
-    };
-
-    setData([...data, nuevoUsuario]);
+  
+    // Limpiar y cerrar formulario
     setForm({
       id: "",
-      TipoDocumento: "",
-      Documento: "",
-      Celular: "",
-      NombreCompleto: "",
-      Correo: "",
+      document_type: "",
+      document: "",
+      cellphone: "",
+      full_name: "",
+      email: "",
       Rol: "",
-      Estado: true,
+      status: true,
     });
     setShowForm(false);
-    openSnackbar("Usuario agregado exitosamente", "success");
   };
+  
 
   const editar = async () => {
-    const { Documento, Celular, NombreCompleto, Correo } = form;
-
-    // Verifica si todos los campos requeridos están llenos
-    if (!Documento || !Celular || !NombreCompleto || !Correo) {
+    if (!form.document || !form.cellphone || !form.full_name || !form.email) {
       openSnackbar("Por favor, ingrese todos los campos", "warning");
       return;
     }
-
-    // Mapea los datos para actualizar el registro correcto
-    const updatedData = data.map((registro) =>
-      registro.id === form.id ? { ...form } : registro
-    );
-
-    // Muestra la alerta de confirmación y espera la respuesta
+  
     const response = await Swal.fire({
       title: "¿Desea editar el usuario?",
       icon: "warning",
@@ -192,15 +154,23 @@ const Usuario = () => {
       confirmButtonText: "Editar",
       cancelButtonText: "Cancelar",
     });
-
-    // Verifica si el usuario confirmó la acción antes de continuar
+  
     if (response.isConfirmed) {
-      setData(updatedData); // Actualiza los datos
-      setIsEditing(false); // Sale del modo de edición
-      setModalOpen(false); // Cierra el modal
-      openSnackbar("Usuario editado exitosamente", "success");
+      try {
+        await axios.put(`http://localhost:3000/users/${form.id}`, form);
+        toast.success("Usuario editado exitosamente");
+  
+        const res = await axios.get("http://localhost:3000/users");
+        setData(res.data);
+  
+        setIsEditing(false);
+        setModalOpen(false);
+      } catch (error) {
+        toast.error("Error al editar el usuario");
+      }
     }
   };
+  
 
   const eliminar = async (dato) => {
     const response = await Swal.fire({
@@ -212,12 +182,20 @@ const Usuario = () => {
       confirmButtonText: "Eliminar",
       cancelButtonText: "Cancelar",
     });
+  
     if (response.isConfirmed) {
-      const updatedData = data.filter((registro) => registro.id !== dato.id);
-      setData(updatedData);
-      openSnackbar("Usuario eliminado exitosamente", "success");
+      try {
+        await axios.delete(`http://localhost:3000/users/${dato.id}`);
+        toast.success("Usuario eliminado exitosamente");
+  
+        const res = await axios.get("http://localhost:3000/users");
+        setData(res.data);
+      } catch (error) {
+        toast.error("Error al eliminar el usuario");
+      }
     }
   };
+  
 
   const cambiarEstado = async (id) => {
     const response = await Swal.fire({
@@ -229,26 +207,28 @@ const Usuario = () => {
       confirmButtonText: "Cambiar",
       cancelButtonText: "Cancelar",
     });
+  
     if (response.isConfirmed) {
-      const updatedData = data.map((registro) => {
-        if (registro.id === id) {
-          registro.Estado = !registro.Estado;
-        }
-        return registro;
-      });
-
-      setData(updatedData);
-      openSnackbar("Estado del usuario actualizado exitosamente", "success");
+      try {
+        await axios.put(`http://localhost:3000/users/status/${id}`); // Asegúrate de tener esta ruta en tu backend
+        toast.success("Estado actualizado correctamente");
+  
+        const res = await axios.get("http://localhost:3000/users");
+        setData(res.data);
+      } catch (error) {
+        toast.error("Error al cambiar el estado");
+      }
     }
   };
+  
 
   const filteredData = data.filter(
     (item) =>
-      item.Correo.toLowerCase().includes(tableSearchText) ||
-      item.TipoDocumento.toLowerCase().includes(tableSearchText) ||
-      item.Documento.toString().includes(tableSearchText) ||
-      item.Celular.toLowerCase().includes(tableSearchText) ||
-      item.NombreCompleto.toString().includes(tableSearchText)
+      item.email.toLowerCase().includes(tableSearchText) ||
+      item.document_type.toLowerCase().includes(tableSearchText) ||
+      item.document.toString().includes(tableSearchText) ||
+      item.cellphone.toLowerCase().includes(tableSearchText) ||
+      item.full_name.toString().includes(tableSearchText)
   );
 
   const tiposDocumento = [
@@ -258,9 +238,9 @@ const Usuario = () => {
     { value: "PEP", label: "Permiso Especial de Permanencia" },
   ];
   const roles = [
-    { id_role: 1, name: "Administrador", state: true },
-    { id_role: 2, name: "Jefe de cocina", state: true },
-    { id_role: 3, name: "Auxiliar de cocina", state: true },
+    { idRole: 1, name: "Administrador", status: true },
+    { idRole: 2, name: "Jefe de cocina", status: true },
+    { idRole: 3, name: "Auxiliar de cocina", status: true },
   ];
 
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -288,17 +268,17 @@ const Usuario = () => {
       [name]: value,
     }));
 
-    if (name === "Contraseña") {
+    if (name === "password") {
       if (!validatePassword(value)) {
         setFormErrors((prevErrors) => ({
           ...prevErrors,
-          Contraseña:
+          password:
             "La contraseña debe contener al menos 10 caracteres, una mayúscula, una minúscula, un número y un carácter especial.",
         }));
       } else {
         setFormErrors((prevErrors) => ({
           ...prevErrors,
-          Contraseña: "",
+          password: "",
         }));
       }
     }
@@ -312,7 +292,7 @@ const Usuario = () => {
       Confirmarcontraseña: value,
     }));
 
-    if (form.Contraseña !== value) {
+    if (form.password !== value) {
       setFormErrors((prevErrors) => ({
         ...prevErrors,
         Confirmarcontraseña: "Las contraseñas no coinciden.",
@@ -327,6 +307,7 @@ const Usuario = () => {
 
   return (
     <Container>
+      <Toaster position="top-right" />
       <br />
       {/* Mostrar la sección de búsqueda y el botón solo si no se está mostrando el formulario */}
       {!showForm && (
@@ -345,13 +326,13 @@ const Usuario = () => {
               onClick={() => {
                 setForm({
                   id: "",
-                  TipoDocumento: "",
-                  Documento: "",
-                  Celular: "",
-                  NombreCompleto: "",
-                  Correo: "",
+                  document_type: "",
+                  document: "",
+                  cellphone: "",
+                  full_name: "",
+                  email: "",
                   Rol: "",
-                  Estado: true,
+                  status: true,
                 });
                 setIsEditing(false);
                 setShowForm(true);
@@ -379,19 +360,19 @@ const Usuario = () => {
                 currentItems.map((item) => (
                   <tr key={item.id}>
                     <td>{item.id}</td>
-                    <td>{item.TipoDocumento}</td>
-                    <td>{item.Documento}</td>
-                    <td>{item.Celular}</td>
-                    <td>{item.NombreCompleto}</td>
-                    <td>{item.Correo}</td>
+                    <td>{item.document_type}</td>
+                    <td>{item.document}</td>
+                    <td>{item.cellphone}</td>
+                    <td>{item.full_name}</td>
+                    <td>{item.email}</td>
                     <td>{item.Rol}</td>
                     <td>
                       <Button
-                        color={item.Estado ? "success" : "danger"}
+                        color={item.status ? "success" : "danger"}
                         onClick={() => cambiarEstado(item.id)}
                         className="me-2 btn-sm"
                       >
-                        {item.Estado ? "On" : "Off"}
+                        {item.status ? "On" : "Off"}
                       </Button>
                     </td>
                     <td>
@@ -465,11 +446,11 @@ const Usuario = () => {
                 </label>
                 <Input
                   type="select" // Cambiado a "select"
-                  name="TipoDocumento"
-                  value={form.TipoDocumento}
+                  name="document_type"
+                  value={form.document_type}
                   onChange={handleChange}
                   className={`form-control ${
-                    formErrors.TipoDocumento ? "is-invalid" : ""
+                    formErrors.document_type ? "is-invalid" : ""
                   }`}
                 >
                   <option value="">Seleccione un tipo de documento</option>
@@ -479,7 +460,7 @@ const Usuario = () => {
                     </option>
                   ))}
                 </Input>
-                {formErrors.TipoDocumento && (
+                {formErrors.document_type && (
                   <div className="invalid-feedback">
                     Este campo es obligatorio.
                   </div>
@@ -494,15 +475,15 @@ const Usuario = () => {
                 </label>
                 <Input
                   type="text"
-                  name="Documento"
-                  value={form.Documento}
+                  name="document"
+                  value={form.document}
                   onChange={handleChange}
                   placeholder="Número de documento"
                   className={`form-control ${
-                    formErrors.Documento ? "is-invalid" : ""
+                    formErrors.document ? "is-invalid" : ""
                   }`}
                 />
-                {formErrors.Documento && (
+                {formErrors.document && (
                   <div className="invalid-feedback">
                     Este campo es obligatorio.
                   </div>
@@ -516,15 +497,15 @@ const Usuario = () => {
                 </label>
                 <Input
                   type="number"
-                  name="Celular"
-                  value={form.Celular}
+                  name="cellphone"
+                  value={form.cellphone}
                   onChange={handleChange}
-                  placeholder="Celular"
+                  placeholder="cellphone"
                   className={`form-control ${
-                    formErrors.Celular ? "is-invalid" : ""
+                    formErrors.cellphone ? "is-invalid" : ""
                   }`}
                 />
-                {formErrors.Celular && (
+                {formErrors.cellphone && (
                   <div className="invalid-feedback">
                     Este campo es obligatorio.
                   </div>
@@ -540,15 +521,15 @@ const Usuario = () => {
                 </label>
                 <Input
                   type="text"
-                  name="NombreCompleto"
-                  value={form.NombreCompleto}
+                  name="full_name"
+                  value={form.full_name}
                   onChange={handleChange}
-                  placeholder="Nombre completo"
+                  placeholder="full_name"
                   className={`form-control ${
-                    formErrors.NombreCompleto ? "is-invalid" : ""
+                    formErrors.full_name ? "is-invalid" : ""
                   }`}
                 />
-                {formErrors.NombreCompleto && (
+                {formErrors.full_name && (
                   <div className="invalid-feedback">
                     Este campo es obligatorio.
                   </div>
@@ -562,15 +543,15 @@ const Usuario = () => {
                 </label>
                 <Input
                   type="email"
-                  name="Correo"
-                  value={form.Correo}
+                  name="email"
+                  value={form.email}
                   onChange={handleChange}
                   placeholder="Número de Correo"
                   className={`form-control ${
-                    formErrors.Correo ? "is-invalid" : ""
+                    formErrors.email ? "is-invalid" : ""
                   }`}
                 />
-                {formErrors.Correo && (
+                {formErrors.email && (
                   <div className="invalid-feedback">
                     Este campo es obligatorio.
                   </div>
@@ -591,7 +572,7 @@ const Usuario = () => {
                 >
                   <option value="">Seleccione un rol</option>
                   {roles.map((role) => (
-                    <option key={role.id_role} value={role.id_role}>
+                    <option key={role.idRole} value={role.idRole}>
                       {role.name}
                     </option>
                   ))}
@@ -611,17 +592,17 @@ const Usuario = () => {
                 </label>
                 <Input
                   type="password"
-                  name="Contraseña"
-                  value={form.Contraseña}
+                  name="password"
+                  value={form.password}
                   onChange={handlePasswordChange}
-                  placeholder="Contraseña"
+                  placeholder="password"
                   className={`form-control ${
-                    formErrors.Contraseña ? "is-invalid" : ""
+                    formErrors.password ? "is-invalid" : ""
                   }`}
                 />
-                {formErrors.Contraseña && (
+                {formErrors.password && (
                   <div className="invalid-feedback">
-                    {formErrors.Contraseña}
+                    {formErrors.password}
                   </div>
                 )}
               </FormGroup>
@@ -679,15 +660,15 @@ const Usuario = () => {
                 <label>Tipo Documento</label>
                 <Input
                   type="text"
-                  name="TipoDocumento"
+                  name="document_type"
                   readOnly
-                  value={form.TipoDocumento}
+                  value={form.document_type}
                   placeholder="Tipo Documento del usuario"
                   className={`form-control ${
-                    formErrors.TipoDocumento ? "is-invalid" : ""
+                    formErrors.document_type ? "is-invalid" : ""
                   }`}
                 />
-                {formErrors.TipoDocumento && (
+                {formErrors.document_type && (
                   <div className="invalid-feedback">
                     Este campo es obligatorio.
                   </div>
@@ -699,15 +680,15 @@ const Usuario = () => {
                 <label>Documento</label>
                 <Input
                   type="text"
-                  name="Documento"
+                  name="document"
                   readOnly
-                  value={form.Documento}
+                  value={form.document}
                   placeholder="Número de documento"
                   className={`form-control ${
-                    formErrors.Documento ? "is-invalid" : ""
+                    formErrors.document ? "is-invalid" : ""
                   }`}
                 />
-                {formErrors.Documento && (
+                {formErrors.document && (
                   <div className="invalid-feedback">
                     Este campo es obligatorio.
                   </div>
@@ -719,12 +700,12 @@ const Usuario = () => {
                 <label>Celular</label>
                 <Input
                   type="text" // Corrige el typo "te" a "text"
-                  name="Celular"
-                  value={form.Celular}
+                  name="cellphone"
+                  value={form.cellphone}
                   onChange={handleChange}
                   placeholder="Número de contacto"
                   className={`form-control ${
-                    formErrors.Celular ? "is-invalid" : ""
+                    formErrors.cellphone ? "is-invalid" : ""
                   }`}
                 />
                 {formErrors.Celular && (
@@ -743,15 +724,15 @@ const Usuario = () => {
                 </label>
                 <Input
                   type="text"
-                  name="NombreCompleto"
-                  value={form.NombreCompleto}
+                  name="full_name"
+                  value={form.full_name}
                   onChange={handleChange}
                   placeholder="Nombre Completo"
                   className={`form-control ${
-                    formErrors.NombreCompleto ? "is-invalid" : ""
+                    formErrors.full_name ? "is-invalid" : ""
                   }`}
                 />
-                {formErrors.NombreCompleto && (
+                {formErrors.full_name && (
                   <div className="invalid-feedback">
                     Este campo es obligatorio.
                   </div>
@@ -765,15 +746,15 @@ const Usuario = () => {
                 </label>
                 <Input
                   type="email" // Cambiado a "email" para validación automática del formato
-                  name="Correo"
-                  value={form.Correo}
+                  name="email"
+                  value={form.email}
                   onChange={handleChange}
                   placeholder="Correo Electrónico"
                   className={`form-control ${
-                    formErrors.Correo ? "is-invalid" : ""
+                    formErrors.email ? "is-invalid" : ""
                   }`}
                 />
-                {formErrors.Correo && (
+                {formErrors.email && (
                   <div className="invalid-feedback">
                     Este campo es obligatorio.
                   </div>
