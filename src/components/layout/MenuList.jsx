@@ -40,7 +40,7 @@ const MenuList = ({ collapsed, backgroundColor, textColor }) => {
                 { key: 'empleados', label: 'Empleados', path: '/empleados', icon: <Users size={SUB_ICON_SIZE} /> },
                 { key: 'insumo', label: 'Insumo', path: '/insumo', icon: <Box size={SUB_ICON_SIZE} /> },
                 { key: 'producto_insumo', label: 'Producto Insumo', path: '/producto_insumo', icon: <Boxes size={SUB_ICON_SIZE} /> },
-                { key: 'orden_produccion', label: 'Orden de Producción', path: '/orden_produccion', icon: <ClipboardList size={SUB_ICON_SIZE} /> },
+                { key: 'orden_produccion', label: 'Crear Orden de Producción', path: '/orden_produccion', icon: <ClipboardList size={SUB_ICON_SIZE} /> },
                 { key: 'produccion', label: 'Producción', path: '/produccion', icon: <Factory size={SUB_ICON_SIZE} /> },
                 { key: 'compras', label: 'Registro compra', path: '/compras', icon: <ShoppingBag size={SUB_ICON_SIZE} /> },
             ],

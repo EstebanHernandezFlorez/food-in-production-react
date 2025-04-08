@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Table, Button, Container, Row, Col, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
-import { FaTrashAlt, FaEye } from "react-icons/fa";
+import { FaTrashAlt } from "react-icons/fa";
 import { FiEdit } from "react-icons/fi";
 import { PlusOutlined } from "@ant-design/icons";
 import toast, { Toaster } from "react-hot-toast";
@@ -16,7 +16,7 @@ const Insumos = () => {
     const [tableSearchText, setTableSearchText] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [detailModalOpen, setDetailModalOpen] = useState(false);
-    const [selectedItem, setSelectedItem] = useState(null);
+    
     const [formErrors, setFormErrors] = useState({});
     const itemsPerPage = 10;
 

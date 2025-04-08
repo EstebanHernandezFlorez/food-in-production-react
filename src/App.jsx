@@ -39,8 +39,11 @@ import ManoDeObra from "./views/module/ManoDeObra/ManoDeObra";
 import RecoveryPassword from "./views/module/Auth/olvidoContraseña";
 import { NavDropdown } from "react-bootstrap";
 
+
 import TablaGastos from "./views/module/ManoDeObra/TablaGastos";
 import RendimientoEmpleado from "./views/module/ManoDeObra/RendimientoEmpleado";
+import Productos from "./views/module/ProductoInsumo/ProductoInsumo";
+import FichaTecnica from "./views/module/ProductoInsumo/FichaTecnica";
 
 const users = [
   {
@@ -60,7 +63,7 @@ const users = [
 const { Header, Sider, Content } = Layout;
 
 export default function App() {
-  const handleSelectcted = (eventKey) =>
+  const handleSelect = (eventKey) =>
     alert(`sele  const handleSelectcted ${eventKey}`);
 
   const [collapsed, setCollapsed] = useState(false);
@@ -171,6 +174,8 @@ export default function App() {
 
                       <Route path="/tabla-gastos" element={<TablaGastos />} />
                       <Route path="/rendimiento-empleado" element={<RendimientoEmpleado />} />
+                      <Route path="/productos" element={<Productos />} />
+                      <Route path="/ficha-tecnica" element={<FichaTecnica />} />
                     </Routes>
                   </Content>
                 </Layout>
