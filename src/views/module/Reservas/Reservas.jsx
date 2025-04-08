@@ -1,69 +1,27 @@
-import  { useEffect, useState } from "react";
-import { Container, Button, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter, Row, Col, Label, InputGroup, InputGroupText } from 'reactstrap';
+import React, { useEffect, useState, useCallback } from "react";
+import {
+  Container, Button, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter,
+  Row, Col, Label, InputGroup, InputGroupText, Spinner, FormFeedback, ListGroup, ListGroupItem
+} from 'reactstrap';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from "@fullcalendar/interaction";
 import { utils, writeFile } from "xlsx";
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
-import { FaSearch, FaTrash, FaFileExcel } from 'react-icons/fa';
+import { FaSearch, FaFileExcel, FaTrashAlt } from 'react-icons/fa';
+import Select from 'react-select'; // Importación para el selector múltiple
 
-const initialReservas = [
-  {
-    id: 1,
-    nombre: "Boda Juan y María",
-    distintivo: "7867",
-    categoriaCliente: "Privado",
-    correo: "juan.maria@example.com",
-    celular: "1234567890",
-    direccion: "Cl 76 j 12b 55",
-    evento: "Boda",
-    fechaHora: "2024-09-01T18:00",
-    cantidadMesas: "15",
-    duracionEvento: "5",
-    tipoEvento: "Celebración",
-    nroPersonas: "150",
-    observaciones: "Decoración elegante",
-    servicios: "DJ, Fotografía",
-    montoDecoracion: "200000",
-    abonos: [{ fecha: "2024-08-01", cantidad: "500000" }],
-    totalPago: "1500000",
-    restante: "1000000",
-    formaPago: "Tarjeta",
-    estado: "terminada"
-  },
-  {
-    id: 2,
-    nombre: "Fiesta de Empresa",
-    distintivo: "7576",
-    categoriaCliente: "Corporativo",
-    correo: "empresa@example.com",
-    celular: "0987654321",
-    direccion: "Avenida Siempre Viva 456",
-    evento: "Corporativo",
-    fechaHora: "2024-09-15T20:00",
-    cantidadMesas: "20",
-    duracionEvento: "6",
-    tipoEvento: "Conferencia",
-    nroPersonas: "200",
-    observaciones: "Requiere equipo audiovisual",
-    servicios: "Catering, Audio",
-    montoDecoracion: "300000",
-    abonos: [{ fecha: "2024-08-15", cantidad: "700000" }],
-    totalPago: "2000000",
-    restante: "1300000",
-    formaPago: "Transferencia",
-    estado: "confirmada"
-  }
-];
+// --- IMPORTAR SERVICIOS REALES ---
+// ¡¡VERIFICA QUE ESTAS RUTAS SEAN CORRECTAS PARA TU ESTRUCTURA DE PROYECTO!!
+import reservasService from '../../services/reservasService';
+import clientesService from '../../services/clientesService';
+import serviciosService from '../../services/serviciosService';
 
-const mockClientes = [
-  { id: 1, nombre: "Juan Pérez", distintivo: "7867", categoriaCliente: "VIP", correo: "juan@example.com", celular: "1234567890", direccion: "Calle 123" },
-  { id: 2, nombre: "María López", distintivo: "7576", categoriaCliente: "Regular", correo: "maria@example.com", celular: "0987654321", direccion: "Avenida 456" },
-];
-
+// --- ESTADO INICIAL DEL FORMULARIO ---
 const emptyForm = {
-  id: '',
+  id: null,
+  customerId: null,
   nombre: '',
   distintivo: '',
   categoriaCliente: '',
@@ -72,777 +30,513 @@ const emptyForm = {
   direccion: '',
   evento: '',
   fechaHora: '',
-  cantidadMesas: '',
   duracionEvento: '',
   tipoEvento: '',
   nroPersonas: '',
   observaciones: '',
-  servicios: '',
+  servicios: [], // Array de OBJETOS {value, label} para react-select
   montoDecoracion: '',
-  abonos: [],
+  abonos: [], // Array de objetos { fecha: '', cantidad: '' }
   totalPago: '',
-  restante: '',
+  restante: '', // Calculado
   formaPago: '',
-  estado: 'pendiente'
+  estado: 'pendiente' // Estado workflow/visual
 };
 
+// --- COMPONENTE PRINCIPAL ---
+// Asegúrate que el nombre de la función coincide con el export default si es necesario
 export default function Calendario() {
-  const [data, setData] = useState(initialReservas);
-  const [selectedReserva, setSelectedReserva] = useState(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(null);
-  const [form, setForm] = useState(emptyForm);
-  const [errors, setErrors] = useState({});
-  const [searchText, setSearchText] = useState('');
+  // --- Estados del Componente ---
+  const [data, setData] = useState([]); // Almacena las reservas cargadas
+  const [availableServices, setAvailableServices] = useState([]); // Servicios disponibles para el Select
+  const [selectedReserva, setSelectedReserva] = useState(null); // Reserva en edición (o null si es nueva)
+  const [modalOpen, setModalOpen] = useState(false); // Visibilidad del modal
+  const [form, setForm] = useState(emptyForm); // Estado del formulario del modal
+  const [errors, setErrors] = useState({}); // Errores de validación del form
+  const [searchText, setSearchText] = useState(''); // Búsqueda en el calendario
+  // Estados para búsqueda de cliente integrada
   const [clientSearchText, setClientSearchText] = useState('');
   const [clientSearchResults, setClientSearchResults] = useState([]);
-  const [showClientSearch, setShowClientSearch] = useState(false);
+  const [showClientSearch, setShowClientSearch] = useState(false); // Mostrar/ocultar resultados búsqueda
+  const [isClientSearchLoading, setIsClientSearchLoading] = useState(false); // Cargando búsqueda cliente
+  const [loading, setLoading] = useState(true); // Carga general
 
-  const handleDateClick = (arg) => {
-    if (new Date(arg.dateStr) < new Date()) {
-      Swal.fire({
-        title: "Error",
-        text: "No se pueden crear reservas en fechas pasadas.",
-        icon: "error",
-        confirmButtonColor: '#3085d6',
-      });
-      return;
-    }
-    setSelectedDate(arg.dateStr);
-    setSelectedReserva(null);
-    setForm({...emptyForm, fechaHora: arg.dateStr + 'T00:00'});
-    setModalOpen(true);
-  };
-
-  const handleEventClick = (info) => {
-    const reserva = data.find(res => res.id.toString() === info.event.id);
-    if (reserva) {
-      setSelectedReserva(reserva);
-      setForm(reserva);
-      setSelectedDate(null);
-      setModalOpen(true);
-    }
-  };
-
-  const handleEventDrop = (info) => {
-    const { event } = info;
-    const updatedReserva = data.find(res => res.id.toString() === event.id);
-    if (updatedReserva) {
-      const newDate = new Date(event.start);
-      if (newDate < new Date()) {
-        Swal.fire({
-          title: "Error",
-          text: "No se pueden reprogramar reservas a fechas pasadas.",
-          icon: "error",
-          confirmButtonColor: '#3085d6',
-        });
-        info.revert();
-        return;
-      }
-      
-      const conflictingReserva = data.find(res => 
-        res.id.toString() !== event.id && 
-        new Date(res.fechaHora).toDateString() === newDate.toDateString()
-      );
-      
-      if (conflictingReserva) {
-        Swal.fire({
-          title: "Error",
-          text: "Ya existe una reserva en esta fecha y hora.",
-          icon: "error",
-          confirmButtonColor: '#3085d6',
-        });
-        info.revert();
-        return;
-      }
-
-      const updatedData = data.map(res => 
-        res.id.toString() === event.id 
-          ? {...res, fechaHora: event.start.toISOString().slice(0, 16)} 
-          : res
-      );
-      setData(updatedData);
-      Swal.fire({
-        title: "Reserva reprogramada",
-        text: "La reserva ha sido reprogramada exitosamente.",
-        icon: "success",
-        confirmButtonColor: '#3085d6',
-      });
-    }
-  };
-
-  const colorMap = {
-    terminada: '#28a745',
-    anulada: '#dc3545',
-    pendiente: '#ffc107',
-    en_proceso: '#fd7e14',
-    confirmada: '#007bff'
-  };
-
-  const events = data.map(reserva => ({
-    id: reserva.id.toString(),
-    title: reserva.nombre,
-    start: reserva.fechaHora,
-    backgroundColor: colorMap[reserva.estado],
-    borderColor: colorMap[reserva.estado],
-    textColor: reserva.estado === 'pendiente' ? '#000' : '#fff'
+  // --- Opciones formateadas para react-select a partir de los servicios disponibles ---
+  const serviceOptions = availableServices.map(service => ({
+    value: service.id,
+    label: service.Nombre || service.name || `Servicio ${service.id}` // Nombre a mostrar
   }));
 
-  const handleSearchChange = (e) => {
-    setSearchText(e.target.value);
-  };
+  // --- FUNCIÓN PARA CARGAR DATOS INICIALES (Reservas y Servicios) ---
+  const loadInitialData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [fetchedReservations, fetchedServices] = await Promise.all([
+        reservasService.getAllReservations(),
+        serviciosService.getAllServicios()
+      ]);
+      setData(fetchedReservations || []);
+      setAvailableServices(fetchedServices || []);
+      console.log("Datos iniciales cargados:", { reservations: fetchedReservations?.length, services: fetchedServices?.length });
+    } catch (error) {
+      console.error("Error fetching initial data:", error);
+      Swal.fire("Error Carga Inicial", `No se pudieron cargar los datos: ${error?.message || 'Error desconocido'}`, "error");
+      setData([]);
+      setAvailableServices([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []); // useCallback con [] para que se cree solo una vez
 
-  const filteredEvents = events.filter(event => 
-    event.title.toLowerCase().includes(searchText.toLowerCase())
-  );
+  // --- useEffect PARA CARGAR DATOS AL MONTAR EL COMPONENTE ---
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]); // Ejecutar cuando loadInitialData cambia (solo al montar)
 
-  const handleClientSearch = (e) => {
-    const searchValue = e.target.value;
-    setClientSearchText(searchValue);
-    const results = mockClientes.filter(cliente => 
-      cliente.nombre.toLowerCase().includes(searchValue.toLowerCase()) ||
-      cliente.distintivo.includes(searchValue)
-    );
-    setClientSearchResults(results);
-  };
-
-  const selectClient = (cliente) => {
-    setForm(prevForm => ({
-      ...prevForm,
-      nombre: cliente.nombre,
-      distintivo: cliente.distintivo,
-      categoriaCliente: cliente.categoriaCliente,
-      correo: cliente.correo,
-      celular: cliente.celular,
-      direccion: cliente.direccion
-    }));
-    setClientSearchText('');
+  // --- Abrir modal para NUEVA reserva ---
+  const handleDateClick = (arg) => {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const clickedDate = new Date(arg.dateStr); clickedDate.setHours(0, 0, 0, 0);
+    if (clickedDate < today) {
+      Swal.fire("Fecha Inválida", "No se pueden crear reservas en fechas pasadas.", "warning");
+      return;
+    }
+    setSelectedReserva(null); // Indicar que es nueva
+    const defaultTime = 'T09:00'; // Hora por defecto
+    setForm({ ...emptyForm, fechaHora: arg.dateStr + defaultTime }); // Resetear form + fecha
+    setErrors({}); // Limpiar errores
+    setClientSearchText(''); // Limpiar búsqueda de cliente
     setClientSearchResults([]);
     setShowClientSearch(false);
+    setModalOpen(true); // Abrir modal
   };
 
-  const handleAbonoChange = (index, field, value) => {
-    const newAbonos = [...form.abonos];
-    newAbonos[index] = { ...newAbonos[index], [field]: value };
-    setForm(prevForm => ({
-      ...prevForm,
-      abonos: newAbonos
-    }));
-    updateRestante(prevForm.totalPago, newAbonos);
-  };
+  // --- Abrir modal para EDITAR reserva ---
+  const handleEventClick = (info) => {
+    const reservaId = parseInt(info.event.id, 10);
+    const reserva = data.find(res => res.id === reservaId);
+    if (reserva) {
+      setSelectedReserva(reserva); // Indicar que se edita
 
-  const addAbono = () => {
-    setForm(prevForm => ({
-      ...prevForm,
-      abonos: [...prevForm.abonos, { fecha: '', cantidad: '' }]
-    }));
-  };
+      // Formatear servicios para react-select
+      const selectedServiceValues = (Array.isArray(reserva.servicios) ? reserva.servicios : [])
+        .map(service => {
+          if (typeof service === 'object' && service !== null && service.id) {
+            return { value: service.id, label: service.Nombre || service.name || `Servicio ${service.id}` };
+          }
+          const foundService = availableServices.find(s => s.id === service);
+          return foundService ? { value: foundService.id, label: foundService.Nombre || foundService.name || `Servicio ${foundService.id}` } : null;
+        })
+        .filter(option => option !== null);
 
-  const removeAbono = (index) => {
-    setForm(prevForm => {
-      const newAbonos = prevForm.abonos.filter((_, i) => i !== index);
-      updateRestante(prevForm.totalPago, newAbonos);
-      return {
-        ...prevForm,
-        abonos: newAbonos
-      };
-    });
-  };
-
-  const updateRestante = (totalPago, abonos) => {
-    const totalAbonos = abonos.reduce((sum, abono) => sum + parseFloat(abono.cantidad || 0), 0);
-    const restante = parseFloat(totalPago || 0) - totalAbonos;
-    setForm(prevForm => ({
-      ...prevForm,
-      restante: restante.toFixed(0)
-    }));
-  };
-
-  const validateField = (name, value) => {
-    switch (name) {
-      case 'nombre':
-        return value.trim() && /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value) ? '' : 'El nombre es requerido y solo debe contener letras.';
-      case 'distintivo':
-        return value.trim() && /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value) ? '' : 'Distintivo es requerido y solo debe  contener letras.';
-      case 'categoriaCliente':
-        return value.trim() ? '' : 'Categoría Cliente es requerida.';
-      case 'celular':
-        return /^\d{10}$/.test(value) ? '' : 'Celular es requerido y debe tener exactamente 10 dígitos.';
-      case 'correo':
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? '' : 'Correo electrónico es requerido y debe ser válido.';
-      case 'direccion':
-        return value.trim() ? '' : 'Dirección es requerida.';
-      case 'evento':
-        return value.trim() && /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value) ? '' : 'Evento es requerido y solo debe contener letras.';
-      case 'fechaHora':
-        return value && new Date(value) > new Date() ? '' : 'Fecha y hora son requeridas y deben ser futuras.';
-      case 'cantidadMesas':
-        return parseInt(value) > 0 ? '' : 'Cantidad de mesas es requerida y debe ser mayor a 0.';
-      case 'duracionEvento':
-        return parseFloat(value) > 0 ? '' : 'Duración del evento es requerida y debe ser mayor a 0.';
-      case 'tipoEvento':
-        return value.trim() ? '' : 'Tipo de Evento es requerido.';
-      case 'nroPersonas':
-        return parseInt(value) > 0 ? '' : 'Número de personas es requerido y debe ser mayor a 0.';
-      case 'servicios':
-        return value.trim() ? '' : 'Servicios es requerido.';
-      case 'montoDecoracion':
-        return parseFloat(value) >= 0 ? '' : 'Monto de decoración es requerido y no puede ser negativo.';
-      case 'totalPago':
-        return parseFloat(value) > 0 ? '' : 'Total a pagar es requerido y debe ser mayor a 0.';
-      case 'restante':
-        return parseFloat(value) >= 0 ? '' : 'El monto restante es requerido y no puede ser negativo.';
-      case 'formaPago':
-        return value.trim() ? '' : 'Forma de Pago es requerida.';
-      default:
-        return '';
+      // Llenar formulario (incluyendo datos del cliente y servicios formateados)
+      setForm({
+        ...emptyForm, ...reserva,
+        customerId: reserva.customerId || reserva.idCustomers || (reserva.Customer ? reserva.Customer.id : null),
+        servicios: selectedServiceValues,
+        abonos: Array.isArray(reserva.abonos) ? reserva.abonos : []
+      });
+      setErrors({}); // Limpiar errores
+      setClientSearchText(''); // Limpiar búsqueda de cliente
+      setClientSearchResults([]);
+      setShowClientSearch(false);
+      setModalOpen(true); // Abrir modal
+    } else {
+      console.error("Reserva no encontrada para editar. ID:", reservaId);
+      Swal.fire("Error", "No se pudo encontrar la reserva seleccionada.", "error");
     }
   };
 
+  // --- REPROGRAMAR reserva (Drag & Drop) ---
+  const handleEventDrop = async (info) => {
+    const { event } = info;
+    const reservaId = parseInt(event.id, 10);
+    const reservaOriginal = data.find(res => res.id === reservaId);
+
+    if (!reservaOriginal) {
+      console.error("Error: No se encontró reserva original para reprogramar. ID:", reservaId);
+      Swal.fire("Error Interno", "No se pudo encontrar la reserva.", "error");
+      return;
+    }
+
+    const newStartDate = new Date(event.start);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+
+    if (newStartDate < today) {
+      Swal.fire("Error", "No se pueden reprogramar a fechas pasadas.", "error");
+      info.revert(); return;
+    }
+
+    const conflictingReserva = data.find(res =>
+      res.id !== reservaId &&
+      new Date(res.fechaHora).toDateString() === newStartDate.toDateString()
+    );
+
+    if (conflictingReserva) {
+      Swal.fire("Conflicto", "Ya existe otra reserva en esta fecha.", "error");
+      info.revert(); return;
+    }
+
+    // Asegurar enviar todos los datos necesarios para la actualización
+    const updatedReservaData = {
+      ...reservaOriginal,
+      // Convertir servicios de {value, label} a IDs si es necesario para la API de update
+      // Si la API de update espera IDs:
+      // servicios: (reservaOriginal.servicios || []).map(s => typeof s === 'object' ? s.value : s),
+      fechaHora: event.start.toISOString().slice(0, 16)
+    };
+     // Si la API espera objetos {value, label}, no necesitas convertir `servicios`
+     // const updatedReservaData = { ...reservaOriginal, fechaHora: event.start.toISOString().slice(0, 16) };
+
+
+    try {
+      setLoading(true);
+      await reservasService.updateReservation(reservaId, updatedReservaData);
+      // Actualizar estado local. IMPORTANTE: mantener el formato correcto para servicios en el estado local
+      setData(prevData => prevData.map(res => res.id === reservaId ? { ...updatedReservaData, servicios: reservaOriginal.servicios } : res)); // Mantener formato original de servicios
+      Swal.fire("Reserva reprogramada", "La reserva se actualizó.", "success");
+    } catch (error) {
+      console.error("Error updating reservation on drop:", error);
+      Swal.fire("Error", "No se pudo reprogramar la reserva.", "error");
+      info.revert();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- Mapeo de colores y eventos para FullCalendar ---
+  const colorMap = { terminada: '#28a745', anulada: '#dc3545', pendiente: '#ffc107', en_proceso: '#fd7e14', confirmada: '#007bff' };
+  const events = data.map(reserva => ({ id: reserva.id.toString(), title: reserva.nombre || reserva.evento || `Reserva ${reserva.id}`, start: reserva.fechaHora, backgroundColor: colorMap[reserva.estado] || '#6c757d', borderColor: colorMap[reserva.estado] || '#6c757d', textColor: reserva.estado === 'pendiente' ? '#212529' : '#ffffff' }));
+  const handleSearchChange = (e) => { setSearchText(e.target.value); };
+  const filteredEvents = events.filter(event => event.title.toLowerCase().includes(searchText.toLowerCase()));
+
+  // --- BÚSQUEDA DE CLIENTES ---
+  const handleClientSearch = async (e) => { // Quitamos el tipado TS
+    const searchValue = e.target.value;
+    setClientSearchText(searchValue);
+    setShowClientSearch(true);
+    console.log("Buscando cliente con término:", searchValue);
+    if (searchValue.length < 2) {
+        setClientSearchResults([]);
+        setErrors(prev => ({ ...prev, clientSearch: searchValue.length > 0 ? 'Mínimo 2 caracteres' : '' }));
+        return;
+    }
+    setIsClientSearchLoading(true);
+    setErrors(prev => ({ ...prev, clientSearch: '' }));
+    try {
+      const results = await clientesService.searchClientes(searchValue); // Llamada real al servicio
+      console.log("Resultados búsqueda cliente:", results);
+      setClientSearchResults(results || []);
+      if (!results || results.length === 0) {
+          setErrors(prev => ({ ...prev, clientSearch: 'No se encontraron clientes.' }));
+      }
+    } catch (error) { // Quitamos el tipado TS
+      console.error("Error searching clients:", error);
+      setErrors(prev => ({ ...prev, clientSearch: `Error: ${error?.message || 'No se pudo buscar'}` }));
+      setClientSearchResults([]);
+    } finally {
+      setIsClientSearchLoading(false);
+    }
+  };
+
+  // --- SELECCIONAR CLIENTE ---
+  const selectClient = (cliente) => { // Quitamos el tipado TS
+    console.log("Cliente seleccionado:", cliente);
+    setForm(prevForm => ({
+      ...prevForm, customerId: cliente.id, nombre: cliente.NombreCompleto || '',
+      distintivo: cliente.Distintivo || '', categoriaCliente: cliente.CategoriaCliente || '',
+      correo: cliente.Correo || '', celular: cliente.Celular || '', direccion: cliente.Direccion || '',
+    }));
+    setClientSearchText(''); setClientSearchResults([]); setShowClientSearch(false);
+    setErrors(prev => ({ ...prev, customerId: '', clientSearch: '' }));
+  };
+
+  // --- MANEJO DE ABONOS ---
+  const handleAbonoChange = (index, field, value) => {
+    const updatedAbonos = form.abonos.map((abono, i) => i === index ? { ...abono, [field]: value } : abono);
+    setForm(prevForm => ({ ...prevForm, abonos: updatedAbonos }));
+    if (field === 'cantidad') { updateRestante(form.totalPago, updatedAbonos); }
+    setErrors(prevErrors => ({ ...prevErrors, [`abono-${index}-${field}`]: validateAbonoField(field, value) }));
+  };
+  const addAbono = () => {
+    setForm(prevForm => ({ ...prevForm, abonos: [...(prevForm.abonos || []), { fecha: '', cantidad: '' }] }));
+    setErrors(prevErrors => ({ ...prevErrors, abonos: '' }));
+  };
+  const removeAbono = (index) => {
+    const updatedAbonos = (form.abonos || []).filter((_, i) => i !== index);
+    setForm(prevForm => ({ ...prevForm, abonos: updatedAbonos }));
+    updateRestante(form.totalPago, updatedAbonos);
+    setErrors(prevErrors => { const newErrors = { ...prevErrors }; delete newErrors[`abono-${index}-fecha`]; delete newErrors[`abono-${index}-cantidad`]; return newErrors; });
+  };
+  const updateRestante = useCallback((totalPago, abonos) => {
+    const totalAbonosNum = (abonos || []).reduce((sum, abono) => sum + parseFloat(abono.cantidad || 0), 0);
+    const totalPagoNum = parseFloat(totalPago || 0);
+    const restanteNum = totalPagoNum - totalAbonosNum;
+    const restanteFormatted = isNaN(restanteNum) ? '' : restanteNum.toFixed(0);
+    setForm(prevForm => ({ ...prevForm, restante: restanteFormatted }));
+    setErrors(prevErrors => ({ ...prevErrors, restante: validateField('restante', restanteFormatted) }));
+  }, []);
+
+  // --- MANEJO DE SELECCIÓN DE SERVICIOS (react-select) ---
+  const handleMultiServiceChange = (selectedOptions) => {
+    setForm(prevForm => ({ ...prevForm, servicios: selectedOptions || [] })); // Guardar array {value, label}
+    setErrors(prevErrors => ({ ...prevErrors, servicios: validateField('servicios', selectedOptions || []) }));
+  };
+
+   // --- VALIDACIÓN ---
+   const validateAbonoField = (fieldName, value) => {
+     if (fieldName === 'fecha' && !value) return 'Fecha req.';
+     if (fieldName === 'cantidad') { const numValue = parseFloat(value); if (isNaN(numValue) || numValue <= 0) return 'Cantidad > 0.'; }
+     return '';
+   };
+   const validateField = (name, value) => {
+     if (name === 'customerId' && !value) return 'Debe seleccionar un cliente.';
+     // Descomentar si servicios son obligatorios
+     // if (name === 'servicios' && (!Array.isArray(value) || value.length === 0)) { return 'Seleccione al menos un servicio.'; }
+
+    switch (name) {
+      case 'nombre': return value.trim() ? '' : 'Nombre es requerido.'; // Cliente
+      case 'evento': return value.trim() && value.length <= 100 ? '' : 'Asunto/Evento requerido (máx 100).';
+      case 'fechaHora': if (!value) return 'Fecha y hora requeridas.'; return new Date(value) > new Date() ? '' : 'Fecha/hora debe ser futura.';
+      case 'duracionEvento': return value ? '' : 'Duración requerida.';
+      case 'tipoEvento': return value ? '' : 'Tipo de Evento requerido.';
+      case 'nroPersonas': return parseInt(value) > 0 ? '' : 'Nro. Personas > 0.';
+      case 'montoDecoracion': return !isNaN(parseFloat(value)) && parseFloat(value) >= 0 ? '' : 'Monto Decoración >= 0.';
+      case 'totalPago': return !isNaN(parseFloat(value)) && parseFloat(value) > 0 ? '' : 'Total a Pagar > 0.';
+      case 'restante': return !isNaN(parseFloat(value)) && parseFloat(value) >= 0 ? '' : 'Restante >= 0.';
+      case 'formaPago': return value ? '' : 'Forma de Pago requerida.';
+      // Campos cliente (solo formato si existen, ya que vienen de selección)
+      case 'distintivo': return !value || value.trim() ? '' : 'Distintivo inválido.';
+      case 'categoriaCliente': return !value || value ? '' : 'Categoría inválida.';
+      case 'celular': return !value || /^\d{7,15}$/.test(value) ? '' : 'Celular inválido (7-15 dígitos).';
+      case 'correo': return !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? '' : 'Correo inválido.';
+      case 'direccion': return !value || value.trim() ? '' : 'Dirección inválida.';
+      default: return '';
+    }
+   };
+   const validateForm = () => {
+     const newErrors = {}; let isValid = true;
+     const fieldsToValidate = [ 'customerId', 'evento', 'fechaHora', 'duracionEvento', 'tipoEvento', 'nroPersonas', 'montoDecoracion', 'totalPago', 'restante', 'formaPago' /*, 'servicios'*/ ];
+     const clientFields = ['nombre']; // Verificar que al menos el nombre esté (indicador de cliente seleccionado)
+     [...fieldsToValidate, ...clientFields].forEach(key => { const error = validateField(key, form[key]); if (error) { newErrors[key] = error; isValid = false; } });
+     // Validar Abonos
+     if (!form.abonos || form.abonos.length === 0) { newErrors.abonos = 'Agregar al menos un abono.'; isValid = false; }
+     else { form.abonos.forEach((abono, i) => { const fe = validateAbonoField('fecha', abono.fecha); const ce = validateAbonoField('cantidad', abono.cantidad); if (fe) newErrors[`abono-${i}-fecha`] = fe; if (ce) newErrors[`abono-${i}-cantidad`] = ce; if (fe || ce) isValid = false; }); }
+     setErrors(newErrors); return isValid;
+   };
+
+  // --- Cambio General en campos del Formulario ---
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm(prevForm => {
-      const updatedForm = {
-        ...prevForm,
-        [name]: value
-      };
-      if (name === 'totalPago') {
-        updateRestante(value, prevForm.abonos);
-      }
-      return updatedForm;
-    });
-    setErrors(prevErrors => ({
-      ...prevErrors,
-      [name]: validateField(name, value)
+    const updatedForm = { ...form, [name]: value };
+    setForm(updatedForm);
+    if (name === 'totalPago') { updateRestante(value, updatedForm.abonos); }
+    // Validar el campo que cambió
+    setErrors(prevErrors => ({ ...prevErrors, [name]: validateField(name, value),
+      // Limpiar errores de abono si cambia otro campo
+      ...(name !== 'abonos' && Object.keys(prevErrors).filter(k => k.startsWith('abono-')).reduce((acc, key) => ({ ...acc, [key]: undefined }), {}))
     }));
   };
 
-  const validateForm = () => {
-    const newErrors = {};
-    let isValid = true;
-
-    Object.keys(form).forEach(key => {
-      if (key !== 'id' && key !== 'observaciones' && key !== 'abonos') {
-        const error = validateField(key, form[key]);
-        newErrors[key] = error;
-        if (error) isValid = false;
-      }
-    });
-
-    // Validate abonos
-    if (form.abonos.length === 0) {
-      newErrors.abonos = 'Debe agregar al menos un abono.';
-      isValid = false;
-    } else {
-      form.abonos.forEach((abono, index) => {
-        if (!abono.fecha || !abono.cantidad) {
-          newErrors[`abono${index}`] = 'Fecha y cantidad son requeridas para cada abono.';
-          isValid = false;
-        }
-      });
-    }
-
-    setErrors(newErrors);
-    return isValid;
-  };
-
+  // --- GUARDAR (Crear o Editar) ---
   const handleSaveReserva = async () => {
-    if (!validateForm()) {
-      Swal.fire({
-        title: "Error",
-        text: "Por favor, corrija los errores en el formulario.",
-        icon: "error",
-        confirmButtonColor: '#3085d6',
-      });
-      return;
-    }
+     if (!validateForm()) { Swal.fire("Error Validación", "Corrija los errores indicados.", "warning"); return; }
+     const isEditing = selectedReserva !== null;
+     const result = await Swal.fire({ title: isEditing ? '¿Guardar Cambios?' : '¿Crear Reserva?', icon: 'question', showCancelButton: true, confirmButtonColor: '#3085d6', cancelButtonColor: '#d33', confirmButtonText: 'Sí', cancelButtonText: 'No' });
 
-    // Check for conflicting reservations
-    const conflictingReserva = data.find(res => 
-      res.id !== form.id && 
-      new Date(res.fechaHora).toDateString() === new Date(form.fechaHora).toDateString()
-    );
-    
-    if (conflictingReserva) {
-      Swal.fire({
-        title: "Error",
-        text: "Ya existe una reserva en esta fecha y hora.",
-        icon: "error",
-        confirmButtonColor: '#3085d6',
-      });
-      return;
-    }
+     if (result.isConfirmed) {
+         setLoading(true);
+         try {
+             // Convertir servicios de {value, label} a [id] antes de enviar
+             const serviceIds = (form.servicios || []).map(option => option.value);
+             // Asegurarse que abonos tengan formato numérico si es necesario
+             const abonosToSend = (form.abonos || []).map(ab => ({
+                 fecha: ab.fecha,
+                 cantidad: parseFloat(ab.cantidad || 0) // Convertir a número
+             }));
 
-    const result = await Swal.fire({
-      title: selectedReserva ? '¿Desea editar esta reserva?' : '¿Desea agregar esta reserva?',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: selectedReserva ? 'Sí, editar' : 'Sí, agregar',
-      cancelButtonText: 'Cancelar'
-    });
+             const dataToSend = { ...form, servicios: serviceIds, abonos: abonosToSend };
 
-    if (result.isConfirmed) {
-      if (selectedReserva) {
-        setData(data.map(reserva => reserva.id === form.id ? form : reserva));
-      } else {
-        const newId = Math.max(...data.map(r => r.id)) + 1;
-        setData([...data, { ...form, id: newId }]);
-      }
-      setModalOpen(false);
-      Swal.fire({
-        title: selectedReserva ? "Reserva editada" : "Reserva agregada",
-        text: selectedReserva ? "La reserva ha sido editada exitosamente." : "La reserva ha sido agregada exitosamente.",
-        icon: "success",
-        confirmButtonColor: '#3085d6',
-      });
-    }
+             if (isEditing) {
+                 await reservasService.updateReservation(selectedReserva.id, dataToSend);
+                 // Actualizar estado local manteniendo el formato {value, label} para servicios
+                 setData(prevData => prevData.map(r => r.id === selectedReserva.id ? { ...dataToSend, id: selectedReserva.id, servicios: form.servicios, abonos: form.abonos } : r));
+                 Swal.fire("Actualizado", "Reserva actualizada.", "success");
+             } else {
+                 const newReservation = await reservasService.createReservation(dataToSend);
+                 // Poner formato {value, label} en el estado local para servicios
+                 const newReservationForState = { ...newReservation, servicios: form.servicios, abonos: form.abonos };
+                 setData(prevData => [...prevData, newReservationForState]);
+                 Swal.fire("Creada", "Reserva creada.", "success");
+             }
+             setModalOpen(false);
+         } catch (error) { // Quitamos tipado TS
+            console.error("Error saving reservation:", error);
+            const errorMessage = error.response?.data?.message || error.message || "No se pudo guardar la reserva.";
+            Swal.fire("Error", errorMessage, "error");
+         } finally { setLoading(false); }
+     }
   };
 
+  // --- CANCELAR (Eliminar) ---
   const handleCancel = async (id) => {
-    const result = await Swal.fire({
-      title: '¿Está seguro de cancelar esta reserva?',
-      text: "Esta acción no se puede deshacer",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Sí, cancelar reserva',
-      cancelButtonText: 'No, mantener reserva'
-    });
-
-    if (result.isConfirmed) {
-      setData(data.map(reserva => reserva.id === id ? {...reserva, estado: 'anulada'} : reserva));
-      setModalOpen(false);
-      Swal.fire({
-        title: "Reserva cancelada",
-        text: "La reserva ha sido cancelada exitosamente.",
-        icon: "success",
-        confirmButtonColor: '#3085d6',
-      });
-    }
+     if (!id) return;
+     const result = await Swal.fire({ title: '¿ELIMINAR Reserva?', text: "¡Acción irreversible!", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#3085d6', confirmButtonText: 'Sí, eliminar', cancelButtonText: 'No' });
+     if (result.isConfirmed) {
+         setLoading(true);
+         try {
+             const response = await reservasService.deleteReservation(id);
+             if (response && response.success !== false) {
+                setData(prevData => prevData.filter(reserva => reserva.id !== id));
+                setModalOpen(false);
+                Swal.fire("Eliminada", response.message || "Reserva eliminada.", "success");
+             } else { Swal.fire("Error", response?.message || "No se pudo eliminar.", "error"); }
+         } catch (error) { // Quitamos tipado TS
+             console.error("Error deleting reservation:", error);
+             const errorMessage = error.response?.data?.message || error.message || "Error al eliminar.";
+             Swal.fire("Error", errorMessage, "error");
+         } finally { setLoading(false); }
+     }
   };
 
+  // --- Descargar Excel ---
   const handleDownloadExcel = () => {
-    const worksheet = utils.json_to_sheet(data);
-    const workbook = utils.book_new();
-    utils.book_append_sheet(workbook, worksheet, 'Reservas');
-    writeFile(workbook, 'Reservas.xlsx');
+    if (data.length === 0) { Swal.fire("Vacío", "No hay datos.", "info"); return; }
+    const dataToExport = data.map(r => ({ ID: r.id, Cliente: r.nombre, Asunto: r.evento, Fecha_Hora: r.fechaHora, Duracion: r.duracionEvento, Tipo: r.tipoEvento, Personas: r.nroPersonas, Total: r.totalPago, Restante: r.restante, Pago: r.formaPago, Estado: r.estado }));
+    const ws = utils.json_to_sheet(dataToExport); const wb = utils.book_new(); utils.book_append_sheet(wb, ws, 'Reservas'); writeFile(wb, 'Reservas.xlsx');
   };
 
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value);
-  };
+  // --- Formato de Moneda ---
+  const formatCurrency = (value) => { const n = parseFloat(value); return isNaN(n) ? '' : new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(n); };
 
+  // --- RENDERIZADO DEL COMPONENTE ---
   return (
     <Container fluid className="p-0">
+      {/* --- Indicador de Carga General --- */}
+      {loading && ( <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(255, 255, 255, 0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}> <Spinner color="primary" style={{ width: '3rem', height: '3rem' }} /> <span className="ms-2">Cargando...</span> </div> )}
+
+      {/* --- Encabezado y Botones --- */}
       <Row className="mb-3 align-items-center">
-        <Col>
-          <h2>Calendario de Reservas</h2>
-        </Col>
-        <Col xs="auto">
-          <Button color="success" onClick={handleDownloadExcel}>
-            <FaFileExcel className="me-2" />
-            Descargar Excel
-          </Button>
-        </Col>
-      </Row>
-      <Row className="mb-3">
-        <Col>
-          <Input
-            type="text"
-            style={{ width: '300px' }} placeholder="Buscar reservas..."
-            value={searchText}
-            onChange={handleSearchChange}
-          />
-        </Col>
-      </Row>
-      <Row>
-        <Col>
-          <div style={{ height: 'calc(100vh - 200px)' }}>
-            <FullCalendar
-              plugins={[dayGridPlugin, interactionPlugin]}
-              initialView="dayGridMonth"
-              events={filteredEvents}
-              dateClick={handleDateClick}
-              eventClick={handleEventClick}
-              editable={true}
-              eventDrop={handleEventDrop}
-              height="100%"
-            />
-          </div>
-        </Col>
+          <Col> <h2>Calendario de Reservas</h2> </Col>
+          <Col xs="auto"> <Button color="success" onClick={handleDownloadExcel} disabled={data.length === 0 || loading}> <FaFileExcel className="me-2" /> Descargar Excel </Button> </Col>
       </Row>
 
-      <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)} size="lg">
-        <ModalHeader style={{background:'#6d0f0f'}} toggle={() => setModalOpen(!modalOpen)}>
-          <h3 className="text-white">{selectedReserva ? 'Editar Reserva' : 'Nueva Reserva'}</h3>
+      {/* --- Búsqueda Principal Calendario--- */}
+      <Row className="mb-3">
+          <Col> <Input type="text" style={{ width: '300px' }} placeholder="Buscar por nombre/evento..." value={searchText} onChange={handleSearchChange} disabled={loading} /> </Col>
+      </Row>
+
+      {/* --- Calendario --- */}
+      <Row>
+          <Col>
+            <div style={{ height: 'calc(100vh - 250px)', position: 'relative' }}>
+              {data.length > 0 || !loading ? (
+                  <FullCalendar
+                      plugins={[dayGridPlugin, interactionPlugin]}
+                      initialView="dayGridMonth"
+                      events={filteredEvents}
+                      dateClick={handleDateClick}
+                      eventClick={handleEventClick}
+                      editable={true}
+                      eventDrop={handleEventDrop}
+                      locale="es"
+                      buttonText={{ today: 'Hoy' }}
+                      height="100%"
+                  />
+               ) : (
+                   <p className="text-center mt-5">{loading ? '' : 'No hay reservas para mostrar.'}</p>
+               )}
+            </div>
+          </Col>
+      </Row>
+
+      {/* --- MODAL PARA CREAR/EDITAR RESERVA --- */}
+      <Modal isOpen={modalOpen} toggle={() => !loading && setModalOpen(!modalOpen)} size="lg" backdrop="static" scrollable>
+        <ModalHeader toggle={() => !loading && setModalOpen(!modalOpen)} style={{background:'#6d0f0f', color: 'white'}}>
+            {selectedReserva ? 'Editar Reserva' : 'Nueva Reserva'}
         </ModalHeader>
         <ModalBody>
-          <FormGroup>
+          {/* --- Datos del Cliente (CON BÚSQUEDA INTEGRADA) --- */}
+          <FormGroup tag="fieldset" className="border p-3 mb-3">
+            <legend className="w-auto px-2" style={{fontSize: '1rem', fontWeight: 'bold'}}>Datos del Cliente</legend>
             <Row>
-              <Col md={6}>
-                <Label for="nombre"><b>Nombre</b></Label>
+              <Col md={7} style={{ position: 'relative' }}>
+                <Label for="clienteBusqueda"><b>Buscar Cliente*</b></Label>
                 <InputGroup>
-                  <Input
-                    id="nombre"
-                    style={{ border: '2px solid #000000' }}
-                    type="text"
-                    name="nombre"
-                    value={form.nombre}
-                    onChange={handleChange}
-                    invalid={!!errors.nombre}
-                  />
-                  <InputGroupText style={{ cursor: 'pointer' }} onClick={() => setShowClientSearch(!showClientSearch)}>
-                    <FaSearch />
-                  </InputGroupText>
+                  <Input id="clienteBusqueda" type="text" placeholder="Buscar por nombre o distintivo..." value={clientSearchText} onChange={handleClientSearch} onFocus={() => setShowClientSearch(true)} onBlur={() => setTimeout(() => setShowClientSearch(false), 200)} disabled={loading || isClientSearchLoading} invalid={!!errors.customerId && !form.customerId}/>
+                  <InputGroupText> {isClientSearchLoading ? <Spinner size="sm" /> : <FaSearch />} </InputGroupText>
                 </InputGroup>
-                {errors.nombre && <span className="text-danger">{errors.nombre}</span>}
+                {errors.customerId && !form.customerId && <FormFeedback style={{ display: 'block' }}>{errors.customerId}</FormFeedback>}
+                {showClientSearch && (clientSearchResults.length > 0 || errors.clientSearch) && (
+                   <ListGroup style={{ position: 'absolute', top: 'calc(100% - 10px)', left: '15px', right: '15px', zIndex: 10, maxHeight: '150px', overflowY: 'auto', border: '1px solid #ccc', borderRadius: '0 0 0.25rem 0.25rem', background: 'white' }}>
+                    {clientSearchResults.map(cliente => ( <ListGroupItem key={cliente.id} action tag="button" onClick={() => selectClient(cliente)} style={{ textAlign: 'left', width: '100%', fontSize: '0.9rem', padding: '0.5rem 0.75rem' }}> {cliente.NombreCompleto} ({cliente.Distintivo}) </ListGroupItem> ))}
+                    {errors.clientSearch && <ListGroupItem className="text-danger small" style={{ fontStyle: 'italic' }}>{errors.clientSearch}</ListGroupItem>}
+                   </ListGroup>
+                )}
               </Col>
-              <Col md={6}>
-                <Label for="distintivo"><b>Distintivo</b></Label>
-                <Input
-                  id="distintivo"
-                  style={{ border: '2px solid #000000' }}
-                  type="text"
-                  name="distintivo"
-                  value={form.distintivo}
-                  onChange={handleChange}
-                  invalid={!!errors.distintivo}
-                />
-                {errors.distintivo && <span className="text-danger">{errors.distintivo}</span>}
+              <Col md={5}>
+                 <Label for="categoriaClienteDisplay"><b>Categoría</b></Label>
+                 <Input id="categoriaClienteDisplay" name="categoriaCliente" value={form.categoriaCliente} readOnly disabled/>
               </Col>
-            </Row>
-            {showClientSearch && (
-              <Row className="mt-2">
-                <Col md={12}>
-                  <Input
-                    type="text"
-                    
-                    placeholder="Buscar cliente..."
-                    value={clientSearchText}
-                    onChange={handleClientSearch}
-                  />
-                  {clientSearchResults.length > 0 && (
-                    <div className="border rounded mt-1 p-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                      {clientSearchResults.map(cliente => (
-                        <div 
-                          key={cliente.id} 
-                          className="p-2 hover-bg-light cursor-pointer"
-                          onClick={() => selectClient(cliente)}
-                        >
-                          {cliente.nombre} - {cliente.distintivo}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </Col>
-              </Row>
-            )}
-            <Row className="mt-3">
-              <Col md={6}>
-                <Label for="categoriaCliente"><b>Categoría Cliente</b></Label>
-                <Input
-                  id="categoriaCliente"
-                  style={{ border: '2px solid #000000' }}
-                  type="select"
-                  name="categoriaCliente"
-                  value={form.categoriaCliente}
-                  onChange={handleChange}
-                  invalid={!!errors.categoriaCliente}
-                >
-                  <option value="">Seleccione una categoría</option>
-                  <option value="Familiar">Familiar</option>
-                  <option value="Empresarial">Empresarial</option>
-                  <option value="Preferencial">Preferencial</option>
-                  <option value="Frecuente">Nuevo</option>
-                </Input>
-                {errors.categoriaCliente && <span className="text-danger">{errors.categoriaCliente}</span>}
-              </Col>
-              <Col md={6}>
-                <Label for="correo"><b>Correo</b></Label>
-                <Input
-                  id="correo"
-                  style={{ border: '2px solid #000000' }}
-                  type="email"
-                  name="correo"
-                  value={form.correo}
-                  onChange={handleChange}
-                  invalid={!!errors.correo}
-                />
-                {errors.correo && <span className="text-danger">{errors.correo}</span>}
-              </Col>
-            </Row>
-            <Row className="mt-3">
-              <Col md={6}>
-                <Label for="celular"><b>Celular</b></Label>
-                <Input
-                  id="celular"
-                  style={{ border: '2px solid #000000' }}
-                  type="text"
-                  name="celular"
-                  value={form.celular}
-                  onChange={handleChange}
-                  invalid={!!errors.celular}
-                />
-                {errors.celular && <span className="text-danger">{errors.celular}</span>}
-              </Col>
-              <Col md={6}>
-                <Label for="direccion"><b>Dirección</b></Label>
-                <Input
-                  id="direccion"
-                  style={{ border: '2px solid #000000' }}
-                  type="text"
-                  name="direccion"
-                  value={form.direccion}
-                  onChange={handleChange}
-                  invalid={!!errors.direccion}
-                />
-                {errors.direccion && <span className="text-danger">{errors.direccion}</span>}
-              </Col>
-            </Row>
-            <Row className="mt-3">
-              <Col md={12}>
-                <Label for="fechaHora"><b>Fecha y Hora</b></Label>
-                <Input
-                  id="fechaHora"
-                  style={{ border: '2px solid #000000' }}
-                  type="datetime-local"
-                  name="fechaHora"
-                  value={form.fechaHora}
-                  onChange={handleChange}
-                  invalid={!!errors.fechaHora}
-                />
-                {errors.fechaHora && <span className="text-danger">{errors.fechaHora}</span>}
-              </Col>
-            </Row>
-            <Row className="mt-3">
-              <Col md={6}>
-                <Label for="cantidadMesas"><b>Cantidad de Mesas</b></Label>
-                <Input
-                  id="cantidadMesas"
-                  style={{ border: '2px solid #000000' }}
-                  type="number"
-                  name="cantidadMesas"
-                  value={form.cantidadMesas}
-                  onChange={handleChange}
-                  invalid={!!errors.cantidadMesas}
-                />
-                {errors.cantidadMesas && <span className="text-danger">{errors.cantidadMesas}</span>}
-              </Col>
-              <Col md={6}>
-                <Label for="duracionEvento"><b>Duración del Evento (horas)</b></Label>
-                <Input
-                  id="duracionEvento"
-                  style={{ border: '2px solid #000000' }}
-                  type="number"
-                  name="duracionEvento"
-                  value={form.duracionEvento}
-                  onChange={handleChange}
-                  invalid={!!errors.duracionEvento}
-                />
-                {errors.duracionEvento && <span className="text-danger">{errors.duracionEvento}</span>}
-              </Col>
-            </Row>
-            <Row className="mt-3">
-              <Col md={6}>
-                <Label for="tipoEvento"><b>Tipo de Evento</b></Label>
-                <Input
-                  id="tipoEvento"
-                  style={{ border: '2px solid #000000' }}
-                  type="select"
-                  name="tipoEvento"
-                  value={form.tipoEvento}
-                  onChange={handleChange}
-                  invalid={!!errors.tipoEvento}
-                >
-                  <option value="">Seleccione un tipo</option>
-                  <option value="Empresarial">Empresarial</option>
-                  <option value="Cumpleaños">Cumpleaños</option>
-                  <option value="Grado">Grado</option>
-                  <option value="Aniversario">Aniversario</option>
-                  <option value="Bautizo">Bautizo</option>
-                  <option value="PrimeraComunion">Primera Comunión</option>
-                  <option value="Matrimonio">Matrimonio</option>
-                </Input>
-                {errors.tipoEvento && <span className="text-danger">{errors.tipoEvento}</span>}
-              </Col>
-              <Col md={6}>
-                <Label for="nroPersonas"><b>Número de Personas</b></Label>
-                <Input
-                  id="nroPersonas"
-                  style={{ border: '2px solid #000000' }}
-                  type="number"
-                  name="nroPersonas"
-                  value={form.nroPersonas}
-                  onChange={handleChange}
-                  invalid={!!errors.nroPersonas}
-                />
-                {errors.nroPersonas && <span className="text-danger">{errors.nroPersonas}</span>}
-              </Col>
-            </Row>
-            <Row className="mt-3">
-              <Col md={12}>
-                <Label for="observaciones"><b>Observaciones</b></Label>
-                <Input
-                  id="observaciones"
-                  style={{ border: '2px solid #000000' }}
-                  type="textarea"
-                  name="observaciones"
-                  value={form.observaciones}
-                  onChange={handleChange}
-                  rows="3"
-                />
-              </Col>
-            </Row>
-            <Row className="mt-3">
-              <Col md={6}>
-                <Label for="servicios"><b>Servicios</b></Label>
-                <Input
-                  id="servicios"
-                  style={{ border: '2px solid #000000' }}
-                  type="select"
-                  name="servicios"
-                  value={form.servicios}
-                  onChange={handleChange}
-                  invalid={!!errors.servicios}
-                >
-                  <option value="">Seleccione un servicio</option>
-                  <option value="Decoracion">Decoración</option>
-                </Input>
-                {errors.servicios && <span className="text-danger">{errors.servicios}</span>}
-              </Col>
-              <Col md={6}>
-                <Label for="montoDecoracion"><b>Monto Decoración</b></Label>
-                <Input
-                  id="montoDecoracion"
-                  style={{ border: '2px solid #000000' }}
-                  type="select"
-                  name="montoDecoracion"
-                  value={form.montoDecoracion}
-                  onChange={handleChange}
-                  invalid={!!errors.montoDecoracion}
-                >
-                  <option value="">Seleccione un monto</option>
-                  <option value="70000">$70.000 (2 a 15 personas)</option>
-                  <option value="90000">$90.000 (16 a 40 personas)</option>
-                </Input>
-                {errors.montoDecoracion && <span className="text-danger">{errors.montoDecoracion}</span>}
-              </Col>
-            </Row>
-            <Row className="mt-3">
-              <Col md={12}>
-                <Label><b>Abonos</b></Label>
-                {form.abonos.map((abono, index) => (
-                  <Row key={index} className="mb-2">
-                    <Col md={5}>
-                      <Input
-                        type="date"
-                        value={abono.fecha}
-                        onChange={(e) => handleAbonoChange(index, 'fecha', e.target.value)}
-                        style={{ border: '2px solid #000000' }}
-                      />
-                    </Col>
-                    <Col md={5}>
-                      <Input
-                        type="number"
-                        value={abono.cantidad}
-                        onChange={(e) => handleAbonoChange(index, 'cantidad', e.target.value)}
-                        placeholder="Cantidad"
-                        style={{ border: '2px solid #000000' }}
-                      />
-                    </Col>
-                    <Col md={2}>
-                      <Button style={{background:'#6d0f0f'}} onClick={() => removeAbono(index)}>
-                        <FaTrash />
-                      </Button>
-                    </Col>
-                  </Row>
-                ))}
-                {errors.abonos && <span className="text-danger">{errors.abonos}</span>}
-                {form.abonos.map((_, index) => (
-                  errors[`abono${index}`] && <span key={index} className="text-danger d-block">{errors[`abono${index}`]}</span>
-                ))}
-                <Button style={{background:'#7ea9d1'}} onClick={addAbono} >+</Button>
-              </Col>
-            </Row>
-            <Row className="mt-3">
-              <Col md={4}>
-                <Label for="totalPago"><b>Total a Pagar</b></Label>
-                <Input
-                  id="totalPago"
-                  style={{ border: '2px solid #000000' }}
-                  type="number"
-                  name="totalPago"
-                  value={form.totalPago}
-                  onChange={handleChange}
-                  invalid={!!errors.totalPago}
-                />
-                {errors.totalPago && <span className="text-danger">{errors.totalPago}</span>}
-              </Col>
-              <Col md={4}>
-                <Label for="restante"><b>Restante</b></Label>
-                <Input
-                  id="restante"
-                  style={{ border: '2px solid #000000' }}
-                  type="number"
-                  name="restante"
-                  value={form.restante}
-                  onChange={handleChange}
-                  invalid={!!errors.restante}
-                  readOnly
-                />
-                {errors.restante && <span className="text-danger">{errors.restante}</span>}
-              </Col>
-              <Col md={4}>
-                <Label for="formaPago"><b>Forma de Pago</b></Label>
-                <Input
-                  id="formaPago"
-                  style={{ border: '2px solid #000000' }}
-                  type="select"
-                  name="formaPago"
-                  value={form.formaPago}
-                  onChange={handleChange}
-                  invalid={!!errors.formaPago}
-                >
-                  <option value="">Seleccione una forma de pago</option>
-                  <option value="Bancolombia">Bancolombia</option>
-                  <option value="Efectivo">Efectivo</option>
-                  <option value="Tarjeta">Tarjeta</option>
-                </Input>
-                {errors.formaPago && <span className="text-danger">{errors.formaPago}</span>}
-              </Col>
-            </Row>
-            <Row className="mt-3">
-              <Col md={12}>
-                <Label for="estado"><b>Estado</b></Label>
-                <Input
-                  id="estado"
-                  style={{ border: '2px solid #000000' }}
-                  type="select"
-                  name="estado"
-                  value={form.estado}
-                  onChange={handleChange}
-                >
-                  <option value="pendiente">Pendiente</option>
-                  <option value="confirmada">Confirmada</option>
-                  <option value="en_proceso">En Proceso</option>
-                  <option value="terminada">Terminada</option>
-                  <option value="anulada">Anulada</option>
-                </Input>
-              </Col>
+               <Col md={12} className="mt-2">
+                   <Input bsSize="sm" type="text" value={form.nombre ? `Seleccionado: ${form.nombre} (ID: ${form.customerId})` : 'Ningún cliente seleccionado'} readOnly disabled title={form.nombre ? `ID: ${form.customerId}` : ''}/>
+               </Col>
             </Row>
           </FormGroup>
+
+          {/* --- Detalles de la Reserva --- */}
+          <FormGroup tag="fieldset" className="border p-3 mb-3">
+            <legend className="w-auto px-2" style={{fontSize: '1rem', fontWeight: 'bold'}}>Detalles de la Reserva</legend>
+            <Row>
+                <Col md={6}> <Label for="evento"><b>Asunto/Evento*</b></Label> <Input id="evento" name="evento" type="text" value={form.evento} onChange={handleChange} invalid={!!errors.evento} disabled={loading}/> {errors.evento && <FormFeedback>{errors.evento}</FormFeedback>} </Col>
+                <Col md={6}> <Label for="fechaHora"><b>Fecha y Hora*</b></Label> <Input id="fechaHora" name="fechaHora" type="datetime-local" value={form.fechaHora} onChange={handleChange} invalid={!!errors.fechaHora} disabled={loading}/> {errors.fechaHora && <FormFeedback>{errors.fechaHora}</FormFeedback>} </Col>
+            </Row>
+            <Row className="mt-3">
+                <Col md={6}> <Label for="duracionEvento"><b>Duración (HH:MM)*</b></Label> <Input id="duracionEvento" name="duracionEvento" type="time" value={form.duracionEvento} onChange={handleChange} invalid={!!errors.duracionEvento} step="1800" disabled={loading}/> {errors.duracionEvento && <FormFeedback>{errors.duracionEvento}</FormFeedback>} </Col>
+                <Col md={6}> <Label for="tipoEvento"><b>Tipo de Evento*</b></Label> <Input id="tipoEvento" name="tipoEvento" type="select" value={form.tipoEvento} onChange={handleChange} invalid={!!errors.tipoEvento} disabled={loading}> <option value="">Seleccione...</option> <option value="Empresarial">Empresarial</option> <option value="Cumpleaños">Cumpleaños</option> <option value="Grado">Grado</option> <option value="Aniversario">Aniversario</option> <option value="Bautizo">Bautizo</option> <option value="PrimeraComunion">Primera Comunión</option> <option value="Matrimonio">Matrimonio</option> </Input> {errors.tipoEvento && <FormFeedback>{errors.tipoEvento}</FormFeedback>} </Col>
+            </Row>
+            <Row className="mt-3">
+                <Col md={6}> <Label for="nroPersonas"><b>Número de Personas*</b></Label> <Input id="nroPersonas" name="nroPersonas" type="number" value={form.nroPersonas} onChange={handleChange} invalid={!!errors.nroPersonas} min="1" disabled={loading}/> {errors.nroPersonas && <FormFeedback>{errors.nroPersonas}</FormFeedback>} </Col>
+                <Col md={6}> <Label for="observaciones"><b>Observaciones</b></Label> <Input id="observaciones" name="observaciones" type="textarea" value={form.observaciones} onChange={handleChange} rows="1" disabled={loading}/> </Col>
+            </Row>
+          </FormGroup>
+
+          {/* --- Servicios Adicionales --- */}
+          <FormGroup tag="fieldset" className="border p-3 mb-3">
+            <legend className="w-auto px-2" style={{fontSize: '1rem', fontWeight: 'bold'}}>Servicios Adicionales</legend>
+            <Select id="servicios" name="servicios" options={serviceOptions} isMulti onChange={handleMultiServiceChange} value={form.servicios} placeholder="Seleccione servicios..." isLoading={loading && availableServices.length === 0} isDisabled={loading} closeMenuOnSelect={false} styles={{ control: (base, status) => ({ ...base, borderColor: errors.servicios ? '#dc3545' : '#ced4da' }) }} /> {errors.servicios && <div className="text-danger mt-1 small">{errors.servicios}</div>}
+          </FormGroup>
+
+          {/* --- Detalles de Pago y Abonos --- */}
+          <FormGroup tag="fieldset" className="border p-3 mb-3">
+             <legend className="w-auto px-2" style={{fontSize: '1rem', fontWeight: 'bold'}}>Detalles de Pago</legend>
+             <Row>
+                 <Col md={6}> <Label for="montoDecoracion"><b>Monto Decoración*</b></Label> <Input id="montoDecoracion" name="montoDecoracion" type="number" value={form.montoDecoracion} onChange={handleChange} invalid={!!errors.montoDecoracion} min="0" disabled={loading}/> {errors.montoDecoracion && <FormFeedback>{errors.montoDecoracion}</FormFeedback>} </Col>
+                 <Col md={6}> <Label for="totalPago"><b>Total a Pagar*</b></Label> <Input id="totalPago" name="totalPago" type="number" value={form.totalPago} onChange={handleChange} invalid={!!errors.totalPago} min="0" disabled={loading}/> {errors.totalPago && <FormFeedback>{errors.totalPago}</FormFeedback>} </Col>
+             </Row>
+             <Row className="mt-3">
+                 <Col md={12}> <Label><b>Abonos*</b></Label> {errors.abonos && <div className="text-danger mb-2 small">{errors.abonos}</div>} {(form.abonos || []).map((abono, index) => ( <Row key={index} className="mb-2 align-items-center"> <Col md={5}> <Input type="date" value={abono.fecha} onChange={(e) => handleAbonoChange(index, 'fecha', e.target.value)} invalid={!!errors[`abono-${index}-fecha`]} disabled={loading} /> {errors[`abono-${index}-fecha`] && <FormFeedback>{errors[`abono-${index}-fecha`]}</FormFeedback>} </Col> <Col md={5}> <Input type="number" placeholder="Cantidad" value={abono.cantidad} onChange={(e) => handleAbonoChange(index, 'cantidad', e.target.value)} invalid={!!errors[`abono-${index}-cantidad`]} min="1" disabled={loading} /> {errors[`abono-${index}-cantidad`] && <FormFeedback>{errors[`abono-${index}-cantidad`]}</FormFeedback>} </Col> <Col md={2}> <Button size="sm" color="danger" onClick={() => removeAbono(index)} disabled={loading}> <FaTrashAlt /> </Button> </Col> </Row> ))} <Button color="info" size="sm" onClick={addAbono} className="mt-1" disabled={loading}>+ Agregar Abono</Button> </Col>
+             </Row>
+             <Row className="mt-3">
+                 <Col md={6}> <Label for="restante"><b>Restante*</b></Label> <Input id="restante" name="restante" type="number" value={form.restante} readOnly invalid={!!errors.restante}/> {errors.restante && <FormFeedback>{errors.restante}</FormFeedback>} </Col>
+                 <Col md={6}> <Label for="formaPago"><b>Forma de Pago*</b></Label> <Input id="formaPago" name="formaPago" type="select" value={form.formaPago} onChange={handleChange} invalid={!!errors.formaPago} disabled={loading}> <option value="">Seleccione...</option> <option value="Bancolombia">Bancolombia</option> <option value="Efectivo">Efectivo</option> <option value="Tarjeta">Tarjeta</option> <option value="Nequi">Nequi</option> <option value="Daviplata">Daviplata</option> </Input> {errors.formaPago && <FormFeedback>{errors.formaPago}</FormFeedback>} </Col>
+             </Row>
+          </FormGroup>
+
+          {/* --- Estado Visual --- */}
+          <FormGroup tag="fieldset" className="border p-3">
+             <legend className="w-auto px-2" style={{fontSize: '1rem', fontWeight: 'bold'}}>Estado de la Reserva</legend>
+             <Row>
+                 <Col md={12}> <Label for="estado"><b>Estado (Visual)</b></Label> <Input id="estado" name="estado" type="select" value={form.estado} onChange={handleChange} disabled={loading}> <option value="pendiente">Pendiente</option> <option value="confirmada">Confirmada</option> <option value="en_proceso">En Proceso</option> <option value="terminada">Terminada</option> <option value="anulada">Anulada</option> </Input> </Col>
+             </Row>
+          </FormGroup>
+
         </ModalBody>
+        {/* --- Footer del Modal con Botones --- */}
         <ModalFooter>
-          <Button style={{ background: '#2e8329' }} onClick={handleSaveReserva}>
-            {selectedReserva ? 'Guardar Cambios' : 'Crear Reserva'}
-          </Button>
-          {selectedReserva && (
-            <Button color="danger" onClick={() => handleCancel(selectedReserva.id)}>Cancelar Reserva</Button>
-          )}
-          <Button style={{background:'#6d0f0f'}} onClick={() => setModalOpen(false)}>Cerrar</Button>
+            <Button style={{ background: '#2e8329', color: 'white' }} onClick={handleSaveReserva} disabled={loading}> {loading ? <Spinner size="sm"/> : (selectedReserva ? 'Guardar Cambios' : 'Crear Reserva')} </Button>
+            {selectedReserva && ( <Button color="danger" onClick={() => handleCancel(selectedReserva.id)} disabled={loading}> {loading ? <Spinner size="sm"/> : 'Eliminar Reserva'} </Button> )}
+            <Button style={{background:'#6d0f0f', color: 'white'}} onClick={() => setModalOpen(false)} disabled={loading}>Cerrar</Button>
         </ModalFooter>
       </Modal>
     </Container>
