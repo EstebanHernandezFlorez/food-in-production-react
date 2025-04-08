@@ -1,562 +1,590 @@
-import { useState,  } from "react"; 
+import { useState, useEffect } from "react"; // Quitamos PropTypes si no lo usamos directamente aquí
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Table, Button, Container, Row, Col, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
-import { FaEdit, FaTrashAlt } from 'react-icons/fa'; 
-import PropTypes from 'prop-types'; 
+// Añadimos Spinner
+import { Table, Button, Container, FormGroup, Input, Modal,
+ ModalHeader, ModalBody, ModalFooter, Spinner, Label } from 'reactstrap';
+ import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+//                                                                                                                        ^^^^^ ¡Añadido aquí!import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
+// Importamos el nuevo servicio
+import clientesService from "../../services/clientesService"; // Asegúrate que la ruta es correcta
+import "../../../App.css"; // Si tienes estilos globales
 
-
-const initialData = [
-  { id: 1, NombreCompleto: "Juan Pérez", Distintivo: "7867", CategoriaCliente: "regular", Celular: "3123456789", Correo: "juan.perez@example.com", Direccion: "Cl 76 j 12b 55", Estado: true },
-  { id: 2, NombreCompleto: "Ana Torres", Distintivo: "7576", CategoriaCliente: "familiar", Celular: "3109876543", Correo: "ana.torres@example.com", Direccion: "Av. El Dorado 92-45", Estado: true },
-];
+// Estado inicial vacío para el formulario (formato frontend)
+const initialFormState = {
+  id: '',
+  NombreCompleto: '',
+  Distintivo: '',
+  CategoriaCliente: '', // Asegúrate que el valor inicial ('') sea válido para tu <select> o pon uno por defecto
+  Celular: '',
+  Correo: '',
+  Direccion: '',
+  Estado: 'Activo' // Usaremos 'Activo'/'Inactivo' consistentemente en el estado del form
+};
 
 const Clientes = () => {
 
-  const [data, setData] = useState(initialData);
-  const [form, setForm] = useState({
-    id: '',
-    NombreCompleto: '',
-    Distintivo: '',
-    CategoriaCliente: '',
-    Celular: '',
-    Correo: '',
-    Direccion: '',
-    Estado: true
-  });
+  const [data, setData] = useState([]); // Datos de la API (formato frontend)
+  const [filteredData, setFilteredData] = useState([]); // Para búsqueda/paginación
+  const [loading, setLoading] = useState(true); // Estado de carga
+  const [form, setForm] = useState(initialFormState);
+  // Mantenemos errores locales para validación rápida en frontend (opcional)
   const [errors, setErrors] = useState({
-    NombreCompleto: '',
-    Distintivo: '',
-    CategoriaCliente: '',
-    Celular: '',
-    Correo: '',
-    Direccion: '',
+    NombreCompleto: '', Distintivo: '', CategoriaCliente: '',
+    Celular: '', Correo: '', Direccion: '',
   });
-  const [isEditing, setIsEditing] = useState(false);
-  const [showForm, setShowForm] = useState(false);
+  // Estados para los modales (como en Servicios.jsx)
+  const [modalInsertar, setModalInsertar] = useState(false);
+  const [modalEditar, setModalEditar] = useState(false);
+
   const [searchText, setSearchText] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [modalOpen, setModalOpen] = useState(false);
-
   const itemsPerPage = 7;
 
-  const handleSearch = (e) => {
-    setSearchText(e.target.value.toLowerCase());
-  };
+  // --- Hook para cargar datos iniciales ---
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  const validateField = (name, value) => {
-    switch (name) {
-      case 'NombreCompleto':
-        return /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value) ? '' : 'Nombre Completo solo debe contener letras y espacios.';
-      case 'Distintivo':
-        return /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value) ? '' : 'Distintivo solo debe contener letras.';
-      case 'CategoriaCliente':
-        return /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value) ? '' : 'Categoría Cliente solo debe contener letras y espacios.';
-      case 'Celular':
-        return /^\d{10}$/.test(value) ? '' : 'Celular debe tener exactamente 10 dígitos.';
-      case 'Correo':
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? '' : 'Correo electrónico inválido.';
-      case 'Direccion':
-        return value.trim() !== '' ? '' : 'Dirección es requerida.';
-      default:
-        return '';
+  // --- Hook para filtrar datos cuando cambian los datos o el texto de búsqueda ---
+   useEffect(() => {
+    const lowercasedFilter = searchText.toLowerCase();
+    const filtered = data.filter(item =>
+        // Adapta los campos a buscar si es necesario
+        item.NombreCompleto.toLowerCase().includes(lowercasedFilter) ||
+        item.Distintivo.toLowerCase().includes(lowercasedFilter) ||
+        item.CategoriaCliente.toLowerCase().includes(lowercasedFilter) ||
+        (item.Celular && item.Celular.includes(searchText)) || // Cuidado con null/undefined
+        (item.Correo && item.Correo.toLowerCase().includes(lowercasedFilter))
+    );
+    setFilteredData(filtered);
+    setCurrentPage(1); // Resetea a página 1 al filtrar
+  }, [data, searchText]);
+
+
+  // --- Función para obtener datos de la API ---
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const clientes = await clientesService.getAllClientes(); // Usa el servicio
+      setData(clientes || []); // Asegura que sea un array
+    } catch (error) {
+      console.error("Error cargando clientes:", error);
+      Swal.fire('Error', 'No se pudieron cargar los clientes.', 'error');
+      setData([]); // Resetea data en caso de error
+    } finally {
+      setLoading(false);
     }
   };
 
+  // --- Handlers ---
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prevForm => ({
       ...prevForm,
       [name]: value
     }));
+    // Validar campo al cambiar (opcional, para feedback rápido)
     setErrors(prevErrors => ({
       ...prevErrors,
-      [name]: validateField(name, value)
+      [name]: validateField(name, value) // Usa tu función de validación local
     }));
   };
 
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
+  const handleSearch = (e) => {
+    setSearchText(e.target.value); // No necesita toLowerCase aquí
   };
 
-  const showAlert = (message, icon) => {
-    Swal.fire({
-      title: message,
-      icon: icon,
-      confirmButtonColor: '#3085d6',
-    });
+  // --- Validación Frontend (Opcional pero útil para feedback rápido) ---
+  const validateField = (name, value) => {
+    // Reutiliza tus reglas de validación existentes
+     switch (name) {
+      case 'NombreCompleto':
+         return value.trim() ? '' : 'Nombre Completo es requerido.'; // Simple validación de requerido
+        // return /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value) ? '' : 'Nombre Completo solo debe contener letras y espacios.';
+      case 'Distintivo':
+         return value.trim() ? '' : 'Distintivo es requerido.';
+        // return /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value) ? '' : 'Distintivo solo debe contener letras.';
+      case 'CategoriaCliente':
+         return value ? '' : 'Categoría Cliente es requerida.'; // Para select, verifica que no esté vacío
+      case 'Celular':
+         // Hacer la validación de 10 dígitos opcional o ajustar según backend
+         return !value || /^\d{10}$/.test(value) ? '' : 'Celular debe tener 10 dígitos (si se ingresa).';
+      case 'Correo':
+         // Hacer opcional
+         return !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? '' : 'Correo electrónico inválido (si se ingresa).';
+      case 'Direccion':
+         // Hacer opcional
+         return !value || value.trim() !== '' ? '' : 'Dirección es requerida (si se ingresa).';
+      default:
+        return '';
+    }
   };
 
   const validateForm = () => {
     const newErrors = {};
     let isValid = true;
+    const fieldsToValidate = ['NombreCompleto', 'Distintivo', 'CategoriaCliente', 'Celular', 'Correo', 'Direccion']; // Ajusta según campos requeridos
 
-    Object.keys(form).forEach(key => {
-      if (key !== 'id' && key !== 'Estado') {
+    fieldsToValidate.forEach(key => {
         const error = validateField(key, form[key]);
         newErrors[key] = error;
-        if (error) isValid = false;
-      }
+        // Solo marca inválido si hay error Y el campo es requerido (ajusta lógica si es necesario)
+        if (error && ['NombreCompleto', 'Distintivo', 'CategoriaCliente'].includes(key)) {
+             isValid = false;
+        } else if (error) {
+             // Si hay error en campos opcionales pero mal formateados
+             isValid = false;
+        }
     });
 
     setErrors(newErrors);
     return isValid;
   };
 
-  const handleSubmit = async () => {
+
+  // --- Funciones CRUD adaptadas ---
+
+  const insertar = async () => {
     if (!validateForm()) {
-      showAlert("Por favor, corrija los errores en el formulario.", 'error');
-      return;
+       Swal.fire('Error de Validación', 'Por favor, corrija los errores en el formulario.', 'warning');
+       return;
     }
 
-    const { Distintivo } = form;
-    const clienteExistente = data.find(registro => registro.Distintivo === Distintivo);
-    if (clienteExistente) {
-      showAlert("El cliente ya existe. Por favor, ingrese un distintivo diferente.", 'error');
-      return;
+    // No necesitamos la confirmación Swal aquí si ya está en el modal (o añadirla si se prefiere)
+    setLoading(true);
+    try {
+       // Crea un objeto solo con los datos necesarios para crear (excluye id)
+       // El servicio se encarga del mapeo a formato backend
+       const dataToCreate = { ...form, Estado: 'Activo' }; // Asegura que se crea como Activo
+       delete dataToCreate.id; // No enviar id al crear
+
+       await clientesService.createCliente(dataToCreate);
+
+       setModalInsertar(false); // Cierra el modal
+       setForm(initialFormState); // Limpia el formulario
+       setErrors({}); // Limpia errores locales
+       await Swal.fire('Agregado', 'El cliente ha sido agregado con éxito.', 'success');
+       fetchData(); // Recarga los datos
+    } catch (error) {
+      console.error("Error al insertar cliente:", error);
+      // --- Manejo de errores MEJORADO ---
+      let errorMessage = 'No se pudo agregar el cliente.';
+      if (error.response) {
+          if (error.response.data?.errors && Array.isArray(error.response.data.errors) && error.response.data.errors.length > 0) {
+              errorMessage = error.response.data.errors.map(err => err.msg).join(' ');
+          } else if (error.response.data?.message) {
+              errorMessage = error.response.data.message;
+          } else if (error.response.status === 400) {
+              errorMessage = "Error de validación. Verifique los datos ingresados.";
+          } else if (error.message) {
+              errorMessage = error.message;
+          }
+      } else if (error.request) {
+          errorMessage = "No se pudo conectar con el servidor.";
+      } else {
+          errorMessage = error.message || "Ocurrió un error inesperado.";
+      }
+      Swal.fire('Error', errorMessage, 'error');
+      setLoading(false); // Asegura quitar loading en caso de error
     }
-
-    const result = await Swal.fire({
-      title: '¿Desea agregar este cliente?',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Sí, agregar',
-      cancelButtonText: 'Cancelar'
-    });
-
-    if (result.isConfirmed) {
-      const nuevoCliente = {
-        ...form,
-        id: data.length ? Math.max(...data.map(cli => cli.id)) + 1 : 1
-      };
-
-      setData([...data, nuevoCliente]);
-
-      setForm({
-        id: '',
-        NombreCompleto: '',
-        Distintivo: '',
-        CategoriaCliente: '',
-        Celular: '',
-        Correo: '',
-        Direccion: '',
-        Estado: true
-      });
-      setShowForm(false);
-      showAlert("Cliente agregado exitosamente", 'success');
-    }
+     // setLoading es manejado por fetchData() o en el catch del error
   };
 
   const editar = async () => {
     if (!validateForm()) {
-      showAlert("Por favor, corrija los errores en el formulario.", 'error');
-      return;
+       Swal.fire('Error de Validación', 'Por favor, corrija los errores en el formulario.', 'warning');
+       return;
     }
 
-    const { Distintivo, id } = form;
-    const clienteExistente = data.find(
-      (registro) => registro.Distintivo === Distintivo && registro.id !== id
-    );
-    if (clienteExistente) {
-      showAlert("Ya existe un cliente con el mismo distintivo. Por favor, ingresa un distintivo diferente.", 'error');
-      return;
-    }
+     // No necesitamos confirmación Swal aquí si está en el modal
+    setLoading(true);
+    try {
+       // Pasamos el ID (que SÍ está en el form state al editar) y los datos del form
+       // El servicio mapeará a formato backend
+       await clientesService.updateCliente(form.id, form);
 
-    const result = await Swal.fire({
-      title: '¿Desea editar este cliente?',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Sí, editar',
-      cancelButtonText: 'Cancelar'
-    });
-
-    if (result.isConfirmed) {
-      const updatedData = data.map((registro) =>
-        registro.id === id ? { ...form } : registro
-      );
-
-      setData(updatedData);
-      setIsEditing(false);
-      setModalOpen(false);
-      showAlert("Cliente editado exitosamente", 'success');
+       setModalEditar(false);
+       setForm(initialFormState);
+       setErrors({});
+       await Swal.fire('Editado', 'El cliente ha sido editado con éxito.', 'success');
+       fetchData(); // Recarga datos (obligatorio por 204 de la API)
+    } catch (error) {
+       console.error("Error al editar cliente:", error);
+       // --- Manejo de errores MEJORADO (similar a insertar, ajusta mensajes si es necesario) ---
+       let errorMessage = 'No se pudo editar el cliente.';
+       if (error.response) {
+           if (error.response.data?.errors && Array.isArray(error.response.data.errors) && error.response.data.errors.length > 0) {
+               errorMessage = error.response.data.errors.map(err => err.msg).join(' ');
+           } else if (error.response.data?.message) {
+               errorMessage = error.response.data.message;
+           } else if (error.response.status === 400) {
+               errorMessage = "Error de validación al editar.";
+           } else if (error.response.status === 404) {
+                errorMessage = "El cliente que intenta editar no fue encontrado.";
+           } else if (error.message) {
+               errorMessage = error.message;
+           }
+       } else if (error.request) {
+           errorMessage = "No se pudo conectar con el servidor.";
+       } else {
+           errorMessage = error.message || "Ocurrió un error inesperado al editar.";
+       }
+       Swal.fire('Error', errorMessage, 'error');
+       setLoading(false);
     }
   };
 
-  const handleDelete = async (dato) => {
+  const eliminar = async (cliente) => { // Renombrado para consistencia
     const result = await Swal.fire({
       title: '¿Está seguro?',
-      text: `¿Desea eliminar el cliente "${dato.NombreCompleto}"?`,
+      text: `¿Desea eliminar el cliente "${cliente.NombreCompleto}"?`, // Usa NombreCompleto
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
+      confirmButtonColor: '#2e8322', // Ajusta colores si quieres
+      cancelButtonColor: '#6d0f0f',
       confirmButtonText: 'Sí, eliminar',
       cancelButtonText: 'Cancelar'
     });
 
     if (result.isConfirmed) {
-      const updatedData = data.filter(registro => registro.id !== dato.id);
-      setData(updatedData);
-      showAlert("Cliente eliminado exitosamente", 'success');
+      setLoading(true);
+      try {
+        await clientesService.deleteCliente(cliente.id); // Usa el servicio, pasa el ID
+        await Swal.fire('Eliminado', 'El cliente ha sido eliminado con éxito.', 'success');
+        fetchData(); // Recarga datos
+      } catch (error) {
+        console.error("Error al eliminar cliente:", error);
+        // --- Manejo de errores ---
+        let errorMessage = 'No se pudo eliminar el cliente.';
+         if (error.response) {
+             if (error.response.data?.message) {
+                 errorMessage = error.response.data.message;
+             } else if (error.response.status === 404) {
+                 errorMessage = "El cliente que intenta eliminar no fue encontrado.";
+             } else if (error.message) {
+                 errorMessage = error.message;
+             }
+         } else if (error.request) {
+             errorMessage = "No se pudo conectar con el servidor.";
+         } else {
+             errorMessage = error.message || "Ocurrió un error inesperado al eliminar.";
+         }
+        Swal.fire('Error', errorMessage, 'error');
+        setLoading(false);
+      }
     }
   };
 
   const cambiarEstado = async (id) => {
+    // Busca el cliente en el estado 'data' (formato frontend)
     const cliente = data.find(c => c.id === id);
-    const nuevoEstado = !cliente.Estado;
+    if (!cliente) return;
+
+    // Determina el nuevo estado en formato frontend ('Activo'/'Inactivo')
+    const nuevoEstado = cliente.Estado === "Activo" ? "Inactivo" : "Activo";
 
     const result = await Swal.fire({
       title: "¿Desea cambiar el estado del cliente?",
-      text: `El cliente "${cliente.NombreCompleto}" pasará de ${cliente.Estado ? 'Activo' : 'Inactivo'} a ${nuevoEstado ? 'Activo' : 'Inactivo'}`,
+      text: `El cliente "${cliente.NombreCompleto}" pasará a ${nuevoEstado}`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
+      confirmButtonColor: "#2e8322", // Ajusta colores
+      cancelButtonColor: "#6d0f0f",
       confirmButtonText: "Sí, cambiar",
       cancelButtonText: "Cancelar",
     });
 
     if (result.isConfirmed) {
-      const updatedData = data.map((registro) => {
-        if (registro.id === id) {
-          return { ...registro, Estado: nuevoEstado };
-        }
-        return registro;
-      });
+      setLoading(true);
+      try {
+        // Llama al servicio pasando el ID y el NUEVO estado en formato frontend
+        await clientesService.changeStateCliente(id, nuevoEstado);
 
-      setData(updatedData);
-      showAlert(`Estado del cliente actualizado a ${nuevoEstado ? 'Activo' : 'Inactivo'}`, 'success');
+        await Swal.fire('Actualizado', `El estado del cliente ha sido actualizado a ${nuevoEstado}.`, 'success');
+        fetchData(); // Recarga datos (obligatorio por 204)
+      } catch (error) {
+        console.error("Error al cambiar estado cliente:", error);
+        // --- Manejo de errores ---
+         let errorMessage = 'No se pudo actualizar el estado.';
+        if (error.response) {
+            if (error.response.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.response.status === 404) {
+                errorMessage = "El cliente cuyo estado intenta cambiar no fue encontrado.";
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+        } else if (error.request) {
+            errorMessage = "No se pudo conectar con el servidor.";
+        } else {
+            errorMessage = error.message || "Ocurrió un error inesperado al cambiar el estado.";
+        }
+        Swal.fire('Error', errorMessage, 'error');
+        setLoading(false);
+      }
     }
   };
 
-  const filteredData = data.filter(item =>
-    item.NombreCompleto.toLowerCase().includes(searchText) ||
-    item.Distintivo.toLowerCase().includes(searchText) ||
-    item.CategoriaCliente.toLowerCase().includes(searchText) ||
-    item.Celular.toString().includes(searchText) ||
-    item.Correo.toLowerCase().includes(searchText) ||
-    item.Direccion.toLowerCase().includes(searchText)
-  );
 
+  // --- Lógica de Paginación (sin cambios aparentes necesarios) ---
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
-
+  // Usa filteredData para paginar
+  const currentItems = Array.isArray(filteredData) ? filteredData.slice(indexOfFirstItem, indexOfLastItem) : [];
   const pageNumbers = [];
-  for (let i = 1; i <= Math.ceil(filteredData.length / itemsPerPage); i++) {
-    pageNumbers.push(i);
+  if (Array.isArray(filteredData)) {
+      for (let i = 1; i <= Math.ceil(filteredData.length / itemsPerPage); i++) {
+          pageNumbers.push(i);
+      }
   }
 
+  // --- Renderizado ---
   return (
     <Container>
+      <h2 className="text-center mt-4">Lista de Clientes</h2>
       <br />
-      {!showForm && (
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <Input
+          type="text"
+          placeholder="Buscar cliente..." // Placeholder ajustado
+          value={searchText}
+          onChange={handleSearch}
+          style={{ width: '300px' }} // Ancho ajustado
+        />
+        {/* Botón para abrir el MODAL de insertar */}
+        <Button style={{ backgroundColor: '#2e8322', color: 'white' }} onClick={() => {
+            setForm(initialFormState); // Limpia form
+            setErrors({}); // Limpia errores locales
+            setModalInsertar(true); // Abre modal insertar
+        }}>
+            Agregar Cliente
+        </Button>
+      </div>
+
+      {/* Indicador de Carga */}
+      {loading && (
+         <div className="text-center my-5">
+             <Spinner color="primary" />
+             <p>Cargando...</p>
+         </div>
+       )}
+
+      {/* Tabla de Datos (solo se muestra si no está cargando) */}
+      {!loading && (
         <>
-          <h2>Lista de Clientes</h2>
-          <br />
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <Input
-              type="text"
-              placeholder="Buscar cliente"
-              value={searchText}
-              onChange={handleSearch}
-              style={{ width: '20%' }}
-            />
-
-            <Button style={{ background: '#2e8329' }} onClick={() => { setForm({ id: '', NombreCompleto: '', Distintivo: '', CategoriaCliente: '', Celular: '', Correo: '', Direccion: '', Estado: true }); setIsEditing(false); setShowForm(true); }}>
-              Agregar Cliente
-            </Button>
-          </div>
-
-          <Table striped bordered hover responsive>
-            <thead className="text-center">
-              <tr>
-                <th>ID</th>
-                <th>Nombre Completo</th>
-                <th>Distintivo</th>
-                <th>Categoría</th>
-                <th>Celular</th>
-                <th>Correo</th>
-                <th>Dirección</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="text-center">
-              {currentItems.length > 0 ? (
-                currentItems.map((dato) => (
-                  <tr key={dato.id}>
-                    <td>{dato.id}</td>
-                    <td>{dato.NombreCompleto}</td>
-                    <td>{dato.Distintivo}</td>
-                    <td>{dato.CategoriaCliente}</td>
-                    <td>{dato.Celular}</td>
-                    <td>{dato.Correo}</td>
-                    <td>{dato.Direccion}</td>
+          <div className="table-responsive">
+            {/* Ajusta las columnas y el mapeo de datos */}
+            <Table className="table table-bordered table-hover text-center">
+              <thead>
+                <tr>
+                  <th>Id</th>
+                  <th>Nombre Completo</th>
+                  <th>Distintivo</th>
+                  <th>Categoría</th>
+                  <th>Celular</th>
+                  <th>Correo</th>
+                  <th>Dirección</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentItems.length > 0 ? currentItems.map((cliente) => (
+                  // Asegúrate que los nombres de campo coinciden con el estado 'data' (formato frontend)
+                  <tr key={cliente.id} style={{ backgroundColor: cliente.Estado === "Inactivo" ? "#f8f9fa" : "white" }}>
+                    <td>{cliente.id}</td>
+                    <td>{cliente.NombreCompleto}</td>
+                    <td>{cliente.Distintivo}</td>
+                    <td>{cliente.CategoriaCliente}</td>
+                    <td>{cliente.Celular || '-'}</td> {/* Muestra '-' si está vacío */}
+                    <td>{cliente.Correo || '-'}</td>
+                    <td>{cliente.Direccion || '-'}</td>
                     <td>
                       <Button
-                        style={{
-                          backgroundColor: dato.Estado ? '#2e8322' : '#8d0f0f',
-                          borderColor: dato.Estado ? '#2e8322' : '#8d0f0f',
-                          color: '#fff'
-                        }}
-                        onClick={() => cambiarEstado(dato.id)}
+                        color={cliente.Estado === "Activo" ? "success" : "secondary"}
+                        onClick={() => cambiarEstado(cliente.id)}
+                        size="sm"
+                        className="me-1"
+                        style={{ minWidth: '80px', color: "white", padding: '0.25rem 0.5rem' }}
+                        disabled={loading}
                       >
-                        {dato.Estado ? "Activo" : "Inactivo"}
+                        {cliente.Estado}
                       </Button>
                     </td>
                     <td>
-                      <Button style={{ background: '#1a1918', marginRight: '5px' }} onClick={() => { setForm(dato); setIsEditing(true); setModalOpen(true); }}>
-                        <FaEdit />
+                      <Button
+                        color="dark" // O el color que prefieras
+                        size="sm"
+                        className="me-1"
+                        onClick={() => {
+                            setForm(cliente); // Carga datos del cliente en el form
+                            setErrors({}); // Limpia errores previos
+                            setModalEditar(true); // Abre modal editar
+                         }}
+                         disabled={loading}
+                       >
+                          <FaEdit />
                       </Button>
-                      <Button style={{background:'#8d0f0f'}} onClick={() => handleDelete(dato)}>
-                        <FaTrashAlt />
+                      <Button
+                        color="danger"
+                        size="sm"
+                        onClick={() => eliminar(cliente)} // Llama a la función eliminar
+                        disabled={loading}
+                      >
+                          <FaTrashAlt />
                       </Button>
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="9">No hay datos disponibles.</td>
-                </tr>
-              )}
-            </tbody>
-          </Table>
-
-          <div className="d-flex justify-content-center">
-            <nav>
-              <ul className="pagination">
-                {pageNumbers.map((number) => (
-                  <li
-                    key={number}
-                    className={`page-item ${number === currentPage ? 'active' : ''}`}
-                    onClick={() => handlePageChange(number)}
-                  >
-                    <span className="page-link">{number}</span>
-                  </li>
-                ))}
-              </ul>
-            </nav>
+                )) : (
+                  <tr>
+                    <td colSpan="9" className="text-center">No hay clientes para mostrar.</td> {/* Ajusta colSpan */}
+                  </tr>
+                )}
+              </tbody>
+            </Table>
           </div>
+
+          {/* Paginación */}
+          {filteredData.length > itemsPerPage && (
+            <div className="d-flex justify-content-center">
+                 <ul className="pagination">
+                    {pageNumbers.map(number => (
+                    <li key={number} className={`page-item ${currentPage === number ? 'active' : ''}`}>
+                        <Button
+                            onClick={() => setCurrentPage(number)}
+                            className="page-link"
+                        >
+                        {number}
+                        </Button>
+                    </li>
+                    ))}
+                 </ul>
+            </div>
+           )}
         </>
       )}
 
-      {showForm && (
-        <Row>
-          <Col md={12}>
-            <h2>{isEditing ? 'Editar Cliente' : 'Agregar Cliente'}</h2>
-            
-            <br />
-            <FormGroup>
-              <Row>
-                <Col md={6}>
-                  <label><b>Nombre Completo</b></label>
-                  <br />
-                  <Input
-                    type="text"
-                    name="NombreCompleto"
-                    value={form.NombreCompleto}
-                    onChange={handleChange}
-                    placeholder="Nombre Completo"
-                    invalid={!!errors.NombreCompleto}
-                  />
-                  {errors.NombreCompleto && <span className="text-danger">{errors.NombreCompleto}</span>}
-                </Col>
-                <Col md={6}>
-                  <label><b>Distintivo</b></label>
-                  <br />
-                  <Input
-                    type="text"
-                    name="Distintivo"
-                    value={form.Distintivo}
-                    onChange={handleChange}
-                    placeholder="Distintivo"
-                    invalid={!!errors.Distintivo}
-                  />
-                  {errors.Distintivo &&  <span className="text-danger">{errors.Distintivo}</span>}
-                </Col>
-              </Row>
-              <Row>
-                <Col md={6}>
-                  <br />
-                  <label><b>Categoria cliente</b></label>
-                  <Input
-                    type="select"
-                    name="CategoriaCliente"
-                    value={form.CategoriaCliente}
-                    onChange={handleChange}
-                    placeholder="Categoría Cliente"
-                    invalid={!!errors.CategoriaCliente}
-                  >
-                  <option value="">Seleccione una categoría</option>
-                  <option value="Familiar">Familiar</option>
-                  <option value="Empresarial">Empresarial</option>
-                  <option value="Preferencial">Preferencial</option>
-                  <option value="Frecuente">Nuevo</option>
-                </Input>
-                  {errors.CategoriaCliente && <span className="text-danger">{errors.CategoriaCliente}</span>}
-                </Col>
-                <Col md={6}>
-                  <br />
-                  <label><b>Celular</b></label>
-                  <br />
-                  <Input
-                    type="text"
-                    name="Celular"
-                    value={form.Celular}
-                    onChange={handleChange}
-                    placeholder="Celular"
-                    invalid={!!errors.Celular}
-                  />
-                  {errors.Celular && <span className="text-danger">{errors.Celular}</span>}
-                </Col>
-              </Row>
-              <Row>
-                <Col md={6}>
-                  <br />
-                  <label><b>Email</b></label>
-                  <br />
-                  <Input
-                    type="email"
-                    name="Correo"
-                    value={form.Correo}
-                    onChange={handleChange}
-                    placeholder="Correo"
-                    invalid={!!errors.Correo}
-                  />
-                  {errors.Correo && <span className="text-danger">{errors.Correo}</span>}
-                </Col>
-                <Col md={6}>
-                  <br />
-                  <label><b>Dirección</b></label>
-                  <br />
-                  <Input
-                    type="text"
-                    name="Direccion"
-                    value={form.Direccion}
-                    onChange={handleChange}
-                    placeholder="Dirección"
-                    invalid={!!errors.Direccion}
-                  />
-                  {errors.Direccion && <span className="text-danger">{errors.Direccion}</span>}
-                </Col>
-              </Row>
-              <br />
-              <div className="d-flex justify-content-start">
-                <Button style={{ background: '#2e8329', marginRight: '10px' }} onClick={handleSubmit}>
-                  Guardar
-                </Button>
-                <Button style={{background:'#6d0f0f'}} onClick={() => setShowForm(false)}>
-                  Cancelar
-                </Button>
-              </div>
-            </FormGroup>
-          </Col>
-        </Row>
-      )}
+      {/* --- Modales (Adaptados de Servicios.jsx) --- */}
 
-      {/* Modal para edición del cliente */}
-      <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)}>
-        <ModalHeader style={{background:'#6d0f0f'}} toggle={() => setModalOpen(!modalOpen)}>
-        <h3 className="text-white"> Editar cliente</h3>
+      {/* Modal Insertar */}
+      <Modal isOpen={modalInsertar} toggle={() => !loading && setModalInsertar(!modalInsertar)}>
+        <ModalHeader toggle={() => !loading && setModalInsertar(!modalInsertar)} style={{ background: '#6d0f0f', color: 'white' }}>
+          Agregar Cliente
         </ModalHeader>
         <ModalBody>
+           {/* Campos del formulario para insertar - Usa los nombres del 'form' state */}
           <FormGroup>
-          <label ><b>Nombre Completo:</b></label>
-          <br />
-            <Input
-            style={{ border: '2px solid #000000' }}
-              type="text"
-              name="NombreCompleto"
-              value={form.NombreCompleto}
-              onChange={handleChange}
-              placeholder="Nombre Completo"
-              invalid={!!errors.NombreCompleto}
-            />
+            <Label for="NombreCompletoInsertar"><b>Nombre Completo:</b></Label>
+            <Input id="NombreCompletoInsertar" name="NombreCompleto" type="text" onChange={handleChange} value={form.NombreCompleto} invalid={!!errors.NombreCompleto}/>
             {errors.NombreCompleto && <span className="text-danger">{errors.NombreCompleto}</span>}
-            <br />
-            <label ><b>Distintivo:</b></label>
-            <br />
-            <Input
-            style={{ border: '2px solid #000000' }}
-              type="text"
-              name="Distintivo"
-              value={form.Distintivo}
-              onChange={handleChange}
-              placeholder="Distintivo"
-              invalid={!!errors.Distintivo}
-            />
-            {errors.Distintivo && <span className="text-danger">{errors.Distintivo}</span>}
-            <br />
-            <label ><b>Categoria cliente:</b></label>
-            <br />
-            <Input
-            style={{ border: '2px solid #000000' }}
-              type="text"
-              name="CategoriaCliente"
-              value={form.CategoriaCliente}
-              onChange={handleChange}
-              placeholder="Categoría Cliente"
-              invalid={!!errors.CategoriaCliente}
-            />
+          </FormGroup>
+           <FormGroup>
+            <Label for="DistintivoInsertar"><b>Distintivo:</b></Label>
+            <Input id="DistintivoInsertar" name="Distintivo" type="text" onChange={handleChange} value={form.Distintivo} invalid={!!errors.Distintivo}/>
+             {errors.Distintivo && <span className="text-danger">{errors.Distintivo}</span>}
+          </FormGroup>
+          <FormGroup>
+            <Label for="CategoriaClienteInsertar"><b>Categoría Cliente:</b></Label>
+            <Input id="CategoriaClienteInsertar" name="CategoriaCliente" type="select" onChange={handleChange} value={form.CategoriaCliente} invalid={!!errors.CategoriaCliente}>
+                <option value="">Seleccione una categoría</option>
+                <option value="Familiar">Familiar</option>
+                <option value="Empresarial">Empresarial</option>
+                <option value="Preferencial">Preferencial</option>
+                <option value="Nuevo">Nuevo</option> {/* Ajusta opciones según necesites */}
+            </Input>
+             {errors.CategoriaCliente && <span className="text-danger">{errors.CategoriaCliente}</span>}
+          </FormGroup>
+           <FormGroup>
+            <Label for="CelularInsertar"><b>Celular:</b></Label>
+            <Input id="CelularInsertar" name="Celular" type="text" onChange={handleChange} value={form.Celular} invalid={!!errors.Celular}/>
+             {errors.Celular && <span className="text-danger">{errors.Celular}</span>}
+          </FormGroup>
+           <FormGroup>
+            <Label for="CorreoInsertar"><b>Correo:</b></Label>
+            <Input id="CorreoInsertar" name="Correo" type="email" onChange={handleChange} value={form.Correo} invalid={!!errors.Correo}/>
+             {errors.Correo && <span className="text-danger">{errors.Correo}</span>}
+          </FormGroup>
+           <FormGroup>
+            <Label for="DireccionInsertar"><b>Dirección:</b></Label>
+            <Input id="DireccionInsertar" name="Direccion" type="text" onChange={handleChange} value={form.Direccion} invalid={!!errors.Direccion}/>
+             {errors.Direccion && <span className="text-danger">{errors.Direccion}</span>}
+          </FormGroup>
+          {/* No se necesita campo Estado al insertar, se asume Activo */}
+        </ModalBody>
+        <ModalFooter>
+          <Button color="success" onClick={insertar} disabled={loading}>
+            {loading ? <Spinner size="sm" /> : 'Agregar'}
+          </Button>
+          <Button color="secondary" onClick={() => setModalInsertar(false)} disabled={loading}>Cancelar</Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Modal Editar */}
+      <Modal isOpen={modalEditar} toggle={() => !loading && setModalEditar(!modalEditar)}>
+        <ModalHeader toggle={() => !loading && setModalEditar(!modalEditar)} style={{ background: '#6d0f0f', color: 'white' }}>
+          Editar Cliente
+        </ModalHeader>
+        <ModalBody>
+           {/* Campos del formulario para editar - Usa los nombres del 'form' state */}
+           {/* Repite la estructura de FormGroup/Label/Input del modal de insertar */}
+           <FormGroup>
+            <Label for="NombreCompletoEditar"><b>Nombre Completo:</b></Label>
+            <Input id="NombreCompletoEditar" name="NombreCompleto" type="text" onChange={handleChange} value={form.NombreCompleto} invalid={!!errors.NombreCompleto}/>
+             {errors.NombreCompleto && <span className="text-danger">{errors.NombreCompleto}</span>}
+          </FormGroup>
+           <FormGroup>
+            <Label for="DistintivoEditar"><b>Distintivo:</b></Label>
+            <Input id="DistintivoEditar" name="Distintivo" type="text" onChange={handleChange} value={form.Distintivo} invalid={!!errors.Distintivo}/>
+             {errors.Distintivo && <span className="text-danger">{errors.Distintivo}</span>}
+          </FormGroup>
+          <FormGroup>
+            <Label for="CategoriaClienteEditar"><b>Categoría Cliente:</b></Label>
+            <Input id="CategoriaClienteEditar" name="CategoriaCliente" type="select" onChange={handleChange} value={form.CategoriaCliente} invalid={!!errors.CategoriaCliente}>
+                 <option value="">Seleccione una categoría</option>
+                 <option value="Familiar">Familiar</option>
+                 <option value="Empresarial">Empresarial</option>
+                 <option value="Preferencial">Preferencial</option>
+                 <option value="Nuevo">Nuevo</option>
+            </Input>
             {errors.CategoriaCliente && <span className="text-danger">{errors.CategoriaCliente}</span>}
-            <br />
-            <label ><b>Celular:</b></label>
-            <br />
-            <Input
-            style={{ border: '2px solid #000000' }}
-              type="text"
-              name="Celular"
-              value={form.Celular}
-              onChange={handleChange}
-              placeholder="Celular"
-              invalid={!!errors.Celular}
-            />
+          </FormGroup>
+           <FormGroup>
+            <Label for="CelularEditar"><b>Celular:</b></Label>
+            <Input id="CelularEditar" name="Celular" type="text" onChange={handleChange} value={form.Celular} invalid={!!errors.Celular}/>
             {errors.Celular && <span className="text-danger">{errors.Celular}</span>}
-            <br />
-            <label ><b>Correo:</b></label>
-            <br />
-            <Input
-            style={{ border: '2px solid #000000' }}
-              type="email"
-              name="Correo"
-              value={form.Correo}
-              onChange={handleChange}
-              placeholder="Correo"
-              invalid={!!errors.Correo}
-            />
-            {errors.Correo && <span className="text-danger">{errors.Correo}</span>}
-            <br />
-            <label ><b>Dirección:</b></label>
-            <br />
-            <Input
-            style={{ border: '2px solid #000000' }}
-              type="text"
-              name="Direccion"
-              value={form.Direccion}
-              onChange={handleChange}
-              placeholder="Dirección"
-              invalid={!!errors.Direccion}
-            />
-            {errors.Direccion && <span className="text-danger">{errors.Direccion}</span>}
+          </FormGroup>
+           <FormGroup>
+            <Label for="CorreoEditar"><b>Correo:</b></Label>
+            <Input id="CorreoEditar" name="Correo" type="email" onChange={handleChange} value={form.Correo} invalid={!!errors.Correo}/>
+             {errors.Correo && <span className="text-danger">{errors.Correo}</span>}
+          </FormGroup>
+           <FormGroup>
+            <Label for="DireccionEditar"><b>Dirección:</b></Label>
+            <Input id="DireccionEditar" name="Direccion" type="text" onChange={handleChange} value={form.Direccion} invalid={!!errors.Direccion}/>
+             {errors.Direccion && <span className="text-danger">{errors.Direccion}</span>}
+          </FormGroup>
+          {/* Opcional: Mostrar el estado pero no permitir editarlo en este modal */}
+          <FormGroup>
+              <Label for="estadoEditar"><b>Estado:</b></Label>
+              <Input id="estadoEditar" name="Estado" type="text" value={form.Estado} readOnly disabled/>
           </FormGroup>
         </ModalBody>
         <ModalFooter>
-          <Button style={{ background: '#2e8329' }} onClick={editar}>Guardar </Button>{' '}
-          <Button style={{background:'#6d0f0f'}} onClick={() => setModalOpen(!modalOpen)}>Cancelar</Button>
+          <Button color="primary" onClick={editar} disabled={loading}>
+             {loading ? <Spinner size="sm" /> : 'Guardar Cambios'}
+          </Button>
+          <Button color="secondary" onClick={() => setModalEditar(false)} disabled={loading}>Cancelar</Button>
         </ModalFooter>
       </Modal>
     </Container>
   );
 };
 
-Clientes.propTypes = {
-  data: PropTypes.array,
-};
+// PropTypes ya no son necesarios si no se pasan props
+// Clientes.propTypes = {
+//   data: PropTypes.array, // Ya no se pasa como prop
+// };
 
 export default Clientes;

@@ -169,7 +169,7 @@ export default function App() {
                       <Route path="/reservas" element={<Reservas />} />
                       <Route path="/servicios" element={<Servicios />} />
                       <Route path="/mano_de_obra" element={<ManoDeObra />} />
-
+                      <Route path="/registro-compras" element={<RegistroCompra />} />
                       <Route path="/tabla-gastos" element={<TablaGastos />} />
                       <Route path="/rendimiento-empleado" element={<RendimientoEmpleado />} />
                     </Routes>
