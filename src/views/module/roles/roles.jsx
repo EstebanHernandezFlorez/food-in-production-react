@@ -35,13 +35,15 @@ export default function RolePage() {
     }
   };
 
-  const handleToggleRoleState = async (roleId) => {
+  const handleToggleRoleState = async (idRole, currentState) => {
     try {
-      await axios.patch(`http://localhost:3000/role/${roleId}/status`);
-      toast.success("Estado actualizado");
-      fetchRoles();
-    } catch {
-      toast.error("Error al cambiar estado");
+      const newState = !currentState; // Cambiar el estado al opuesto
+      await axios.patch(`http://localhost:3000/role/${idRole}/status`, { status: newState });
+      toast.success("Estado del rol actualizado correctamente");
+      fetchRoles(); // Actualizar la lista de roles
+    } catch (error) {
+      console.error("Error al cambiar el estado del rol:", error.response?.data || error);
+      toast.error("Error al cambiar el estado del rol");
     }
   };
 
@@ -92,7 +94,7 @@ export default function RolePage() {
                       <Button
                         color={row.status ? "success" : "danger"}
                         size="sm"
-                        onClick={() => handleToggleRoleState(row.idRole)}
+                        onClick={() => handleToggleRoleState(row.idRole, row.status)}
                       >
                         {row.status ? "Activo" : "Inactivo"}
                       </Button>
