@@ -133,7 +133,7 @@ export default function RolePage() {
 
         <Col sm="12" md="6">
           <fieldset>
-            <legend>Permisos</legend>
+            <legend>Roles</legend>
             <FormPermissions
               onAddRole={handleAddRole}
               onUpdateRole={handleUpdateRole}

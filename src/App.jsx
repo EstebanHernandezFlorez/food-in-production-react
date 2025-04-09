@@ -42,8 +42,6 @@ import { NavDropdown } from "react-bootstrap";
 
 import TablaGastos from "./views/module/ManoDeObra/TablaGastos";
 import RendimientoEmpleado from "./views/module/ManoDeObra/RendimientoEmpleado";
-import Productos from "./views/module/ProductoInsumo/ProductoInsumo";
-import FichaTecnica from "./views/module/ProductoInsumo/FichaTecnica";
 
 const users = [
   {
@@ -174,8 +172,6 @@ export default function App() {
                       <Route path="/registro-compras" element={<RegistroCompra />} />
                       <Route path="/tabla-gastos" element={<TablaGastos />} />
                       <Route path="/rendimiento-empleado" element={<RendimientoEmpleado />} />
-                      <Route path="/productos" element={<Productos />} />
-                      <Route path="/ficha-tecnica" element={<FichaTecnica />} />
                     </Routes>
                   </Content>
                 </Layout>
