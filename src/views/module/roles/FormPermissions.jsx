@@ -9,6 +9,8 @@ export default function FormPermissions({ onAddRole, onUpdateRole, selectedRole,
   const [privileges, setPrivileges] = useState([]);
   const [role, setRole] = useState({ roleName: "" });
   const [rolePrivileges, setRolePrivileges] = useState([]);
+  const [newPermission, setNewPermission] = useState(""); // Estado para el nuevo permiso
+  const [newPrivilege, setNewPrivilege] = useState(""); // Estado para el nuevo privilegio
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -18,29 +20,8 @@ export default function FormPermissions({ onAddRole, onUpdateRole, selectedRole,
   useEffect(() => {
     if (selectedRole) {
       setRole({ roleName: selectedRole.roleName });
-      }
-    }, [selectedRole]);
- 
-  FormPermissions.propTypes = {
-    onAddRole: PropTypes.func.isRequired,
-    onUpdateRole: PropTypes.func.isRequired,
-    selectedRole: PropTypes.shape({
-      idRole: PropTypes.number,
-      roleName: PropTypes.string,
-      privileges: PropTypes.arrayOf(
-        PropTypes.shape({
-          idPermission: PropTypes.number,
-          idPrivilege: PropTypes.number,
-        })
-      ),
-    }),
-    nameRol: PropTypes.arrayOf(
-      PropTypes.shape({
-        idRole: PropTypes.number.isRequired,
-        status: PropTypes.bool.isRequired,
-      })
-    ).isRequired,
-  };
+    }
+  }, [selectedRole]);
 
   const fetchData = async () => {
     try {
@@ -52,6 +33,34 @@ export default function FormPermissions({ onAddRole, onUpdateRole, selectedRole,
       setPrivileges(privRes.data);
     } catch {
       toast.error("Error al cargar permisos o privilegios");
+    }
+  };
+
+  const handleAddPermission = async () => {
+    if (!newPermission.trim()) return toast.error("El nombre del permiso no puede estar vacío");
+    try {
+      const { data } = await axios.post("http://localhost:3000/permission", {
+        permissionName: newPermission,
+        status: true, // Enviar el estado como booleano
+      });
+      setPermissions([...permissions, data]);
+      setNewPermission("");
+      toast.success("Permiso creado correctamente");
+    } catch (error) {
+      console.error("Error al crear el permiso:", error); // Muestra el error en la consola
+      toast.error("Error al crear el permiso");
+    }
+  };
+
+  const handleAddPrivilege = async () => {
+    if (!newPrivilege.trim()) return toast.error("El nombre del privilegio no puede estar vacío");
+    try {
+      const { data } = await axios.post("http://localhost:3000/privilege", { privilegeName: newPrivilege });
+      setPrivileges([...privileges, data]);
+      setNewPrivilege("");
+      toast.success("Privilegio creado correctamente");
+    } catch {
+      toast.error("Error al crear el privilegio");
     }
   };
 
@@ -67,7 +76,10 @@ export default function FormPermissions({ onAddRole, onUpdateRole, selectedRole,
     const payload = {
       roleName: role.roleName,
       privileges: privilegesFormatted,
+      status: true, // Agregar el campo status como booleano
     };
+
+    console.log("Datos enviados al backend:", payload); // Verifica los datos enviados
 
     try {
       setIsLoading(true);
@@ -82,7 +94,8 @@ export default function FormPermissions({ onAddRole, onUpdateRole, selectedRole,
       }
       setRole({ roleName: "" });
       setRolePrivileges([]);
-    } catch {
+    } catch (error) {
+      console.error("Error al guardar el rol:", error.response?.data || error); // Muestra el error en la consola
       toast.error("Error al guardar el rol");
     } finally {
       setIsLoading(false);
@@ -166,6 +179,37 @@ export default function FormPermissions({ onAddRole, onUpdateRole, selectedRole,
           </Button>
         </div>
       </form>
+
+      <Row className="mt-4">
+        <Col md={6}>
+          <FormGroup>
+            <label htmlFor="newPermission">Nuevo Permiso:</label>
+            <Input
+              type="text"
+              id="newPermission"
+              value={newPermission}
+              onChange={(e) => setNewPermission(e.target.value)}
+            />
+            <Button color="success" className="mt-2" onClick={handleAddPermission}>
+              Agregar Permiso
+            </Button>
+          </FormGroup>
+        </Col>
+        <Col md={6}>
+          <FormGroup>
+            <label htmlFor="newPrivilege">Nuevo Privilegio:</label>
+            <Input
+              type="text"
+              id="newPrivilege"
+              value={newPrivilege}
+              onChange={(e) => setNewPrivilege(e.target.value)}
+            />
+            <Button color="success" className="mt-2" onClick={handleAddPrivilege}>
+              Agregar Privilegio
+            </Button>
+          </FormGroup>
+        </Col>
+      </Row>
     </Container>
   );
 }
