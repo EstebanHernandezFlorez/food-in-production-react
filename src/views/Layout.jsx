@@ -15,10 +15,13 @@ import "primeicons/primeicons.css"; // PrimeIcons
 import MenuList from "../components/layout/MenuList";
 import Logo from "../components/layout/Logo";
 import { NavDropdown } from "react-bootstrap";
+import { useAuth } from "./hooks/AuthProvider";
 
 const { Header, Sider, Content } = Layout;
 
 export function AppLayout() {
+  const auth = useAuth();
+
   const [darkTheme, setDarkTheme] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
@@ -94,7 +97,9 @@ export function AppLayout() {
               >
                 <NavDropdown.Item href="#action1">Perfil</NavDropdown.Item>
                 <NavDropdown.Item href="#action2">
-                  Cerrar Sesión
+                  <button onClick={() => auth.logOut()} className="btn-submit">
+                    Cerrar Sesión
+                  </button>
                 </NavDropdown.Item>
               </NavDropdown>
             </div>
