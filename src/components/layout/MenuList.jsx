@@ -42,7 +42,7 @@ const MenuList = ({ collapsed, backgroundColor, textColor }) => {
                 { key: 'producto_insumo', label: 'Producto Insumo', path: '/producto_insumo', icon: <Boxes size={SUB_ICON_SIZE} /> },
                 { key: 'orden_produccion', label: 'Crear Orden de Producción', path: '/orden_produccion', icon: <ClipboardList size={SUB_ICON_SIZE} /> },
                 { key: 'produccion', label: 'Producción', path: '/produccion', icon: <Factory size={SUB_ICON_SIZE} /> },
-                { key: 'compras', label: 'Registro compra', path: '/compras', icon: <ShoppingBag size={SUB_ICON_SIZE} /> },
+                { key: 'compras', label: 'Gestion compra', path: '/gestion-compras', icon: <ShoppingBag size={SUB_ICON_SIZE} /> },
             ],
         },
         {

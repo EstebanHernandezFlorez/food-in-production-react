@@ -1,782 +1,707 @@
-import React, { useState, useEffect } from "react";
-import 'bootstrap/dist/css/bootstrap.min.css';
-import { Table, Button, Container, Row, Col, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter, Label } from 'reactstrap';
-import { FaEye } from 'react-icons/fa';
-import { PlusCircleOutlined, DeleteOutlined, SelectOutlined, EditOutlined, TeamOutlined, PlusOutlined } from '@ant-design/icons';
-import FondoIcono from '../../../assets/logoFIP.png'; // Make sure path is correct
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
+
+// --- External Libraries ---
+import 'bootstrap/dist/css/bootstrap.min.css';
+import '../../../App.css'; // <-- Verifica la ruta
+import '../../../index.css'; // Keep if needed
+import {
+    Table, Button, Container, Row, Col, Input, FormGroup, Label, FormFeedback,
+    Modal, ModalHeader, ModalBody, ModalFooter, Spinner, Card, CardBody, CardHeader,
+    Form, Alert // <--- AÑADIDO 'Alert' AQUÍ
+} from 'reactstrap';
+// Updated icons consistent with Proveedores/TablaGastos
+import { Eye, Edit, Trash2, Plus, ArrowLeft, Save, Users, ListFilter, XCircle, AlertTriangle, CheckCircle, ListChecks, Settings } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
+
+// --- Internal Components ---
+import { formatCurrencyCOP } from "../../../utils/formatting"; // <--- NECESARIO: Asegúrate que esta ruta y función existan
+import CustomPagination from '../../General/CustomPagination'; // <--- OPCIONAL: Si quieres usarlo, verifica la ruta
+import ConceptSpentSelect from './ConceptSpentSelect'; // Keep this component
+
+// --- Services ---
 import MonthlyOverallExpenseService from "../../services/gastosGeneralesService"; // Corrected import name? Verify filename.
 import ConceptSpentService from "../../services/conceptoGasto"; // Corrected import name? Verify filename.
-import ConceptSpentSelect from './ConceptSpentSelect'; // Assuming this component works correctly
-import toast, { Toaster } from 'react-hot-toast';
-import '../../../index.css';
 
+// --- Confirmation Modal Component (Import or define as in Proveedores/TablaGastos) ---
+const ConfirmationModal = ({ isOpen, toggle, title, children, onConfirm, confirmText = "Confirmar", confirmColor = "primary", isConfirming = false }) => (
+     <Modal isOpen={isOpen} toggle={!isConfirming ? toggle : undefined} centered backdrop="static" keyboard={!isConfirming}>
+        <ModalHeader toggle={!isConfirming ? toggle : undefined}>
+             <div className="d-flex align-items-center">
+                <AlertTriangle size={24} className={`text-${confirmColor === 'danger' ? 'danger' : (confirmColor === 'warning' ? 'warning' : 'primary')} me-2`} />
+                <span className="fw-bold">{title}</span>
+            </div>
+        </ModalHeader>
+        <ModalBody>{children}</ModalBody>
+        <ModalFooter>
+            <Button color="secondary" outline onClick={toggle} disabled={isConfirming}>Cancelar</Button>
+            <Button color={confirmColor} onClick={onConfirm} disabled={isConfirming}>
+                {isConfirming ? (<><Spinner size="sm" className="me-1"/> Procesando...</>) : confirmText}
+            </Button>
+        </ModalFooter>
+    </Modal>
+);
+
+// --- Constants ---
+const ITEMS_PER_PAGE = 7; // O ajusta según prefieras
+const INITIAL_FORM_STATE = {
+    idExpenseType: 1, // Assuming '1' represents Mano de Obra
+    dateOverallExp: dayjs().format('YYYY-MM-DD'), // Default to today
+    novelty_expense: '',
+    status: true,
+    idConceptSpent: '',
+    price: ''
+};
+const INITIAL_FORM_ERRORS = {
+    dateOverallExp: null, novelty_expense: null, expenseItems: null, idConceptSpent: null, price: null
+};
+const INITIAL_CONFIRM_PROPS = {
+    title: "", message: null, confirmText: "Confirmar", confirmColor: "primary", itemDetails: null
+};
+
+// --- Componente Principal: ManoDeObra (Estilo Proveedores) ---
 const ManoDeObra = () => {
+    // --- State ---
     const [data, setData] = useState([]);
-    const [form, setForm] = useState({
-        idExpenseType: 1, // Defaulting to 1 as per original code
-        dateOverallExp: '',
-        novelty_expense: '',
-        status: true,
-        // Fields for adding items temporarily
-        idConceptSpent: '',
-        price: ''
-    });
-    const [addedExpenses, setAddedExpenses] = useState([]); // Stores items { idConceptSpent, conceptName, price }
+    const [isLoadingTable, setIsLoadingTable] = useState(true);
+    const [form, setForm] = useState(INITIAL_FORM_STATE);
+    const [addedExpenses, setAddedExpenses] = useState([]);
     const [conceptSpents, setConceptSpents] = useState([]);
-    const navigate = useNavigate();
-    const [isEditing, setIsEditing] = useState(false); // Flag specifically for the EDIT MODAL
-    const [showForm, setShowForm] = useState(false); // Flag for showing the CREATE/main form
+    const [showForm, setShowForm] = useState(false);
     const [tableSearchText, setTableSearchText] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const [editModalOpen, setEditModalOpen] = useState(false); // Renamed from modalOpen for clarity
-    const [selectedManoObra, setSelectedManoObra] = useState(null); // Item being edited in the modal
-    // const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); // Keep if delete functionality is needed
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [selectedManoObra, setSelectedManoObra] = useState(null);
     const [detailModalOpen, setDetailModalOpen] = useState(false);
-    const [selectedItemForDetail, setSelectedItemForDetail] = useState(null); // Renamed for clarity
-    const itemsPerPage = 7;
+    const [selectedItemForDetail, setSelectedItemForDetail] = useState(null);
+    const [formErrors, setFormErrors] = useState(INITIAL_FORM_ERRORS);
+    const [apiError, setApiError] = useState(null); // For general API errors during save/update
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+    const [confirmModalProps, setConfirmModalProps] = useState(INITIAL_CONFIRM_PROPS);
+    const [isConfirmActionLoading, setIsConfirmActionLoading] = useState(false);
 
-    const [formErrors, setFormErrors] = useState({
-        dateOverallExp: '',
-        novelty_expense: '',
-        expenseItems: '',
-        // Errors specific to the add item section
-        idConceptSpent: '',
-        price: ''
-    });
-    const [apiError, setApiError] = useState(null);
+    // --- Refs ---
+    const confirmActionRef = useRef(null);
+
+    // --- Hooks ---
+    const navigate = useNavigate();
 
     // --- Data Fetching ---
-    useEffect(() => {
-        fetchData();
-        fetchConceptSpents();
-    }, []);
-
-    const fetchData = async () => {
+    const fetchData = useCallback(async (showLoadingSpinner = true) => {
+        if (showLoadingSpinner) setIsLoadingTable(true);
         try {
-            // console.log("Fetching monthly expenses...");
             const expenses = await MonthlyOverallExpenseService.getAllMonthlyOverallExpenses();
-            // console.log("Raw API Response (fetchData):", expenses);
-            // Ensure the response is an array
             setData(Array.isArray(expenses) ? expenses : []);
         } catch (error) {
-            console.error("Error fetching data:", error);
-            toast.error(`Error al cargar los gastos: ${error.message || 'Error desconocido'}`);
-            setData([]); // Set to empty array on error
+            console.error("Error fetching monthly expense data:", error);
+            toast.error(`Error al cargar los gastos mensuales.`);
+            setData([]);
+        } finally {
+            if (showLoadingSpinner) setIsLoadingTable(false);
         }
-    };
+    }, []);
 
-    const fetchConceptSpents = async () => {
+    const fetchConceptSpents = useCallback(async () => {
         try {
-            // console.log("Fetching concept spents...");
             const conceptSpentsData = await ConceptSpentService.getAllConceptSpents();
-            // console.log("Concept spents data:", conceptSpentsData);
             setConceptSpents(Array.isArray(conceptSpentsData) ? conceptSpentsData : []);
         } catch (error) {
             console.error("Error fetching concept spents:", error);
-            toast.error(`Error al cargar los conceptos: ${error.message || 'Error desconocido'}`);
-            setConceptSpents([]); // Set to empty array on error
+            toast.error(`Error al cargar los conceptos.`);
+            setConceptSpents([]);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        fetchData();
+        fetchConceptSpents();
+    }, [fetchData, fetchConceptSpents]);
 
     // --- Utility Functions ---
-    const resetFormState = () => {
-        setForm({
-            idExpenseType: 1,
-            dateOverallExp: '',
-            novelty_expense: '',
-            status: true,
-            idConceptSpent: '',
-            price: ''
-        });
+    const resetFormState = useCallback(() => {
+        setForm(INITIAL_FORM_STATE);
         setAddedExpenses([]);
-        setFormErrors({
-            dateOverallExp: '', novelty_expense: '', expenseItems: '', idConceptSpent: '', price: ''
-        });
+        setFormErrors(INITIAL_FORM_ERRORS);
         setApiError(null);
-    };
+        setIsSubmitting(false); // Asegura resetear submitting
+    }, []);
 
     // --- Event Handlers ---
-    const handleChange = (e) => {
+    const handleChange = useCallback((e) => {
         const { name, value } = e.target;
         setForm(prevForm => ({ ...prevForm, [name]: value }));
-        // Clear specific error when user types
-        setFormErrors(prevErrors => ({ ...prevErrors, [name]: '' }));
-        // Clear general API error on any change
-        setApiError(null);
-        // Clear item-specific errors if those fields change
+        if (formErrors[name]) {
+            setFormErrors(prevErrors => ({ ...prevErrors, [name]: null }));
+        }
+        if (apiError) setApiError(null);
         if (name === 'idConceptSpent' || name === 'price') {
-            setFormErrors(prevErrors => ({ ...prevErrors, idConceptSpent: '', price: '' }));
+            setFormErrors(prevErrors => ({ ...prevErrors, idConceptSpent: null, price: null }));
         }
-        // Clear main form errors if those fields change
-        if (name === 'dateOverallExp' || name === 'novelty_expense') {
-             setFormErrors(prevErrors => ({ ...prevErrors, dateOverallExp: '', novelty_expense: '' }));
+        if (formErrors.expenseItems) {
+             setFormErrors(prevErrors => ({ ...prevErrors, expenseItems: null }));
         }
-        // Clear expense items error when adding/removing items (handled elsewhere) or changing main fields
-         if (name === 'dateOverallExp' || name === 'novelty_expense') {
-             setFormErrors(prevErrors => ({ ...prevErrors, expenseItems: '' }));
-         }
+    }, [formErrors, apiError]);
 
-        // console.log("handleChange:", name, value);
-    };
-
-    const addExpenseToTable = () => {
+    const addExpenseToTable = useCallback(() => {
         const { idConceptSpent, price } = form;
         let itemValid = true;
         const newErrors = { ...formErrors };
 
         if (!idConceptSpent) {
-            newErrors.idConceptSpent = 'Seleccione un concepto';
-            itemValid = false;
+            newErrors.idConceptSpent = 'Seleccione un concepto'; itemValid = false;
         }
-        if (!price || isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
-            newErrors.price = 'Ingrese un precio válido';
-            itemValid = false;
+        const parsedPrice = parseFloat(price);
+        if (!price || isNaN(parsedPrice) || parsedPrice <= 0) {
+            newErrors.price = 'Precio inválido (> 0)'; itemValid = false;
         }
 
         if (!itemValid) {
             setFormErrors(newErrors);
-            toast.error("Verifique el concepto y el precio.");
+            toast.error("Verifique concepto y precio.", { icon: <AlertTriangle className="text-warning" /> });
             return;
         }
 
-        const parsedIdConceptSpent = parseInt(idConceptSpent, 10); // Simpler parsing
-
+        const parsedIdConceptSpent = parseInt(idConceptSpent, 10);
         if (isNaN(parsedIdConceptSpent)) {
              setFormErrors(prev => ({ ...prev, idConceptSpent: 'Concepto inválido'}));
-             toast.error("ID de concepto no es un número válido.");
-             return;
+             toast.error("Concepto seleccionado no válido."); return;
         }
 
         const concept = conceptSpents.find(c => c.idExpenseType === parsedIdConceptSpent);
-
         if (concept) {
-            // Check if concept already added (optional, prevents duplicates)
-            // if (addedExpenses.some(item => item.idConceptSpent === parsedIdConceptSpent)) {
-            //     toast.error("Este concepto ya ha sido agregado.");
-            //     return;
-            // }
-
             setAddedExpenses(prevExpenses => [
-                ...prevExpenses,
-                {
+                ...prevExpenses, {
                     idConceptSpent: parsedIdConceptSpent,
-                    conceptName: concept.name, // Use the name from fetched concepts
-                    price: parseFloat(price),
-                    // NO expenseDate here unless backend needs it per item
+                    conceptName: concept.name || concept.nombreConcepto || 'Nombre Desconocido', // AJUSTA SI ES NECESARIO
+                    price: parsedPrice,
                 }
             ]);
-            // Reset only the item fields in the form
             setForm(prevForm => ({ ...prevForm, idConceptSpent: '', price: '' }));
-            // Clear item-specific errors and the general expenseItems error
-            setFormErrors(prevErrors => ({ ...prevErrors, idConceptSpent: '', price: '', expenseItems: '' }));
+            setFormErrors(prevErrors => ({ ...prevErrors, idConceptSpent: null, price: null, expenseItems: null }));
         } else {
              setFormErrors(prev => ({ ...prev, idConceptSpent: 'Concepto no encontrado'}));
-             toast.error("El concepto de gasto seleccionado no es válido.");
+             toast.error("Concepto no encontrado.");
         }
-    };
+    }, [form.idConceptSpent, form.price, conceptSpents, addedExpenses, formErrors]);
 
-    const removeExpenseFromTable = (index) => {
-        setAddedExpenses(prevExpenses => prevExpenses.filter((_, i) => i !== index));
-         // If removing the last item might trigger validation, clear the error
-        if (addedExpenses.length === 1) {
-             setFormErrors(prevErrors => ({ ...prevErrors, expenseItems: '' }));
+    const removeExpenseFromTable = useCallback((indexToRemove) => {
+        setAddedExpenses(prevExpenses => prevExpenses.filter((_, i) => i !== indexToRemove));
+        if (addedExpenses.length === 1 && formErrors.expenseItems) {
+             setFormErrors(prevErrors => ({ ...prevErrors, expenseItems: null }));
         }
-    };
+    }, [addedExpenses.length, formErrors.expenseItems]);
 
     // --- Main Form (Creation) Validation & Submission ---
-    const validateCreationForm = () => {
+    const validateCreationForm = useCallback(() => {
         let isValid = true;
-        const newErrors = { idConceptSpent: formErrors.idConceptSpent, price: formErrors.price }; // Keep item errors if any
+        const newErrors = { ...INITIAL_FORM_ERRORS, idConceptSpent: formErrors.idConceptSpent, price: formErrors.price }; // Start fresh but keep item input errors
 
-        if (!form.dateOverallExp) {
-            newErrors.dateOverallExp = 'La fecha es obligatoria';
-            isValid = false;
+        if (!form.dateOverallExp || !dayjs(form.dateOverallExp, 'YYYY-MM-DD', true).isValid()) {
+            newErrors.dateOverallExp = 'Fecha inválida o faltante'; isValid = false;
+        } else if (dayjs(form.dateOverallExp).isAfter(dayjs(), 'day')) {
+             newErrors.dateOverallExp = 'La fecha no puede ser futura.'; isValid = false;
         }
-        // Basic check, allow empty novelty? Adjust if needed
-        if (!form.novelty_expense) {
-             newErrors.novelty_expense = 'La novedad es obligatoria';
-             isValid = false;
+        if (!form.novelty_expense || !form.novelty_expense.trim()) {
+             newErrors.novelty_expense = 'La novedad es obligatoria'; isValid = false;
         }
-        // Check if items were added
         if (addedExpenses.length === 0) {
-            newErrors.expenseItems = 'Debe agregar al menos un concepto de gasto';
-            isValid = false;
+            newErrors.expenseItems = 'Debe agregar al menos un concepto'; isValid = false;
         }
 
         setFormErrors(newErrors);
         return isValid;
-    };
+    }, [form.dateOverallExp, form.novelty_expense, addedExpenses, formErrors.idConceptSpent, formErrors.price]);
 
-    const handleCreateSubmit = async () => {
-        console.log("handleCreateSubmit called");
+    const handleCreateSubmit = useCallback(async () => {
         if (!validateCreationForm()) {
-            toast.error("Por favor, complete la fecha, novedad y agregue al menos un gasto.");
+            toast.error("Corrija los errores del formulario.", { icon: <XCircle className="text-danger" /> });
             return;
         }
+        setIsSubmitting(true); setApiError(null);
+        const toastId = toast.loading('Guardando registro...');
 
-        const totalValueExpense = addedExpenses.reduce((sum, item) => sum + Number(item.price), 0);
-
-        // Construct payload specifically for the MonthlyOverallExpense creation
+        const totalValueExpense = addedExpenses.reduce((sum, item) => sum + Number(item.price || 0), 0);
         const payload = {
-            idExpenseType: form.idExpenseType, // As defined in state
-            dateOverallExp: form.dateOverallExp,
-            novelty_expense: form.novelty_expense,
-            status: form.status, // Defaulting to true from initial state
+            idExpenseType: form.idExpenseType, dateOverallExp: form.dateOverallExp,
+            novelty_expense: form.novelty_expense, status: form.status,
             valueExpense: totalValueExpense,
-            // Map added expenses to the format expected by the backend API
-            // Adjust keys (idConceptSpent, price) if backend expects different names
             expenseItems: addedExpenses.map(item => ({
-                idConceptSpent: item.idConceptSpent,
-                price: item.price
+                idConceptSpent: item.idConceptSpent, price: item.price
             }))
         };
 
-        console.log("Payload being sent for creation:", payload);
-        setApiError(null); // Clear previous API errors
-
         try {
-            const response = await MonthlyOverallExpenseService.createMonthlyOverallExpense(payload);
-            console.log("API Response (Create):", response);
-            toast.success("Registro mensual creado exitosamente.");
-
-            setShowForm(false); // Hide form
-            resetFormState(); // Reset form and items
-            fetchData(); // Refresh table data
-
+            await MonthlyOverallExpenseService.createMonthlyOverallExpense(payload);
+            toast.success("Registro creado exitosamente.", { id: toastId, icon: <CheckCircle className="text-success" /> });
+            setShowForm(false); resetFormState(); await fetchData(false);
         } catch (error) {
-            console.error("Error al guardar el gasto:", error);
-            // Use the error structure from the service
-            const errorMessage = error.message || "Error al guardar el gasto.";
+            console.error("Error al crear gasto mensual:", error);
+            const errorMessage = error.response?.data?.message || error.message || "Error al guardar.";
             setApiError(errorMessage);
-            toast.error(errorMessage);
+            toast.error(`Error: ${errorMessage}`, { id: toastId, icon: <XCircle className="text-danger" />, duration: 5000 });
+        } finally {
+            setIsSubmitting(false);
         }
-    };
+    }, [form, addedExpenses, validateCreationForm, resetFormState, fetchData]);
 
     // --- Edit Modal Logic ---
-    const openEditModal = (item) => {
-        // console.log("Opening edit modal for:", item);
-        setSelectedManoObra(item); // Store the item being edited
-        setIsEditing(true); // Set the modal editing flag
-        setForm({ // Populate form ONLY with fields editable in the modal
-            ...form, // Keep defaults like idExpenseType, status, etc.
-            dateOverallExp: item.dateOverallExp.split('T')[0], // Format date for input type="date"
-            novelty_expense: item.novelty_expense,
-            // Do NOT populate idConceptSpent or price here
+    const openEditModal = useCallback((item) => {
+        setSelectedManoObra(item);
+        setForm({ // Populate only editable fields
+            ...INITIAL_FORM_STATE, // Start fresh to avoid carrying over item fields
+            idExpenseType: item.idExpenseType || 1, // Keep type ID
+            dateOverallExp: item.dateOverallExp ? dayjs(item.dateOverallExp).format('YYYY-MM-DD') : '',
+            novelty_expense: item.novelty_expense || '',
+            status: item.status !== undefined ? item.status : true, // Keep status
         });
-        setAddedExpenses([]); // Ensure no items carry over to edit modal state
-        setFormErrors({ // Reset errors specific to the modal
-             dateOverallExp: '', novelty_expense: '', expenseItems: '', idConceptSpent: '', price: ''
-         });
+        setFormErrors(INITIAL_FORM_ERRORS); // Reset errors
+        setAddedExpenses([]); // Ensure no items carry over
         setApiError(null);
-        setEditModalOpen(true); // Open the modal
-    };
+        setEditModalOpen(true);
+    }, []); // No dependencies needed if only using 'item'
 
-    const closeEditModal = () => {
+    const closeEditModal = useCallback(() => {
         setEditModalOpen(false);
-        setIsEditing(false);
         setSelectedManoObra(null);
-        resetFormState(); // Reset form fully on modal close
-    };
+        resetFormState(); // Reset form fully on close
+    }, [resetFormState]);
 
-    const validateEditForm = () => {
+    const validateEditForm = useCallback(() => {
          let isValid = true;
-         const newErrors = { };
-
-         if (!form.dateOverallExp) {
-             newErrors.dateOverallExp = 'La fecha es obligatoria';
-             isValid = false;
+         const newErrors = { dateOverallExp: null, novelty_expense: null };
+         if (!form.dateOverallExp || !dayjs(form.dateOverallExp, 'YYYY-MM-DD', true).isValid()) {
+             newErrors.dateOverallExp = 'Fecha inválida o faltante'; isValid = false;
+         } else if (dayjs(form.dateOverallExp).isAfter(dayjs(), 'day')) {
+             newErrors.dateOverallExp = 'La fecha no puede ser futura.'; isValid = false;
          }
-         if (!form.novelty_expense) {
-              newErrors.novelty_expense = 'La novedad es obligatoria';
-              isValid = false;
+         if (!form.novelty_expense || !form.novelty_expense.trim()) {
+              newErrors.novelty_expense = 'La novedad es obligatoria'; isValid = false;
          }
-         setFormErrors(prev => ({...prev, ...newErrors})); // Update only modal field errors
+         setFormErrors(prev => ({...INITIAL_FORM_ERRORS, ...newErrors})); // Reset others, set these
          return isValid;
-    }
+    }, [form.dateOverallExp, form.novelty_expense]);
 
-    const handleEditSubmit = async () => {
-        // console.log("handleEditSubmit called");
+    const handleEditSubmit = useCallback(async () => {
         if (!selectedManoObra || !validateEditForm()) {
-            toast.error("Por favor, complete todos los campos del modal.");
+            toast.error("Corrija los errores del formulario.", { icon: <XCircle className="text-danger"/> });
             return;
         }
+        setIsSubmitting(true); setApiError(null);
+        const toastId = toast.loading('Actualizando registro...');
 
-        // Payload contains ONLY the fields being updated via the modal
-        const payload = {
-            dateOverallExp: form.dateOverallExp,
-            novelty_expense: form.novelty_expense,
-            // Include other fields like status if they *can* be changed via this modal
-            // status: form.status,
-            // DO NOT include valueExpense or expenseItems as they are not edited here
+        const payload = { // Only send updated fields
+            dateOverallExp: form.dateOverallExp, novelty_expense: form.novelty_expense,
+            // status: form.status, // Include if status can be changed here
         };
 
-        console.log(`Payload being sent for update (ID: ${selectedManoObra.idOverallMonth}):`, payload);
-        setApiError(null);
-
         try {
-            const response = await MonthlyOverallExpenseService.updateMonthlyOverallExpense(selectedManoObra.idOverallMonth, payload);
-            console.log("API Response (Update):", response);
-            toast.success("Gasto mensual actualizado exitosamente.");
-
-            closeEditModal(); // Close modal
-            fetchData(); // Refresh table
-
+            await MonthlyOverallExpenseService.updateMonthlyOverallExpense(selectedManoObra.idOverallMonth, payload);
+            toast.success("Registro actualizado.", { id: toastId, icon: <CheckCircle className="text-success"/> });
+            closeEditModal(); await fetchData(false);
         } catch (error) {
             console.error("Error updating expense:", error);
-            const errorMessage = error.message || "Error al actualizar el gasto.";
-            setApiError(errorMessage); // Show error potentially within the modal
-            toast.error(errorMessage);
+            const errorMessage = error.response?.data?.message || error.message || "Error al actualizar.";
+            setApiError(errorMessage); // Show error inside modal
+            toast.error(`Error: ${errorMessage}`, { id: toastId, icon: <XCircle className="text-danger"/>, duration: 5000 });
+        } finally {
+            setIsSubmitting(false);
         }
-    };
+    }, [selectedManoObra, form.dateOverallExp, form.novelty_expense, validateEditForm, closeEditModal, fetchData]);
 
     // --- Other Actions ---
-    const cambiarEstado = async (idOverallMonth) => {
-        // Find the current status
-        const itemToToggle = data.find(item => item.idOverallMonth === idOverallMonth);
-        if (!itemToToggle) return;
 
-        const newStatus = !itemToToggle.status;
-        const originalData = [...data]; // Backup data for potential rollback
+    // Confirmation Modal Logic
+    const toggleConfirmModal = useCallback(() => {
+        if (isConfirmActionLoading) return;
+        setConfirmModalOpen(prev => !prev);
+    }, [isConfirmActionLoading]);
 
-        // Optimistic UI update
+    useEffect(() => {
+        if (!confirmModalOpen && !isConfirmActionLoading) {
+            setConfirmModalProps(INITIAL_CONFIRM_PROPS);
+            confirmActionRef.current = null;
+        }
+    }, [confirmModalOpen, isConfirmActionLoading]);
+
+    const prepareConfirmation = useCallback((actionFn, props) => {
+        const detailsToPass = props.itemDetails;
+        confirmActionRef.current = () => {
+             if (actionFn) actionFn(detailsToPass);
+             else { console.error("Confirm actionFn is null."); toggleConfirmModal(); }
+        };
+        setConfirmModalProps(props);
+        setConfirmModalOpen(true);
+    }, [toggleConfirmModal]);
+
+
+    // CHANGE STATUS (Request Confirmation)
+    const requestChangeStatusConfirmation = useCallback((item) => {
+         if (!item || item.idOverallMonth == null) { console.error("Invalid item for status change:", item); return; }
+         const { idOverallMonth, status: currentStatus } = item;
+         const actionText = currentStatus ? "desactivar" : "activar";
+         const futureStatusText = currentStatus ? "Inactivo" : "Activo";
+         const confirmColor = currentStatus ? "warning" : "success";
+
+        prepareConfirmation(executeChangeStatus, {
+            title: "Confirmar Cambio de Estado",
+            message: (
+                <p>¿Está seguro que desea <strong>{actionText}</strong> el registro mensual con ID <strong>#{idOverallMonth}</strong>? <br /> Su nuevo estado será: <strong>{futureStatusText}</strong>.</p>
+            ),
+            confirmText: `Confirmar ${actionText.charAt(0).toUpperCase() + actionText.slice(1)}`,
+            confirmColor: confirmColor,
+            itemDetails: { idOverallMonth, currentStatus } // Pass necessary details
+        });
+    }, [prepareConfirmation]);
+
+    // CHANGE STATUS (Execute Action)
+    const executeChangeStatus = useCallback(async (details) => {
+        if (!details || details.idOverallMonth == null) {
+             console.error("Missing details for status change execution:", details);
+             toast.error("Error interno al cambiar estado."); toggleConfirmModal(); return;
+        }
+        const { idOverallMonth, currentStatus } = details;
+        const newStatus = !currentStatus;
+        const actionText = currentStatus ? "desactivar" : "activar";
+
+        setIsConfirmActionLoading(true);
+        const toastId = toast.loading(`${actionText.charAt(0).toUpperCase() + actionText.slice(1)}ndo registro...`);
+
+        // Optimistic UI Update (Optional but good UX)
+        const originalData = [...data];
         setData(prevData => prevData.map(item =>
             item.idOverallMonth === idOverallMonth ? { ...item, status: newStatus } : item
         ));
 
         try {
+            // Assuming service: changeStateMonthlyOverallExpense(id, newStatus)
             await MonthlyOverallExpenseService.changeStateMonthlyOverallExpense(idOverallMonth, newStatus);
-            toast.success("Estado del gasto mensual actualizado exitosamente");
-            // No need to call fetchData again if API call is successful
+            toast.success(`Estado actualizado a ${newStatus ? 'Activo' : 'Inactivo'}.`, { id: toastId, icon: <CheckCircle /> });
+            toggleConfirmModal();
+            // No need to fetchData if optimistic update worked and API succeeded
+            // await fetchData(false);
         } catch (error) {
             console.error("Error updating expense status:", error);
-            toast.error(`Error al cambiar el estado: ${error.message || 'Error desconocido'}`);
+            toast.error(`Error al cambiar estado: ${error.message || 'Error desconocido'}`, { id: toastId, icon: <XCircle className="text-danger"/> });
             setData(originalData); // Rollback UI on error
+            toggleConfirmModal();
+        } finally {
+            setIsConfirmActionLoading(false);
         }
-    };
+    }, [data, toggleConfirmModal, fetchData]); // fetchData needed only if not using optimistic update
 
-    const handleTableSearch = (e) => {
-        setTableSearchText(e.target.value.toLowerCase());
-        setCurrentPage(1); // Reset to first page on search
-    };
 
-    const handlePageChange = (pageNumber) => {
+    // --- Table Search & Pagination Handlers ---
+    const handleTableSearch = useCallback((e) => {
+        setTableSearchText(e.target.value);
+        setCurrentPage(1);
+    }, []);
+
+    const handlePageChange = useCallback((pageNumber) => {
         setCurrentPage(pageNumber);
-    };
+    }, []);
 
-    const handleClick = () => {
-        navigate('/tabla-gastos'); // Navigate to general expenses table
-    };
-    const handleRendimientoEmp = () => {
-        navigate('/rendimiento-empleado'); // Navigate to employee performance
-    };
+    // --- Navigation Handlers ---
+    const handleNavigateToOtherExpenses = useCallback(() => navigate('/tabla-gastos'), [navigate]); // Navigates to Conceptos Gasto list
+    const handleNavigateToEmployees = useCallback(() => navigate('/rendimiento-empleado'), [navigate]);
 
-    const openDetailModal = (item) => {
+    // --- Detail Modal Handlers ---
+    const openDetailModal = useCallback((item) => {
         setSelectedItemForDetail(item);
         setDetailModalOpen(true);
-    };
-    const closeDetailModal = () => setDetailModalOpen(false);
+    }, []);
+    const closeDetailModal = useCallback(() => setDetailModalOpen(false), []);
 
-    // --- Filtering and Pagination ---
-    const filteredData = data.filter(item =>
-        item && ( // Add check if item exists
-            String(item.idOverallMonth || '').toLowerCase().includes(tableSearchText) ||
-            (item.dateOverallExp && new Date(item.dateOverallExp).toLocaleDateString('es-ES').includes(tableSearchText)) ||
-            String(item.valueExpense || '').toLowerCase().includes(tableSearchText) ||
-            String(item.novelty_expense || '').toLowerCase().includes(tableSearchText)
-        )
-    );
+    // --- Filtering and Pagination Logic ---
+    const filteredData = useMemo(() => {
+        if (!Array.isArray(data)) return [];
+        const sortedData = [...data].sort((a, b) => (b.idOverallMonth || 0) - (a.idOverallMonth || 0));
+        const lowerSearchText = tableSearchText.trim().toLowerCase();
+        if (!lowerSearchText) return sortedData;
+        return sortedData.filter(item =>
+            item && (
+                String(item.idOverallMonth || '').toLowerCase().includes(lowerSearchText) ||
+                (item.dateOverallExp && dayjs(item.dateOverallExp).format('DD/MM/YYYY').includes(lowerSearchText)) ||
+                String(item.valueExpense ?? '').toLowerCase().includes(lowerSearchText) ||
+                (item.novelty_expense || '').toLowerCase().includes(lowerSearchText)
+            )
+        );
+    }, [data, tableSearchText]);
 
+    const totalItems = useMemo(() => filteredData.length, [filteredData]);
+    const totalPages = useMemo(() => Math.ceil(totalItems / ITEMS_PER_PAGE) || 1, [totalItems]);
+    const validCurrentPage = useMemo(() => Math.max(1, Math.min(currentPage, totalPages || 1)), [currentPage, totalPages]);
 
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
-    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-    const pageNumbers = [];
-    for (let i = 1; i <= totalPages; i++) {
-        pageNumbers.push(i);
-    }
+    const currentItems = useMemo(() => {
+        const startIndex = (validCurrentPage - 1) * ITEMS_PER_PAGE;
+        return filteredData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    }, [filteredData, validCurrentPage]);
 
-    const totalExpenses = addedExpenses.reduce((sum, item) => sum + item.price, 0);
+    useEffect(() => {
+        if (currentPage > totalPages && totalPages > 0) {
+            setCurrentPage(totalPages);
+        }
+    }, [totalPages, currentPage]);
 
-    // --- JSX ---
+    // --- Totals Calculation ---
+    const totalExpensesInForm = useMemo(() => {
+        return addedExpenses.reduce((sum, item) => sum + Number(item.price || 0), 0);
+    }, [addedExpenses]);
+
+    // --- Render ---
     return (
-        <Container>
-            <Toaster position="top-right" />
-            <br />
-            {!showForm ? ( // Display Table View
+        <Container fluid className="p-4 main-content">
+            <Toaster position="top-center" toastOptions={{ style: { maxWidth: 600 } }} />
+            {!showForm ? ( // ========== Display Table View ==========
                 <>
-                    {/* Header */}
-                    <div className="d-flex align-items-center mb-3">
-                        <img src={FondoIcono} alt="Logo FIP" style={{ width: '5%', height: 'auto', marginRight: '20px' }} />
-                        <h2 style={{ flex: 1, margin: 0 }}>Gastos Mensuales (Mano de Obra)</h2>
-                        {/* Navigation Buttons */}
-                        <div style={{ display: 'flex', gap: '15px' }}>
-                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                 <Button color="link" onClick={handleRendimientoEmp} style={{ padding: 0 }}>
-                                     <TeamOutlined style={{ fontSize: '34px', color: 'black' }} />
-                                 </Button>
-                                 <span style={{ fontSize: '14px', color: 'black', marginTop: '5px' }}>Empleados</span>
-                             </div>
-                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                 <Button color="link" onClick={handleClick} style={{ padding: 0 }}>
-                                      <SelectOutlined style={{ fontSize: '34px', color: 'black' }} />
-                                  </Button>
-                                 <span style={{ fontSize: '14px', color: 'black', marginTop: '5px' }}>Otros Gastos</span>
-                              </div>
-                         </div>
-                    </div>
-                    <hr/>
+                    <h2 className="mb-4">Gestión de Gastos Mensuales (Mano de Obra)</h2>
+                    {/* Search and Action Buttons Row - Styled like Proveedores */}
+                    <Row className="mb-3 align-items-center">
+                        <Col md={6} lg={4}>
+                            <Input
+                                bsSize="sm" type="text" placeholder="Buscar por ID, Fecha, Novedad..."
+                                value={tableSearchText} onChange={handleTableSearch}
+                                aria-label="Buscar gastos mensuales"
+                            />
+                        </Col>
+                        <Col md={6} lg={8} className="text-md-end mt-2 mt-md-0 d-flex justify-content-end align-items-center gap-2">
+                            {/* Navigation Buttons */}
+                            <Button color="info" outline size="sm" onClick={handleNavigateToEmployees} title="Ir a Empleados">
+                                <Users size={16} className="me-1" /> Empleados
+                            </Button>
+                            <Button color="secondary" outline size="sm" onClick={handleNavigateToOtherExpenses} title="Ir a Conceptos de Gasto">
+                                <Settings size={16} className="me-1"/> Conceptos Gasto {/* Icon changed */}
+                            </Button>
+                            {/* Create Button */}
+                            <Button color="success" size="sm" onClick={() => { resetFormState(); setShowForm(true); }} className="button-add">
+                                <Plus size={18} className="me-1" /> Crear Registro Mensual
+                            </Button>
+                        </Col>
+                    </Row>
 
-                    {/* Search and Create Button */}
-                    <div className="d-flex justify-content-between align-items-center mb-3">
-                        <Input
-                            type="text"
-                            placeholder="Buscar por ID, Fecha, Valor o Novedad..."
-                            value={tableSearchText}
-                            onChange={handleTableSearch}
-                            style={{ width: '40%' }}
-                        />
-                        <Button
-                            style={{ backgroundColor: '#228b22', color: 'white', border: 'none' }}
-                            onClick={() => {
-                                resetFormState(); // Ensure form is clean before showing
-                                setShowForm(true);
-                                setIsEditing(false); // Explicitly set to creation mode
-                            }}
-                        >
-                            Crear Registro de Mes <PlusCircleOutlined style={{ marginLeft: '5px' }} />
-                        </Button>
-                    </div>
-
-                    {/* Data Table */}
-                    <Table className="table table-sm table-hover table-bordered table-striped">
-                        <thead className="thead-dark">
-                            <tr>
-                                <th style={{ textAlign: 'center' }}>ID</th>
-                                <th style={{ textAlign: 'center' }}>Fecha</th>
-                                <th style={{ textAlign: 'center' }}>Valor Gasto Total</th>
-                                <th style={{ textAlign: 'center' }}>Novedades</th>
-                                <th style={{ textAlign: 'center' }}>Estado</th>
-                                <th style={{ textAlign: 'center' }}>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {currentItems.length > 0 ? (
-                                currentItems.map((item) => (
-                                    <tr key={item.idOverallMonth}>
-                                        <td style={{ textAlign: 'center' }}>{item.idOverallMonth}</td>
-                                        <td style={{ textAlign: 'center' }}>{new Date(item.dateOverallExp).toLocaleDateString('es-ES')}</td>
-                                        {/* Format currency if desired */}
-                                        <td style={{ textAlign: 'right' }}>{item.valueExpense?.toLocaleString('es-CO', { style: 'currency', currency: 'COP' }) ?? 'N/A'}</td>
-                                        <td>{item.novelty_expense}</td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            <Button
-                                                color={item.status ? "success" : "secondary"}
-                                                size="sm"
-                                                onClick={() => cambiarEstado(item.idOverallMonth)}
-                                            >
-                                                {item.status ? "Activo" : "Inactivo"}
-                                            </Button>
-                                        </td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            <div className="d-flex justify-content-center align-items-center gap-2">
-                                                <Button
-                                                    color="dark"
-                                                    size="sm"
-                                                    onClick={() => openEditModal(item)}
-                                                    title="Editar Cabecera"
-                                                >
-                                                    <EditOutlined />
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    onClick={() => openDetailModal(item)}
-                                                    style={{ backgroundColor: '#F5C300', border: 'none' }}
-                                                    title="Ver Detalles"
-                                                >
-                                                    <FaEye style={{ color: 'black' }} />
-                                                </Button>
-                                                {/* Add Delete Button if needed */}
-                                                {/* <Button color="danger" size="sm" onClick={() => openDeleteModal(item)}> <DeleteOutlined /> </Button> */}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
+                    {/* Data Table - Styled like Proveedores */}
+                    <div className="table-responsive shadow-sm custom-table-container mb-3">
+                        <Table hover size="sm" className="mb-0 custom-table" aria-live="polite">
+                            <thead className="table-dark">
                                 <tr>
-                                    <td colSpan="6" className="text-center">No hay datos disponibles {tableSearchText ? 'para la búsqueda actual' : ''}.</td>
+                                    <th scope="col" style={{ width: '10%' }}>ID</th>
+                                    <th scope="col" style={{ width: '15%' }}>Fecha</th>
+                                    <th scope="col" style={{ width: '20%' }} className="text-end">Monto Total</th>
+                                    <th scope="col">Novedades</th>
+                                    <th scope="col" style={{ width: '10%' }} className="text-center">Estado</th>
+                                    <th scope="col" style={{ width: '15%' }} className="text-center">Acciones</th>
                                 </tr>
-                            )}
-                        </tbody>
-                    </Table>
+                            </thead>
+                            <tbody>
+                                {isLoadingTable ? (
+                                    <tr><td colSpan="6" className="text-center p-5"><Spinner color="primary" /> Cargando...</td></tr>
+                                ) : currentItems.length > 0 ? (
+                                    currentItems.map((item) => (
+                                        <tr key={item.idOverallMonth} style={{ verticalAlign: 'middle' }}>
+                                            <th scope="row">{item.idOverallMonth}</th>
+                                            <td>{item.dateOverallExp ? dayjs(item.dateOverallExp).format('DD/MM/YYYY') : '-'}</td>
+                                            <td className="text-end">{formatCurrencyCOP(item.valueExpense)}</td>
+                                            <td>{item.novelty_expense || '-'}</td>
+                                            <td className="text-center">
+                                                <Button
+                                                    outline color={item.status ? "success" : "secondary"} size="sm" className="p-1"
+                                                    onClick={() => requestChangeStatusConfirmation(item)} // Use confirmation
+                                                    disabled={item.idOverallMonth == null || isConfirmActionLoading}
+                                                    title={item.status ? "Activo (Clic para inactivar)" : "Inactivo (Clic para activar)"}
+                                                >
+                                                    {item.status ? "Activo" : "Inactivo"}
+                                                </Button>
+                                            </td>
+                                            <td className="text-center">
+                                                <div className="d-inline-flex gap-1 action-cell-content">
+                                                    <Button color="warning" outline size="sm" onClick={() => openEditModal(item)} title="Editar Cabecera" className="p-1" disabled={isConfirmActionLoading}> <Edit size={14} /> </Button>
+                                                    <Button color="info" outline size="sm" onClick={() => openDetailModal(item)} title="Ver Detalles" className="p-1" disabled={isConfirmActionLoading}> <Eye size={14} /> </Button>
+                                                    {/* Elimina la línea 520 original y reemplázala con esta si quieres comentar TODO el botón de eliminar: */}
+{/* <Button color="danger" outline size="sm" onClick={() => requestDeleteConfirmation(item)} title="Eliminar Registro" className="p-1" disabled={isConfirmActionLoading}> <Trash2 size={14} /> </Button> */}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr><td colSpan="6" className="text-center fst-italic p-4">
+                                        {tableSearchText ? 'No se encontraron resultados.' : 'No hay registros.'}
+                                        {!isLoadingTable && data.length === 0 && !tableSearchText && (
+                                             <span className="d-block mt-2">Aún no hay registros. <Button size="sm" color="link" onClick={() => setShowForm(true)} className="p-0 align-baseline">Crear el primero</Button></span>
+                                        )}
+                                    </td></tr>
+                                )}
+                            </tbody>
+                        </Table>
+                    </div>
 
                     {/* Pagination */}
-                    {totalPages > 1 && (
-                        <ul className="pagination justify-content-center">
-                            {pageNumbers.map(number => (
-                                <li key={number} className={`page-item ${currentPage === number ? 'active' : ''}`}>
-                                    <Button outline className="page-link" onClick={() => handlePageChange(number)}>
-                                        {number}
-                                    </Button>
-                                </li>
-                            ))}
-                        </ul>
+                    {!isLoadingTable && totalPages > 1 && (
+                        <CustomPagination currentPage={validCurrentPage} totalPages={totalPages} onPageChange={handlePageChange} />
                     )}
                 </>
-            ) : ( // Display Creation Form View
-                <div>
-                     {/* Back Button */}
-                     <Button color="secondary" outline onClick={() => setShowForm(false)} className="mb-3">
-                         ← Volver a la Lista
-                     </Button>
-                    <h2 className="text-center">Crear Registro Mensual de Gastos</h2>
-                    <hr/>
-                     {apiError && <div className="alert alert-danger">{apiError}</div>}
-
-                    {/* Main Fields */}
-                    <Row className="mb-3">
-                        <Col md={6}>
-                            <FormGroup>
-                                <Label for="dateOverallExp">Fecha del Mes <span className="text-danger">*</span></Label>
-                                <Input
-                                    id="dateOverallExp"
-                                    type="date"
-                                    name="dateOverallExp"
-                                    value={form.dateOverallExp}
-                                    onChange={handleChange}
-                                    invalid={!!formErrors.dateOverallExp}
-                                />
-                                <span className="text-danger small">{formErrors.dateOverallExp}</span>
-                            </FormGroup>
-                        </Col>
-                        <Col md={6}>
-                            <FormGroup>
-                                <Label for="novelty_expense">Novedades del Mes <span className="text-danger">*</span></Label>
-                                <Input
-                                    id="novelty_expense"
-                                    type="textarea"
-                                    name="novelty_expense"
-                                    value={form.novelty_expense}
-                                    onChange={handleChange}
-                                    placeholder="Describa las novedades o eventos relevantes para los gastos de este mes"
-                                    invalid={!!formErrors.novelty_expense}
-                                    rows={3}
-                                />
-                                 <span className="text-danger small">{formErrors.novelty_expense}</span>
-                            </FormGroup>
-                        </Col>
-                    </Row>
-                     <hr/>
-
-                    {/* Add Expense Item Section */}
-                     <h5>Agregar Conceptos de Gasto</h5>
-                    <Row className="mb-3 align-items-end"> {/* Use align-items-end for button alignment */}
-                        <Col md={5}>
-                             <Label for="idConceptSpent">Concepto de Gasto <span className="text-danger">*</span></Label>
-                            <ConceptSpentSelect
-                                id="idConceptSpent" // Add id for label linking
-                                value={form.idConceptSpent}
-                                onChange={handleChange} // Pass the main handleChange
-                                conceptSpents={conceptSpents}
-                                name="idConceptSpent" // Ensure name is passed
-                                invalid={!!formErrors.idConceptSpent}
-                            />
-                             <span className="text-danger small">{formErrors.idConceptSpent}</span>
-                        </Col>
-                        <Col md={4}>
-                            <FormGroup>
-                                <Label for="price">Precio <span className="text-danger">*</span></Label>
-                                <Input
-                                    id="price"
-                                    type="number"
-                                    name="price"
-                                    value={form.price}
-                                    onChange={handleChange}
-                                    placeholder="0.00"
-                                    min="0"
-                                    step="any"
-                                    invalid={!!formErrors.price}
-                                />
-                                 <span className="text-danger small">{formErrors.price}</span>
-                            </FormGroup>
-                        </Col>
-                        <Col md={3}>
-                            {/* Align button with the bottom of the inputs */}
-                             <FormGroup className="mb-0"> {/* Remove bottom margin for alignment */}
-                                <Button
-                                    color="success"
-                                    onClick={addExpenseToTable}
-                                    className="w-100" // Make button take full column width
-                                >
-                                    <PlusOutlined /> Agregar
+            ) : ( // ========== Display Creation Form View ==========
+                <Card className="shadow-sm"> {/* Keep Card structure for complex form */}
+                     <CardHeader className="bg-light">
+                        <Row className="align-items-center">
+                            <Col xs="auto">
+                                <Button color="secondary" outline size="sm" onClick={() => { setShowForm(false); resetFormState(); }} disabled={isSubmitting}>
+                                    <ArrowLeft size={18} /> Volver
                                 </Button>
-                             </FormGroup>
-                        </Col>
-                    </Row>
+                            </Col>
+                            <Col><h4 className="mb-0 text-center">Crear Registro Mensual</h4></Col>
+                             <Col xs="auto" style={{ visibility: 'hidden' }}><Button size="sm" outline><ArrowLeft/></Button></Col> {/* Spacer */}
+                        </Row>
+                    </CardHeader>
+                    <CardBody>
+                        {apiError && <Alert color="danger" size="sm" className="py-2 px-3">{apiError}</Alert>}
+                        <Form id="createMonthlyExpenseForm" noValidate onSubmit={(e) => e.preventDefault()}>
 
-                    {/* Table of Added Expenses */}
-                    <h6 className="mt-4">Gastos Agregados para este Mes:</h6>
-                     <span className="text-danger small">{formErrors.expenseItems}</span>
-                    <Table className="mt-2 table-sm table-bordered">
-                        <thead>
-                            <tr>
-                                <th>Concepto</th>
-                                <th>Precio</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {addedExpenses.length > 0 ? (
-                                addedExpenses.map((item, index) => (
-                                    <tr key={index}>
-                                        <td>{item.conceptName}</td>
-                                        {/* Format currency */}
-                                        <td style={{ textAlign: 'right' }}>{item.price.toLocaleString('es-CO', { style: 'currency', currency: 'COP' })}</td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            <Button color="danger" size="sm" onClick={() => removeExpenseFromTable(index)}>
-                                                <DeleteOutlined />
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan="3" className="text-center text-muted">Aún no se han agregado gastos.</td>
-                                </tr>
-                            )}
-                        </tbody>
-                         {addedExpenses.length > 0 && (
-                              <tfoot>
-                                  <tr>
-                                      <th className="text-right">Total:</th>
-                                      <th className="text-right">{totalExpenses.toLocaleString('es-CO', { style: 'currency', currency: 'COP' })}</th>
-                                      <th></th>
-                                  </tr>
-                              </tfoot>
-                         )}
-                    </Table>
+                            {/* --- Main Fields: Fecha y Novedades --- */}
+                             <Row className="g-3 mb-4">
+                                <Col md={6}>
+                                    <FormGroup>
+                                        <Label for="dateOverallExp" className="form-label fw-bold">Fecha Mes <span className="text-danger">*</span></Label>
+                                        <Input id="dateOverallExp" bsSize="sm" type="date" name="dateOverallExp"
+                                            value={form.dateOverallExp} onChange={handleChange} max={dayjs().format('YYYY-MM-DD')}
+                                            invalid={!!formErrors.dateOverallExp} disabled={isSubmitting} required />
+                                        <FormFeedback>{formErrors.dateOverallExp}</FormFeedback>
+                                    </FormGroup>
+                                </Col>
+                                <Col md={6}>
+                                    <FormGroup>
+                                        <Label for="novelty_expense" className="form-label fw-bold">Novedades Mes <span className="text-danger">*</span></Label>
+                                        <Input id="novelty_expense" bsSize="sm" type="textarea" name="novelty_expense"
+                                            value={form.novelty_expense} onChange={handleChange} placeholder="Describa eventos..."
+                                            invalid={!!formErrors.novelty_expense} disabled={isSubmitting} required rows={3} />
+                                        <FormFeedback>{formErrors.novelty_expense}</FormFeedback>
+                                    </FormGroup>
+                                </Col>
+                            </Row>
+                            <hr />
 
-                    {/* Action Buttons for Creation Form */}
-                    <div className="d-flex justify-content-end mt-4 gap-2">
-                        <Button color="secondary" onClick={() => { setShowForm(false); resetFormState(); }}>
-                            Cancelar
+                            {/* --- Add Expense Item Section --- */}
+                            <h5 className="mb-3">Agregar Conceptos de Gasto</h5>
+                            {formErrors.expenseItems && <Alert color="danger" size="sm" className="py-2 px-3 mb-2">{formErrors.expenseItems}</Alert>}
+                            <Row className="g-3 mb-3 align-items-end">
+                                <Col md={5}>
+                                     <Label for="idConceptSpent" className="form-label">Concepto <span className="text-danger">*</span></Label>
+                                    <ConceptSpentSelect id="idConceptSpent" value={form.idConceptSpent} onChange={handleChange}
+                                        conceptSpents={conceptSpents} name="idConceptSpent" invalid={!!formErrors.idConceptSpent}
+                                        disabled={isSubmitting || conceptSpents.length === 0} bsSize="sm" />
+                                     <FormFeedback className={formErrors.idConceptSpent ? 'd-block' : ''}>{formErrors.idConceptSpent}</FormFeedback>
+                                     {conceptSpents.length === 0 && <small className="text-warning d-block mt-1">No hay conceptos.</small>}
+                                </Col>
+                                <Col md={4}>
+                                    <Label for="price" className="form-label">Precio (COP) <span className="text-danger">*</span></Label>
+                                    <Input id="price" bsSize="sm" type="number" name="price" value={form.price} onChange={handleChange}
+                                        placeholder="0.00" min="0.01" step="any" invalid={!!formErrors.price} disabled={isSubmitting} required />
+                                     <FormFeedback>{formErrors.price}</FormFeedback>
+                                </Col>
+                                <Col md={3}>
+                                    <Button color="success" outline onClick={addExpenseToTable} className="w-100" size="sm"
+                                        disabled={isSubmitting || !form.idConceptSpent || !form.price} >
+                                        <Plus size={16} /> Agregar
+                                    </Button>
+                                </Col>
+                            </Row>
+
+                            {/* --- Table of Added Expenses --- */}
+                            <h6 className="mt-4">Gastos Agregados:</h6>
+                            <div className="table-responsive mb-3">
+                                <Table size="sm" bordered className="detail-table align-middle">
+                                    <thead className="table-light"><tr><th style={{ width: '60%' }}>Concepto</th><th style={{ width: '30%' }} className="text-end">Precio</th><th style={{ width: '10%' }} className="text-center">Quitar</th></tr></thead>
+                                    <tbody>
+                                        {addedExpenses.length > 0 ? addedExpenses.map((item, index) => (
+                                            <tr key={index}><td>{item.conceptName}</td><td className="text-end">{formatCurrencyCOP(item.price)}</td>
+                                                <td className="text-center"><Button color="danger" outline size="sm" className="p-1" onClick={() => removeExpenseFromTable(index)} disabled={isSubmitting} title="Quitar"> <Trash2 size={14} /> </Button></td>
+                                            </tr>))
+                                        : (<tr><td colSpan="3" className="text-center text-muted fst-italic py-3">Aún no se han agregado gastos.</td></tr>)}
+                                    </tbody>
+                                    {addedExpenses.length > 0 && (
+                                        <tfoot><tr className="table-light"><th className="text-end fw-bold">Total Agregado:</th><th className="text-end fw-bold">{formatCurrencyCOP(totalExpensesInForm)}</th><th></th></tr></tfoot>
+                                    )}
+                                </Table>
+                            </div>
+                         </Form>
+                    </CardBody>
+                    <CardHeader className="bg-light d-flex justify-content-end gap-2 border-top"> {/* Buttons in Footer */}
+                        <Button color="secondary" outline onClick={() => { setShowForm(false); resetFormState(); }} disabled={isSubmitting}>
+                            <XCircle size={18} className="me-1" /> Cancelar
                         </Button>
-                        <Button style={{ background: '#2e8322', color: 'white', border: 'none' }} onClick={handleCreateSubmit}>
-                            Guardar Registro Mensual
+                        <Button color="primary" onClick={handleCreateSubmit} disabled={isSubmitting || addedExpenses.length === 0}>
+                            {isSubmitting ? <><Spinner size="sm"/> Guardando...</> : <><Save size={18} className="me-1"/> Guardar Registro</>}
                         </Button>
-                    </div>
-                </div>
+                    </CardHeader>
+                </Card>
             )}
 
-            {/* Edit Modal (Handles only Date and Novelty) */}
-            <Modal isOpen={editModalOpen} toggle={closeEditModal} centered>
-                <ModalHeader toggle={closeEditModal}>Editar Registro Mensual</ModalHeader>
+            {/* ============ Edit Modal (Handles only Date and Novelty) ============ */}
+            <Modal isOpen={editModalOpen} toggle={closeEditModal} centered backdrop="static" keyboard={!isSubmitting}>
+                <ModalHeader toggle={!isSubmitting ? closeEditModal : undefined}> <Edit size={20} className="me-2" /> Editar Cabecera Registro </ModalHeader>
                 <ModalBody>
-                    {apiError && <div className="alert alert-danger">{apiError}</div>}
-                    <Row>
-                        <Col md={12}> {/* Use full width for date */}
-                            <FormGroup>
-                                <Label for="editDateOverallExp">Fecha <span className="text-danger">*</span></Label>
-                                <Input
-                                    id="editDateOverallExp"
-                                    type="date"
-                                    name="dateOverallExp" // Must match state key
-                                    value={form.dateOverallExp} // Bind to form state
-                                    onChange={handleChange} // Use the same handler
-                                    invalid={!!formErrors.dateOverallExp}
-                                />
-                                 <span className="text-danger small">{formErrors.dateOverallExp}</span>
-                            </FormGroup>
-                        </Col>
-                        <Col md={12}> {/* Use full width for novelty */}
-                            <FormGroup>
-                                <Label for="editNoveltyExpense">Novedades <span className="text-danger">*</span></Label>
-                                <Input
-                                    id="editNoveltyExpense"
-                                    type="textarea"
-                                    name="novelty_expense" // Must match state key
-                                    value={form.novelty_expense} // Bind to form state
-                                    onChange={handleChange} // Use the same handler
-                                    rows={4}
-                                    invalid={!!formErrors.novelty_expense}
-                                />
-                                 <span className="text-danger small">{formErrors.novelty_expense}</span>
-                            </FormGroup>
-                        </Col>
-                    </Row>
-                     <p><small>Nota: Para modificar los conceptos de gasto individuales o el valor total, deberá gestionar los gastos asociados a este mes (funcionalidad futura o en otra sección).</small></p>
+                    {apiError && <Alert color="danger" size="sm">{apiError}</Alert>}
+                    <Form id="editMonthlyExpenseForm" noValidate onSubmit={(e) => e.preventDefault()}>
+                        <Row>
+                            <Col md={12}>
+                                <FormGroup>
+                                    <Label for="editDateOverallExp" className="form-label">Fecha <span className="text-danger">*</span></Label>
+                                    <Input id="editDateOverallExp" bsSize="sm" type="date" name="dateOverallExp" value={form.dateOverallExp} onChange={handleChange} max={dayjs().format('YYYY-MM-DD')}
+                                        invalid={!!formErrors.dateOverallExp} disabled={isSubmitting} required />
+                                    <FormFeedback>{formErrors.dateOverallExp}</FormFeedback>
+                                </FormGroup>
+                            </Col>
+                            <Col md={12}>
+                                <FormGroup>
+                                    <Label for="editNoveltyExpense" className="form-label">Novedades <span className="text-danger">*</span></Label>
+                                    <Input id="editNoveltyExpense" bsSize="sm" type="textarea" name="novelty_expense" value={form.novelty_expense} onChange={handleChange} rows={4}
+                                        invalid={!!formErrors.novelty_expense} disabled={isSubmitting} required />
+                                    <FormFeedback>{formErrors.novelty_expense}</FormFeedback>
+                                </FormGroup>
+                            </Col>
+                        </Row>
+                    </Form>
+                     <p className="text-muted mt-3"><small>Nota: Conceptos y valor total se gestionan en la creación.</small></p>
                 </ModalBody>
                 <ModalFooter>
-                     <Button color="secondary" onClick={closeEditModal}>
-                        Cancelar
-                    </Button>
-                    <Button style={{ background: '#2e8322', color: 'white' }} onClick={handleEditSubmit}> {/* Call dedicated edit handler */}
-                        Actualizar
-                    </Button>
+                     <Button color="secondary" outline onClick={closeEditModal} disabled={isSubmitting}>Cancelar</Button>
+                     <Button color="primary" onClick={handleEditSubmit} disabled={isSubmitting}>
+                         {isSubmitting ? <><Spinner size="sm"/> Actualizando...</> : <><Save size={16}/> Actualizar</>}
+                     </Button>
                 </ModalFooter>
             </Modal>
 
-            {/* Detail Modal */}
-            <Modal isOpen={detailModalOpen} toggle={closeDetailModal} centered size="lg">
-                <ModalHeader toggle={closeDetailModal} style={{ color: '#8C1616', fontWeight: 'bold' }}>
-                    Detalles del Registro Mensual
-                </ModalHeader>
-                <ModalBody style={{ padding: '20px' }}>
+            {/* ============ Detail Modal ============ */}
+            <Modal isOpen={detailModalOpen} toggle={closeDetailModal} centered size="lg" backdrop="static">
+                <ModalHeader toggle={closeDetailModal}> <Eye size={20} className="me-2" /> Detalles Registro Mensual</ModalHeader>
+                <ModalBody>
                     {selectedItemForDetail && (
-                        <div>
-                            <Table bordered striped size="sm">
-                                <tbody>
-                                    <tr>
-                                        <th scope="row" style={{ width: '30%' }}>ID Registro</th>
-                                        <td>{selectedItemForDetail.idOverallMonth}</td>
-                                    </tr>
-                                     <tr>
-                                         <th scope="row">Tipo Gasto ID</th>
-                                         {/* You might want to display the type name if available */}
-                                         <td>{selectedItemForDetail.idExpenseType} (Mano de Obra)</td>
-                                     </tr>
-                                    <tr>
-                                        <th scope="row">Fecha</th>
-                                        <td>{new Date(selectedItemForDetail.dateOverallExp).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}</td>
-                                    </tr>
-                                    <tr>
-                                        <th scope="row">Valor Total Gasto</th>
-                                        <td>{selectedItemForDetail.valueExpense?.toLocaleString('es-CO', { style: 'currency', currency: 'COP' })}</td>
-                                    </tr>
-                                    <tr>
-                                        <th scope="row">Novedades</th>
-                                        <td>{selectedItemForDetail.novelty_expense || '-'}</td>
-                                    </tr>
-                                     <tr>
-                                         <th scope="row">Estado</th>
-                                         <td>{selectedItemForDetail.status ? 'Activo' : 'Inactivo'}</td>
-                                     </tr>
-                                     {/* Here you might fetch and display the individual expense items associated with this month if your API supports it */}
-                                      {/* Example:
-                                      <tr>
-                                          <th colSpan="2">Conceptos Incluidos:</th>
-                                      </tr>
-                                      <tr>
-                                          <td colSpan="2">
-                                              [Logic to fetch and display items related to selectedItemForDetail.idOverallMonth]
-                                          </td>
-                                      </tr>
-                                      */}
-                                </tbody>
-                            </Table>
-                        </div>
+                         <Table bordered striped size="sm"><tbody>
+                            <tr><th style={{ width: '30%' }}>ID Registro</th><td>{selectedItemForDetail.idOverallMonth}</td></tr>
+                            <tr><th>Tipo Gasto</th><td>{selectedItemForDetail.idExpenseType} (Mano de Obra)</td></tr>
+                            <tr><th>Fecha</th><td>{selectedItemForDetail.dateOverallExp ? dayjs(selectedItemForDetail.dateOverallExp).format('DD [de] MMMM [de] YYYY') : '-'}</td></tr>
+                            <tr><th>Valor Total</th><td>{formatCurrencyCOP(selectedItemForDetail.valueExpense)}</td></tr>
+                            <tr><th>Novedades</th><td>{selectedItemForDetail.novelty_expense || <span className="text-muted fst-italic">Ninguna</span>}</td></tr>
+                            <tr><th>Estado</th><td>{selectedItemForDetail.status ? 'Activo' : 'Inactivo'}</td></tr>
+                            {/* Aquí iría lógica para cargar y mostrar los 'expenseItems' si fuera necesario */}
+                         </tbody></Table>
                     )}
                 </ModalBody>
-                <ModalFooter style={{ justifyContent: 'flex-end' }}>
-                    <Button color="secondary" onClick={closeDetailModal}>
-                        Cerrar
-                    </Button>
-                </ModalFooter>
+                <ModalFooter><Button color="secondary" outline onClick={closeDetailModal}>Cerrar</Button></ModalFooter>
             </Modal>
 
-             {/* Keep Delete Modal if needed */}
-             {/* <Modal isOpen={isDeleteModalOpen} toggle={handleDeleteModalClose}> ... </Modal> */}
+            {/* Confirmation Modal */}
+             <ConfirmationModal
+                isOpen={confirmModalOpen}
+                toggle={toggleConfirmModal}
+                title={confirmModalProps.title}
+                onConfirm={() => confirmActionRef.current && confirmActionRef.current()}
+                confirmText={confirmModalProps.confirmText}
+                confirmColor={confirmModalProps.confirmColor}
+                isConfirming={isConfirmActionLoading}
+            >
+                {confirmModalProps.message}
+            </ConfirmationModal>
 
         </Container>
     );

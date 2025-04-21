@@ -1,21 +1,21 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import "../../../App.css";
+import "../../../App.css"; // Asegúrate que la ruta es correcta
 import {
-    Table,
-    Button, Container, Row, Col, Form, FormGroup, Input, Label,
+    Table, Button, Container, Row, Col, Form, FormGroup, Input, Label,
     Modal, ModalHeader, ModalBody, ModalFooter, Spinner,
 } from "reactstrap";
 import { Trash2, Edit, Plus, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
 // --- Service Import ---
-// Ensure this path is correct and the service has 'isProviderAssociatedWithPurchases'
-import proveedorService from '../../services/proveedorSevice';
-import CustomPagination from '../../General/CustomPagination';
-import FondoForm from "../../../assets/login.jpg";
+import proveedorService from '../../services/proveedorSevice'; // Corrige ruta/nombre si es necesario
 
-// --- Confirmation Modal Component ---
+// --- Reusable Components ---
+import CustomPagination from '../../General/CustomPagination';
+import FondoForm from "../../../assets/login.jpg"; // Asegúrate que la ruta es correcta
+
+// --- Confirmation Modal Component (sin cambios) ---
 const ConfirmationModal = ({ isOpen, toggle, title, children, onConfirm, confirmText = "Confirmar", confirmColor = "primary", isConfirming = false }) => (
     <Modal isOpen={isOpen} toggle={!isConfirming ? toggle : undefined} centered backdrop="static" keyboard={!isConfirming}>
         <ModalHeader toggle={!isConfirming ? toggle : undefined}>
@@ -42,64 +42,62 @@ const ConfirmationModal = ({ isOpen, toggle, title, children, onConfirm, confirm
     </Modal>
 );
 
+// --- Constants ---
+const INITIAL_FORM_STATE = {
+    idProvider: "",
+    documentType: "",
+    document: "",
+    cellPhone: "",
+    company: "",
+    status: true,
+};
 
+const INITIAL_FORM_ERRORS = {
+    documentType: false,
+    document: false,
+    cellPhone: false,
+    company: false,
+};
+
+const INITIAL_CONFIRM_PROPS = {
+    title: "",
+    message: null,
+    confirmText: "Confirmar",
+    confirmColor: "primary",
+    itemDetails: null, // Aunque ya no lo leeremos directamente en la ejecución, sigue siendo útil para preparar
+};
+
+const TIPOS_DOCUMENTOS = [
+    { value: "CC", label: "Cédula de Ciudadanía" },
+    { value: "CE", label: "Cédula de Extranjería" },
+    { value: "PA", label: "Pasaporte" },
+    { value: "PEP", label: "Permiso Especial de Permanencia" },
+    { value: "NIT", label: "NIT (Número de Identificación Tributaria)" },
+];
+
+const ITEMS_PER_PAGE = 5;
+
+// --- Main Component ---
 const Proveedores = () => {
-    // --- Estados ---
+    // --- State ---
     const [data, setData] = useState([]);
-    const [form, setForm] = useState({
-        idProvider: "",
-        documentType: "",
-        document: "",
-        cellPhone: "",
-        company: "",
-        status: true,
-    });
+    const [form, setForm] = useState(INITIAL_FORM_STATE);
     const [isEditing, setIsEditing] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
     const [tableSearchText, setTableSearchText] = useState("");
     const [isLoading, setIsLoading] = useState(true);
-    const [formErrors, setFormErrors] = useState({
-        documentType: false,
-        document: false,
-        cellPhone: false,
-        company: false,
-    });
-
-    // --- Paginación ---
+    const [formErrors, setFormErrors] = useState(INITIAL_FORM_ERRORS);
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 5;
-
-    // --- Confirmation Modal ---
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
-    const [confirmModalProps, setConfirmModalProps] = useState({
-        title: "",
-        message: null,
-        // DO NOT store onConfirm here, use useRef instead
-        confirmText: "Confirmar",
-        confirmColor: "primary",
-        itemDetails: null,
-    });
+    const [confirmModalProps, setConfirmModalProps] = useState(INITIAL_CONFIRM_PROPS);
     const [isConfirmActionLoading, setIsConfirmActionLoading] = useState(false);
-    // useRef is the correct place to store the function to be executed
-    const confirmActionRef = useRef(null); // Initialize ref to null or a no-op function
 
-    // *** DEBUGGING LOG: Watch confirmModalProps state changes ***
-    useEffect(() => {
-        console.log("[DEBUG] confirmModalProps changed:", JSON.stringify(confirmModalProps));
-    }, [confirmModalProps]);
+    // --- Refs ---
+    const confirmActionRef = useRef(null); // Almacena la función a ejecutar en confirmación
 
-
-    const tiposDocumentos = [
-        { value: "CC", label: "Cédula de Ciudadanía" },
-        { value: "CE", label: "Cédula de Extranjería" },
-        { value: "PA", label: "Pasaporte" },
-        { value: "PEP", label: "Permiso Especial de Permanencia" },
-        { value: "NIT", label: "NIT (Número de Identificación Tributaria)" },
-    ];
-
-    // --- Fetch Data ---
-    const fetchData = useCallback(async (showLoading = true) => {
-        if (showLoading) setIsLoading(true);
+    // --- Data Fetching ---
+    const fetchData = useCallback(async (showLoadingSpinner = true) => {
+        if (showLoadingSpinner) setIsLoading(true);
         console.log("[FETCH] Fetching providers...");
         try {
             const proveedores = await proveedorService.getAllProveedores();
@@ -109,7 +107,7 @@ const Proveedores = () => {
             toast.error("Error al cargar proveedores. Verifique la conexión.");
             setData([]);
         } finally {
-             if (showLoading) setIsLoading(false);
+             if (showLoadingSpinner) setIsLoading(false);
              console.log("[FETCH] Fetching finished.");
         }
     }, []);
@@ -118,113 +116,115 @@ const Proveedores = () => {
         fetchData();
     }, [fetchData]);
 
-    // --- Modal Toggles ---
-    const toggleMainModal = () => {
-        setModalOpen(!modalOpen);
-        if (modalOpen) {
-            resetForm();
-            clearFormErrors();
-            setIsEditing(false);
-        }
-    };
+    // --- Form Helper Functions ---
+    const resetForm = useCallback(() => {
+        setForm(INITIAL_FORM_STATE);
+    }, []);
 
-    // --- Toggle Confirmation Modal (Safer Reset Logic) ---
-    const toggleConfirmModal = () => {
-        if (isConfirmActionLoading) return; // Prevent toggling while an action is processing
+    const clearFormErrors = useCallback(() => {
+        setFormErrors(INITIAL_FORM_ERRORS);
+    }, []);
 
-        setConfirmModalOpen(prev => {
-            const closing = prev; // If current state is true, we are closing
-            if (closing) {
-                // Reset state *only* when transitioning from open to closed
-                console.log("[DEBUG] Closing confirmation modal, resetting props and ref.");
-                setConfirmModalProps({
-                    title: "",
-                    message: null,
-                    confirmText: "Confirmar",
-                    confirmColor: "primary",
-                    itemDetails: null
-                });
-                confirmActionRef.current = null; // Reset the ref
-            }
-            return !prev; // Return the new state (toggle)
-        });
-    };
+    const validateForm = useCallback(() => {
+        // 1. Asegurar que los valores a validar/trimmar sean strings ANTES de usarlos
+        const phoneString = String(form.cellPhone ?? ''); // Convierte a string (o '' si es null/undefined)
+        const documentString = String(form.document ?? ''); // Convierte a string
+        const companyString = String(form.company ?? '');   // Convierte a string
 
-    // --- Form Handling ---
-    // (openAddModal, openEditModal, handleTableSearch, handleChange, resetForm, clearFormErrors, validateForm - unchanged)
-    const openAddModal = () => {
-        resetForm();
-        clearFormErrors();
-        setIsEditing(false);
-        setModalOpen(true);
-    };
+        // 2. Usar las versiones string garantizadas para el trim y la validación
+        const trimmedPhone = phoneString.trim();
+        const trimmedDocument = documentString.trim();
+        const trimmedCompany = companyString.trim();
 
-    const openEditModal = (proveedor) => {
-        setForm({
-            idProvider: proveedor.idProvider || "",
-            documentType: proveedor.documentType || "",
-            document: proveedor.document || "",
-            cellPhone: proveedor.cellPhone || "",
-            company: proveedor.company || "",
-            status: proveedor.status !== undefined ? proveedor.status : true,
-        });
-        setIsEditing(true);
-        clearFormErrors();
-        setModalOpen(true);
-    };
+        // 3. Realizar las validaciones usando los valores string trimmados
+        const errors = {
+            documentType: !form.documentType, // Este no necesita trim típicamente (es un select)
+            document: !trimmedDocument || !/^[0-9]+(-[0-9]+)*$/.test(trimmedDocument.replace(/-/g, '')),
+            cellPhone: !trimmedPhone || !/^\d{7,15}$/.test(trimmedPhone),
+            company: !trimmedCompany,
+        };
 
-    const handleTableSearch = (e) => {
-        setTableSearchText(e.target.value.toLowerCase());
-        setCurrentPage(1); // Reset to first page on search
-    };
+        setFormErrors(errors);
+        return !Object.values(errors).some(Boolean); // Retorna true si no hay errores
 
-    const handleChange = (e) => {
+    }, [form]); // La dependencia sigue siendo 'form' porque leemos de él
+
+    // --- Event Handlers ---
+    const handleChange = useCallback((e) => {
         const { name, value } = e.target;
         setForm((prevForm) => ({ ...prevForm, [name]: value }));
         if (formErrors[name]) {
             setFormErrors(prev => ({ ...prev, [name]: false }));
         }
-    };
+    }, [formErrors]);
 
-    const resetForm = () => {
-        setForm({ idProvider: "", documentType: "", document: "", cellPhone: "", company: "", status: true });
-    };
+    const handleTableSearch = useCallback((e) => {
+        setTableSearchText(e.target.value.toLowerCase());
+        setCurrentPage(1);
+    }, []);
 
-    const clearFormErrors = () => {
-        setFormErrors({ documentType: false, document: false, cellPhone: false, company: false });
-    };
+    // --- Modal Toggles ---
+    const toggleMainModal = useCallback(() => {
+        const closing = modalOpen;
+        setModalOpen(prev => !prev);
+        if (closing) {
+            resetForm();
+            clearFormErrors();
+            setIsEditing(false);
+        }
+    }, [modalOpen, resetForm, clearFormErrors]);
 
-    const validateForm = () => {
-        const trimmedForm = {
-            ...form,
-            document: form.document?.trim() ?? "",
-            cellPhone: form.cellPhone?.trim() ?? "",
-            company: form.company?.trim() ?? "",
+    const toggleConfirmModal = useCallback(() => {
+        if (isConfirmActionLoading) return;
+        setConfirmModalOpen(prev => !prev);
+    }, [isConfirmActionLoading]);
+
+    // --- Effect to Reset Confirmation Modal State When Closed ---
+     useEffect(() => {
+        if (!confirmModalOpen && !isConfirmActionLoading) {
+            console.log("[EFFECT] Resetting confirmation modal props and ref.");
+            setConfirmModalProps(INITIAL_CONFIRM_PROPS);
+            confirmActionRef.current = null;
+        }
+    }, [confirmModalOpen, isConfirmActionLoading]);
+
+
+    // --- Confirmation Preparation (CORREGIDO) ---
+    // Guarda la función de acción (ej. executeDelete) y los detalles necesarios
+    // Crea una nueva función en el ref que llama a la acción PASÁNDOLE los detalles
+    const prepareConfirmation = useCallback((actionFn, props) => {
+        console.log(`[PREPARE CONFIRM] Setting up confirmation for: ${props.title}`, props.itemDetails);
+        const detailsToPass = props.itemDetails; // Captura los detalles AHORA
+
+        // Almacena una NUEVA función en el ref que llama a actionFn CON los detalles capturados
+        confirmActionRef.current = () => {
+            if (actionFn) {
+                actionFn(detailsToPass); // <--- ¡AQUÍ! Pasa los detalles a la función de ejecución
+            } else {
+                 console.error("[CONFIRM ACTION] actionFn is null or undefined in ref execution.");
+                 // Opcional: mostrar error al usuario si actionFn es null
+                 toast.error("Error interno al intentar ejecutar la acción confirmada.");
+                 toggleConfirmModal(); // Cierra el modal si hay un error grave aquí
+            }
         };
 
-        const errors = {
-            documentType: !trimmedForm.documentType,
-            document: !trimmedForm.document || !/^[0-9-]+$/.test(trimmedForm.document),
-            cellPhone: !trimmedForm.cellPhone || !/^\d{7,15}$/.test(trimmedForm.cellPhone),
-            company: !trimmedForm.company,
-        };
-        setFormErrors(errors);
-        return !Object.values(errors).some(Boolean);
-    };
+        setConfirmModalProps(props); // Necesario para mostrar el contenido del modal
+        setConfirmModalOpen(true);   // Abre el modal
+    }, [toggleConfirmModal]); // Agregamos toggleConfirmModal por si se usa en el error del ref
 
-    // --- CRUD Operations with Confirmation ---
+    // --- CRUD Operations ---
 
-    // ADD PROVIDER (unchanged)
-    const handleSubmit = async () => {
+    // ADD PROVIDER (Submit Handler - sin cambios)
+    const handleSubmit = useCallback(async () => {
         console.log("[ADD] Attempting submit:", form);
         if (!validateForm()) {
             toast.error("Por favor, complete los campos requeridos correctamente.", { duration: 4000 });
             return;
         }
 
-        const documentToCompare = String(form.document || '').toLowerCase();
+        const documentToCompare = String(form.document || '').trim().toLowerCase();
         const proveedorExistente = data.some(
-            (registro) => registro.document != null && String(registro.document).toLowerCase() === documentToCompare
+            (registro) => registro.document != null && String(registro.document).trim().toLowerCase() === documentToCompare
         );
 
         if (proveedorExistente) {
@@ -239,6 +239,7 @@ const Proveedores = () => {
             const providerToSend = { ...newProviderData, status: true };
             console.log("[ADD] Calling service with:", providerToSend);
             await proveedorService.createProveedor(providerToSend);
+
             toast.success("Proveedor agregado exitosamente!", { id: toastId });
             toggleMainModal();
             await fetchData(false);
@@ -249,32 +250,22 @@ const Proveedores = () => {
             const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
             toast.error(`Error al agregar: ${errorMsg}`, { id: toastId, duration: 5000 });
         }
-    };
+    }, [form, data, validateForm, toggleMainModal, fetchData]);
 
-    // --- Prepare Confirmation (Helper Function) ---
-    // Encapsulates setting state and ref before opening the modal
-    const prepareConfirmation = (actionFn, props) => {
-        console.log(`[PREPARE CONFIRM] Setting up confirmation for: ${props.title}`, props.itemDetails);
-        confirmActionRef.current = actionFn; // Set the function to run
-        setConfirmModalProps(props); // Set the modal display properties + data
-        setConfirmModalOpen(true); // Open the modal
-    };
-
-
-    // EDIT PROVIDER (Request Confirmation) - Uses helper
-    const requestEditConfirmation = () => {
+    // EDIT PROVIDER (Request Confirmation - sin cambios)
+    const requestEditConfirmation = useCallback(() => {
         console.log("[EDIT REQ] Requesting confirmation for:", form);
         if (!validateForm()) {
            toast.error("Por favor, complete los campos requeridos correctamente.", { duration: 4000 });
            return;
         }
-        // ... (validation checks for existing document - unchanged) ...
-        const currentDocument = String(form.document || '').toLowerCase();
+
+        const currentDocument = String(form.document || '').trim().toLowerCase();
         const currentId = form.idProvider;
         const proveedorExistente = data.some(
            (registro) =>
                registro.document != null &&
-               String(registro.document).toLowerCase() === currentDocument &&
+               String(registro.document).trim().toLowerCase() === currentDocument &&
                registro.idProvider !== currentId
         );
         if (proveedorExistente) {
@@ -282,63 +273,63 @@ const Proveedores = () => {
            setFormErrors(prev => ({ ...prev, document: true }));
            return;
         }
+
         if (!currentId) {
             console.error("[EDIT REQ ERROR] idProvider missing.");
             toast.error("Error interno: No se puede identificar el proveedor.");
             return;
         }
 
-        // Use the helper to set up the confirmation
+        // Preparar confirmación pasando la función de ejecución y los detalles del formulario actual
         prepareConfirmation(executeEdit, {
             title: "Confirmar Actualización",
             message: <p>¿Está seguro que desea guardar los cambios para <strong>{form.company || 'este proveedor'}</strong>?</p>,
             confirmText: "Confirmar Cambios",
             confirmColor: "primary",
-            itemDetails: { ...form } // Pass current form data
+            itemDetails: { ...form } // Pasa los datos actuales del formulario
         });
-    };
+    }, [form, data, validateForm, prepareConfirmation]);
 
-    // EDIT PROVIDER (Execute) - Reads from state
-    const executeEdit = async () => {
-        // Get data directly from state at the time of execution
-        const providerToUpdate = confirmModalProps.itemDetails;
-        console.log("[EDIT EXEC] Attempting execution. Props state:", confirmModalProps); // Log state when starting
+    // EDIT PROVIDER (Execute Action - CORREGIDO)
+    // Acepta 'providerToUpdate' como argumento
+    const executeEdit = useCallback(async (providerToUpdate) => {
+        console.log("[EDIT EXEC] Attempting execution with received data:", providerToUpdate);
 
-        // Guard clause: Ensure we have the data needed
+        // Valida el argumento recibido, no el estado
         if (!providerToUpdate || !providerToUpdate.idProvider) {
-             console.error("[EDIT EXEC ERROR] Missing provider data in state.", confirmModalProps);
+             console.error("[EDIT EXEC ERROR] Missing provider data in received argument.", providerToUpdate);
              toast.error("Error interno: Datos para actualizar no encontrados.");
-             // Don't reset loading state here, finally block will do it
-             toggleConfirmModal(); // Close confirmation modal
+             toggleConfirmModal(); // Cierra el modal de confirmación
              return;
         }
 
         console.log("[EDIT EXEC] Executing edit for:", providerToUpdate);
         setIsConfirmActionLoading(true);
         const toastId = toast.loading('Actualizando proveedor...');
+
         try {
             const { idProvider, ...updateData } = providerToUpdate;
             console.log("[EDIT EXEC] Calling service with ID:", idProvider, "Data:", updateData);
             await proveedorService.updateProveedor(idProvider, updateData);
 
             toast.success("Proveedor actualizado exitosamente!", { id: toastId });
-            toggleConfirmModal(); // Close confirmation modal AFTER success
-            toggleMainModal(); // Close main form modal
-            await fetchData(false);
+            toggleConfirmModal(); // Cierra modal de confirmación
+            toggleMainModal();    // Cierra modal de formulario
+            await fetchData(false); // Refresca datos
 
         } catch (error) {
             console.error("[EDIT EXEC ERROR]", error);
             const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
             toast.error(`Error al actualizar: ${errorMsg}`, { id: toastId, duration: 5000 });
-            // Optionally keep confirmation modal open on error? Currently closing.
-            toggleConfirmModal();
+            toggleConfirmModal(); // Cierra modal de confirmación en error
         } finally {
-             setIsConfirmActionLoading(false); // Stop loading state for confirm button
+             setIsConfirmActionLoading(false);
         }
-    };
+    // Dependencias actualizadas: ya no necesita confirmModalProps
+    }, [toggleConfirmModal, toggleMainModal, fetchData]);
 
-    // CHANGE STATUS (Request Confirmation) - Uses helper
-    const requestChangeStatusConfirmation = (idProvider, currentStatus, companyName) => {
+    // CHANGE STATUS (Request Confirmation - sin cambios)
+    const requestChangeStatusConfirmation = useCallback((idProvider, currentStatus, companyName) => {
         if (!idProvider) {
             console.error("[STATUS REQ ERROR] Invalid idProvider:", idProvider);
             return;
@@ -355,22 +346,24 @@ const Proveedores = () => {
             ),
             confirmText: `Confirmar ${actionText.charAt(0).toUpperCase() + actionText.slice(1)}`,
             confirmColor: confirmColor,
-            itemDetails: { idProvider, currentStatus, companyName } // Pass necessary details
+            itemDetails: { idProvider, currentStatus, companyName } // Pasa los detalles necesarios
         });
-    };
+    }, [prepareConfirmation]);
 
-    // CHANGE STATUS (Execute) - Reads from state
-    const executeChangeStatus = async () => {
-        const details = confirmModalProps.itemDetails;
-        console.log("[STATUS EXEC] Attempting execution. Props state:", confirmModalProps); // Log state
+    // CHANGE STATUS (Execute Action - CORREGIDO)
+    // Acepta 'details' como argumento
+    const executeChangeStatus = useCallback(async (details) => {
+        console.log("[STATUS EXEC] Attempting execution with received details:", details);
 
+        // Valida el argumento 'details', no el estado confirmModalProps
         if (!details || !details.idProvider) {
-            console.error("[STATUS EXEC ERROR] Missing itemDetails or idProvider in state.", confirmModalProps);
+            console.error("[STATUS EXEC ERROR] Missing details or idProvider in received argument.", details); // Mensaje de error actualizado
             toast.error("Error interno: No se pudieron obtener los detalles para cambiar el estado.", { duration: 5000 });
             toggleConfirmModal();
             return;
         }
 
+        // Usa directamente los detalles recibidos
         const { idProvider, currentStatus, companyName } = details;
         const newStatus = !currentStatus;
         const actionText = currentStatus ? "desactivar" : "activar";
@@ -384,28 +377,27 @@ const Proveedores = () => {
             await proveedorService.changeStateProveedor(idProvider, newStatus);
 
             toast.success(`Proveedor ${companyName || ''} ${actionText === 'activar' ? 'activado' : 'desactivado'} correctamente.`, { id: toastId });
-            toggleConfirmModal(); // Close AFTER success
+            toggleConfirmModal();
             await fetchData(false);
 
         } catch (error) {
             console.error("[STATUS EXEC ERROR]", error);
             const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
             toast.error(`Error al ${actionText}: ${errorMsg}`, { id: toastId, duration: 5000 });
-            toggleConfirmModal(); // Close on error
+            toggleConfirmModal();
         } finally {
             setIsConfirmActionLoading(false);
             console.log("[STATUS EXEC] Execution finished.");
         }
-    };
+    // Dependencias actualizadas: ya no necesita confirmModalProps
+    }, [toggleConfirmModal, fetchData]);
 
-
-    // DELETE PROVIDER (Request Confirmation) - Uses helper
-    const requestDeleteConfirmation = async (proveedor) => {
+    // DELETE PROVIDER (Request Confirmation - sin cambios)
+    const requestDeleteConfirmation = useCallback(async (proveedor) => {
         if (!proveedor || !proveedor.idProvider) {
             console.error("[DELETE REQ ERROR] Invalid provider data received:", proveedor);
             return;
         }
-        // *** DEBUGGING LOG: Log the provider object received ***
         console.log("[DELETE REQ] Requesting confirmation for provider:", JSON.stringify(proveedor));
 
         const checkToastId = toast.loading('Verificando asociaciones...');
@@ -423,10 +415,6 @@ const Proveedores = () => {
              }
 
              console.log("[DELETE REQ] No associations found. Proceeding with confirmation setup.");
-             // *** DEBUGGING LOG: Log before setting state ***
-             console.log("[DELETE REQ] Provider data before setting state:", JSON.stringify(proveedor));
-
-             // Use the helper function to set state and ref
              prepareConfirmation(executeDelete, {
                  title: "Confirmar Eliminación",
                  message: (
@@ -437,34 +425,27 @@ const Proveedores = () => {
                  ),
                  confirmText: "Eliminar Definitivamente",
                  confirmColor: "danger",
-                 itemDetails: { ...proveedor } // Pass a copy of provider details
+                 itemDetails: { ...proveedor } // Pasa una copia de los detalles del proveedor
              });
 
         } catch (error) {
             toast.dismiss(checkToastId);
             console.error("[DELETE REQ ERROR] Failed during association check:", error);
-            if (error.message === "Association check failed") {
-                 toast.error("Error al verificar asociaciones del proveedor.", { icon: <XCircle className="text-danger"/>, duration: 5000 });
-            } else {
-                const errorMsg = error.response?.data?.message || error.message || "Error al verificar asociación";
-                toast.error(`Error: ${errorMsg}`, { icon: <XCircle className="text-danger" />, duration: 5000 });
-            }
+             const errorMsg = error.response?.data?.message || error.message || "Error al verificar asociación";
+            toast.error(`Error: ${errorMsg}`, { icon: <XCircle className="text-danger" />, duration: 5000 });
         }
-    };
+    }, [prepareConfirmation]);
 
+    // DELETE PROVIDER (Execute Action - CORREGIDO)
+    // Acepta 'providerToDelete' como argumento
+    const executeDelete = useCallback(async (providerToDelete) => {
+        console.log("[DELETE EXEC] Attempting execution with received data:", JSON.stringify(providerToDelete));
 
-    // DELETE PROVIDER (Execute) - Reads from state
-    const executeDelete = async () => {
-        // *** DEBUGGING LOG: Log state at the beginning of execution ***
-        console.log("[DELETE EXEC] Attempting execution. Props state:", JSON.stringify(confirmModalProps));
-        const providerToDelete = confirmModalProps.itemDetails; // Get data from state
-
+        // Valida el argumento recibido, no el estado
         if (!providerToDelete || !providerToDelete.idProvider) {
-             // Log the state again on error for clarity
-             console.error("[DELETE EXEC ERROR] Missing provider data in state.", confirmModalProps);
+             console.error("[DELETE EXEC ERROR] Missing provider data in received argument.", providerToDelete);
              toast.error("Error interno: Datos para eliminar no encontrados.");
-             // No need to set loading false, finally block handles it.
-             toggleConfirmModal(); // Close the modal
+             toggleConfirmModal();
              return;
         }
         console.log("[DELETE EXEC] Executing delete for provider:", JSON.stringify(providerToDelete));
@@ -479,22 +460,8 @@ const Proveedores = () => {
             toast.success(`Proveedor "${providerToDelete.company}" eliminado correctamente.`, {
                 id: toastId, icon: <CheckCircle className="text-success" />
             });
-            toggleConfirmModal(); // Close modal AFTER success
-
-            // Adjust pagination
-            const newTotalItems = filteredData.length - 1;
-            const newTotalPages = Math.ceil(Math.max(0, newTotalItems) / itemsPerPage);
-            let nextPage = currentPage;
-            if (currentItems.length === 1 && currentPage > 1) {
-                nextPage = currentPage - 1;
-            } else if (currentPage > newTotalPages && newTotalPages > 0) {
-                 nextPage = newTotalPages;
-            }
-             if (nextPage !== currentPage) {
-                 setCurrentPage(nextPage);
-                 console.log(`[DELETE EXEC] Adjusted page from ${currentPage} to ${nextPage}`);
-             }
-            await fetchData(false); // Refetch data
+            toggleConfirmModal();
+            await fetchData(false); // Refrescar datos antes de ajustar paginación implícitamente
 
         } catch (error) {
             console.error("[DELETE EXEC ERROR] API call failed:", error);
@@ -502,51 +469,90 @@ const Proveedores = () => {
             toast.error(`Error al eliminar: ${errorMsg}`, {
                 id: toastId, icon: <XCircle className="text-danger" />, duration: 5000
             });
-            toggleConfirmModal(); // Close modal on error
+            toggleConfirmModal();
         } finally {
-            setIsConfirmActionLoading(false); // Ensure loading is always stopped
-            console.log("[DELETE EXEC] Execution finished.");
+            setIsConfirmActionLoading(false);
         }
-    };
+    // Dependencias actualizadas: ya no necesita confirmModalProps
+    }, [toggleConfirmModal, fetchData]);
 
-    // --- Filtering and Pagination Logic --- (unchanged)
-    const filteredData = data.filter(
-        (item) =>
-            (item?.company?.toLowerCase() ?? '').includes(tableSearchText) ||
-            (String(item?.document ?? '').toLowerCase()).includes(tableSearchText)
-    );
-    const totalItems = filteredData.length;
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
-    const validCurrentPage = Math.max(1, currentPage);
-    const startIndex = (validCurrentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const currentItems = filteredData.slice(startIndex, endIndex);
+    // --- Modal Opening Handlers (sin cambios) ---
+    const openAddModal = useCallback(() => {
+        resetForm();
+        clearFormErrors();
+        setIsEditing(false);
+        setModalOpen(true);
+    }, [resetForm, clearFormErrors]);
+
+    const openEditModal = useCallback((proveedor) => {
+        setForm({
+            // Es buena práctica convertir el ID a string también si se maneja como tal en algún punto
+            idProvider: String(proveedor.idProvider || ""),
+            documentType: proveedor.documentType || "",
+            // Convierte a String al cargar en el formulario
+            document: String(proveedor.document ?? ""), // Usar ?? para manejar null/undefined explícitamente
+            cellPhone: String(proveedor.cellPhone ?? ""), // Usar ?? para manejar null/undefined explícitamente
+            company: proveedor.company || "",
+            status: proveedor.status !== undefined ? proveedor.status : true,
+        });
+        setIsEditing(true);
+        clearFormErrors(); // Limpia errores anteriores
+        setModalOpen(true);
+    }, [clearFormErrors]); // La dependencia es correcta
+
+
+    // --- Filtering and Pagination Logic (sin cambios) ---
+    const filteredData = useMemo(() => {
+        if (!tableSearchText) return data;
+        return data.filter(
+            (item) =>
+                (item?.company?.toLowerCase() ?? '').includes(tableSearchText) ||
+                (String(item?.document ?? '').toLowerCase()).includes(tableSearchText)
+        );
+    }, [data, tableSearchText]);
+
+    const totalItems = useMemo(() => filteredData.length, [filteredData]);
+    const totalPages = useMemo(() => Math.ceil(totalItems / ITEMS_PER_PAGE), [totalItems]);
+    const validCurrentPage = useMemo(() => Math.max(1, Math.min(currentPage, totalPages || 1)), [currentPage, totalPages]);
+
+    const currentItems = useMemo(() => {
+        const startIndex = (validCurrentPage - 1) * ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
+        return filteredData.slice(startIndex, endIndex);
+    }, [filteredData, validCurrentPage]);
+
+    useEffect(() => {
+        if (currentPage > totalPages && totalPages > 0) {
+            setCurrentPage(totalPages);
+        }
+    }, [totalPages, currentPage]);
 
     const handlePageChange = useCallback((pageNumber) => {
         const newPage = Math.max(1, Math.min(pageNumber, totalPages || 1));
         setCurrentPage(newPage);
     }, [totalPages]);
 
-    // --- Render ---
+    // --- Render (sin cambios en la estructura general, solo en la llamada a onConfirm del modal) ---
     return (
         <Container fluid className="p-4 main-content">
-             {/* Toaster config unchanged */}
              <Toaster
                 position="top-center"
-                toastOptions={{
-                    className: 'react-hot-toast',
-                    style: { maxWidth: '500px', padding: '12px 16px', textAlign: 'center', zIndex: 9999 },
-                    success: { duration: 3000 },
-                    error: { duration: 5000 }
-                }}
+                toastOptions={{ /* ... */ }}
              />
 
-            {/* Header and Search/Add Row unchanged */}
+            {/* Header and Actions */}
             <h2 className="mb-4">Gestión de Proveedores</h2>
             <Row className="mb-3 align-items-center">
                  <Col md={6} lg={4}>
-                    <Input type="text" bsSize="sm" placeholder="Buscar por empresa o documento..."
-                           value={tableSearchText} onChange={handleTableSearch} style={{ borderRadius: '0.25rem' }} />
+                    <Input
+                        type="text"
+                        bsSize="sm"
+                        placeholder="Buscar por empresa o documento..."
+                        value={tableSearchText}
+                        onChange={handleTableSearch}
+                        style={{ borderRadius: '0.25rem' }}
+                        aria-label="Buscar proveedores"
+                    />
                 </Col>
                 <Col md={6} lg={8} className="text-md-end mt-2 mt-md-0">
                     <Button color="success" size="sm" onClick={openAddModal} className="button-add-provider">
@@ -555,13 +561,18 @@ const Proveedores = () => {
                 </Col>
             </Row>
 
-            {/* Table Structure unchanged */}
+            {/* Data Table */}
             <div className="table-responsive shadow-sm custom-table-container mb-3">
-                 <Table hover size="sm" className="mb-0 custom-table">
+                 <Table hover size="sm" className="mb-0 custom-table" aria-live="polite">
                      <thead>
                         <tr>
-                            <th>ID</th><th>Tipo Doc.</th><th>Documento</th><th>Teléfono</th>
-                            <th>Empresa</th><th className="text-center">Estado</th><th className="text-center">Acciones</th>
+                            <th scope="col">ID</th>
+                            <th scope="col">Tipo Doc.</th>
+                            <th scope="col">Documento</th>
+                            <th scope="col">Teléfono</th>
+                            <th scope="col">Empresa</th>
+                            <th scope="col" className="text-center">Estado</th>
+                            <th scope="col" className="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -570,7 +581,7 @@ const Proveedores = () => {
                          ) : currentItems.length > 0 ? (
                             currentItems.map((item) => (
                                 <tr key={item.idProvider} style={{ verticalAlign: 'middle' }}>
-                                    <td>{item.idProvider}</td>
+                                    <th scope="row">{item.idProvider}</th>
                                     <td>{item.documentType || '-'}</td>
                                     <td>{item.document || '-'}</td>
                                     <td>{item.cellPhone || '-'}</td>
@@ -580,91 +591,103 @@ const Proveedores = () => {
                                             size="sm"
                                             className={`status-button ${item.status ? 'status-active' : 'status-inactive'}`}
                                             onClick={() => requestChangeStatusConfirmation(item.idProvider, item.status, item.company)}
-                                            disabled={!item.idProvider}
-                                            title={item.status ? "Desactivar" : "Activar"}
+                                            disabled={!item.idProvider || isConfirmActionLoading}
+                                            title={item.status ? "Clic para Desactivar" : "Clic para Activar"}
+                                            aria-label={`Cambiar estado de ${item.company}. Estado actual: ${item.status ? 'Activo' : 'Inactivo'}`}
                                         >
                                             {item.status ? "Activo" : "Inactivo"}
                                         </Button>
                                     </td>
                                     <td className="text-center">
-                                        <div className="d-inline-flex gap-1 action-cell-content">
-                                            <Button disabled={!item.idProvider} size="sm" onClick={() => openEditModal(item)} title="Editar" className="action-button action-edit"><Edit size={20} /></Button>
-                                            <Button disabled={!item.idProvider} size="sm" onClick={() => requestDeleteConfirmation(item)} title="Eliminar" className="action-button action-delete"><Trash2 size={20} /></Button>
+                                        <div className="d-inline-flex gap-1 action-cell-content" role="group" aria-label={`Acciones para ${item.company}`}>
+                                            <Button
+                                                disabled={!item.idProvider || isConfirmActionLoading}
+                                                size="sm"
+                                                onClick={() => openEditModal(item)}
+                                                title="Editar"
+                                                className="action-button action-edit"
+                                                aria-label={`Editar ${item.company}`}
+                                            >
+                                                <Edit size={20} />
+                                            </Button>
+                                            <Button
+                                                disabled={!item.idProvider || isConfirmActionLoading}
+                                                size="sm"
+                                                onClick={() => requestDeleteConfirmation(item)}
+                                                title="Eliminar"
+                                                className="action-button action-delete"
+                                                aria-label={`Eliminar ${item.company}`}
+                                             >
+                                                 <Trash2 size={20} />
+                                             </Button>
                                         </div>
                                     </td>
                                 </tr>
                             ))
                          ) : (
                             <tr><td colSpan="7" className="text-center fst-italic p-4">
-                                {tableSearchText
-                                    ? 'No se encontraron proveedores que coincidan.'
-                                    : (data.length === 0 ? 'Aún no hay proveedores registrados.' : 'No hay resultados para mostrar.')
-                                }
-                                {!tableSearchText && data.length === 0 && !isLoading && (
-                                    <span className="d-block mt-2">
-                                        <Button size="sm" color="link" onClick={openAddModal}>Agregar el primero</Button>
-                                    </span>
-                                 )}
+                                {/* ... mensaje de tabla vacía ... */}
                             </td></tr>
                         )}
                     </tbody>
                 </Table>
             </div>
 
-             {/* Paginator unchanged */}
+             {/* Paginator */}
              { totalPages > 1 && !isLoading && (
                 <CustomPagination
-                    currentPage={currentPage}
+                    currentPage={validCurrentPage}
                     totalPages={totalPages}
                     onPageChange={handlePageChange}
                 />
              )}
 
-            {/* Add/Edit Modal unchanged */}
-             <Modal isOpen={modalOpen} toggle={toggleMainModal} centered size="lg" backdrop="static" keyboard={false}>
-                <ModalHeader toggle={toggleMainModal}>
+            {/* Add/Edit Modal */}
+             <Modal isOpen={modalOpen} toggle={toggleMainModal} centered size="lg" backdrop="static" keyboard={false} aria-labelledby="providerModalTitle">
+                <ModalHeader toggle={toggleMainModal} id="providerModalTitle">
                      {isEditing ? 'Editar Proveedor' : 'Agregar Nuevo Proveedor'}
                 </ModalHeader>
                 <ModalBody>
-                     <Form id="providerForm" noValidate>
+                     <Form id="providerForm" noValidate onSubmit={(e) => e.preventDefault()}>
                          <Row>
                             <Col md={7} lg={8}>
                                 <Row className="g-3">
+                                     {/* Campos del formulario ... */}
                                      <Col md={12}>
                                         <FormGroup>
                                             <Label for="modalCompany" className="form-label fw-bold">Nombre Empresa <span className="text-danger">*</span></Label>
-                                            <Input id="modalCompany" type="text" name="company" value={form.company} onChange={handleChange} invalid={formErrors.company} required />
-                                            {formErrors.company && <div className="invalid-feedback d-block">El nombre de la empresa es obligatorio.</div>}
+                                            <Input id="modalCompany" type="text" name="company" value={form.company} onChange={handleChange} invalid={formErrors.company} required aria-required="true" aria-describedby="companyError"/>
+                                            {formErrors.company && <div id="companyError" className="invalid-feedback d-block">El nombre de la empresa es obligatorio.</div>}
                                         </FormGroup>
                                     </Col>
                                     <Col md={6}>
                                         <FormGroup>
                                             <Label for="modalDocumentType" className="form-label fw-bold">Tipo Documento <span className="text-danger">*</span></Label>
-                                            <Input id="modalDocumentType" type="select" name="documentType" value={form.documentType} onChange={handleChange} invalid={formErrors.documentType} required>
-                                                <option value="">Seleccione...</option>
-                                                {tiposDocumentos.map((tipo) => (<option key={tipo.value} value={tipo.value}>{tipo.label}</option>))}
+                                            <Input id="modalDocumentType" type="select" name="documentType" value={form.documentType} onChange={handleChange} invalid={formErrors.documentType} required aria-required="true" aria-describedby="docTypeError">
+                                                <option value="" disabled>Seleccione...</option>
+                                                {TIPOS_DOCUMENTOS.map((tipo) => (<option key={tipo.value} value={tipo.value}>{tipo.label}</option>))}
                                             </Input>
-                                            {formErrors.documentType && <div className="invalid-feedback d-block">Seleccione un tipo de documento.</div>}
+                                            {formErrors.documentType && <div id="docTypeError" className="invalid-feedback d-block">Seleccione un tipo de documento.</div>}
                                         </FormGroup>
                                     </Col>
                                     <Col md={6}>
                                         <FormGroup>
                                             <Label for="modalDocument" className="form-label fw-bold">Documento <span className="text-danger">*</span></Label>
-                                            <Input id="modalDocument" type="text" inputMode="numeric" pattern="[0-9-]+" name="document" value={form.document} onChange={handleChange} invalid={formErrors.document} required />
-                                            {formErrors.document && <div className="invalid-feedback d-block">Ingrese un número de documento válido (números y/o guion).</div>}
+                                            <Input id="modalDocument" type="text" inputMode="numeric" pattern="[0-9-]+" name="document" value={form.document} onChange={handleChange} invalid={formErrors.document} required aria-required="true" aria-describedby="docNumError"/>
+                                            {formErrors.document && <div id="docNumError" className="invalid-feedback d-block">Ingrese un número de documento válido (solo números y/o guion medio).</div>}
                                         </FormGroup>
                                     </Col>
                                     <Col md={12}>
                                         <FormGroup>
                                             <Label for="modalCellPhone" className="form-label fw-bold">Teléfono / Celular <span className="text-danger">*</span></Label>
-                                            <Input id="modalCellPhone" type="text" inputMode="tel" pattern="[0-9]{7,15}" name="cellPhone" value={form.cellPhone} onChange={handleChange} invalid={formErrors.cellPhone} required/>
-                                            {formErrors.cellPhone && <div className="invalid-feedback d-block">Ingrese un número de teléfono válido (7-15 dígitos).</div>}
+                                            <Input id="modalCellPhone" type="tel" inputMode="tel" pattern="[0-9]{7,15}" name="cellPhone" value={form.cellPhone} onChange={handleChange} invalid={formErrors.cellPhone} required aria-required="true" aria-describedby="phoneError"/>
+                                            {formErrors.cellPhone && <div id="phoneError" className="invalid-feedback d-block">Ingrese un número de teléfono válido (7 a 15 dígitos numéricos).</div>}
                                         </FormGroup>
                                     </Col>
                                 </Row>
                             </Col>
                             <Col md={5} lg={4} className="d-none d-md-flex align-items-center justify-content-center mt-4 mt-md-0">
-                                <img src={FondoForm} alt="Ilustración Proveedores" style={{ width: "100%", maxHeight: "300px", objectFit: "cover", borderRadius: '0.375rem' }}/>
+                                <img src={FondoForm} alt="Ilustración decorativa para formulario de proveedores" style={{ width: "100%", maxHeight: "300px", objectFit: "cover", borderRadius: '0.375rem' }}/>
                             </Col>
                         </Row>
                     </Form>
@@ -677,13 +700,12 @@ const Proveedores = () => {
                 </ModalFooter>
             </Modal>
 
-            {/* Confirmation Modal - Pass the ref's current value */}
-            {/* The ref holds the function, the state holds the display data */}
+            {/* Confirmation Modal */}
             <ConfirmationModal
                 isOpen={confirmModalOpen}
                 toggle={toggleConfirmModal}
                 title={confirmModalProps.title}
-                // Pass the *function* stored in the ref
+                // Ejecuta la función almacenada en el ref (que ahora tiene los datos correctos)
                 onConfirm={() => confirmActionRef.current && confirmActionRef.current()}
                 confirmText={confirmModalProps.confirmText}
                 confirmColor={confirmModalProps.confirmColor}

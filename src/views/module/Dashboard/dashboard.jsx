@@ -1,202 +1,186 @@
-import React, { Component } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line } from 'recharts';
+import React, { useState, useEffect, useMemo } from 'react';
+import styles from './Dashboard.module.css';
 
-// Datos de ejemplo
-const data = [
-  { name: 'Jan', uv: 4000, pv: 2400, amt: 2400, purchases: 2000 },
-  { name: 'Feb', uv: 3000, pv: 1398, amt: 2210, purchases: 1500 },
-  { name: 'Mar', uv: 2000, pv: 9800, amt: 2290, purchases: 1700 },
-  { name: 'Apr', uv: 2780, pv: 3908, amt: 2000, purchases: 1900 },
-  { name: 'May', uv: 1890, pv: 4800, amt: 2181, purchases: 2100 },
-  { name: 'Jun', uv: 2390, pv: 3800, amt: 2500, purchases: 2300 },
-  { name: 'Jul', uv: 3490, pv: 4300, amt: 2100, purchases: 2500 },
-];
+// --- Servicios ---
+import proveedorService from '../../services/proveedorSevice';
+import empleadoService from '../../services/empleadoService';
+import registerPurchaseService from '../../services/registroCompraService';
+import monthlyOverallExpenseService from '../../services/gastosGeneralesService';
+// --- Datos Simulados ---
+import {
+    sampleProducts,
+    sampleProcesses,
+    sampleProductionRecords,
+    getMonthYear,
+    getPreviousMonth
+} from '../../../data/sampleData';
 
-export default class Dashboard extends Component {
-  state = {
-    selectedCategory: 'Financiero',
-    selectedYear: '2024',
-    selectedMonth: 'January',
-  };
+// --- Componentes ---
+import StatCard from './StatCard';
+import FinancialView from './FinancialView';
+import SupplierView from './SupplierView';
+import EmployeeView from './EmployeeView';
 
-  handleCategoryChange = (e) => {
-    this.setState({ selectedCategory: e.target.value });
-  };
+// --- Importar Iconos de Lucide ---
+import { DollarSign, TrendingUp, Users, Truck, Clock, PackageCheck, AlertCircle } from 'lucide-react'; // Importa los iconos que usarás
 
-  handleYearChange = (e) => {
-    this.setState({ selectedYear: e.target.value });
-  };
+const CATEGORIES = {
+  FINANCIERO: 'Financiero',
+  PROVEEDOR: 'Proveedor',
+  EMPLEADO: 'Eficiencia del empleado',
+};
 
-  handleMonthChange = (e) => {
-    this.setState({ selectedMonth: e.target.value });
-  };
+const Dashboard = () => {
+  const [selectedCategory, setSelectedCategory] = useState(CATEGORIES.FINANCIERO);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  const [selectedMonth, setSelectedMonth] = useState(getMonthYear(new Date().toISOString()).month);
 
-  getPurchaseStats = () => {
-    const { selectedMonth } = this.state;
-    const filteredData = data.filter(item => item.name === selectedMonth);
+  // --- Estados ---
+  const [suppliers, setSuppliers] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [kpiData, setKpiData] = useState({
+    totalExpense: null,
+    expenseChangePercent: null,
+    activeSuppliers: null,
+    totalProduction: null,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingKpi, setIsLoadingKpi] = useState(true);
+  const [error, setError] = useState(null);
 
-    const maxPurchase = Math.max(...data.map(item => item.purchases));
-    const minPurchase = Math.min(...data.map(item => item.purchases));
-    const monthPurchase = filteredData.length ? filteredData[0].purchases : 0;
+  // --- Carga de datos ---
+  useEffect(() => {
+    const loadInitialData = async () => {
+      setIsLoading(true);
+      setIsLoadingKpi(true);
+      setError(null);
+      try {
+        const [suppliersData, employeesData] = await Promise.all([
+          proveedorService.getAllProveedores(),
+          empleadoService.getAllEmpleados()
+        ]);
 
-    return {
-      maxPurchase,
-      minPurchase,
-      monthPurchase,
+        const mappedSuppliers = suppliersData.map(s => ({ id: s.idProvider, name: s.nameProvider, status: s.status , ...s }));
+        setSuppliers(mappedSuppliers);
+        setEmployees(employeesData.map(e => ({ id: e.idEmployee, name: e.nameEmployee, status: e.status, ...e })));
+
+        // --- CALCULAR KPIs (¡LÓGICA REAL NECESARIA!) ---
+        const activeSuppliersCount = mappedSuppliers.filter(s => s.status === true || s.status === 1).length;
+        const activeEmployeesCount = employeesData.filter(e => e.status === true || e.status === 1).length; // Asume que empleados también tienen status
+
+        // Placeholders - Reemplazar con llamadas API o cálculos
+        const fetchedKpiData = {
+            totalExpense: 53250,
+            expenseChangePercent: -2.5,
+            activeSuppliers: activeSuppliersCount,
+            totalProduction: 1250,
+            activeEmployees: activeEmployeesCount // Añadido
+        };
+        setKpiData(fetchedKpiData);
+        // --- Fin Cálculo KPIs ---
+
+        setIsLoading(false);
+        setIsLoadingKpi(false);
+
+      } catch (err) {
+        console.error("Error loading initial dashboard data:", err);
+        setError(err.message || "Error al cargar datos iniciales.");
+        setIsLoading(false);
+        setIsLoadingKpi(false);
+      }
     };
-  };
+    loadInitialData();
+  }, []);
 
-  getContent = () => {
-    const { selectedCategory } = this.state;
-    const { maxPurchase, minPurchase, monthPurchase } = this.getPurchaseStats();
+   // --- Años y Meses ---
+   const availableYears = useMemo(() => { /* ... */ }, []);
+   const availableMonths = useMemo(() => { /* ... */ }, []);
+   const handleCategoryChange = (category) => setSelectedCategory(category);
+   const handleYearChange = (e) => setSelectedYear(e.target.value);
+   const handleMonthChange = (e) => setSelectedMonth(e.target.value);
 
-    switch (selectedCategory) {
-      case 'Proveedor':
-        return (
+   // --- Renderizado Condicional Error ---
+   if (error && isLoading) { // Error durante la carga inicial crítica
+     return (
+        <div className={styles.dashboardContainer}>
+            <div className={styles.errorMessage}>
+                <AlertCircle size={30} style={{ marginRight: '10px' }}/> Error al cargar datos iniciales: {error}
+            </div>
+        </div>
+     );
+   }
+
+  // --- Renderizado Contenido Detallado ---
+  const renderContent = () => { /* ... (igual que antes) ... */ };
+  const formatCurrency = (value) => value ? `$${value.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '$0';
+  const formatNumber = (value) => value ? value.toLocaleString('es-ES') : '0';
+  const formatPercentage = (value) => value ? `${value >= 0 ? '+' : ''}${value.toFixed(1)}%` : '0%';
+
+
+  return (
+    <div className={styles.dashboardContainer}>
+      <header className={styles.header}>
+         <h1 className={styles.title}>Dashboard</h1>
+         <div className={styles.filters}>{/* ... (selectores) ... */}</div>
+         <div className={styles.categoryButtons}>{/* ... (botones) ... */}</div>
+      </header>
+
+      {/* --- FILA DE STAT CARDS --- */}
+      <div className={styles.statCardRow}>
+        {isLoadingKpi ? (
+          // Placeholders de carga
+          Array.from({ length: 4 }).map((_, index) => ( // Crea 4 placeholders
+            <div key={index} className={styles.statCardTop} style={{ justifyContent: 'center' }}>
+                <span className={styles.loadingMessage} style={{padding: '20px 0'}}>Cargando...</span>
+            </div>
+          ))
+        ) : error && !isLoading ? ( // Muestra error de KPI si la carga general terminó
+             <div className={styles.errorMessage} style={{gridColumn: '1 / -1'}}>
+                <AlertCircle size={20} style={{ marginRight: '8px' }}/> Error al cargar KPIs: {error}
+             </div>
+        ) : (
+          // Renderiza las StatCards con iconos Lucide
           <>
-            <div style={boxStyle}>
-              <h3>Mayor compra al año</h3>
-              <p>${maxPurchase}</p>
-            </div>
-            <div style={boxStyle}>
-              <h3>Menor compra en el mes</h3>
-              <p>${minPurchase}</p>
-            </div>
-            <div style={boxStyle}>
-              <h3>Compra en el mes seleccionado</h3>
-              <p>${monthPurchase}</p>
-            </div>
+            <StatCard
+              title="Gasto Total Mes"
+              value={formatCurrency(kpiData.totalExpense)}
+              change={kpiData.expenseChangePercent ? `${formatPercentage(kpiData.expenseChangePercent)} vs mes ant.` : null}
+              changeType={kpiData.expenseChangePercent === null ? 'neutral' : (kpiData.expenseChangePercent > 0 ? 'negative' : 'positive')}
+              icon={DollarSign} // Usa el icono importado de Lucide
+            />
+             <StatCard
+              title="Producción Total"
+              value={`${formatNumber(kpiData.totalProduction)} uds`}
+              // change="+5% vs mes ant."
+              // changeType="positive"
+              icon={PackageCheck} // Icono Lucide
+            />
+             <StatCard
+              title="Proveedores Activos"
+              value={formatNumber(kpiData.activeSuppliers)}
+              icon={Truck} // Icono Lucide
+            />
+            <StatCard
+              title="Empleados Activos"
+              value={formatNumber(kpiData.activeEmployees)}
+              icon={Users} // Icono Lucide
+            />
           </>
-        );
-      case 'Eficiencia del empleado':
-        // Puedes agregar contenido específico para esta categoría aquí
-        return <div style={boxStyle}><h3>Datos de eficiencia del empleado</h3></div>;
-      case 'Ventas totales del periodo':
-        // Puedes agregar contenido específico para esta categoría aquí
-        return <div style={boxStyle}><h3>Datos de ventas totales</h3></div>;
-      case 'Financiero':
-      default:
-        // Puedes agregar contenido específico para esta categoría aquí
-        return <div style={boxStyle}><h3>Datos financieros</h3></div>;
-    }
-  };
-
-  render() {
-    const { selectedCategory, selectedYear, selectedMonth } = this.state;
-
-    return (
-      <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
-        <div style={{ flex: 6, marginRight: '10px' }}>
-          {/* Botones grandes */}
-          <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-around'}}>
-            {['Financiero', 'Eficiencia del empleado', 'Proveedor', 'Ventas totales del periodo'].map(category => (
-                <button
-                key={category}
-                style={{
-                    padding: '15px 30px',
-                    fontSize: '16px',
-                    backgroundColor: selectedCategory === category ? '#8C1616' : '#f0f0f0',
-                    color: selectedCategory === category ? '#fff' : '#000',
-                    border: '2px solid black',
-                    borderRadius: '5px',
-                    cursor: 'pointer',
-                    margin: '0 30px', // Ajusta el margen aquí
-                }}
-                value={category}
-                onClick={this.handleCategoryChange}
-                >
-                {category}
-                </button>
-            ))}
-            </div>
-
-
-          {/* Selectores */}
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <select
-                value={selectedYear}
-                onChange={this.handleYearChange}
-                style={selectStyle}
-              >
-                <option value="2024">2024</option>
-                <option value="2023">2023</option>
-                <option value="2022">2022</option>
-                {/* Añade más opciones según necesites */}
-              </select>
-
-              <select
-                value={selectedMonth}
-                onChange={this.handleMonthChange}
-                style={selectStyle}
-              >
-                <option value="January">January</option>
-                <option value="February">February</option>
-                <option value="March">March</option>
-                {/* Añade más opciones según necesites */}
-              </select>
-
-              <select
-                style={selectStyle}
-              >
-                <option value={selectedCategory}>{selectedCategory}</option>
-                {/* Podrías agregar más opciones dependiendo del campo seleccionado */}
-              </select>
-            </div>
-          </div>
-
-          {/* Gráficas */}
-          <div style={{ margin: '20px 0' }}>
-            <h2>Bar Chart</h2>
-            <BarChart width={600} height={300} data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="uv" fill="#8884d8" />
-              <Bar dataKey="pv" fill="#82ca9d" />
-            </BarChart>
-          </div>
-
-          <div style={{ margin: '20px 0' }}>
-            <h2>Line Chart</h2>
-            <LineChart width={600} height={300} data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="uv" stroke="#8884d8" />
-              <Line type="monotone" dataKey="pv" stroke="#82ca9d" />
-            </LineChart>
-          </div>
-        </div>
-
-        {/* Contenedores pequeños */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          {this.getContent()}
-        </div>
+        )}
       </div>
-    );
-  }
-}
 
-// Estilos adicionales para los selectores y contenedores
-const selectStyle = {
-  padding: '10px',
-  fontSize: '14px',
-  border: '1px solid #ccc',
-  borderRadius: '5px',
-  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-  width: '150px',
+
+      {/* Área Principal */}
+      <main className={styles.contentArea}>
+        {isLoading && !error ? ( // Muestra carga general si aún no ha terminado
+             <div className={styles.loadingMessage}>Cargando datos...</div>
+        ) : (
+            renderContent() // Renderiza la vista correspondiente
+        )}
+      </main>
+
+    </div>
+  );
 };
 
-const boxStyle = {
-  padding: '10px',
-  backgroundColor: '#f0f0f0',
-  borderRadius: '5px',
-  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-  textAlign: 'center',
-  marginBottom: '10px'
-};
+export default Dashboard;

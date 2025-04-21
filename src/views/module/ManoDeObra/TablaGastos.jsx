@@ -1,343 +1,603 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Table, Button, Container, FormGroup, Input, Modal, ModalHeader, ModalBody, Label } from 'reactstrap';
-import { FaEye } from 'react-icons/fa';
-import { PlusCircleOutlined, SelectOutlined, EditOutlined, TeamOutlined } from '@ant-design/icons';
-import FondoIcono from '../../../assets/logoFIP.png';
+import '../../../App.css'; // Asegúrate que la ruta es correcta
+import {
+    Table, Button, Container, Row, Col, Form, FormGroup, Input, Label, FormFeedback, // Added FormFeedback
+    Modal, ModalHeader, ModalBody, ModalFooter, Spinner, Alert // Added Alert, FormFeedback
+} from 'reactstrap';
+// Updated Icons
+import { Edit, Trash2, Plus, AlertTriangle, CheckCircle, XCircle, Save, Users, ListChecks, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import ConceptSpentService from "../../services/conceptoGasto";
 import toast, { Toaster } from 'react-hot-toast';
 
-const initialFormState = {
+// --- Service Import ---
+import ConceptSpentService from "../../services/conceptoGasto"; // Verifica la ruta
+
+// --- Reusable Components ---
+import CustomPagination from '../../General/CustomPagination'; // Verifica la ruta
+// import FondoIcono from '../../../assets/logoFIP.png'; // Lo comentamos para seguir el estilo de Proveedores
+
+// --- Confirmation Modal Component (Import or define as in Proveedores) ---
+const ConfirmationModal = ({ isOpen, toggle, title, children, onConfirm, confirmText = "Confirmar", confirmColor = "primary", isConfirming = false }) => (
+     <Modal isOpen={isOpen} toggle={!isConfirming ? toggle : undefined} centered backdrop="static" keyboard={!isConfirming}>
+        <ModalHeader toggle={!isConfirming ? toggle : undefined}>
+             <div className="d-flex align-items-center">
+                <AlertTriangle size={24} className={`text-${confirmColor === 'danger' ? 'danger' : (confirmColor === 'warning' ? 'warning' : 'primary')} me-2`} />
+                <span className="fw-bold">{title}</span>
+            </div>
+        </ModalHeader>
+        <ModalBody>{children}</ModalBody>
+        <ModalFooter>
+            <Button color="secondary" outline onClick={toggle} disabled={isConfirming}>Cancelar</Button>
+            <Button color={confirmColor} onClick={onConfirm} disabled={isConfirming}>
+                {isConfirming ? (<><Spinner size="sm" className="me-1"/> Procesando...</>) : confirmText}
+            </Button>
+        </ModalFooter>
+    </Modal>
+);
+
+
+// --- Constants ---
+const INITIAL_FORM_STATE = {
+    idExpenseType: null, // Added ID for editing
     name: '',
     description: '',
     isBimonthly: false,
     status: true
 };
 
+const INITIAL_FORM_ERRORS = {
+    name: null,
+    description: null
+};
+
+const INITIAL_CONFIRM_PROPS = {
+    title: "", message: null, confirmText: "Confirmar", confirmColor: "primary", itemDetails: null
+};
+
+const ITEMS_PER_PAGE = 7; // O ajusta según prefieras
+
+// --- Main Component: TablaGastos (Styled like Proveedores) ---
 const TablaGastos = () => {
+    // --- State ---
     const [data, setData] = useState([]);
-    const [form, setForm] = useState(initialFormState);
-    const navigate = useNavigate();
+    const [form, setForm] = useState(INITIAL_FORM_STATE);
     const [isEditing, setIsEditing] = useState(false);
-    const [showForm, setShowForm] = useState(false);
-    const [tableSearchText, setTableSearchText] = useState('');
-    const [currentPage, setCurrentPage] = useState(1);
     const [modalOpen, setModalOpen] = useState(false);
-    const [selectedItem, setSelectedItem] = useState(null);
-    const itemsPerPage = 7;
+    const [tableSearchText, setTableSearchText] = useState('');
+    const [isLoadingTable, setIsLoadingTable] = useState(true); // Loading state for table
+    const [formErrors, setFormErrors] = useState(INITIAL_FORM_ERRORS);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+    const [confirmModalProps, setConfirmModalProps] = useState(INITIAL_CONFIRM_PROPS);
+    const [isSubmitting, setIsSubmitting] = useState(false); // Loading state for form submit/modal actions
+    const [isConfirmActionLoading, setIsConfirmActionLoading] = useState(false); // Loading for confirmation actions
 
-    const [formErrors, setFormErrors] = useState({
-        name: '',
-        description: ''
-    });
+    // --- Refs ---
+    const confirmActionRef = useRef(null); // Stores the function to execute on confirmation
 
-    const [apiError, setApiError] = useState(null);
+    // --- Hooks ---
+    const navigate = useNavigate();
+
+    // --- Data Fetching ---
+    const fetchData = useCallback(async (showLoadingSpinner = true) => {
+        if (showLoadingSpinner) setIsLoadingTable(true);
+        try {
+            const concepts = await ConceptSpentService.getAllConceptSpents();
+            setData(Array.isArray(concepts) ? concepts : []);
+        } catch (error) {
+            console.error("Error fetching concept data:", error);
+            toast.error("Error al cargar los conceptos de gasto.");
+            setData([]);
+        } finally {
+             if (showLoadingSpinner) setIsLoadingTable(false);
+        }
+    }, []);
 
     useEffect(() => {
         fetchData();
+    }, [fetchData]);
+
+    // --- Form Helper Functions ---
+    const resetForm = useCallback(() => {
+        setForm(INITIAL_FORM_STATE);
     }, []);
 
-    const fetchData = async () => {
-        try {
-            const concepts = await ConceptSpentService.getAllConceptSpents();
-            setData(concepts);
-        } catch (error) {
-            console.error("Error fetching data:", error);
-            toast.error("Error al cargar los datos");
+    const clearFormErrors = useCallback(() => {
+        setFormErrors(INITIAL_FORM_ERRORS);
+    }, []);
+
+    const validateForm = useCallback(() => {
+        const errors = { name: null, description: null };
+        let isValid = true;
+
+        if (!form.name || !form.name.trim()) {
+            errors.name = 'El nombre es obligatorio.';
+            isValid = false;
         }
-    };
-
-    const handleClick = () => {
-        navigate('/mano_de_obra');
-    };
-
-    const handleRendimientoEmp = () => {
-        navigate('/rendimiento-empleado');
-    };
-
-    const handleOpenModal = (item = null) => {
-        if (item) {
-            setIsEditing(true);
-            setForm({ ...item });
-        } else {
-            setIsEditing(false);
-            setForm(initialFormState);
+        if (!form.description || !form.description.trim()) {
+            errors.description = 'La descripción es obligatoria.';
+            isValid = false;
         }
-        setFormErrors({ name: '', description: '' });
-        setApiError(null);
-        setModalOpen(true);
-    };
 
-    const handleCloseModal = () => {
-        setModalOpen(false);
-        setForm(initialFormState); // Reset the form
-    };
+        setFormErrors(errors);
+        return isValid;
+    }, [form]);
 
-    const handleChange = (e) => {
+    // --- Event Handlers ---
+    const handleChange = useCallback((e) => {
         const { name, value, type, checked } = e.target;
         const inputValue = type === 'checkbox' ? checked : value;
-        setForm(prevForm => ({
-            ...prevForm,
-            [name]: inputValue
-        }));
-        setFormErrors(prevErrors => ({ ...prevErrors, [name]: '' }));
-        setApiError(null);
-    };
-
-    const validateForm = () => {
-        let isValid = true;
-        const newErrors = {};
-
-        if (!form.name.trim()) {
-            newErrors.name = 'El nombre es obligatorio';
-            isValid = false;
+        setForm(prevForm => ({ ...prevForm, [name]: inputValue }));
+        if (formErrors[name]) {
+            setFormErrors(prevErrors => ({ ...prevErrors, [name]: null }));
         }
+    }, [formErrors]);
 
-        if (!form.description.trim()) {
-            newErrors.description = 'La descripción es obligatoria';
-            isValid = false;
+    const handleTableSearch = useCallback((e) => {
+        setTableSearchText(e.target.value);
+        setCurrentPage(1);
+    }, []);
+
+    // --- Modal Toggles ---
+    const toggleMainModal = useCallback(() => {
+        const closing = modalOpen;
+        setModalOpen(prev => !prev);
+        if (closing) {
+            resetForm();
+            clearFormErrors();
+            setIsEditing(false);
         }
+    }, [modalOpen, resetForm, clearFormErrors]);
 
-        setFormErrors(newErrors);
-        return isValid;
-    };
+    const toggleConfirmModal = useCallback(() => {
+        if (isConfirmActionLoading) return;
+        setConfirmModalOpen(prev => !prev);
+    }, [isConfirmActionLoading]);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+     // Effect to Reset Confirmation Modal State When Closed
+    useEffect(() => {
+        if (!confirmModalOpen && !isConfirmActionLoading) {
+            setConfirmModalProps(INITIAL_CONFIRM_PROPS);
+            confirmActionRef.current = null;
+        }
+    }, [confirmModalOpen, isConfirmActionLoading]);
 
+    // --- Confirmation Preparation Logic (similar to Proveedores) ---
+    const prepareConfirmation = useCallback((actionFn, props) => {
+        const detailsToPass = props.itemDetails;
+        confirmActionRef.current = () => {
+             if (actionFn) {
+                 actionFn(detailsToPass); // Pass details to the execution function
+             } else {
+                 console.error("[CONFIRM ACTION] actionFn is null.");
+                 toast.error("Error interno al intentar ejecutar la acción.");
+                 toggleConfirmModal();
+             }
+        };
+        setConfirmModalProps(props);
+        setConfirmModalOpen(true);
+    }, [toggleConfirmModal]);
+
+
+    // --- CRUD Operations & Actions ---
+
+    // ADD / EDIT Concept (Submit Handler)
+    const handleSubmit = useCallback(async () => { // Removed event argument, triggered by button click
         if (!validateForm()) {
-            toast.error("Por favor, ingrese todos los campos correctamente");
+            toast.error("Por favor, complete los campos requeridos.", { icon: <XCircle className="text-danger" /> });
             return;
         }
 
+        // Optional: Check for duplicate name before submitting (only if needed)
+        // const conceptNameLower = form.name.trim().toLowerCase();
+        // const isDuplicate = data.some(item =>
+        //     item.name.trim().toLowerCase() === conceptNameLower && item.idExpenseType !== form.idExpenseType
+        // );
+        // if (isDuplicate) {
+        //     setFormErrors(prev => ({ ...prev, name: 'Este nombre de concepto ya existe.' }));
+        //     toast.error("Este nombre de concepto ya existe.");
+        //     return;
+        // }
+
+        setIsSubmitting(true);
+        const actionText = isEditing ? "Actualizando" : "Creando";
+        const toastId = toast.loading(`${actionText} concepto...`);
+
         try {
+            const payload = { ...form };
             if (isEditing) {
-                await ConceptSpentService.updateConceptSpent(form.idExpenseType, form);
-                toast.success("Concepto de gasto actualizado exitosamente");
+                // Ensure ID is present
+                if (!payload.idExpenseType) throw new Error("ID del concepto no encontrado para actualizar.");
+                // Assuming updateConceptSpent takes (id, data)
+                await ConceptSpentService.updateConceptSpent(payload.idExpenseType, payload);
+                toast.success("Concepto actualizado exitosamente!", { id: toastId, icon: <CheckCircle className="text-success" /> });
             } else {
-                await ConceptSpentService.createConceptSpent(form);
-                toast.success("Concepto de gasto creado exitosamente");
+                // Remove potentially null idExpenseType for creation
+                delete payload.idExpenseType;
+                // Assuming createConceptSpent takes (data)
+                await ConceptSpentService.createConceptSpent(payload);
+                toast.success("Concepto creado exitosamente!", { id: toastId, icon: <CheckCircle className="text-success" /> });
             }
 
-            handleCloseModal();
-            fetchData();
-        } catch (error) {
-            console.error("Error creating/updating concept:", error);
-            setApiError(error.response?.data?.message || "Error al guardar el concepto de gasto");
-            toast.error(error.response?.data?.message || "Error al guardar el concepto de gasto");
-        }
-    };
+            toggleMainModal(); // Close modal on success
+            await fetchData(false); // Refresh data without main loader
 
-    const cambiarEstado = async (idExpenseType) => {
-        const conceptToUpdate = data.find(item => item.idExpenseType === idExpenseType);
-        if (!conceptToUpdate) {
-            toast.error("Concepto de gasto no encontrado.");
+        } catch (error) {
+            console.error(`Error ${actionText.toLowerCase()} concepto:`, error);
+            const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
+            toast.error(`Error al ${actionText.toLowerCase()}: ${errorMsg}`, { id: toastId, icon: <XCircle className="text-danger" />, duration: 5000 });
+            // Keep modal open on error
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, [form, isEditing, validateForm, toggleMainModal, fetchData, data]); // Added 'data' dependency for duplicate check if uncommented
+
+    // CHANGE STATUS (Request Confirmation)
+    const requestChangeStatusConfirmation = useCallback((concept) => {
+        if (!concept || concept.idExpenseType == null) {
+            console.error("[STATUS REQ ERROR] Invalid concept data:", concept);
+            return;
+        }
+        const { idExpenseType, status: currentStatus, name } = concept;
+        const actionText = currentStatus ? "desactivar" : "activar";
+        const futureStatusText = currentStatus ? "Inactivo" : "Activo";
+        const confirmColor = currentStatus ? "warning" : "success";
+
+        prepareConfirmation(executeChangeStatus, {
+            title: "Confirmar Cambio de Estado",
+            message: (
+                <p>¿Está seguro que desea <strong>{actionText}</strong> el concepto <strong>{name || 'seleccionado'}</strong>? <br /> Su nuevo estado será: <strong>{futureStatusText}</strong>.</p>
+            ),
+            confirmText: `Confirmar ${actionText.charAt(0).toUpperCase() + actionText.slice(1)}`,
+            confirmColor: confirmColor,
+            itemDetails: { idExpenseType, currentStatus, name } // Pass necessary details
+        });
+    }, [prepareConfirmation]);
+
+    // CHANGE STATUS (Execute Action)
+    const executeChangeStatus = useCallback(async (details) => {
+        if (!details || details.idExpenseType == null) {
+            console.error("[STATUS EXEC ERROR] Missing details:", details);
+            toast.error("Error interno: No se pudieron obtener los detalles.");
+            toggleConfirmModal();
+            return;
+        }
+        const { idExpenseType, currentStatus, name } = details;
+        const newStatus = !currentStatus;
+        const actionText = currentStatus ? "desactivar" : "activar";
+
+        setIsConfirmActionLoading(true);
+        const toastId = toast.loading(`${actionText.charAt(0).toUpperCase() + actionText.slice(1)}ndo concepto...`);
+
+        try {
+             // Assuming service exists: changeStateConceptSpent(id, newStatus)
+             // OR use updateConceptSpent(id, { status: newStatus }) if that's the method
+            await ConceptSpentService.changeStateConceptSpent(idExpenseType, newStatus); // <-- ADJUST SERVICE CALL IF NEEDED
+            // await ConceptSpentService.updateConceptSpent(idExpenseType, { status: newStatus }); // Alternative
+
+            toast.success(`Concepto "${name || ''}" ${actionText === 'activar' ? 'activado' : 'desactivado'}.`, { id: toastId, icon: <CheckCircle /> });
+            toggleConfirmModal();
+            await fetchData(false); // Refresh data
+
+        } catch (error) {
+            console.error(`Error al ${actionText} concepto:`, error);
+            const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
+            toast.error(`Error: ${errorMsg}`, { id: toastId, icon: <XCircle className="text-danger" />, duration: 5000 });
+            toggleConfirmModal();
+        } finally {
+            setIsConfirmActionLoading(false);
+        }
+    }, [toggleConfirmModal, fetchData]); // Dependencies
+
+    // DELETE Concept (Request Confirmation) - ADD THIS FUNCTIONALITY
+    const requestDeleteConfirmation = useCallback((concept) => {
+        if (!concept || concept.idExpenseType == null) {
+            console.error("[DELETE REQ ERROR] Invalid concept data:", concept);
+            return;
+        }
+        // Optional: Add a check here if concept is associated with expenses, similar to proveedor check
+        // const isAssociated = await ConceptSpentService.isConceptAssociated(concept.idExpenseType);
+        // if (isAssociated) { /* Show error and return */ }
+
+        prepareConfirmation(executeDelete, {
+            title: "Confirmar Eliminación",
+            message: (
+                <>
+                    <p>¿Está seguro que desea eliminar permanentemente el concepto <strong>{concept.name || 'seleccionado'}</strong>?</p>
+                    <p><strong className="text-danger">Esta acción no se puede deshacer.</strong></p>
+                </>
+            ),
+            confirmText: "Eliminar Definitivamente",
+            confirmColor: "danger",
+            itemDetails: { ...concept } // Pass concept details
+        });
+    }, [prepareConfirmation]);
+
+    // DELETE Concept (Execute Action) - ADD THIS FUNCTIONALITY
+    const executeDelete = useCallback(async (conceptToDelete) => {
+        if (!conceptToDelete || conceptToDelete.idExpenseType == null) {
+            console.error("[DELETE EXEC ERROR] Missing concept data:", conceptToDelete);
+            toast.error("Error interno: Datos para eliminar no encontrados.");
+            toggleConfirmModal();
             return;
         }
 
+        setIsConfirmActionLoading(true);
+        const toastId = toast.loading('Eliminando concepto...');
+
         try {
-            await ConceptSpentService.updateConceptSpent(idExpenseType, { status: !conceptToUpdate.status });
+            // Assuming service exists: deleteConceptSpent(id)
+            await ConceptSpentService.deleteConceptSpent(conceptToDelete.idExpenseType); // <-- ADJUST SERVICE CALL IF NEEDED
 
-            setData(prevData =>
-                prevData.map(item =>
-                    item.idExpenseType === idExpenseType ? { ...item, status: !item.status } : item
-                )
-            );
+            toast.success(`Concepto "${conceptToDelete.name}" eliminado.`, { id: toastId, icon: <CheckCircle className="text-success" /> });
+            toggleConfirmModal();
+            await fetchData(false);
 
-            toast.success("Estado del tipo de gasto actualizado exitosamente");
         } catch (error) {
-            console.error("Error updating concept status:", error);
-            toast.error(error.response?.data?.message || "Error al cambiar el estado del gasto");
+            console.error("Error al eliminar concepto:", error);
+            const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
+            toast.error(`Error: ${errorMsg}`, { id: toastId, icon: <XCircle className="text-danger" />, duration: 5000 });
+            toggleConfirmModal();
+        } finally {
+            setIsConfirmActionLoading(false);
         }
-    };
+    }, [toggleConfirmModal, fetchData]); // Dependencies
 
-    const filteredData = data.filter(item =>
-        item.name.toLowerCase().includes(tableSearchText.toLowerCase())
-    );
+    // --- Modal Opening Handlers ---
+    const openAddModal = useCallback(() => {
+        resetForm();
+        clearFormErrors();
+        setIsEditing(false);
+        setModalOpen(true);
+    }, [resetForm, clearFormErrors]);
 
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
-    const pageNumbers = Array.from({ length: Math.ceil(filteredData.length / itemsPerPage) }, (_, i) => i + 1);
+    const openEditModal = useCallback((item) => {
+        setForm({
+            idExpenseType: item.idExpenseType ?? null,
+            name: item.name || '',
+            description: item.description || '',
+            isBimonthly: item.isBimonthly || false,
+            status: item.status !== undefined ? item.status : true,
+        });
+        setIsEditing(true);
+        clearFormErrors();
+        setModalOpen(true);
+    }, [clearFormErrors]);
 
+    // --- Navigation Handlers ---
+    const handleNavigateToManoDeObra = useCallback(() => navigate('/mano_de_obra'), [navigate]);
+    const handleNavigateToEmployees = useCallback(() => navigate('/rendimiento-empleado'), [navigate]);
+
+    // --- Filtering and Pagination Logic ---
+    const filteredData = useMemo(() => {
+         // 1. Ordenar por ID descendente (o por nombre, si prefieres)
+         const sortedData = [...data].sort((a, b) => (b.idExpenseType || 0) - (a.idExpenseType || 0));
+         // const sortedData = [...data].sort((a, b) => (a.name || '').localeCompare(b.name || '')); // Sort by name
+
+        // 2. Aplicar filtro
+        const lowerSearchText = tableSearchText.trim().toLowerCase();
+        if (!lowerSearchText) return sortedData;
+
+        return sortedData.filter(item =>
+            item && (
+                (item.name || '').toLowerCase().includes(lowerSearchText) ||
+                (item.description || '').toLowerCase().includes(lowerSearchText) ||
+                 String(item.idExpenseType || '').toLowerCase().includes(lowerSearchText) // Search by ID
+            )
+        );
+    }, [data, tableSearchText]);
+
+    const totalItems = useMemo(() => filteredData.length, [filteredData]);
+    const totalPages = useMemo(() => Math.ceil(totalItems / ITEMS_PER_PAGE) || 1, [totalItems]);
+    const validCurrentPage = useMemo(() => Math.max(1, Math.min(currentPage, totalPages || 1)), [currentPage, totalPages]);
+
+    const currentItems = useMemo(() => {
+        const startIndex = (validCurrentPage - 1) * ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
+        return filteredData.slice(startIndex, endIndex);
+    }, [filteredData, validCurrentPage]);
+
+    useEffect(() => {
+        if (currentPage > totalPages && totalPages > 0) {
+            setCurrentPage(totalPages);
+        }
+    }, [totalPages, currentPage]);
+
+    const handlePageChange = useCallback((pageNumber) => {
+        const newPage = Math.max(1, Math.min(pageNumber, totalPages || 1));
+        setCurrentPage(newPage);
+    }, [totalPages]);
+
+    // --- Render ---
     return (
-        <Container>
-            <Toaster />
-            <br />
-            {!showForm && (
-                <>
-                    <div className="d-flex align-items-center mb-3">
-                        <img
-                            src={FondoIcono}
-                            alt="Descripción de la Imagen"
-                            style={{
-                                width: '5%',
-                                height: '10vh',
-                                objectFit: 'cover',
-                                marginRight: '20px',
-                            }}
-                        />
-                        <div style={{ flex: 1 }}>
-                            <h2 style={{ margin: 0 }}>Administrar Lista</h2>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                            <Button
-                                style={{
-                                    background: 'transparent',
-                                    border: 'none',
-                                    padding: '0',
-                                }}
-                                onClick={handleRendimientoEmp}
-                            >
-                                <TeamOutlined style={{ fontSize: '34px', color: 'black' }} />
-                            </Button>
-                            <span style={{ fontSize: '14px', color: 'black', marginTop: '5px' }}>Empleados</span>
-                        </div>
-                    </div>
-                    <br />
-                    <h5>Gastos generales del restaurante</h5>
-                    <div className="d-flex justify-content-between align-items-center mb-3">
-                        <Input
-                            type="text" placeholder="Buscar gasto" value={tableSearchText} onChange={e => setTableSearchText(e.target.value)}
-                            style={{ width: '50%' }}
-                        />
-                        <div className="d-flex">
-                            <Button
-                                style={{ backgroundColor: '#228b22', color: 'black', marginRight: '10px' }}
-                                onClick={handleClick}
-                            >
-                                Tabla de gastos mensuales
-                                <SelectOutlined style={{ fontSize: '16px', color: 'black', paddingLeft: '5px' }} />
-                            </Button>
-                            <Button
-                                style={{ backgroundColor: '#228b22', color: 'black' }}
-                                onClick={() => handleOpenModal()}
-                            >
-                                Crear gasto
-                                <PlusCircleOutlined style={{ fontSize: '16px', color: 'black', paddingLeft: '5px' }} />
-                            </Button>
-                        </div>
-                    </div>
-                    <Table className="table table-sm table-hover">
-                        <thead>
-                            <tr>
-                                <th style={{ textAlign: 'center' }}>ID</th>
-                                <th style={{ textAlign: 'center' }}>Nombre del Gasto</th>
-                                <th style={{ textAlign: 'center' }}>Descripción</th>
-                                <th style={{ textAlign: 'center' }}>Bimestral</th>
-                                <th>Estado</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {currentItems.length > 0 ? currentItems.map(item => (
-                                <tr key={item.idExpenseType}>
-                                    <td style={{ textAlign: 'center' }}>{item.idExpenseType}</td>
-                                    <td style={{ textAlign: 'center' }}>{item.name}</td>
-                                    <td style={{ textAlign: 'center' }}>{item.description}</td>
-                                    <td style={{ textAlign: 'center' }}>{item.isBimonthly ? 'Sí' : 'No'}</td>
-                                    <td>
+        <Container fluid className="p-4 main-content"> {/* Use fluid container */}
+            <Toaster position="top-center" toastOptions={{ style: { maxWidth: 600 } }} />
+
+             {/* Header and Actions */}
+             <h2 className="mb-4">Administrar Conceptos de Gasto</h2>
+             <Row className="mb-3 align-items-center">
+                 <Col md={6} lg={4}>
+                    <Input
+                        bsSize="sm"
+                        type="text"
+                        placeholder="Buscar por nombre, descripción o ID..."
+                        value={tableSearchText}
+                        onChange={handleTableSearch}
+                        aria-label="Buscar conceptos de gasto"
+                    />
+                </Col>
+                 <Col md={6} lg={8} className="text-md-end mt-2 mt-md-0 d-flex justify-content-end align-items-center gap-2">
+                      {/* Navigation Buttons - Styled like Proveedores */}
+                     <Button color="info" outline size="sm" onClick={handleNavigateToEmployees} title="Ir a Empleados">
+                         <Users size={16} className="me-1" /> Empleados
+                     </Button>
+                      <Button color="secondary" outline size="sm" onClick={handleNavigateToManoDeObra} title="Ir a Gastos Mensuales">
+                          <ListChecks size={16} className="me-1"/> Gastos Mensuales {/* Icon changed */}
+                     </Button>
+                     {/* Add Button */}
+                     <Button color="success" size="sm" onClick={openAddModal} className="button-add">
+                        <Plus size={18} className="me-1" /> Agregar Concepto
+                    </Button>
+                </Col>
+            </Row>
+
+            {/* Data Table */}
+            <div className="table-responsive shadow-sm custom-table-container mb-3">
+                 <Table hover size="sm" className="mb-0 custom-table" aria-live="polite">
+                    <thead className="table-dark">
+                        <tr>
+                            <th scope="col" style={{ width: '10%' }}>ID</th>
+                            <th scope="col">Nombre Concepto</th>
+                            <th scope="col">Descripción</th>
+                            <th scope="col" style={{ width: '10%' }} className="text-center">Bimestral</th>
+                            <th scope="col" style={{ width: '10%' }} className="text-center">Estado</th>
+                            <th scope="col" style={{ width: '15%' }} className="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {isLoadingTable ? (
+                            <tr><td colSpan="6" className="text-center p-5"><Spinner color="primary" /> Cargando...</td></tr>
+                        ) : currentItems.length > 0 ? (
+                            currentItems.map((item) => (
+                                <tr key={item.idExpenseType} style={{ verticalAlign: 'middle' }}>
+                                    <th scope="row">{item.idExpenseType}</th>
+                                    <td>{item.name || '-'}</td>
+                                    <td>{item.description || '-'}</td>
+                                    <td className="text-center">{item.isBimonthly ? 'Sí' : 'No'}</td>
+                                    <td className="text-center">
+                                         {/* Status Button - Styled like Proveedores */}
                                         <Button
+                                            outline
                                             color={item.status ? "success" : "secondary"}
-                                            onClick={() => cambiarEstado(item.idExpenseType)}
-                                            className="btn-sm"
+                                            size="sm"
+                                            className="p-1" // Small padding
+                                            onClick={() => requestChangeStatusConfirmation(item)}
+                                            disabled={item.idExpenseType == null || isConfirmActionLoading}
+                                            title={item.status ? "Activo (Clic para inactivar)" : "Inactivo (Clic para activar)"}
                                         >
                                             {item.status ? "Activo" : "Inactivo"}
                                         </Button>
                                     </td>
-                                    <td>
-                                        <div className="d-flex align-items-center">
+                                    <td className="text-center">
+                                        {/* Action Buttons - Styled like Proveedores */}
+                                        <div className="d-inline-flex gap-1 action-cell-content">
                                             <Button
-                                                color="dark"
-                                                onClick={() => handleOpenModal(item)}
-                                                className="me-2 "
-                                                style={{ padding: '0.25rem 0.5rem' }}
+                                                color="warning" // Yellow for edit
+                                                outline
+                                                size="sm"
+                                                onClick={() => openEditModal(item)}
+                                                title="Editar Concepto"
+                                                className="p-1"
+                                                disabled={item.idExpenseType == null || isConfirmActionLoading}
                                             >
-                                                <EditOutlined style={{ fontSize: '0.75rem' }} />
+                                                <Edit size={14} /> {/* Smaller icon */}
+                                            </Button>
+                                            <Button
+                                                color="danger" // Red for delete
+                                                outline
+                                                size="sm"
+                                                onClick={() => requestDeleteConfirmation(item)}
+                                                title="Eliminar Concepto"
+                                                className="p-1"
+                                                disabled={item.idExpenseType == null || isConfirmActionLoading}
+                                            >
+                                                <Trash2 size={14} /> {/* Smaller icon */}
                                             </Button>
                                         </div>
                                     </td>
                                 </tr>
-                            )) : (
-                                <tr>
-                                    <td colSpan="6" className="text-center">No hay registros disponibles</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </Table>
-                    <div className="d-flex justify-content-center">
-                        <nav>
-                            <ul className="pagination">
-                                {pageNumbers.map(number => (
-                                    <li key={number} className="page-item">
-                                        <Button
-                                            className="page-link"
-                                            onClick={() => setCurrentPage(number)}
-                                        >
-                                            {number}
-                                        </Button>
-                                    </li>
-                                ))}
-                            </ul>
-                        </nav>
-                    </div>
-                </>
-            )}
+                            ))
+                        ) : (
+                            <tr><td colSpan="6" className="text-center fst-italic p-4">
+                                {tableSearchText ? 'No se encontraron conceptos para la búsqueda.' : 'No hay conceptos de gasto registrados.'}
+                                {!isLoadingTable && data.length === 0 && !tableSearchText && (
+                                    <span className="d-block mt-2">Aún no hay conceptos. <Button size="sm" color="link" onClick={openAddModal} className="p-0 align-baseline">Agregar el primero</Button></span>
+                                )}
+                            </td></tr>
+                        )}
+                    </tbody>
+                </Table>
+            </div>
 
-            <Modal isOpen={modalOpen} toggle={handleCloseModal}>
-                <ModalHeader toggle={handleCloseModal}>{isEditing ? 'Editar Gasto' : 'Crear Gasto'}</ModalHeader>
+             {/* Paginator */}
+             {!isLoadingTable && totalPages > 1 && (
+                <CustomPagination
+                    currentPage={validCurrentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                />
+             )}
+
+            {/* Add/Edit Modal - Styled like Proveedores */}
+             <Modal isOpen={modalOpen} toggle={toggleMainModal} centered backdrop="static" keyboard={!isSubmitting}>
+                <ModalHeader toggle={!isSubmitting ? toggleMainModal : undefined}>
+                     {/* Use Settings icon or similar */}
+                     <Settings size={20} className="me-2" /> {isEditing ? 'Editar Concepto de Gasto' : 'Agregar Nuevo Concepto'}
+                </ModalHeader>
                 <ModalBody>
-                    {apiError && <div className="alert alert-danger">{apiError}</div>}
-                    <form onSubmit={handleSubmit}>
+                     {/* Display API errors within the modal if they occur during submit */}
+                     {/* {apiError && <Alert color="danger" size="sm">{apiError}</Alert>} */}
+                     <Form id="conceptForm" noValidate onSubmit={(e) => e.preventDefault()}> {/* Prevent default HTML submit */}
                         <FormGroup>
-                            <Label for="name">Nombre del Gasto</Label>
+                            <Label for="name" className="form-label fw-bold">Nombre Concepto <span className="text-danger">*</span></Label>
                             <Input
-                                type="text"
-                                name="name"
-                                id="name"
-                                placeholder="Nombre del Gasto"
-                                value={form.name}
-                                onChange={handleChange}
-                                invalid={!!formErrors.name}
+                                id="name" bsSize="sm" type="text" name="name"
+                                value={form.name} onChange={handleChange}
+                                invalid={!!formErrors.name} required disabled={isSubmitting}
                             />
-                            {formErrors.name && <div className="invalid-feedback">{formErrors.name}</div>}
+                            <FormFeedback>{formErrors.name}</FormFeedback>
                         </FormGroup>
                         <FormGroup>
-                            <Label for="description">Descripción</Label>
+                            <Label for="description" className="form-label fw-bold">Descripción <span className="text-danger">*</span></Label>
                             <Input
-                                type="textarea"
-                                name="description"
-                                id="description"
-                                placeholder="Descripción"
-                                value={form.description}
-                                onChange={handleChange}
-                                invalid={!!formErrors.description}
+                                id="description" bsSize="sm" type="textarea" name="description"
+                                value={form.description} onChange={handleChange} rows={3}
+                                invalid={!!formErrors.description} required disabled={isSubmitting}
                             />
-                            {formErrors.description && <div className="invalid-feedback">{formErrors.description}</div>}
+                            <FormFeedback>{formErrors.description}</FormFeedback>
                         </FormGroup>
-                        <FormGroup check>
-                            <Label htmlFor="isBimonthly" check>
-                                <Input
-                                    type="checkbox"
-                                    name="isBimonthly"
-                                    id = "isBimonthly"
-                                    checked={form.isBimonthly}
-                                    onChange={handleChange}
-                                />
-                                Es Bimestral
+                        <FormGroup check className="mb-3"> {/* Add margin bottom */}
+                             <Input
+                                type="checkbox"
+                                name="isBimonthly"
+                                id="isBimonthly" // Corrected id to match label's htmlFor
+                                checked={form.isBimonthly}
+                                onChange={handleChange}
+                                disabled={isSubmitting}
+                                className="form-check-input" // Standard class
+                            />
+                            <Label htmlFor="isBimonthly" check className="form-check-label"> {/* Standard class */}
+                                Es Gasto Bimestral
                             </Label>
                         </FormGroup>
-
-                        <Button type="submit" color="primary">
-                            {isEditing ? 'Actualizar' : 'Crear'}
-                        </Button>
-                        <Button color="secondary" onClick={handleCloseModal} style={{ marginLeft: '10px' }}>
-                            Cancelar
-                        </Button>
-                    </form>
+                    </Form>
                 </ModalBody>
+                <ModalFooter>
+                     <Button color="secondary" outline onClick={toggleMainModal} disabled={isSubmitting}>Cancelar</Button>
+                     <Button color="primary" onClick={handleSubmit} disabled={isSubmitting}>
+                         {isSubmitting ?
+                            <><Spinner size="sm" className="me-1"/> {isEditing ? 'Actualizando...' : 'Guardando...'}</>
+                            :
+                            <><Save size={16} className="me-1"/> {isEditing ? 'Guardar Cambios' : 'Agregar Concepto'}</>
+                         }
+                    </Button>
+                </ModalFooter>
             </Modal>
+
+            {/* Confirmation Modal */}
+            <ConfirmationModal
+                isOpen={confirmModalOpen}
+                toggle={toggleConfirmModal}
+                title={confirmModalProps.title}
+                onConfirm={() => confirmActionRef.current && confirmActionRef.current()}
+                confirmText={confirmModalProps.confirmText}
+                confirmColor={confirmModalProps.confirmColor}
+                isConfirming={isConfirmActionLoading}
+            >
+                {confirmModalProps.message}
+            </ConfirmationModal>
+
         </Container>
     );
 };
