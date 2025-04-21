@@ -26,14 +26,14 @@ export const authService = {
         }
     },
     setTokens: (accessToken) => {
-        localStorage.setItem("access-token", accessToken);
+        localStorage.setItem("token", accessToken);
         console.log("Token guardado en localStorage:", accessToken); // Verifica el token 
     },
     getAccessToken: () =>{
-        return localStorage.getItem("access-token");
+        return localStorage.getItem("token");
     },
     clearSession: () =>{
-        localStorage.removeItem("access-token");
+        localStorage.removeItem("token");
         window.location.href = "/";
     }
 }
