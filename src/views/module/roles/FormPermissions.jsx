@@ -1,68 +1,65 @@
 import { useState, useEffect } from "react";
-import PropTypes from "prop-types";
-import { Table, Button, FormGroup, Input, Container, Row, Col } from "reactstrap";
+import { 
+  Table, Button, FormGroup, Input, Container, Row, Col,
+  Modal, ModalHeader, ModalBody, ModalFooter
+} from "reactstrap";
 import toast from "react-hot-toast";
 import axios from "axios";
 
-export default function FormPermissions({ onAddRole, onUpdateRole, selectedRole, nameRol }) {
-  const [permissions, setPermissions] = useState([]);
-  const [privileges, setPrivileges] = useState([]);
+const DEFAULT_PERMISSIONS = [
+  { idPermission: 1, permissionName: "Dashboard", status: true },
+  { idPermission: 2, permissionName: "Roles", status: true },
+  { idPermission: 3, permissionName: "Usuarios", status: true },
+  { idPermission: 4, permissionName: "Proveedor", status: true },
+  { idPermission: 5, permissionName: "Insumo", status: true },
+  { idPermission: 6, permissionName: "Producto insumo", status: true },
+  { idPermission: 7, permissionName: "Orden de produccion", status: true },
+  { idPermission: 8, permissionName: "Registro compra", status: true },
+  { idPermission: 9, permissionName: "Reservas", status: true },
+  { idPermission: 10, permissionName: "Clientes", status: true },
+  { idPermission: 11, permissionName: "Servicios", status: true },
+  { idPermission: 12, permissionName: "Mano de obra", status: true }
+];
+
+const DEFAULT_PRIVILEGES = [
+  { idPrivilege: 1, privilegeName: "Crear privilegio" },
+  { idPrivilege: 2, privilegeName: "Eliminar privilegio" },
+  { idPrivilege: 3, privilegeName: "Editar privilegio" },
+  { idPrivilege: 4, privilegeName: "Inhabilitar privilegio" },
+  { idPrivilege: 5, privilegeName: "Cambiar estado" }
+];
+
+export default function FormPermissions({ 
+  isOpen, 
+  toggle, 
+  onAddRole, 
+  onUpdateRole, 
+  selectedRole, 
+  nameRol 
+}) {
+  const [permissions, setPermissions] = useState(DEFAULT_PERMISSIONS);
+  const [privileges, setPrivileges] = useState(DEFAULT_PRIVILEGES);
   const [role, setRole] = useState({ roleName: "" });
   const [rolePrivileges, setRolePrivileges] = useState([]);
-  const [newPermission, setNewPermission] = useState(""); // Estado para el nuevo permiso
-  const [newPrivilege, setNewPrivilege] = useState(""); // Estado para el nuevo privilegio
   const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    fetchData();
-  }, []);
 
   useEffect(() => {
     if (selectedRole) {
       setRole({ roleName: selectedRole.roleName });
-    }
-  }, [selectedRole]);
 
-  const fetchData = async () => {
-    try {
-      const [permRes, privRes] = await Promise.all([
-        axios.get("http://localhost:3000/permission"),
-        axios.get("http://localhost:3000/privilege"),
-      ]);
-      setPermissions(permRes.data);
-      setPrivileges(privRes.data);
-    } catch {
-      toast.error("Error al cargar permisos o privilegios");
+      if (selectedRole.privileges) {
+        const privilegesArray = selectedRole.privileges.map(
+          privilege => `${privilege.idPermission}-${privilege.idPrivilege}`
+        );
+        setRolePrivileges(privilegesArray);
+      } else {
+        setRolePrivileges([]);
+      }
+    } else {
+      setRole({ roleName: "" });
+      setRolePrivileges([]);
     }
-  };
-
-  const handleAddPermission = async () => {
-    if (!newPermission.trim()) return toast.error("El nombre del permiso no puede estar vacío");
-    try {
-      const { data } = await axios.post("http://localhost:3000/permission", {
-        permissionName: newPermission,
-        status: true, // Enviar el estado como booleano
-      });
-      setPermissions([...permissions, data]);
-      setNewPermission("");
-      toast.success("Permiso creado correctamente");
-    } catch (error) {
-      console.error("Error al crear el permiso:", error); // Muestra el error en la consola
-      toast.error("Error al crear el permiso");
-    }
-  };
-
-  const handleAddPrivilege = async () => {
-    if (!newPrivilege.trim()) return toast.error("El nombre del privilegio no puede estar vacío");
-    try {
-      const { data } = await axios.post("http://localhost:3000/privilege", { privilegeName: newPrivilege });
-      setPrivileges([...privileges, data]);
-      setNewPrivilege("");
-      toast.success("Privilegio creado correctamente");
-    } catch {
-      toast.error("Error al crear el privilegio");
-    }
-  };
+  }, [selectedRole, isOpen]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -76,10 +73,8 @@ export default function FormPermissions({ onAddRole, onUpdateRole, selectedRole,
     const payload = {
       roleName: role.roleName,
       privileges: privilegesFormatted,
-      status: true, // Agregar el campo status como booleano
+      status: true,
     };
-
-    console.log("Datos enviados al backend:", payload); // Verifica los datos enviados
 
     try {
       setIsLoading(true);
@@ -92,10 +87,9 @@ export default function FormPermissions({ onAddRole, onUpdateRole, selectedRole,
         toast.success("Rol creado correctamente");
         onAddRole();
       }
-      setRole({ roleName: "" });
-      setRolePrivileges([]);
+      toggle();
     } catch (error) {
-      console.error("Error al guardar el rol:", error.response?.data || error); // Muestra el error en la consola
+      console.error("Error al guardar el rol:", error.response?.data || error);
       toast.error("Error al guardar el rol");
     } finally {
       setIsLoading(false);
@@ -111,105 +105,104 @@ export default function FormPermissions({ onAddRole, onUpdateRole, selectedRole,
     );
   };
 
-  const handleReset = () => {
-    setRole({ roleName: "" });
-    setRolePrivileges([]);
+  const isRoleDisabled = selectedRole && nameRol && !nameRol.find((r) => r.idRole === selectedRole.idRole)?.status;
+
+  const handleSelectAllForPermission = (permissionId) => {
+    const allPrivilegeKeys = privileges.map(priv => `${permissionId}-${priv.idPrivilege}`);
+    const allSelected = allPrivilegeKeys.every(key => rolePrivileges.includes(key));
+    if (allSelected) {
+      setRolePrivileges(rolePrivileges.filter(key => !key.startsWith(`${permissionId}-`)));
+    } else {
+      const currentKeys = new Set(rolePrivileges);
+      allPrivilegeKeys.forEach(key => currentKeys.add(key));
+      setRolePrivileges(Array.from(currentKeys));
+    }
   };
 
-  const isRoleDisabled = selectedRole && !nameRol.find((r) => r.idRole === selectedRole.idRole)?.status;
-
   return (
-    <Container>
-      <form onSubmit={handleSubmit} onReset={handleReset}>
-        <Row>
-          <Col md={8}>
-            <FormGroup>
-              <label htmlFor="role">Rol:</label>
-              <Input
-                className="form-control"
-                name="roleName"
-                value={role.roleName}
-                onChange={handleChangeRole}
-                required
-                disabled={isRoleDisabled}
-              />
-            </FormGroup>
-          </Col>
-        </Row>
+    <Modal isOpen={isOpen} toggle={toggle} size="lg">
+      <ModalHeader toggle={toggle}>
+        {selectedRole ? "Editar permisos del rol" : "Asignar permisos al nuevo rol"}
+      </ModalHeader>
+      <ModalBody>
+        <Container>
+          <form id="permissionForm" onSubmit={handleSubmit}>
+            <Row>
+              <Col md={8}>
+                <FormGroup>
+                  <label htmlFor="role">Rol:</label>
+                  <Input
+                    className="form-control"
+                    name="roleName"
+                    value={role.roleName}
+                    onChange={handleChangeRole}
+                    required
+                    disabled={isRoleDisabled}
+                  />
+                </FormGroup>
+              </Col>
+            </Row>
 
-        <Row>
-          <Col md={12}>
-            <Table className="table table-hover">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  {privileges.map((priv) => (
-                    <th key={priv.idPrivilege}>{priv.privilegeName}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {permissions.map((perm) => (
-                  <tr key={perm.idPermission}>
-                    <td>{perm.permissionName}</td>
-                    {privileges.map((priv) => (
-                      <td key={`${perm.idPermission}-${priv.idPrivilege}`}>
-                        <Input
-                          className="form-check-input"
-                          type="checkbox"
-                          onChange={() => handleChangePrivilege(perm.idPermission, priv.idPrivilege)}
-                          checked={rolePrivileges.includes(`${perm.idPermission}-${priv.idPrivilege}`)}
-                          disabled={isRoleDisabled}
-                        />
-                      </td>
+            <Row>
+              <Col md={12}>
+                <Table className="table table-hover">
+                  <thead>
+                    <tr>
+                      <th>Permiso</th>
+                      <th>Todo</th>
+                      {privileges.map((priv) => (
+                        <th key={priv.idPrivilege}>{priv.privilegeName}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {permissions.map((perm) => (
+                      <tr key={perm.idPermission}>
+                        <td>{perm.permissionName}</td>
+                        <td>
+                          <Input
+                            className="form-check-input"
+                            type="checkbox"
+                            onChange={() => handleSelectAllForPermission(perm.idPermission)}
+                            checked={privileges.every(priv => 
+                              rolePrivileges.includes(`${perm.idPermission}-${priv.idPrivilege}`)
+                            )}
+                            disabled={isRoleDisabled}
+                          />
+                        </td>
+                        {privileges.map((priv) => (
+                          <td key={`${perm.idPermission}-${priv.idPrivilege}`}>
+                            <Input
+                              className="form-check-input"
+                              type="checkbox"
+                              onChange={() => handleChangePrivilege(perm.idPermission, priv.idPrivilege)}
+                              checked={rolePrivileges.includes(`${perm.idPermission}-${priv.idPrivilege}`)}
+                              disabled={isRoleDisabled}
+                            />
+                          </td>
+                        ))}
+                      </tr>
                     ))}
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </Col>
-        </Row>
-
-        <div className="buttons">
-          <Button type="submit" color="primary" disabled={isRoleDisabled || isLoading}>
-            Guardar
-          </Button>{" "}
-          <Button type="reset" color="secondary" disabled={isRoleDisabled || isLoading}>
-            Limpiar
-          </Button>
-        </div>
-      </form>
-
-      <Row className="mt-4">
-        <Col md={6}>
-          <FormGroup>
-            <label htmlFor="newPermission">Nuevo Permiso:</label>
-            <Input
-              type="text"
-              id="newPermission"
-              value={newPermission}
-              onChange={(e) => setNewPermission(e.target.value)}
-            />
-            <Button color="success" className="mt-2" onClick={handleAddPermission}>
-              Agregar Permiso
-            </Button>
-          </FormGroup>
-        </Col>
-        <Col md={6}>
-          <FormGroup>
-            <label htmlFor="newPrivilege">Nuevo Privilegio:</label>
-            <Input
-              type="text"
-              id="newPrivilege"
-              value={newPrivilege}
-              onChange={(e) => setNewPrivilege(e.target.value)}
-            />
-            <Button color="success" className="mt-2" onClick={handleAddPrivilege}>
-              Agregar Privilegio
-            </Button>
-          </FormGroup>
-        </Col>
-      </Row>
-    </Container>
+                  </tbody>
+                </Table>
+              </Col>
+            </Row>
+          </form>
+        </Container>
+      </ModalBody>
+      <ModalFooter>
+        <Button 
+          type="submit" 
+          form="permissionForm" 
+          color="primary" 
+          disabled={isRoleDisabled || isLoading}
+        >
+          {isLoading ? 'Guardando...' : 'Guardar'}
+        </Button>{' '}
+        <Button color="secondary" onClick={toggle}>
+          Cancelar
+        </Button>
+      </ModalFooter>
+    </Modal>
   );
 }

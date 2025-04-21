@@ -42,27 +42,16 @@ import { NavDropdown } from "react-bootstrap";
 
 import TablaGastos from "./views/module/ManoDeObra/TablaGastos";
 import RendimientoEmpleado from "./views/module/ManoDeObra/RendimientoEmpleado";
+import Productos from "./views/module/ProductoInsumo/ProductoInsumo";
+import FichaTecnica from "./views/module/ProductoInsumo/FichaTecnica";
 
-const users = [
-  {
-    id: 1,
-    usuario: "Carla Gomez",
-    contrasena: "12345",
-    rol: "auxiliar de cocina",
-  },
-  {
-    id: 2,
-    usuario: "Luis Gutierrez",
-    contrasena: "12345",
-    rol: "administrador",
-  },
-];
+import {authService} from "./views/services/authService"
+
 
 const { Header, Sider, Content } = Layout;
 
 export default function App() {
-  const handleSelect = (eventKey) =>
-    alert(`sele  const handleSelectcted ${eventKey}`);
+ 
 
   const [collapsed, setCollapsed] = useState(false);
   const [isRecoveryOpen, setIsRecoveryOpen] = useState(false);
@@ -172,6 +161,8 @@ export default function App() {
                       <Route path="/registro-compras" element={<RegistroCompra />} />
                       <Route path="/tabla-gastos" element={<TablaGastos />} />
                       <Route path="/rendimiento-empleado" element={<RendimientoEmpleado />} />
+                      <Route path="/productos" element={<Productos />} />
+                      <Route path="/ficha-tecnica" element={<FichaTecnica />} />
                     </Routes>
                   </Content>
                 </Layout>
@@ -190,18 +181,16 @@ export default function App() {
 }
 
 function Login({ setIsAuthenticated, openRecoverModal }) {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
   const [error, setError] = useState("");
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    const validUser = users.find(
-      (user) => user.usuario === username && user.contrasena === password
-    );
+    const data = authService.login({email, password})
 
-    if (validUser) {
+    if (data) {
       setError("");
       setIsAuthenticated(true);
       navigate("/dashboard");
@@ -233,12 +222,12 @@ function Login({ setIsAuthenticated, openRecoverModal }) {
               <div className="input-group mb-3 w-100 justify-content-center">
                 <div className="input-group-prepend"></div>
                 <input
-                  type="text"
+                  type="em"
                   className="form-control border border-black border-2 "
-                  id="username"
+                  id="email"
                   placeholder="Ingrese el usuario"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
             </div>

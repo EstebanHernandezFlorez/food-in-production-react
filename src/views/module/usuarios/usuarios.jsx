@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import Swal from "sweetalert2";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -59,7 +59,7 @@ const Usuario = () => {
       try {
         const response = await axios.get("http://localhost:3000/users");
         setData(response.data); // Asumiendo que `response.data` es un array de usuarios
-      } catch (error) {
+      } catch {
         toast.error("Error al cargar los usuarios");
       }
     };
@@ -120,7 +120,7 @@ const Usuario = () => {
       // Recargar usuarios actualizados
       const res = await axios.get("http://localhost:3000/users");
       setData(res.data);
-    } catch (error) {
+    } catch {
       toast.error("Error al agregar el usuario");
     }
   
@@ -165,7 +165,7 @@ const Usuario = () => {
   
         setIsEditing(false);
         setModalOpen(false);
-      } catch (error) {
+      } catch {
         toast.error("Error al editar el usuario");
       }
     }
@@ -190,7 +190,7 @@ const Usuario = () => {
   
         const res = await axios.get("http://localhost:3000/users");
         setData(res.data);
-      } catch (error) {
+      } catch {
         toast.error("Error al eliminar el usuario");
       }
     }
@@ -215,7 +215,7 @@ const Usuario = () => {
   
         const res = await axios.get("http://localhost:3000/users");
         setData(res.data);
-      } catch (error) {
+      } catch {
         toast.error("Error al cambiar el estado");
       }
     }
