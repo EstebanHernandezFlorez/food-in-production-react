@@ -9,6 +9,7 @@ import pagesRoutes from "./views/module/pages.routes";
 import Login from "./views/module/Auth/Login";
 import { AppLayout } from "./views/Layout";
 import PrivateRoute from "./views/hooks/route";
+import  AuthProvider  from "./views/hooks/AuthProvider";
 
 export default function App() {
   const renderRoutes = (routes) => {
@@ -32,6 +33,7 @@ export default function App() {
 
   return (
     <Router>
+      <AuthProvider>
       <Routes>
         <Route path="/" element={<Login />} />
         <Route element={<PrivateRoute />}>
@@ -40,6 +42,7 @@ export default function App() {
           </Route>
         </Route>
       </Routes>
+      </AuthProvider>
     </Router>
   );
 }

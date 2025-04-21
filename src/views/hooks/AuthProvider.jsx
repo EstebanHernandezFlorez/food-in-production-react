@@ -14,17 +14,17 @@ const AuthProvider = ({ children }) => {
     try {
       const response = await axios.post(url, data)
 
-      const res = await response.json();
+      console.log(response)
 
-      if (res.data) {
-        setUser(res.data.user);
-        setToken(res.token);
-        localStorage.setItem("site", res.token);
+      if (response.data) {
+        setUser(response.data.user);
+        setToken(response.token);
+        localStorage.setItem("site", response.token);
         navigate("/home/dashboard");
         return;
       }
       
-      throw new Error(res.message);
+      throw new Error(response.message);
     } catch (err) {
       console.error(err);
     }
