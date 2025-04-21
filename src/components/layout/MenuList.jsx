@@ -8,6 +8,7 @@ import {
     ConciergeBell, CalendarCheck, Boxes
 } from 'lucide-react';
 import '../../menu.css'; // Importante que se cargue
+import routes from "../../views/module/pages.routes"; // Import routes
 
 const ICON_SIZE = 18;
 const SUB_ICON_SIZE = ICON_SIZE - 2;
@@ -18,7 +19,6 @@ const MenuList = ({ collapsed, backgroundColor, textColor }) => {
     const menuRef = useRef(null);
     const rootSubmenuKeys = ['produccion_submenu', 'reservas_submenu'];
 
-    // ... (lógica onOpenChange y menuItems sin cambios) ...
     const onOpenChange = (keys) => {
         const latestOpenKey = keys.find((key) => openKeys.indexOf(key) === -1);
         if (rootSubmenuKeys.indexOf(latestOpenKey) === -1) {
@@ -28,34 +28,24 @@ const MenuList = ({ collapsed, backgroundColor, textColor }) => {
         }
       };
 
-    const menuItems = [
-        { key: 'dashboard', icon: <Home size={ICON_SIZE} />, label: 'Dashboard', path: '/dashboard' },
-        { key: 'roles', icon: <BadgeInfo size={ICON_SIZE} />, label: 'Roles', path: '/roles' },
-        { key: 'usuarios', icon: <User size={ICON_SIZE} />, label: 'Usuarios', path: '/usuarios' },
-        {
-            key: 'produccion_submenu',
-            icon: <Package size={ICON_SIZE} />, label: 'Producción',
-            children: [
-                { key: 'proveedores', label: 'Proveedores', path: '/proveedores', icon: <Building size={SUB_ICON_SIZE} /> },
-                { key: 'empleados', label: 'Empleados', path: '/empleados', icon: <Users size={SUB_ICON_SIZE} /> },
-                { key: 'insumo', label: 'Insumo', path: '/insumo', icon: <Box size={SUB_ICON_SIZE} /> },
-                { key: 'producto_insumo', label: 'Producto Insumo', path: '/producto_insumo', icon: <Boxes size={SUB_ICON_SIZE} /> },
-                { key: 'orden_produccion', label: 'Crear Orden de Producción', path: '/orden_produccion', icon: <ClipboardList size={SUB_ICON_SIZE} /> },
-                { key: 'produccion', label: 'Producción', path: '/produccion', icon: <Factory size={SUB_ICON_SIZE} /> },
-                { key: 'compras', label: 'Registro compra', path: '/compras', icon: <ShoppingBag size={SUB_ICON_SIZE} /> },
-            ],
-        },
-        {
-            key: 'reservas_submenu',
-            icon: <Calendar size={ICON_SIZE} />, label: 'Reservas',
-            children: [
-                { key: 'clientes', label: 'Clientes', path: '/clientes', icon: <Users size={SUB_ICON_SIZE} /> },
-                { key: 'reservas', label: 'Reservas', path: '/reservas', icon: <CalendarCheck size={SUB_ICON_SIZE} /> },
-                { key: 'servicios', label: 'Servicios', path: '/servicios', icon: <ConciergeBell size={SUB_ICON_SIZE} /> },
-            ],
-        },
-        { key: 'mano_de_obra', icon: <Wrench size={ICON_SIZE} />, label: 'Mano de Obra', path: '/mano_de_obra' },
-    ];
+    const transformRoutesToMenuItems = (routes) => {
+        return routes.map((route) => {
+            const menuItem = {
+                key: route.path,
+                icon: route.icon,
+                label: route.label,
+                path: `/home/${route.path}`,
+            };
+
+            if (route.children) {
+                menuItem.children = transformRoutesToMenuItems(route.children);
+            }
+
+            return menuItem;
+        });
+    };
+
+    const menuItems = transformRoutesToMenuItems(routes);
 
     const renderMenuItem = (item) => {
         if (item.children) {
