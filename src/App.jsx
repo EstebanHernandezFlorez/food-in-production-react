@@ -7,7 +7,7 @@ import {
 import "./index.css";
 import pagesRoutes from "./views/module/pages.routes";
 import Login from "./views/module/Auth/Login";
-import { AppLayout } from "./views/Layout";
+import AppLayout from "./components/layout/AppLayout";
 import PrivateRoute from "./views/hooks/route";
 import AuthProvider from "./views/hooks/AuthProvider";
 
