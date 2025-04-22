@@ -1,10 +1,11 @@
 // AppLayout.js
-import React, { useState } from "react";
+import  { useState } from "react";
 import { Layout, Button } from "antd";
 import { PanelLeftClose, PanelRightClose } from "lucide-react";
 import Logo from "./Logo";
 import MenuList from "./MenuList";
-import "./layout.css"; // Asegúrate que este archivo existe
+import "../../layout.css"; // Asegúrate que este archivo existe
+import {Outlet} from "react-router-dom";
 
 const { Header, Sider, Content } = Layout;
 
