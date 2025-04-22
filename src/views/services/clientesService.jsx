@@ -11,8 +11,18 @@ const API_URL = "http://localhost:3000/customers" // Ajusta el puerto si es nece
  */
 const mapToFrontend = (backendCustomer) => {
   if (!backendCustomer) return null
+  
+  // CAMBIO 1: Asegurar que id sea siempre un número
+  const idCustomersNum = Number(backendCustomer.idCustomers)
+  
+  // Verificar que idCustomers sea un número válido
+  if (isNaN(idCustomersNum)) {
+    console.error(`ERROR: idCustomers no es un número válido: ${backendCustomer.idCustomers}`, backendCustomer)
+  }
+  
   return {
-    id: backendCustomer.idCustomers, // Mapea idCustomers a id
+    id: idCustomersNum, // Convertir explícitamente a número
+    idCustomers: idCustomersNum, // Añadir también como idCustomers para compatibilidad
     NombreCompleto: backendCustomer.fullName,
     Distintivo: backendCustomer.distintive,
     CategoriaCliente: backendCustomer.customerCategory,
@@ -30,7 +40,7 @@ const mapToFrontend = (backendCustomer) => {
  */
 const mapToBackend = (frontendCliente) => {
   // Excluye 'id' y transforma 'Estado'
-  const { id, Estado, ...rest } = frontendCliente
+  const { id, idCustomers, Estado, ...rest } = frontendCliente
   return {
     fullName: rest.NombreCompleto,
     distintive: rest.Distintivo,
@@ -64,7 +74,19 @@ const clientesService = {
   getAllClientes: async () => {
     try {
       const response = await axios.get(API_URL)
-      return response.data.map(mapToFrontend)
+      // CAMBIO 2: Verificar y loguear los datos recibidos
+      console.log("Datos de clientes recibidos:", response.data.length)
+      
+      // Mapear y verificar que cada cliente tenga un idCustomers válido
+      const mappedClients = response.data.map(cliente => {
+        const mappedClient = mapToFrontend(cliente)
+        if (!mappedClient.id || isNaN(mappedClient.id)) {
+          console.error("Cliente con ID inválido:", cliente)
+        }
+        return mappedClient
+      })
+      
+      return mappedClients
     } catch (error) {
       console.error("Error fetching clientes:", error)
       throw error // Propaga el error para que el componente lo maneje
@@ -92,7 +114,14 @@ const clientesService = {
    */
   getClienteById: async (idCliente) => {
     try {
-      const response = await axios.get(`${API_URL}/${idCliente}`)
+      // CAMBIO 3: Asegurar que idCliente sea un número
+      const idClienteNum = Number(idCliente)
+      if (isNaN(idClienteNum)) {
+        console.error(`ERROR: ID de cliente no es un número válido: ${idCliente}`)
+        throw new Error("ID de cliente inválido")
+      }
+      
+      const response = await axios.get(`${API_URL}/${idClienteNum}`)
       return mapToFrontend(response.data)
     } catch (error) {
       console.error(`Error fetching cliente with id ${idCliente}:`, error)
@@ -107,9 +136,16 @@ const clientesService = {
    */
   updateCliente: async (idCliente, clienteDataFrontend) => {
     try {
+      // CAMBIO 4: Asegurar que idCliente sea un número
+      const idClienteNum = Number(idCliente)
+      if (isNaN(idClienteNum)) {
+        console.error(`ERROR: ID de cliente no es un número válido: ${idCliente}`)
+        throw new Error("ID de cliente inválido")
+      }
+      
       // Usa un mapeo específico si es necesario (ej, no enviar status)
       const dataToSend = mapToBackendForUpdate(clienteDataFrontend)
-      await axios.put(`${API_URL}/${idCliente}`, dataToSend)
+      await axios.put(`${API_URL}/${idClienteNum}`, dataToSend)
       // No hay datos en la respuesta (204)
     } catch (error) {
       console.error(`Error updating cliente with id ${idCliente}:`, error)
@@ -123,7 +159,14 @@ const clientesService = {
    */
   deleteCliente: async (idCliente) => {
     try {
-      await axios.delete(`${API_URL}/${idCliente}`)
+      // CAMBIO 5: Asegurar que idCliente sea un número
+      const idClienteNum = Number(idCliente)
+      if (isNaN(idClienteNum)) {
+        console.error(`ERROR: ID de cliente no es un número válido: ${idCliente}`)
+        throw new Error("ID de cliente inválido")
+      }
+      
+      await axios.delete(`${API_URL}/${idClienteNum}`)
       // La API devuelve un mensaje, pero no necesitamos procesarlo aquí normalmente
     } catch (error) {
       console.error(`Error deleting cliente with id ${idCliente}:`, error)
@@ -138,8 +181,15 @@ const clientesService = {
    */
   changeStateCliente: async (idCliente, nuevoEstadoFrontend) => {
     try {
+      // CAMBIO 6: Asegurar que idCliente sea un número
+      const idClienteNum = Number(idCliente)
+      if (isNaN(idClienteNum)) {
+        console.error(`ERROR: ID de cliente no es un número válido: ${idCliente}`)
+        throw new Error("ID de cliente inválido")
+      }
+      
       const dataToSend = { status: nuevoEstadoFrontend === "Activo" } // Envía el booleano
-      await axios.patch(`${API_URL}/${idCliente}`, dataToSend)
+      await axios.patch(`${API_URL}/${idClienteNum}`, dataToSend)
       // No hay datos en la respuesta (204)
     } catch (error) {
       console.error(`Error changing estado cliente with id ${idCliente}:`, error)
@@ -173,7 +223,23 @@ const clientesService = {
 
       // Verificar el status code
       if (response.status === 200) {
-        return response.data.map(mapToFrontend)
+        // CAMBIO 7: Asegurar que cada cliente tenga idCustomers como número
+        const results = response.data.map(cliente => {
+          // Verificar si el cliente tiene idCustomers
+          if (!cliente.idCustomers && cliente.idCustomers !== 0) {
+            console.error("Cliente sin idCustomers en resultados de búsqueda:", cliente)
+          }
+          
+          // Mapear el cliente asegurando que idCustomers sea un número
+          return mapToFrontend(cliente)
+        })
+        
+        // Verificar los resultados mapeados
+        console.log(`Resultados de búsqueda (${results.length}):`, 
+          results.map(c => ({ id: c.id, idCustomers: c.idCustomers, nombre: c.NombreCompleto }))
+        )
+        
+        return results
       } else {
         console.warn(`API respondió con status ${response.status}: ${response.statusText}`)
         return []
