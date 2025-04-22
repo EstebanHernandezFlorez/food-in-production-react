@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import productService  from "../../services/productoInsumoService"; // Importa el service
+import fichaTecnicaService from '../../services/fichaTecnicaService';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Table, Button, Container, Row, Col, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
+import { Table, Button, Container, Row, Col, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter, Badge } from 'reactstrap';
 import { FaTrashAlt } from "react-icons/fa";
 import { FiEdit } from "react-icons/fi";
 import { PlusOutlined } from "@ant-design/icons";
@@ -17,6 +18,9 @@ const Productos = () => { // Cambiado el nombre del componente
     const [tableSearchText, setTableSearchText] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [detailModalOpen, setDetailModalOpen] = useState(false);
+    const [fichasTecnicas, setFichasTecnicas] = useState([]);
+    const [showFichasModal, setShowFichasModal] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState(null);
     const navigate = useNavigate(); // Inicializa el hook de navegación
 
     const [formErrors, setFormErrors] = useState({});
@@ -134,7 +138,7 @@ const Productos = () => { // Cambiado el nombre del componente
     const confirmStatusChange = (idProduct) => { // Cambiado
         toast((t) => (
             <div>
-                <p>¿Desea cambiar el estado del producto?</p>  // Cambiado
+                <p>¿Desea cambiar el estado del producto?</p> 
                 <div>
                     <Button color="primary" onClick={() => {
                         handleStatusChange(idProduct);
@@ -151,15 +155,14 @@ const Productos = () => { // Cambiado el nombre del componente
     const confirmDelete = (product) => { // Cambiado
         toast((t) => (
             <div>
-                <p>¿Desea eliminar el producto?</p>  // Cambiado
+                <p>¿Desea eliminar el producto?</p>
                 <div>
                     <Button
                         color="primary"
                         onClick={async () => {
                             try {
                                 await productService.deleteProduct(product.idProduct); // Usamos el service
-                                const updatedData = data.filter(prod => prod.idProduct !== product.idProduct); // Cambiado
-                                setData(updatedData);
+                                await fetchData(); // Reload the data after deletion
                                 toast.success('Producto eliminado exitosamente'); // Cambiado
                             } catch (error) {
                                 console.error("Error deleting product:", error); // Cambiado
@@ -189,16 +192,24 @@ const handleStatusChange = async (idProduct) => { // Cambiado
 
             const updatedStatus = !product.status;
             await productService.changeStateProduct(idProduct, updatedStatus); // Usamos el service
-
-            const updatedData = data.map(prod => // Cambiado
-                prod.idProduct === idProduct ? { ...prod, status: updatedStatus } : prod
-            );
-            setData(updatedData);
+            await fetchData(); // Reload the data after status change
 
             toast.success(`Estado actualizado a ${updatedStatus ? 'Activo' : 'Inactivo'}`);
         } catch (error) {
             console.error("Error updating status:", error);
             toast.error("Error al actualizar estado");
+        }
+    };
+
+    const verFichasTecnicas = async (idProduct, productName) => {
+        try {
+            const fichas = await fichaTecnicaService.getSpecSheetsByProduct(idProduct);
+            setFichasTecnicas(fichas);
+            setSelectedProduct({ id: idProduct, name: productName });
+            setShowFichasModal(true);
+        } catch (error) {
+            console.error("Error al obtener fichas técnicas:", error);
+            toast.error("Error al cargar las fichas técnicas");
         }
     };
 
@@ -289,14 +300,11 @@ const handleStatusChange = async (idProduct) => { // Cambiado
                                     </td>
                                     <td className="text-center">  {/* Agregado: Botones en el centro */}
                                         <Button
-                                            color="primary" // Puedes ajustar el color
-                                            className="btn-sm me-2"  // Agregado "me-2" para espacio
-                                            onClick={() => {
-                                                // Implementa la lógica para "Ver Detalles"
-                                                console.log("Ver Detalles:", item.idProduct);
-                                            }}
+                                            color="primary"
+                                            className="btn-sm me-2"
+                                            onClick={() => navigate(`/fichas-tecnicas/${item.idProduct}`)}
                                         >
-                                            Ver Detalles
+                                            Ver Fichas Tecnicas
                                         </Button>
 
                                         <Button
@@ -359,7 +367,7 @@ const handleStatusChange = async (idProduct) => { // Cambiado
                                 />
                                 {formErrors.productName && (  // Cambiado
                                     <div className="invalid-feedback text-center">
-                                        {formErrors.productName} // Cambiado
+                                        {formErrors.productName} 
                                     </div>
                                 )}
                             </FormGroup>
@@ -385,6 +393,42 @@ const handleStatusChange = async (idProduct) => { // Cambiado
                 style={{ maxWidth: "40%", marginTop: "10px", marginBottom: "3px" }}
             >
                 {/* Contenido del modal de detalle aquí */}
+            </Modal>
+
+            <Modal isOpen={showFichasModal} toggle={() => setShowFichasModal(false)} size="lg">
+                <ModalHeader toggle={() => setShowFichasModal(false)}>
+                    Fichas Técnicas - {selectedProduct?.name}
+                </ModalHeader>
+                <ModalBody>
+                    {fichasTecnicas.length > 0 ? (
+                        <Table>
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Cantidad</th>
+                                    <th>Unidad de Medida</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {fichasTecnicas.map((ficha) => (
+                                    <tr key={ficha.idSpecsheet}>
+                                        <td>{new Date(ficha.startDate).toLocaleDateString()}</td>
+                                        <td>{ficha.quantity}</td>
+                                        <td>{ficha.measurementUnit}</td>
+                                        <td>
+                                            <Badge color={ficha.status ? "success" : "secondary"}>
+                                                {ficha.status ? "Activo" : "Inactivo"}
+                                            </Badge>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </Table>
+                    ) : (
+                        <p className="text-center">No hay fichas técnicas disponibles para este producto</p>
+                    )}
+                </ModalBody>
             </Modal>
         </Container>
     );
