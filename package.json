@@ -28,6 +28,7 @@
     "cors": "^2.8.5",
     "datatables.net-bs5": "^2.2.2",
     "date-fns": "^3.6.0",
+    "dayjs": "^1.11.13",
     "full": "^1.0.1",
     "heroicons": "^2.1.5",
     "install": "^0.13.0",

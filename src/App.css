@@ -162,3 +162,12 @@
   opacity: 1; // Asegura que sea visible
 }
 */
+.form-label-sm {
+  font-size: 0.8rem; /* Ajusta este valor según necesites */
+  margin-bottom: 0.25rem; /* Reduce el espacio debajo del label */
+}
+
+/* Opcional: Reducir el tamaño de fuente de los mensajes de error */
+.invalid-feedback {
+    font-size: 0.75rem; /* Más pequeño que el predeterminado */
+}

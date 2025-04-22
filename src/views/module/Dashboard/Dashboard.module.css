@@ -1,0 +1,141 @@
+/* Dashboard.module.css */
+
+/* ... (estilos existentes para .dashboardContainer, .header, .title, .categoryButtons, .filters) ... */
+/* Ajusta el padding y márgenes si es necesario */
+
+/* --- NUEVOS ESTILOS PARA LA FILA DE STAT CARDS --- */
+.statCardRow {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Columnas flexibles */
+    gap: 20px; /* Espacio entre tarjetas */
+    margin-bottom: 30px; /* Espacio antes del contenido principal */
+  }
+  
+  /* --- NUEVOS ESTILOS PARA LAS STAT CARDS SUPERIORES --- */
+  .statCardTop {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 12px; /* Bordes más redondeados */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06); /* Sombra sutil */
+    display: flex;
+    justify-content: space-between; /* Separa contenido e icono */
+    align-items: center;
+    border: 1px solid #eef2f7; /* Borde muy ligero */
+  }
+  
+  .statCardTopContent {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .statCardTopTitle {
+    font-size: 0.85rem;
+    color: #6c757d; /* Gris */
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .statCardTopValue {
+    font-size: 1.75rem; /* Valor grande */
+    font-weight: 600; /* Negrita */
+    color: #344767; /* Color principal oscuro */
+    line-height: 1.2;
+  }
+  
+  .statCardTopChange {
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-top: 8px;
+  }
+  
+  /* Colores para el cambio porcentual */
+  .positiveChange {
+    color: #4CAF50; /* Verde */
+  }
+  .positiveChange::before {
+      content: '▲ '; /* Opcional: Flecha arriba */
+  }
+  
+  .negativeChange {
+    color: #F44336; /* Rojo */
+  }
+  .negativeChange::before {
+      content: '▼ '; /* Opcional: Flecha abajo */
+  }
+  
+  .neutralChange {
+     color: #6c757d; /* Gris */
+  }
+  
+  
+  .statCardTopIcon {
+    background-color: #344767; /* Fondo oscuro para icono (como en la imagen) */
+    color: #fff; /* Icono blanco */
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-left: 15px; /* Espacio entre texto e icono */
+  }
+  
+  
+  /* --- AJUSTES AL ÁREA DE CONTENIDO PRINCIPAL (Chart Cards) --- */
+  .contentArea {
+    background-color: transparent; /* Quita el fondo blanco general si cada vista es una tarjeta */
+    padding: 0; /* Quita padding si las vistas internas lo manejan */
+    box-shadow: none; /* Quita sombra general */
+    /* El layout de las vistas internas (FinancialView, etc.) se maneja dentro de ellas */
+    display: grid; /* Puedes usar grid o flex para las tarjetas internas */
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Ejemplo para tarjetas internas */
+    gap: 20px;
+  }
+  
+  /* --- ESTILOS PARA LAS TARJETAS DE GRÁFICOS (Aplicar en las Vistas) --- */
+  /* Añade una clase como .chartCard a la raíz de FinancialView, SupplierView, etc. */
+  .chartCard {
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    border: 1px solid #eef2f7;
+    display: flex;
+    flex-direction: column; /* Organiza título, gráfico, footer */
+  }
+  
+  .chartCardTitle {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #344767;
+    margin: 0 0 5px 0;
+  }
+  
+  .chartCardSubtitle {
+     font-size: 0.85rem;
+     color: #6c757d;
+     margin-bottom: 20px;
+  }
+  
+  .chartCardFooter {
+      margin-top: auto; /* Empuja el footer hacia abajo */
+      padding-top: 15px;
+      font-size: 0.8rem;
+      color: #6c757d;
+      border-top: 1px solid #eee; /* Línea separadora opcional */
+      display: flex;
+      align-items: center;
+      gap: 5px;
+  }
+  .chartCardFooter svg { /* Estilo para icono en footer (si usas) */
+      margin-bottom: -2px; /* Ajuste vertical del icono */
+  }
+  
+  /* Ajusta los estilos de gráficas y tablas (.chartContainer, .dataTable) si es necesario */
+  .chartContainer {
+    margin-top: 0; /* El padding de la tarjeta ya da espacio */
+    margin-bottom: 15px;
+    flex-grow: 1; /* Permite que el gráfico ocupe espacio */
+  }
+  
+  /* ... (otros estilos: .loading, .error, .dataTable, etc.) */
