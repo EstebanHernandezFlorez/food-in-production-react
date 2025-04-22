@@ -38,7 +38,8 @@ import Servicios from "./views/module/Servicios/Servicios";
 import ManoDeObra from "./views/module/ManoDeObra/ManoDeObra";
 import RecoveryPassword from "./views/module/Auth/olvidoContraseña";
 import { NavDropdown } from "react-bootstrap";
-
+import FichaTecnica from "./views/module/ProductoInsumo/FichaTecnica";
+import ListaFichasTecnicas from "./views/module/ProductoInsumo/ListaFichasTecnicas";
 
 import TablaGastos from "./views/module/ManoDeObra/TablaGastos";
 import RendimientoEmpleado from "./views/module/ManoDeObra/RendimientoEmpleado";
@@ -162,6 +163,7 @@ export default function App() {
                       <Route path="/produccion" element={<Produccion />} />
                       <Route path="/compras" element={<RegistroCompra />} />
                       <Route path="/producto_insumo" element={<ProductoInsumo />} />
+                      <Route path="/ficha-tecnica" element={<FichaTecnica/>} />
                       <Route path="/insumo" element={<Insumo />} />
                       <Route path="/empleados" element={<Empleados />} />
                       <Route path="/proveedores" element={<Proveedores />} />
@@ -172,6 +174,7 @@ export default function App() {
                       <Route path="/registro-compras" element={<RegistroCompra />} />
                       <Route path="/tabla-gastos" element={<TablaGastos />} />
                       <Route path="/rendimiento-empleado" element={<RendimientoEmpleado />} />
+                      <Route path="/fichas-tecnicas/:idProduct" element={<ListaFichasTecnicas />} />
                     </Routes>
                   </Content>
                 </Layout>
