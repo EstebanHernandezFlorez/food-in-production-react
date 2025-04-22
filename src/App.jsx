@@ -8,7 +8,7 @@ import "./index.css";
 import pagesRoutes from "./views/module/pages.routes";
 import Login from "./views/module/Auth/Login";
 import { AppLayout } from "./views/Layout";
-import PrivateRoute from "./views/hooks/route";
+import PrivateRoute from "./views/hooks/Route";
 import  AuthProvider  from "./views/hooks/AuthProvider";
 
 export default function App() {
