@@ -35,7 +35,10 @@ export default function App() {
     <Router>
       <AuthProvider>
         <Routes>
+          {/* rutas publicas */}
           <Route path="/" element={<Login />} />
+          <Route path="/password" element={<Login />} />
+          {/* rutas privadas */}
           <Route element={<PrivateRoute />}>
             <Route path="home" element={<AppLayout />}>
               {renderRoutes(pagesRoutes)}
