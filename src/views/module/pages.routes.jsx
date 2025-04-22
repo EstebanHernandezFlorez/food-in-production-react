@@ -10,6 +10,10 @@ import Clientes from "./Clientes/Clientes"
 import Reservas from "./Reservas/Reservas"
 import Servicios from "./Servicios/Servicios"
 import ManoDeObra from "./ManoDeObra/ManoDeObra"
+import GestionComprasPage from "./Compras/GestionComprasPage";
+import Insumos from "./Insumo/Insumo";
+import FichaTecnica from "./ProductoInsumo/FichaTecnica"
+import TablaGastos from "./ManoDeObra/TablaGastos";
 
 import {
   Home,
@@ -29,6 +33,7 @@ import {
   Boxes,
 } from "lucide-react";
 import { patch } from "@mui/material";
+import { element } from "prop-types";
 
 const roles = {
   admin: 1,
@@ -76,6 +81,12 @@ const routes = [
         element: <Empleados />,
       },
       {
+        path: "insumo",
+        label: "Insumo",
+        icon: <Boxes size={SUB_ICON_SIZE} />,
+        element: < Insumos/>,
+      },
+      {
         path: "producto-insumo",
         label: "Producto Insumo",
         icon: <Boxes size={SUB_ICON_SIZE} />,
@@ -92,6 +103,12 @@ const routes = [
         label: "Producción",
         icon: <Factory size={SUB_ICON_SIZE} />,
         element: <Produccion />,
+      },
+      {
+        path: "Gestion de compra",
+        label: "Gestión de compras",
+        icon: <Factory size={SUB_ICON_SIZE} />,
+        element: <GestionComprasPage   />,
       },
     ],
   },
@@ -125,7 +142,15 @@ const routes = [
     label: "Mano de obra",
     icon: <Wrench size={ICON_SIZE} />,
     element: <ManoDeObra />,
-  }
+  },
+  {
+    path: "tabla-gastos",      // Ruta funcional
+    element: <TablaGastos />,  // Componente a renderizar
+    menu: false              // <-- ¡LA CLAVE! Indicar que NO va en el menú
+    // Ya no necesitas label ni icon si no va en el menú
+  },
 ];
 
-export default routes;
+
+
+export default routes ;
