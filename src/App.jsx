@@ -1,85 +1,39 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import "bootstrap/dist/css/bootstrap.min.css";
 import {
   BrowserRouter as Router,
   Route,
   Routes,
-  Navigate,
+  Outlet,
 } from "react-router-dom";
-import { Layout, Button } from "antd";
-import {
-  MenuUnfoldOutlined,
-  MenuFoldOutlined,
-  UserOutlined,
-} from "@ant-design/icons";
-import './index.css'
-import "primereact/resources/themes/lara-light-indigo/theme.css"; // Theme
-import "primereact/resources/primereact.min.css";             // Core CSS
-import "primeicons/primeicons.css";      
-
-// Importaciones correctas de los componentes del menú
-import MenuList from "./components/layout/MenuList";
-import Logo from "./components/layout/Logo";
-
-// Importaciones de vistas
-import Dashboard from "./views/module/Dashboard/dashboard";
-import Roles from "./views/module/roles/roles";
-import Usuarios from "./views/module/usuarios/usuarios";
-import Produccion from "./views/module/Produccion/produccion";
-import RegistroCompra from './views/module/Compras/RegistroComprasPage'
-import GestionComprasPage from "./views/module/Compras/GestionComprasPage";
-import ProductoInsumo from "./views/module/ProductoInsumo/ProductoInsumo";
-import Insumo from "./views/module/Insumo/Insumo";
-import Empleados from "./views/module/Empleados/Empleados";
-import Proveedores from "./views/module/Proveedores/Proveedores";
-import Clientes from "./views/module/Clientes/Clientes";
-import Reservas from "./views/module/Reservas/Reservas";
-import Servicios from "./views/module/Servicios/Servicios";
-import ManoDeObra from "./views/module/ManoDeObra/ManoDeObra";
-import RecoveryPassword from "./views/module/Auth/olvidoContraseña";
-import { NavDropdown } from "react-bootstrap";
-
-
-import TablaGastos from "./views/module/ManoDeObra/TablaGastos";
-import RendimientoEmpleado from "./views/module/ManoDeObra/RendimientoEmpleado";
-
-const users = [
-  {
-    id: 1,
-    usuario: "Carla Gomez",
-    contrasena: "12345",
-    rol: "auxiliar de cocina",
-  },
-  {
-    id: 2,
-    usuario: "Luis Gutierrez",
-    contrasena: "12345",
-    rol: "administrador",
-  },
-];
-
-const { Header, Sider, Content } = Layout;
+import "./index.css";
+import pagesRoutes from "./views/module/pages.routes";
+import Login from "./views/module/Auth/Login";
+import { AppLayout } from "./views/Layout";
+import PrivateRoute from "./views/hooks/route";
+import  AuthProvider  from "./views/hooks/AuthProvider";
 
 export default function App() {
-  const handleSelect = (eventKey) =>
-    alert(`sele  const handleSelectcted ${eventKey}`);
-
-  const [collapsed, setCollapsed] = useState(false);
-  const [isRecoveryOpen, setIsRecoveryOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  const openRecoverModal = (e) => {
-    e.preventDefault();
-    setIsRecoveryOpen(true);
-  };
-
-  const closeRecoverModal = () => {
-    setIsRecoveryOpen(false);
+  const renderRoutes = (routes) => {
+    return routes.map((route, index) => {
+      if (route.children) {
+        return (
+          <Route
+            key={index}
+            path={route.children.path}
+            element={
+              route.element || <Outlet /> // Renderiza Outlet si no hay un elemento explícito
+            }
+          >
+            {renderRoutes(route.children)}
+          </Route>
+        );
+      }
+      return <Route key={index} path={route.path} element={route.element} />;
+    });
   };
 
   return (
     <Router>
+      <AuthProvider>
       <Routes>
         <Route
           path="/"
@@ -184,116 +138,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" />} />
         )}
       </Routes>
-
-      {/* Modal de recuperación de contraseña */}
-      <RecoveryPassword isOpen={isRecoveryOpen} onClose={closeRecoverModal} />
+      </AuthProvider>
     </Router>
-  );
-}
-
-function Login({ setIsAuthenticated, openRecoverModal }) {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const navigate = useNavigate();
-  const [error, setError] = useState("");
-
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    const validUser = users.find(
-      (user) => user.usuario === username && user.contrasena === password
-    );
-
-    if (validUser) {
-      setError("");
-      setIsAuthenticated(true);
-      navigate("/dashboard");
-    } else {
-      setError("Usuario o contraseña incorrectos");
-    }
-  };
-
-  return (
-    <div className="row h-150 w-150">
-      <div className="col-sm-12 col-md-6 d-flex justify-content-center align-items-center">
-        <div className="d-flex justify-content-center align-items-center h-100 w-100 ">
-          <form
-            className="p-5 border border-black border border-3"
-            onSubmit={handleSubmit}
-          >
-            <div className="d-flex justify-content-center">
-              <img
-                src="../src/assets/logoFIP.png"
-                alt="logo"
-                style={{ width: 100, height: 100 }}
-                className="justify-content-center"
-              />
-            </div>
-            <div className="form-group d-flex flex-column align-items-center">
-              <label htmlFor="username" className="form-label">
-                <strong>Usuario</strong>
-              </label>
-              <div className="input-group mb-3 w-100 justify-content-center">
-                <div className="input-group-prepend"></div>
-                <input
-                  type="text"
-                  className="form-control border border-black border-2 "
-                  id="username"
-                  placeholder="Ingrese el usuario"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="form-group d-flex flex-column align-items-center">
-              <label htmlFor="password" className="form-label">
-                <strong>Contraseña</strong>
-              </label>
-
-              <div className="input-group mb-3 w-100 justify-content-center">
-                <div className="input-group-prepend"></div>
-                <input
-                  type="password"
-                  className="form-control border border-black border-2"
-                  id="password"
-                  placeholder="Ingrese la contraseña"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {error && <div className="text-danger mb-3">{error}</div>}
-            <div className="my-3 text-center link-text">
-              <a href="#!" onClick={openRecoverModal}>
-                {" "}
-                ¿Ha olvidado su contraseña?
-              </a>
-            </div>
-            <div className="btn-group w-100">
-              <button
-                type="submit"
-                className="btn w-100"
-                style={{ backgroundColor: "#8C1616", color: "white" }}
-              >
-                Ingresar
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      <article className="col-sm-12 col-md-6">
-        <div className="d-flex justify-content-center align-items-center h-100">
-          <img
-            src="../src/assets/login.jpg"
-            alt="food-in-production"
-            width="790"
-            height="734"
-            className="rounded"
-          />
-        </div>
-      </article>
-    </div>
   );
 }

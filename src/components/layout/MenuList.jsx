@@ -8,6 +8,7 @@ import {
     ConciergeBell, CalendarCheck, Boxes
 } from 'lucide-react';
 import '../../menu.css'; // Importante que se cargue
+import routes from "../../views/module/pages.routes"; // Import routes
 
 const ICON_SIZE = 18;
 const SUB_ICON_SIZE = ICON_SIZE - 2;
@@ -18,7 +19,6 @@ const MenuList = ({ collapsed, backgroundColor, textColor }) => {
     const menuRef = useRef(null);
     const rootSubmenuKeys = ['produccion_submenu', 'reservas_submenu'];
 
-    // ... (lógica onOpenChange y menuItems sin cambios) ...
     const onOpenChange = (keys) => {
         const latestOpenKey = keys.find((key) => openKeys.indexOf(key) === -1);
         if (rootSubmenuKeys.indexOf(latestOpenKey) === -1) {
@@ -28,6 +28,7 @@ const MenuList = ({ collapsed, backgroundColor, textColor }) => {
         }
       };
 
+<<<<<<< HEAD
     const menuItems = [
         { key: 'dashboard', icon: <Home size={ICON_SIZE} />, label: 'Dashboard', path: '/dashboard' },
         { key: 'roles', icon: <BadgeInfo size={ICON_SIZE} />, label: 'Roles', path: '/roles' },
@@ -56,6 +57,26 @@ const MenuList = ({ collapsed, backgroundColor, textColor }) => {
         },
         { key: 'mano_de_obra', icon: <Wrench size={ICON_SIZE} />, label: 'Mano de Obra', path: '/mano_de_obra' },
     ];
+=======
+    const transformRoutesToMenuItems = (routes) => {
+        return routes.map((route) => {
+            const menuItem = {
+                key: route.path,
+                icon: route.icon,
+                label: route.label,
+                path: `/home/${route.path}`,
+            };
+
+            if (route.children) {
+                menuItem.children = transformRoutesToMenuItems(route.children);
+            }
+
+            return menuItem;
+        });
+    };
+
+    const menuItems = transformRoutesToMenuItems(routes);
+>>>>>>> 57793b403d0f1cc43fb7c1fcb49c79f7396ab131
 
     const renderMenuItem = (item) => {
         if (item.children) {
