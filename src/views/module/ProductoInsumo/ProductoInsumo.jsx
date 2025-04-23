@@ -263,7 +263,7 @@ const handleStatusChange = async (idProduct) => { // Cambiado
                         </Button>
                         <Button
                             style={{ backgroundColor: '#007bff', color: 'white' }}
-                            onClick={() => navigate('/ficha-tecnica')} // Redirige al formulario de ficha técnica
+                            onClick={() => navigate('/home/ficha-tecnica')} // Redirige al formulario de ficha técnica
                         >
                             Agregar ficha técnica
                         </Button>
