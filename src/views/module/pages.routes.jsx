@@ -10,6 +10,7 @@ import Clientes from "./Clientes/Clientes"
 import Reservas from "./Reservas/Reservas"
 import Servicios from "./Servicios/Servicios"
 import ManoDeObra from "./ManoDeObra/ManoDeObra"
+import GestionComprasPage from "./Compras/GestionComprasPage";
 
 import {
   Home,
@@ -92,6 +93,12 @@ const routes = [
         label: "Producción",
         icon: <Factory size={SUB_ICON_SIZE} />,
         element: <Produccion />,
+      },
+      {
+        path: "gestion-compras",
+        label: "Gestión de Compras",
+        icon: <Factory size={SUB_ICON_SIZE} />,
+        element: <GestionComprasPage />,
       },
     ],
   },

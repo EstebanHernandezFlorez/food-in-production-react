@@ -403,7 +403,9 @@ const ManoDeObra = () => {
     }, []);
 
     // --- Navigation Handlers ---
-    const handleNavigateToOtherExpenses = useCallback(() => navigate('/tabla-gastos'), [navigate]); // Navigates to Conceptos Gasto list
+    const handleNavigateToOtherExpenses = useCallback(() => {
+        navigate('/home/conceptos-gasto'); // <-- Debe coincidir EXACTAMENTE con el path en App.js
+    }, [navigate]); // Navigates to Conceptos Gasto list
     const handleNavigateToEmployees = useCallback(() => navigate('/rendimiento-empleado'), [navigate]);
 
     // --- Detail Modal Handlers ---

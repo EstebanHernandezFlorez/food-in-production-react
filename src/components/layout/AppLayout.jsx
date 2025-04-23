@@ -1,21 +1,20 @@
-// AppLayout.js
-import  { useState } from "react";
+// components/layout/AppLayout.js
+import React, { useState } from "react"; // Importa React si no estaba
 import { Layout, Button } from "antd";
 import { PanelLeftClose, PanelRightClose } from "lucide-react";
-import Logo from "./Logo";
-import MenuList from "./MenuList";
-import "../../layout.css"; // Asegúrate que este archivo existe
-import {Outlet} from "react-router-dom";
+import Logo from "./Logo"; // Asegúrate que la ruta es correcta
+import MenuList from "./MenuList"; // Asegúrate que la ruta es correcta
+import "../../layout.css"; // Asegúrate que este archivo existe y la ruta es correcta
+import { Outlet } from "react-router-dom"; // <-- ¡IMPORTANTE!
 
 const { Header, Sider, Content } = Layout;
 
-// --- CONSTANTES ACTUALIZADAS ---
-const SIDER_WIDTH_EXPANDED = 320; // Mantenemos el ancho aumentado
+// --- CONSTANTES ---
+const SIDER_WIDTH_EXPANDED = 320;
 const SIDER_WIDTH_COLLAPSED = 80;
-const SIDEBAR_BACKGROUND_COLOR = "#FFF1E6"; // <-- ¡NUEVO COLOR DURAZNO!
-const BORDER_COLOR = "#E0C8B8"; // <-- Borde ajustado para #FFF1E6 (un tono más oscuro)
-// Color para texto/iconos que contrasten bien con #FFF1E6 y el hover vino tinto
-const SIDER_TEXT_COLOR = "#5C4033"; // Marrón oscuro sigue siendo una buena opción
+const SIDEBAR_BACKGROUND_COLOR = "#FFF1E6";
+const BORDER_COLOR = "#E0C8B8";
+const SIDER_TEXT_COLOR = "#5C4033";
 
 const AppLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
@@ -24,50 +23,45 @@ const AppLayout = () => {
     <Layout style={{ minHeight: "100vh" }}>
       {/* === SIDERA (BARRA LATERAL) === */}
       <Sider
-        theme="light" // Usamos 'light' para que nuestros CSS anulen más fácil
+        theme="light"
         className="sidebar"
         collapsible
-        trigger={null} // Botón personalizado
+        trigger={null}
         collapsed={collapsed}
         width={SIDER_WIDTH_EXPANDED}
         collapsedWidth={SIDER_WIDTH_COLLAPSED}
         style={{
-          // --- ESTILOS CLAVE PARA SIDEBAR FIJO Y CON SCROLL INTERNO ---
-          overflow: "auto", // <<< Importante: Habilita scroll SI el contenido (menú) es más alto que la pantalla
-          height: "100vh", // <<< Ocupa toda la altura de la ventana
-          position: "fixed", // <<< Fija el Sider en la pantalla
+          overflow: "auto",
+          height: "100vh",
+          position: "fixed",
           left: 0,
           top: 0,
           bottom: 0,
-          // --- FIN ESTILOS CLAVE ---
-          backgroundColor: SIDEBAR_BACKGROUND_COLOR, // Nuevo color durazno
-          borderRight: `1px solid ${BORDER_COLOR}`, // Borde actualizado
-          zIndex: 10, // Asegura que esté por encima del contenido
+          backgroundColor: SIDEBAR_BACKGROUND_COLOR,
+          borderRight: `1px solid ${BORDER_COLOR}`,
+          zIndex: 10,
         }}
       >
-        {/* Pasamos el color explícito por si los componentes hijos lo necesitan */}
         <Logo
           collapsed={collapsed}
           backgroundColor={SIDEBAR_BACKGROUND_COLOR}
         />
+        {/* Pasa las props necesarias a MenuList */}
         <MenuList
           collapsed={collapsed}
           backgroundColor={SIDEBAR_BACKGROUND_COLOR}
-          textColor={SIDER_TEXT_COLOR} // Pasamos el color de texto base
+          textColor={SIDER_TEXT_COLOR}
         />
       </Sider>
 
-      {/* === LAYOUT PRINCIPAL (Contiene Header y Content) === */}
+      {/* === LAYOUT PRINCIPAL (Header y Content) === */}
       <Layout
         className="site-layout"
         style={{
-          // --- AJUSTE CLAVE PARA EL ANCHO ---
-          // El margen izquierdo DEBE coincidir con el ancho ACTUAL del Sider
           marginLeft: collapsed ? SIDER_WIDTH_COLLAPSED : SIDER_WIDTH_EXPANDED,
-          // --- FIN AJUSTE CLAVE ---
-          transition: "margin-left 0.2s", // Transición suave al colapsar/expandir
+          transition: "margin-left 0.2s",
           minHeight: "100vh",
-          backgroundColor: "#FFFFFF", // Fondo del área de contenido
+          backgroundColor: "#FFFFFF",
         }}
       >
         {/* === HEADER === */}
@@ -75,14 +69,13 @@ const AppLayout = () => {
           className="site-layout-background header-sticky"
           style={{
             padding: "0 16px",
-            backgroundColor: SIDEBAR_BACKGROUND_COLOR, // Header también durazno
-            borderBottom: `1px solid ${BORDER_COLOR}`, // Borde actualizado
-            position: "sticky", // Header fijo al hacer scroll en el contenido principal
+            backgroundColor: SIDEBAR_BACKGROUND_COLOR,
+            borderBottom: `1px solid ${BORDER_COLOR}`,
+            position: "sticky",
             top: 0,
-            zIndex: 9, // Menos que el Sider, más que el Content
+            zIndex: 9,
             display: "flex",
             alignItems: "center",
-            // El ancho se adapta al espacio disponible por el marginLeft del Layout padre
           }}
         >
           <Button
@@ -98,28 +91,30 @@ const AppLayout = () => {
             style={{
               width: 64,
               height: 64,
-              color: SIDER_TEXT_COLOR, // Usamos el mismo color de texto base del Sider
+              color: SIDER_TEXT_COLOR,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
             }}
             aria-label={collapsed ? "Expandir menú" : "Colapsar menú"}
           />
-          {/* Otros elementos del Header aquí */}
+          {/* Otros elementos del Header aquí (ej: User profile, notifications) */}
         </Header>
 
         {/* === CONTENT (Contenido principal de la página) === */}
         <Content
           style={{
-            margin: "24px 16px",
-            padding: 24,
+            margin: "24px 16px", // Espaciado alrededor del contenido
+            padding: 24, // Espaciado interno del contenido
             minHeight: 280, // Altura mínima ejemplo
-            // Si aquí añades overflow: 'auto', tendrás scroll DENTRO del content
-            // Si no lo pones, el scroll será el de la página (body) si el contenido es muy largo
+            // backgroundColor: '#fff', // Fondo del área de contenido si es diferente
           }}
         >
-          <Outlet /> {/* Renderiza las rutas hijas aquí */}
+          {/* --- ¡¡AQUÍ SE RENDERIZAN LAS RUTAS HIJAS!! --- */}
+          <Outlet />
         </Content>
+        {/* Puedes añadir un Footer aquí si lo necesitas */}
+        {/* <Footer style={{ textAlign: 'center' }}>Mi App ©2023</Footer> */}
       </Layout>
     </Layout>
   );

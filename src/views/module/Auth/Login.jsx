@@ -12,19 +12,20 @@ export default function Login() {
   const auth = useAuth();
   const navigate = useNavigate(); // Hook para redirigir
 
-  const handleSubmitEvent = (e) => {
+  const handleSubmitEvent = async (e) => { // Ahora es async
     e.preventDefault();
     if (input.email !== "" && input.password !== "") {
       try {
-        auth.loginAction(input);
-        navigate("/home"); // Redirige a la ruta protegida
+        await auth.loginAction(input); // Espera que se complete
+        navigate("/home"); // Redirige después de un login exitoso
       } catch (err) {
-        setError(err.message);
+        setError(err.message); // Muestra el error si ocurre
       }
       return;
     }
     setError("Por favor, proporciona un correo y contraseña válidos.");
   };
+  
 
   return (
     <div className="row h-150 w-150">
