@@ -225,7 +225,7 @@ const GestionComprasPage = () => {
     }, [toggleDetailsModal]);
 
     const handleNavigateToRegister = useCallback(() => {
-        navigate('/compras/registrar'); // Ajusta la ruta si es diferente
+        navigate('/home/registrar-compra'); // Ajusta la ruta si es diferente
     }, [navigate]);
 
     // --- Filtering and Pagination Logic ---
