@@ -30,6 +30,7 @@ import {
   Boxes,
 } from "lucide-react";
 import { patch } from "@mui/material";
+import { element } from "prop-types";
 
 const roles = {
   admin: 1,
@@ -77,6 +78,12 @@ const routes = [
         element: <Empleados />,
       },
       {
+        path: "insumo",
+        label: "Insumo",
+        icon: <Boxes size={SUB_ICON_SIZE} />,
+        element: < Insumos/>,
+      },
+      {
         path: "producto-insumo",
         label: "Producto Insumo",
         icon: <Boxes size={SUB_ICON_SIZE} />,
@@ -95,10 +102,10 @@ const routes = [
         element: <Produccion />,
       },
       {
-        path: "gestion-compras",
-        label: "Gestión de Compras",
+        path: "Gestion de compra",
+        label: "Gestión de compras",
         icon: <Factory size={SUB_ICON_SIZE} />,
-        element: <GestionComprasPage />,
+        element: <GestionComprasPage   />,
       },
     ],
   },
@@ -132,7 +139,9 @@ const routes = [
     label: "Mano de obra",
     icon: <Wrench size={ICON_SIZE} />,
     element: <ManoDeObra />,
-  }
+  },
 ];
 
-export default routes;
+
+
+export default routes ;

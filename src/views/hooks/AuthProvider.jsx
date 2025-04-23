@@ -15,33 +15,24 @@ const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
   // Asegúrate que esta URL es la correcta para TU endpoint de login
 
-  // Efecto para actualizar estado si el token cambia (útil al recargar)
-   useEffect(() => {
-     if (token) {
-       // Opcional: Podrías verificar el token aquí o decodificarlo para obtener datos del usuario
-       // const decoded = jwt_decode(token); // Necesitarías libreria jwt-decode
-       // setUser(decoded); // Ojo: esto no valida si el token sigue vigente en el backend
-       localStorage.setItem("token", token);
-     } else {
-       localStorage.removeItem("token");
-     }
-   }, [token]);
+  const loginAction = async (data) => {
+    try {
+      const response = await axios.post(url, data);
+
+      if (!response) {
+        throw new Error(response.message);
+      }
 
 
+      setUser(response.data.user);
+      setToken(response.data.token);
+      localStorage.setItem("token", response.data.token);
 
-   const loginAction = async (data) => {
-     try {
-       const response = await authService.login(data.email, data.password); // Usamos authService aquí
-       setUser(response.user);
-       setToken(response.token);
-       localStorage.setItem("token", response.token);
-       navigate("/home/dashboard");
-     } catch (err) {
-       console.error("Error en loginAction:", err.message);
-       throw err; // Propagamos el error
-     }
-   };
-   
+      navigate("/home/dashboard");
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const logOut = () => {
     setUser(null);
