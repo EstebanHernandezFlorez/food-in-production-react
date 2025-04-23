@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback } from "react";
 import {
   Container,
   Button,
@@ -15,20 +15,21 @@ import {
   Label,
   Spinner,
   FormFeedback,
-} from "reactstrap"
-import FullCalendar from "@fullcalendar/react"
-import dayGridPlugin from "@fullcalendar/daygrid"
-import interactionPlugin from "@fullcalendar/interaction"
-import { utils, writeFile } from "xlsx"
-import Swal from "sweetalert2"
-import "sweetalert2/dist/sweetalert2.min.css"
-import { FaFileExcel, FaTrashAlt } from "react-icons/fa"
-import Select from "react-select" // Importación para el selector múltiple
+  Table, // Importar Table para la lista
+} from "reactstrap";
+import FullCalendar from "@fullcalendar/react";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import interactionPlugin from "@fullcalendar/interaction";
+import { utils, writeFile } from "xlsx";
+import Swal from "sweetalert2";
+import "sweetalert2/dist/sweetalert2.min.css";
+import { FaFileExcel, FaTrashAlt, FaList } from "react-icons/fa"; // Añadir FaList
+import Select from "react-select"; // Importación para el selector múltiple
 
 // --- IMPORTAR SERVICIOS REALES ---
-import reservasService from "../../services/reservasService"
-import clientesService from "../../services/clientesService"
-import serviciosService from "../../services/serviciosService"
+import reservasService from "../../services/reservasService";
+import clientesService from "../../services/clientesService";
+import serviciosService from "../../services/serviciosService";
 
 // --- ESTADO INICIAL DEL FORMULARIO ---
 const emptyForm = {
@@ -52,213 +53,213 @@ const emptyForm = {
   remaining: "", // Calculado
   paymentMethod: "",
   status: "pendiente", // Estado workflow/visual
-}
+};
 
 // --- COMPONENTE PRINCIPAL ---
 export default function Calendario() {
   // --- Estados del Componente ---
-  const [data, setData] = useState([]) // Almacena las reservas cargadas
-  const [availableServices, setAvailableServices] = useState([]) // Servicios disponibles para el Select
-  const [selectedReserva, setSelectedReserva] = useState(null) // Reserva en edición (o null si es nueva)
-  const [modalOpen, setModalOpen] = useState(false) // Visibilidad del modal
-  const [form, setForm] = useState(emptyForm) // Estado del formulario del modal
-  const [errors, setErrors] = useState({}) // Errores de validación del form
-  const [searchText, setSearchText] = useState("") // Búsqueda en el calendario
+  const [data, setData] = useState([]); // Almacena las reservas cargadas
+  const [availableServices, setAvailableServices] = useState([]); // Servicios disponibles para el Select
+  const [selectedReserva, setSelectedReserva] = useState(null); // Reserva en edición (o null si es nueva)
+  const [modalOpen, setModalOpen] = useState(false); // Visibilidad del modal de edición/creación
+  const [listModalOpen, setListModalOpen] = useState(false); // <<<--- NUEVO ESTADO: Visibilidad del modal de lista
+  const [form, setForm] = useState(emptyForm); // Estado del formulario del modal
+  const [errors, setErrors] = useState({}); // Errores de validación del form
+  const [searchText, setSearchText] = useState(""); // Búsqueda en el calendario
   // Estados para búsqueda de cliente integrada
-  const [clientSearchText, setClientSearchText] = useState("")
-  const [clientSearchResults, setClientSearchResults] = useState([])
-  const [showClientSearch, setShowClientSearch] = useState(false) // Mostrar/ocultar resultados búsqueda
-  const [isClientSearchLoading, setIsClientSearchLoading] = useState(false) // Cargando búsqueda cliente
-  const [loading, setLoading] = useState(true) // Carga general
+  const [clientSearchText, setClientSearchText] = useState("");
+  const [clientSearchResults, setClientSearchResults] = useState([]);
+  const [showClientSearch, setShowClientSearch] = useState(false); // Mostrar/ocultar resultados búsqueda
+  const [isClientSearchLoading, setIsClientSearchLoading] = useState(false); // Cargando búsqueda cliente
+  const [loading, setLoading] = useState(true); // Carga general
 
   // --- Opciones formateadas para react-select a partir de los servicios disponibles ---
   const serviceOptions = availableServices.map((service) => ({
     value: service.id,
     label: service.Nombre || service.name || service.Name || `Servicio ${service.id}`, // Múltiples fallbacks para el nombre
-  }))
+  }));
 
   // --- FUNCIÓN PARA CARGAR DATOS INICIALES (Reservas y Servicios) ---
   const loadInitialData = useCallback(async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       const [fetchedReservations, fetchedServices] = await Promise.all([
         reservasService.getAllReservations(),
         serviciosService.getAllServicios(),
-      ])
+      ]);
 
       // Normalizar los servicios para asegurar que tengan un nombre
       const normalizedServices = (fetchedServices || []).map((service) => ({
         ...service,
         Nombre: service.Nombre || service.name || service.Name || `Servicio ${service.id}`,
-      }))
+      }));
 
-      setData(fetchedReservations || [])
-      setAvailableServices(normalizedServices)
+      setData(fetchedReservations || []);
+      setAvailableServices(normalizedServices);
       console.log("Datos iniciales cargados:", {
         reservations: fetchedReservations?.length,
         services: normalizedServices?.length,
         serviceDetails: normalizedServices,
-      })
+      });
     } catch (error) {
-      console.error("Error fetching initial data:", error)
+      console.error("Error fetching initial data:", error);
       Swal.fire(
         "Error Carga Inicial",
         `No se pudieron cargar los datos: ${error?.message || "Error desconocido"}`,
-        "error",
-      )
-      setData([])
-      setAvailableServices([])
+        "error"
+      );
+      setData([]);
+      setAvailableServices([]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, []) // useCallback con [] para que se cree solo una vez
+  }, []); // useCallback con [] para que se cree solo una vez
 
   // --- useEffect PARA CARGAR DATOS AL MONTAR EL COMPONENTE ---
   useEffect(() => {
-    loadInitialData()
-  }, [loadInitialData]) // Ejecutar cuando loadInitialData cambia (solo al montar)
+    loadInitialData();
+  }, [loadInitialData]); // Ejecutar cuando loadInitialData cambia (solo al montar)
 
   // --- Abrir modal para NUEVA reserva ---
   const handleDateClick = (arg) => {
-    const now = new Date() // Fecha y hora actuales en la zona horaria local
-    const clickedDateTime = new Date(arg.dateStr)
+    const now = new Date(); // Fecha y hora actuales en la zona horaria local
+    const clickedDateTime = new Date(arg.dateStr);
 
     // Convertir ambas fechas a UTC para evitar conflictos de zona horaria
-    const nowUTC = new Date(now.toISOString())
-    const clickedUTC = new Date(clickedDateTime.toISOString())
+    const nowUTC = new Date(now.toISOString());
+    const clickedUTC = new Date(clickedDateTime.toISOString());
 
     if (clickedUTC.getTime() < nowUTC.getTime()) {
-      Swal.fire("Fecha Inválida", "No se pueden crear reservas en fechas pasadas.", "warning")
-      return
+      Swal.fire("Fecha Inválida", "No se pueden crear reservas en fechas pasadas.", "warning");
+      return;
     }
 
-    setSelectedReserva(null) // Indicar que es nueva
-    const defaultTime = "T09:00" // Hora por defecto
-    setForm({ ...emptyForm, dateTime: arg.dateStr + defaultTime }) // Resetear form + fecha
-    setErrors({}) // Limpiar errores
-    setClientSearchText("") // Limpiar búsqueda de cliente
-    setClientSearchResults([])
-    setShowClientSearch(false)
-    setModalOpen(true) // Abrir modal
-  }
+    setSelectedReserva(null); // Indicar que es nueva
+    const defaultTime = "T09:00"; // Hora por defecto
+    setForm({ ...emptyForm, dateTime: arg.dateStr + defaultTime }); // Resetear form + fecha
+    setErrors({}); // Limpiar errores
+    setClientSearchText(""); // Limpiar búsqueda de cliente
+    setClientSearchResults([]);
+    setShowClientSearch(false);
+    setModalOpen(true); // Abrir modal
+  };
 
   // --- Abrir modal para EDITAR reserva ---
-  // --- Abrir modal para EDITAR reserva ---
-// --- Abrir modal para EDITAR reserva ---
-  // En tu archivo calendario.tsx
+  const handleEventClick = (info) => {
+    const idReservations = Number.parseInt(info.event.id, 10);
+    console.log(`Clicked on reservation ID: ${idReservations}`);
 
-// --- Abrir modal para EDITAR reserva ---
-const handleEventClick = (info) => {
-  const idReservations = Number.parseInt(info.event.id, 10);
-  console.log(`Clicked on reservation ID: ${idReservations}`);
-  
-  setLoading(true); // Mostrar indicador de carga
-  
-  // Obtener los detalles de la reserva
-  reservasService.getReservationById(idReservations)
-    .then(detailedReservation => {
-      console.log("Detailed reservation data:", detailedReservation);
-      
-      if (detailedReservation) {
-        // Verificar si hay un error en la respuesta
-        if (detailedReservation.error) {
-          throw new Error(detailedReservation.errorMessage || "Error al cargar los detalles");
-        }
-        
-        setSelectedReserva(detailedReservation); // Indicar que se edita
+    setLoading(true); // Mostrar indicador de carga
 
-        // Formatear servicios para react-select
-        const selectedServiceValues = (Array.isArray(detailedReservation.AditionalServices) 
-          ? detailedReservation.AditionalServices 
-          : [])
-          .map(service => ({
+    // Obtener los detalles de la reserva
+    reservasService
+      .getReservationById(idReservations)
+      .then((detailedReservation) => {
+        console.log("Detailed reservation data:", detailedReservation);
+
+        if (detailedReservation) {
+          // Verificar si hay un error en la respuesta
+          if (detailedReservation.error) {
+            throw new Error(detailedReservation.errorMessage || "Error al cargar los detalles");
+          }
+
+          setSelectedReserva(detailedReservation); // Indicar que se edita
+
+          // Formatear servicios para react-select
+          const selectedServiceValues = (Array.isArray(detailedReservation.AditionalServices)
+            ? detailedReservation.AditionalServices
+            : []
+          ).map((service) => ({
             value: service.idAditionalServices,
-            label: service.name || `Servicio ${service.idAditionalServices}`
+            label: service.name || `Servicio ${service.idAditionalServices}`,
           }));
 
-        // Asegurarse de que pass sea un array válido
-        let formattedPass = [];
-        if (Array.isArray(detailedReservation.pass)) {
-          formattedPass = detailedReservation.pass.map(abono => ({
-            fecha: abono.fecha || '',
-            cantidad: abono.cantidad || 0
-          }));
-        } else if (detailedReservation.pass && typeof detailedReservation.pass === 'object') {
-          // Si pass es un objeto pero no un array, intentar convertirlo
-          formattedPass = [{ fecha: '', cantidad: 0 }];
+          // Asegurarse de que pass sea un array válido
+          let formattedPass = [];
+          if (Array.isArray(detailedReservation.pass)) {
+            formattedPass = detailedReservation.pass.map((abono) => ({
+              fecha: abono.fecha || "",
+              cantidad: abono.cantidad || 0,
+            }));
+          } else if (detailedReservation.pass && typeof detailedReservation.pass === "object") {
+            // Si pass es un objeto pero no un array, intentar convertirlo
+            formattedPass = [{ fecha: "", cantidad: 0 }];
+          }
+
+          console.log("Abonos formateados:", formattedPass);
+
+          // Llenar formulario con datos del cliente, servicios y abonos formateados
+          setForm({
+            ...emptyForm,
+            ...detailedReservation,
+            idCustomers:
+              detailedReservation.idCustomers ||
+              (detailedReservation.Customer ? detailedReservation.Customer.idCustomers : null),
+            fullName:
+              detailedReservation.fullName || (detailedReservation.Customer ? detailedReservation.Customer.fullName : ""),
+            distintive:
+              detailedReservation.distintive ||
+              (detailedReservation.Customer ? detailedReservation.Customer.distintive : ""),
+            customerCategory:
+              detailedReservation.customerCategory ||
+              (detailedReservation.Customer ? detailedReservation.Customer.customerCategory : ""),
+            servicios: selectedServiceValues,
+            pass: formattedPass.length > 0 ? formattedPass : [{ fecha: "", cantidad: 0 }], // Asegurar que haya al menos un abono
+          });
+
+          // Calcular el restante basado en los abonos
+          updateRestante(detailedReservation.totalPay, formattedPass);
+
+          setErrors({}); // Limpiar errores
+          setClientSearchText(""); // Limpiar búsqueda de cliente
+          setClientSearchResults([]);
+          setShowClientSearch(false);
+          setModalOpen(true); // Abrir modal
+        } else {
+          console.error("Reserva no encontrada para editar. ID:", idReservations);
+          Swal.fire("Error", "No se pudo encontrar la reserva seleccionada.", "error");
         }
-        
-        console.log("Abonos formateados:", formattedPass);
-
-        // Llenar formulario con datos del cliente, servicios y abonos formateados
-        setForm({
-          ...emptyForm,
-          ...detailedReservation,
-          idCustomers: detailedReservation.idCustomers || 
-                      (detailedReservation.Customer ? detailedReservation.Customer.idCustomers : null),
-          fullName: detailedReservation.fullName || 
-                   (detailedReservation.Customer ? detailedReservation.Customer.fullName : ""),
-          distintive: detailedReservation.distintive || 
-                     (detailedReservation.Customer ? detailedReservation.Customer.distintive : ""),
-          customerCategory: detailedReservation.customerCategory || 
-                           (detailedReservation.Customer ? detailedReservation.Customer.customerCategory : ""),
-          servicios: selectedServiceValues,
-          pass: formattedPass.length > 0 ? formattedPass : [{ fecha: '', cantidad: 0 }], // Asegurar que haya al menos un abono
-        });
-        
-        // Calcular el restante basado en los abonos
-        updateRestante(detailedReservation.totalPay, formattedPass);
-        
-        setErrors({}); // Limpiar errores
-        setClientSearchText(""); // Limpiar búsqueda de cliente
-        setClientSearchResults([]);
-        setShowClientSearch(false);
-        setModalOpen(true); // Abrir modal
-      } else {
-        console.error("Reserva no encontrada para editar. ID:", idReservations);
-        Swal.fire("Error", "No se pudo encontrar la reserva seleccionada.", "error");
-      }
-    })
-    .catch(error => {
-      console.error("Error fetching reservation details:", error);
-      Swal.fire("Error", "No se pudo cargar los detalles de la reserva.", "error");
-    })
-    .finally(() => {
-      setLoading(false); // Ocultar indicador de carga
-    });
-};
+      })
+      .catch((error) => {
+        console.error("Error fetching reservation details:", error);
+        Swal.fire("Error", "No se pudo cargar los detalles de la reserva.", "error");
+      })
+      .finally(() => {
+        setLoading(false); // Ocultar indicador de carga
+      });
+  };
 
   // --- REPROGRAMAR reserva (Drag & Drop) ---
   const handleEventDrop = async (info) => {
-    const { event } = info
-    const idReservations = Number.parseInt(event.id, 10)
-    console.log(idReservations)
-    const reservaOriginal = data.find((res) => res.idReservations === idReservations)
+    const { event } = info;
+    const idReservations = Number.parseInt(event.id, 10);
+    console.log(idReservations);
+    const reservaOriginal = data.find((res) => res.idReservations === idReservations);
 
     if (!reservaOriginal) {
-      console.error("Error: No se encontró reserva original para reprogramar. ID:", idReservations)
-      Swal.fire("Error Interno", "No se pudo encontrar la reserva.", "error")
-      return
+      console.error("Error: No se encontró reserva original para reprogramar. ID:", idReservations);
+      Swal.fire("Error Interno", "No se pudo encontrar la reserva.", "error");
+      return;
     }
 
-    const newStartDate = new Date(event.start)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const newStartDate = new Date(event.start);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     if (newStartDate < today) {
-      Swal.fire("Error", "No se pueden reprogramar a fechas pasadas.", "error")
-      info.revert()
-      return
+      Swal.fire("Error", "No se pueden reprogramar a fechas pasadas.", "error");
+      info.revert();
+      return;
     }
 
     const conflictingReserva = data.find(
-      (res) => res.id !== idReservations && new Date(res.dateTime).toDateString() === newStartDate.toDateString(),
-    )
+      (res) => res.id !== idReservations && new Date(res.dateTime).toDateString() === newStartDate.toDateString()
+    );
 
     if (conflictingReserva) {
-      Swal.fire("Conflicto", "Ya existe otra reserva en esta fecha.", "error")
-      info.revert()
-      return
+      Swal.fire("Conflicto", "Ya existe otra reserva en esta fecha.", "error");
+      info.revert();
+      return;
     }
 
     // Asegurar enviar todos los datos necesarios para la actualización
@@ -267,26 +268,26 @@ const handleEventClick = (info) => {
       dateTime: event.start.toISOString().slice(0, 16),
       // Convertir servicios de {value, label} a IDs si es necesario para la API de update
       idAditionalServices: (reservaOriginal.servicios || []).map((s) => (typeof s === "object" ? s.value : s)),
-    }
+    };
 
     try {
-      setLoading(true)
-      await reservasService.updateReservation(idReservations, updatedReservaData)
+      setLoading(true);
+      await reservasService.updateReservation(idReservations, updatedReservaData);
       // Actualizar estado local. IMPORTANTE: mantener el formato correcto para servicios en el estado local
       setData((prevData) =>
         prevData.map((res) =>
-          res.id === idReservations ? { ...updatedReservaData, servicios: reservaOriginal.servicios } : res,
-        ),
-      ) // Mantener formato original de servicios
-      Swal.fire("Reserva reprogramada", "La reserva se actualizó.", "success")
+          res.id === idReservations ? { ...updatedReservaData, servicios: reservaOriginal.servicios } : res
+        )
+      ); // Mantener formato original de servicios
+      Swal.fire("Reserva reprogramada", "La reserva se actualizó.", "success");
     } catch (error) {
-      console.error("Error updating reservation on drop:", error)
-      Swal.fire("Error", "No se pudo reprogramar la reserva.", "error")
-      info.revert()
+      console.error("Error updating reservation on drop:", error);
+      Swal.fire("Error", "No se pudo reprogramar la reserva.", "error");
+      info.revert();
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // --- Mapeo de colores y eventos para FullCalendar ---
   const colorMap = {
@@ -295,7 +296,7 @@ const handleEventClick = (info) => {
     pendiente: "#ffc107",
     en_proceso: "#fd7e14",
     confirmada: "#007bff",
-  }
+  };
   const events = data.map((reserva) => ({
     id: reserva.idReservations.toString(),
     title: reserva.fullName || reserva.evento || `Reserva ${reserva.id}`,
@@ -303,41 +304,41 @@ const handleEventClick = (info) => {
     backgroundColor: colorMap[reserva.status] || "#6c757d",
     borderColor: colorMap[reserva.status] || "#6c757d",
     textColor: reserva.status === "pendiente" ? "#212529" : "#ffffff",
-  }))
+  }));
 
   const handleSearchChange = (e) => {
-    setSearchText(e.target.value)
-  }
+    setSearchText(e.target.value);
+  };
 
-  const filteredEvents = events.filter((event) => event.title.toLowerCase().includes(searchText.toLowerCase()))
+  const filteredEvents = events.filter((event) => event.title.toLowerCase().includes(searchText.toLowerCase()));
 
   // --- BÚSQUEDA DE CLIENTES ---
   // CAMBIO 1: Función mejorada para buscar clientes
   const handleClientSearch = async (searchValue) => {
-    setClientSearchText(searchValue)
+    setClientSearchText(searchValue);
 
     // No buscar si el texto tiene menos de 2 caracteres
     if (searchValue.length < 2) {
-      setClientSearchResults([]) // Vaciar resultados
-      return
+      setClientSearchResults([]); // Vaciar resultados
+      return;
     }
 
-    setIsClientSearchLoading(true) // Mostrar indicador de carga
+    setIsClientSearchLoading(true); // Mostrar indicador de carga
 
     try {
-      const results = await clientesService.searchClientes(searchValue)
-      console.log("Resultados de búsqueda de clientes:", results) // Depuración
+      const results = await clientesService.searchClientes(searchValue);
+      console.log("Resultados de búsqueda de clientes:", results); // Depuración
 
       // Verificar la estructura de cada cliente
       if (Array.isArray(results)) {
         results.forEach((cliente, index) => {
           if (!cliente.idCustomers && cliente.idCustomers !== 0) {
-            console.error(`ERROR: Cliente #${index} no tiene idCustomers:`, cliente)
+            console.error(`ERROR: Cliente #${index} no tiene idCustomers:`, cliente);
           } else {
-            console.log(`Cliente #${index} idCustomers: ${cliente.idCustomers}, tipo: ${typeof cliente.idCustomers}`)
+            console.log(`Cliente #${index} idCustomers: ${cliente.idCustomers}, tipo: ${typeof cliente.idCustomers}`);
           }
-        })
-        
+        });
+
         // Normalizar los resultados para manejar diferentes formatos de respuesta
         const normalizedResults = results.map((cliente) => ({
           id: cliente.id || cliente.idCustomers, // Usar idCustomers como fallback
@@ -349,40 +350,40 @@ const handleEventClick = (info) => {
           Email: cliente.Email || cliente.Correo || cliente.email || "",
           Cellphone: cliente.Cellphone || cliente.Celular || cliente.celular || cliente.phone || "",
           Address: cliente.Address || cliente.Direccion || cliente.direccion || cliente.address || "",
-        }))
-        setClientSearchResults(normalizedResults)
+        }));
+        setClientSearchResults(normalizedResults);
       } else {
-        console.error("El backend devolvió un formato no esperado:", results)
-        setClientSearchResults([])
+        console.error("El backend devolvió un formato no esperado:", results);
+        setClientSearchResults([]);
       }
     } catch (error) {
-      console.error("Error al buscar clientes:", error)
-      setClientSearchResults([])
+      console.error("Error al buscar clientes:", error);
+      setClientSearchResults([]);
     } finally {
-      setIsClientSearchLoading(false) // Ocultar indicador de carga
+      setIsClientSearchLoading(false); // Ocultar indicador de carga
     }
-  }
+  };
 
   // --- SELECCIONAR CLIENTE ---
   // CAMBIO 2: Función mejorada para seleccionar cliente
   const selectClient = (cliente) => {
-    console.log("Cliente seleccionado:", cliente) // Debug
-    
+    console.log("Cliente seleccionado:", cliente); // Debug
+
     if (!cliente || (!cliente.id && !cliente.idCustomers)) {
-      console.error("ERROR: Cliente seleccionado inválido o sin ID", cliente)
-      setErrors(prev => ({...prev, idCustomers: "Cliente seleccionado inválido"}))
-      return
+      console.error("ERROR: Cliente seleccionado inválido o sin ID", cliente);
+      setErrors((prev) => ({ ...prev, idCustomers: "Cliente seleccionado inválido" }));
+      return;
     }
-    
+
     // Asegurar que idCustomers sea un número
-    const idCustomersNum = Number(cliente.idCustomers || cliente.id)
-    
+    const idCustomersNum = Number(cliente.idCustomers || cliente.id);
+
     if (isNaN(idCustomersNum)) {
-      console.error(`ERROR: idCustomers no es un número válido: ${cliente.idCustomers || cliente.id}`)
-      setErrors(prev => ({...prev, idCustomers: "ID de cliente inválido"}))
-      return
+      console.error(`ERROR: idCustomers no es un número válido: ${cliente.idCustomers || cliente.id}`);
+      setErrors((prev) => ({ ...prev, idCustomers: "ID de cliente inválido" }));
+      return;
     }
-    
+
     setForm((prevForm) => ({
       ...prevForm,
       idCustomers: idCustomersNum, // Guardar como número
@@ -392,174 +393,174 @@ const handleEventClick = (info) => {
       email: cliente.Email || cliente.Correo || "",
       cellphone: cliente.Cellphone || cliente.Celular || "",
       address: cliente.Address || cliente.Direccion || "",
-    }))
-    
+    }));
+
     console.log("Formulario actualizado con cliente:", {
       idCustomers: idCustomersNum,
-      fullName: cliente.FullName || cliente.NombreCompleto || ""
-    })
-    
-    setClientSearchText("") // Limpia el texto de búsqueda
-    setClientSearchResults([]) // Limpia los resultados de búsqueda
-    setShowClientSearch(false) // Cierra los resultados de búsqueda
-    
+      fullName: cliente.FullName || cliente.NombreCompleto || "",
+    });
+
+    setClientSearchText(""); // Limpia el texto de búsqueda
+    setClientSearchResults([]); // Limpia los resultados de búsqueda
+    setShowClientSearch(false); // Cierra los resultados de búsqueda
+
     // Limpiar error si existía
     if (errors.idCustomers) {
       setErrors((prev) => {
-        const newErrors = {...prev}
-        delete newErrors.idCustomers
-        delete newErrors.clientSearch
-        return newErrors
-      })
+        const newErrors = { ...prev };
+        delete newErrors.idCustomers;
+        delete newErrors.clientSearch;
+        return newErrors;
+      });
     }
-  }
+  };
 
   // --- MANEJO DE ABONOS ---
   const handleAbonoChange = (index, field, value) => {
-    const updatedAbonos = form.pass.map((abono, i) => (i === index ? { ...abono, [field]: value } : abono))
-    setForm((prevForm) => ({ ...prevForm, pass: updatedAbonos }))
+    const updatedAbonos = form.pass.map((abono, i) => (i === index ? { ...abono, [field]: value } : abono));
+    setForm((prevForm) => ({ ...prevForm, pass: updatedAbonos }));
     if (field === "cantidad") {
-      updateRestante(form.totalPay, updatedAbonos)
+      updateRestante(form.totalPay, updatedAbonos);
     }
-    setErrors((prevErrors) => ({ ...prevErrors, [`pass-${index}-${field}`]: validateAbonoField(field, value) }))
-  }
+    setErrors((prevErrors) => ({ ...prevErrors, [`pass-${index}-${field}`]: validateAbonoField(field, value) }));
+  };
 
   const addAbono = () => {
-    setForm((prevForm) => ({ ...prevForm, pass: [...(prevForm.pass || []), { fecha: "", cantidad: "" }] }))
-    setErrors((prevErrors) => ({ ...prevErrors, pass: "" }))
-  }
+    setForm((prevForm) => ({ ...prevForm, pass: [...(prevForm.pass || []), { fecha: "", cantidad: "" }] }));
+    setErrors((prevErrors) => ({ ...prevErrors, pass: "" }));
+  };
 
   const removeAbono = (index) => {
-    const updatedAbonos = (form.pass || []).filter((_, i) => i !== index)
-    setForm((prevForm) => ({ ...prevForm, pass: updatedAbonos }))
-    updateRestante(form.totalPay, updatedAbonos)
+    const updatedAbonos = (form.pass || []).filter((_, i) => i !== index);
+    setForm((prevForm) => ({ ...prevForm, pass: updatedAbonos }));
+    updateRestante(form.totalPay, updatedAbonos);
     setErrors((prevErrors) => {
-      const newErrors = { ...prevErrors }
-      delete newErrors[`pass-${index}-fecha`]
-      delete newErrors[`pass-${index}-cantidad`]
-      return newErrors
-    })
-  }
+      const newErrors = { ...prevErrors };
+      delete newErrors[`pass-${index}-fecha`];
+      delete newErrors[`pass-${index}-cantidad`];
+      return newErrors;
+    });
+  };
 
   const updateRestante = useCallback((totalPay, pass) => {
-    const totalAbonosNum = (pass || []).reduce((sum, abono) => sum + Number.parseFloat(abono.cantidad || 0), 0)
-    const totalPagoNum = Number.parseFloat(totalPay || 0)
-    const restanteNum = totalPagoNum - totalAbonosNum
-    const restanteFormatted = isNaN(restanteNum) ? "" : restanteNum.toFixed(0)
-    setForm((prevForm) => ({ ...prevForm, remaining: restanteFormatted }))
-    setErrors((prevErrors) => ({ ...prevErrors, remaining: validateField("remaining", restanteFormatted) }))
-  }, [])
+    const totalAbonosNum = (pass || []).reduce((sum, abono) => sum + Number.parseFloat(abono.cantidad || 0), 0);
+    const totalPagoNum = Number.parseFloat(totalPay || 0);
+    const restanteNum = totalPagoNum - totalAbonosNum;
+    const restanteFormatted = isNaN(restanteNum) ? "" : restanteNum.toFixed(0);
+    setForm((prevForm) => ({ ...prevForm, remaining: restanteFormatted }));
+    setErrors((prevErrors) => ({ ...prevErrors, remaining: validateField("remaining", restanteFormatted) }));
+  }, []);
 
   // --- MANEJO DE SELECCIÓN DE SERVICIOS (react-select) ---
   const handleMultiServiceChange = (selectedOptions) => {
-    setForm((prevForm) => ({ ...prevForm, servicios: selectedOptions || [] })) // Guardar array {value, label}
-    setErrors((prevErrors) => ({ ...prevErrors, servicios: validateField("servicios", selectedOptions || []) }))
-  }
+    setForm((prevForm) => ({ ...prevForm, servicios: selectedOptions || [] })); // Guardar array {value, label}
+    setErrors((prevErrors) => ({ ...prevErrors, servicios: validateField("servicios", selectedOptions || []) }));
+  };
 
   // --- VALIDACIÓN ---
   const validateAbonoField = (fieldName, value) => {
-    if (fieldName === "fecha" && !value) return "Fecha req."
+    if (fieldName === "fecha" && !value) return "Fecha req.";
     if (fieldName === "cantidad") {
-      const numValue = Number.parseFloat(value)
-      if (isNaN(numValue) || numValue <= 0) return "Cantidad > 0."
+      const numValue = Number.parseFloat(value);
+      if (isNaN(numValue) || numValue <= 0) return "Cantidad > 0.";
     }
-    return ""
-  }
+    return "";
+  };
 
   // CAMBIO 3: Función mejorada para validar campos
   const validateField = (name, value) => {
     if (name === "idCustomers") {
       if (value === null || value === undefined || value === "") {
-        console.error("ERROR: idCustomers es null, undefined o vacío en validateField")
-        return "Debe seleccionar un cliente."
+        console.error("ERROR: idCustomers es null, undefined o vacío en validateField");
+        return "Debe seleccionar un cliente.";
       }
-      
-      const idNum = Number(value)
-      console.log(`Validando idCustomers: ${value} -> ${idNum}, tipo: ${typeof idNum}`)
-      
+
+      const idNum = Number(value);
+      console.log(`Validando idCustomers: ${value} -> ${idNum}, tipo: ${typeof idNum}`);
+
       if (isNaN(idNum) || idNum <= 0) {
-        console.error(`ERROR: idCustomers no es un número válido en validateField: ${value}`)
-        return "ID de cliente inválido."
+        console.error(`ERROR: idCustomers no es un número válido en validateField: ${value}`);
+        return "ID de cliente inválido.";
       }
-      
-      return ""
+
+      return "";
     }
-    
+
     if (name === "servicios" && (!Array.isArray(value) || value.length === 0)) {
-      return "Seleccione al menos un servicio."
+      return "Seleccione al menos un servicio.";
     }
-  
+
     switch (name) {
       case "fullName":
-        return value.trim() ? "" : "Nombre es requerido." // Cliente
+        return value.trim() ? "" : "Nombre es requerido."; // Cliente
       case "dateTime":
-        if (!value) return "Fecha y hora requeridas."
-        return new Date(value) > new Date() ? "" : "Fecha/hora debe ser futura."
+        if (!value) return "Fecha y hora requeridas.";
+        return new Date(value) > new Date() ? "" : "Fecha/hora debe ser futura.";
       case "timeDurationR":
-        return value ? "" : "Duración requerida."
+        return value ? "" : "Duración requerida.";
       case "evenType":
-        return value ? "" : "Tipo de Evento requerido."
+        return value ? "" : "Tipo de Evento requerido.";
       case "numberPeople":
-        return Number.parseInt(value) > 0 ? "" : "Nro. Personas > 0."
+        return Number.parseInt(value) > 0 ? "" : "Nro. Personas > 0.";
       case "decorationAmount":
-        return !isNaN(Number.parseFloat(value)) && Number.parseFloat(value) >= 0 ? "" : "Monto Decoración >= 0."
+        return !isNaN(Number.parseFloat(value)) && Number.parseFloat(value) >= 0 ? "" : "Monto Decoración >= 0.";
       case "totalPay":
-        return !isNaN(Number.parseFloat(value)) && Number.parseFloat(value) > 0 ? "" : "Total a Pagar > 0."
+        return !isNaN(Number.parseFloat(value)) && Number.parseFloat(value) > 0 ? "" : "Total a Pagar > 0.";
       case "remaining":
-        return !isNaN(Number.parseFloat(value)) && Number.parseFloat(value) >= 0 ? "" : "Restante >= 0."
+        return !isNaN(Number.parseFloat(value)) && Number.parseFloat(value) >= 0 ? "" : "Restante >= 0.";
       case "paymentMethod":
-        return value ? "" : "Forma de Pago requerida."
+        return value ? "" : "Forma de Pago requerida.";
       // Campos cliente (solo formato si existen, ya que vienen de selección)
       case "distintive":
-        return !value || value.trim() ? "" : "Distintivo inválido."
+        return !value || value.trim() ? "" : "Distintivo inválido.";
       case "customerCategory":
-        return !value || value ? "" : "Categoría inválida."
+        return !value || value ? "" : "Categoría inválida.";
       case "cellphone":
-        return !value || /^\d{7,15}$/.test(value) ? "" : "Celular inválido (7-15 dígitos)."
+        return !value || /^\d{7,15}$/.test(value) ? "" : "Celular inválido (7-15 dígitos).";
       case "email":
-        return !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? "" : "Correo inválido."
+        return !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? "" : "Correo inválido.";
       case "address":
-        return !value || value.trim() ? "" : "Dirección inválida."
+        return !value || value.trim() ? "" : "Dirección inválida.";
       default:
-        return ""
+        return "";
     }
-  }
+  };
 
   // CAMBIO 4: Función para verificar el formulario antes de enviarlo
   const verifyFormBeforeSending = () => {
-    console.log("Verificando formulario antes de enviar:", form)
-    
+    console.log("Verificando formulario antes de enviar:", form);
+
     // Verificar idCustomers
     if (!form.idCustomers && form.idCustomers !== 0) {
-      console.error("ERROR CRÍTICO: idCustomers es null o undefined en verificación final")
-      return false
+      console.error("ERROR CRÍTICO: idCustomers es null o undefined en verificación final");
+      return false;
     }
-    
-    const idCustomersNum = Number(form.idCustomers)
+
+    const idCustomersNum = Number(form.idCustomers);
     if (isNaN(idCustomersNum) || idCustomersNum <= 0) {
-      console.error(`ERROR: idCustomers no es un número válido en verificación final: ${form.idCustomers}`)
-      return false
+      console.error(`ERROR: idCustomers no es un número válido en verificación final: ${form.idCustomers}`);
+      return false;
     }
-    
+
     // Verificar otros campos críticos
     if (!form.dateTime) {
-      console.error("ERROR: dateTime es null o undefined en verificación final")
-      return false
+      console.error("ERROR: dateTime es null o undefined en verificación final");
+      return false;
     }
-    
+
     if (!form.pass || !Array.isArray(form.pass) || form.pass.length === 0) {
-      console.error("ERROR: pass no es un array válido en verificación final:", form.pass)
-      return false
+      console.error("ERROR: pass no es un array válido en verificación final:", form.pass);
+      return false;
     }
-    
-    return true
-  }
+
+    return true;
+  };
 
   // CAMBIO 5: Función mejorada para validar el formulario completo
   const validateForm = () => {
-    const newErrors = {}
-    let isValid = true
-  
+    const newErrors = {};
+    let isValid = true;
+
     // Campos obligatorios
     const fieldsToValidate = [
       "idCustomers",
@@ -572,64 +573,64 @@ const handleEventClick = (info) => {
       "remaining",
       "paymentMethod",
       "servicios",
-    ]
-  
+    ];
+
     // Verificar que el cliente esté seleccionado
-    const clientFields = ["fullName"]
-    
+    const clientFields = ["fullName"];
+
     // Validación más robusta del cliente
     if (!form.idCustomers && form.idCustomers !== 0) {
-      console.error("ERROR: idCustomers es null o undefined en validateForm")
-      newErrors.idCustomers = "Debe seleccionar un cliente válido."
-      isValid = false
+      console.error("ERROR: idCustomers es null o undefined en validateForm");
+      newErrors.idCustomers = "Debe seleccionar un cliente válido.";
+      isValid = false;
     } else {
       // Verificar que idCustomers sea un número válido
-      const idNum = Number(form.idCustomers)
-      console.log(`Validando idCustomers en validateForm: ${form.idCustomers} -> ${idNum}, tipo: ${typeof idNum}`)
-      
+      const idNum = Number(form.idCustomers);
+      console.log(`Validando idCustomers en validateForm: ${form.idCustomers} -> ${idNum}, tipo: ${typeof idNum}`);
+
       if (isNaN(idNum) || idNum <= 0) {
-        console.error(`ERROR: idCustomers no es un número válido en validateForm: ${form.idCustomers}`)
-        newErrors.idCustomers = "ID de cliente inválido."
-        isValid = false
+        console.error(`ERROR: idCustomers no es un número válido en validateForm: ${form.idCustomers}`);
+        newErrors.idCustomers = "ID de cliente inválido.";
+        isValid = false;
       }
     }
-    
+
     // Validar campos obligatorios
-    ;[...fieldsToValidate, ...clientFields].forEach((key) => {
-      const error = validateField(key, form[key])
+    [...fieldsToValidate, ...clientFields].forEach((key) => {
+      const error = validateField(key, form[key]);
       if (error) {
-        newErrors[key] = error
-        isValid = false
+        newErrors[key] = error;
+        isValid = false;
       }
-    })
-  
+    });
+
     // Validar abonos
     if (!form.pass || form.pass.length === 0) {
-      newErrors.pass = "Agregar al menos un abono."
-      isValid = false
+      newErrors.pass = "Agregar al menos un abono.";
+      isValid = false;
     } else {
       form.pass.forEach((abono, i) => {
-        const fe = validateAbonoField("fecha", abono.fecha)
-        const ce = validateAbonoField("cantidad", abono.cantidad)
-        if (fe) newErrors[`pass-${i}-fecha`] = fe
-        if (ce) newErrors[`pass-${i}-cantidad`] = ce
-        if (fe || ce) isValid = false
-      })
+        const fe = validateAbonoField("fecha", abono.fecha);
+        const ce = validateAbonoField("cantidad", abono.cantidad);
+        if (fe) newErrors[`pass-${i}-fecha`] = fe;
+        if (ce) newErrors[`pass-${i}-cantidad`] = ce;
+        if (fe || ce) isValid = false;
+      });
     }
-    console.log("Errores detectados en el formulario:", newErrors) // Depuración
+    console.log("Errores detectados en el formulario:", newErrors); // Depuración
     // Actualizar errores en el estado
-    setErrors(newErrors)
-  
-    return isValid
-  }
+    setErrors(newErrors);
+
+    return isValid;
+  };
 
   // --- Cambio General en campos del Formulario ---
   const handleChange = (e) => {
-    const { name, value } = e.target
-    const updatedForm = { ...form, [name]: value }
-    setForm(updatedForm)
+    const { name, value } = e.target;
+    const updatedForm = { ...form, [name]: value };
+    setForm(updatedForm);
     if (name === "totalPay") {
-      updateRestante(value, updatedForm.pass)
+      updateRestante(value, updatedForm.pass);
     }
     // Validar el campo que cambió
     setErrors((prevErrors) => ({
@@ -640,43 +641,43 @@ const handleEventClick = (info) => {
         Object.keys(prevErrors)
           .filter((k) => k.startsWith("pass-"))
           .reduce((acc, key) => ({ ...acc, [key]: undefined }), {})),
-    }))
-  }
+    }));
+  };
 
   // --- GUARDAR (Crear o Editar) ---
   // CAMBIO 6: Función mejorada para guardar la reserva
   const handleSaveReserva = async () => {
     // Verificación adicional para idCustomers antes de validar el formulario
     if (!form.idCustomers && form.idCustomers !== 0) {
-      console.error("ERROR CRÍTICO: idCustomers es null o undefined al guardar", form)
-      setErrors(prev => ({...prev, idCustomers: "Debe seleccionar un cliente."}))
-      Swal.fire("Error", "Debe seleccionar un cliente válido.", "warning")
-      return
+      console.error("ERROR CRÍTICO: idCustomers es null o undefined al guardar", form);
+      setErrors((prev) => ({ ...prev, idCustomers: "Debe seleccionar un cliente." }));
+      Swal.fire("Error", "Debe seleccionar un cliente válido.", "warning");
+      return;
     }
-    
+
     // Verificar que idCustomers sea un número válido
-    const idCustomersNum = Number(form.idCustomers)
+    const idCustomersNum = Number(form.idCustomers);
     if (isNaN(idCustomersNum)) {
-      console.error(`ERROR: idCustomers no es un número válido al guardar: ${form.idCustomers}`)
-      setErrors(prev => ({...prev, idCustomers: "ID de cliente inválido."}))
-      Swal.fire("Error", "ID de cliente inválido.", "warning")
-      return
+      console.error(`ERROR: idCustomers no es un número válido al guardar: ${form.idCustomers}`);
+      setErrors((prev) => ({ ...prev, idCustomers: "ID de cliente inválido." }));
+      Swal.fire("Error", "ID de cliente inválido.", "warning");
+      return;
     }
-    
+
     if (!validateForm()) {
-      Swal.fire("Error Validación", "Corrija los errores indicados.", "warning")
-      return
+      Swal.fire("Error Validación", "Corrija los errores indicados.", "warning");
+      return;
     }
-    
+
     // Verificación final del formulario
     if (!verifyFormBeforeSending()) {
-      Swal.fire("Error", "Datos del formulario inválidos. Revise los campos obligatorios.", "error")
-      return
+      Swal.fire("Error", "Datos del formulario inválidos. Revise los campos obligatorios.", "error");
+      return;
     }
-    
-    console.log("Datos validados del formulario:", form)
-    const isEditing = selectedReserva !== null
-  
+
+    console.log("Datos validados del formulario:", form);
+    const isEditing = selectedReserva !== null;
+
     const result = await Swal.fire({
       title: isEditing ? "¿Guardar Cambios?" : "¿Crear Reserva?",
       icon: "question",
@@ -685,85 +686,85 @@ const handleEventClick = (info) => {
       cancelButtonColor: "#d33",
       confirmButtonText: "Sí",
       cancelButtonText: "No",
-    })
-  
+    });
+
     if (result.isConfirmed) {
-      setLoading(true)
+      setLoading(true);
       try {
         // Extraer solo los IDs de los servicios seleccionados
-        const idAditionalServices = (form.servicios || []).map((option) => option.value)
-  
+        const idAditionalServices = (form.servicios || []).map((option) => option.value);
+
         // Asegurar que los abonos tengan el formato correcto
         const abonosToSend = (form.pass || []).map((ab) => ({
           fecha: ab.fecha,
           cantidad: Number.parseFloat(ab.cantidad || 0),
-        }))
-  
+        }));
+
         // Crear una copia limpia del formulario para enviar
         const dataToSend = {
           ...form,
           idCustomers: idCustomersNum, // Asegurar que sea un número
           idAditionalServices: idAditionalServices,
           pass: abonosToSend,
-        }
-        
+        };
+
         // Verificación final de idCustomers
         console.log("Verificación final de idCustomers:", {
           original: form.idCustomers,
           convertido: idCustomersNum,
-          tipo: typeof idCustomersNum
-        })
-        
-        console.log("Datos enviados al backend:", dataToSend)
+          tipo: typeof idCustomersNum,
+        });
+
+        console.log("Datos enviados al backend:", dataToSend);
 
         if (isEditing) {
           // MODIFICADO: Obtener el ID correcto de la reserva
           const reservationId = selectedReserva.idReservations || form.idReservations;
-          
+
           // NUEVO: Verificar que el ID sea válido
           if (!reservationId) {
             console.error("ERROR: No se encontró ID de reserva para actualizar", {
               selectedReserva,
-              formIdReservations: form.idReservations
+              formIdReservations: form.idReservations,
             });
             Swal.fire("Error", "No se pudo identificar la reserva a actualizar", "error");
             setLoading(false);
             return;
           }
-          
+
           console.log("Actualizando reserva con ID:", reservationId);
-          
+
           // MODIFICADO: Pasar el ID correcto a updateReservation
           await reservasService.updateReservation(reservationId, dataToSend);
-          
+
           setData((prevData) =>
             prevData.map((r) =>
               // MODIFICADO: Usar el ID correcto para la comparación
               r.idReservations === reservationId
                 ? { ...dataToSend, idReservations: reservationId, servicios: form.servicios, pass: form.pass }
-                : r,
-            ),
-          )
-          Swal.fire("Actualizado", "Reserva actualizada.", "success")
+                : r
+            )
+          );
+          Swal.fire("Actualizado", "Reserva actualizada.", "success");
         } else {
-          const newReservation = await reservasService.createReservation(dataToSend)
-          setData((prevData) => [...prevData, { ...newReservation, servicios: form.servicios, pass: form.pass }])
-          Swal.fire("Creada", "Reserva creada.", "success")
+          const newReservation = await reservasService.createReservation(dataToSend);
+          setData((prevData) => [...prevData, { ...newReservation, servicios: form.servicios, pass: form.pass }]);
+          Swal.fire("Creada", "Reserva creada.", "success");
         }
 
-        setModalOpen(false)
+        setModalOpen(false);
       } catch (error) {
-        console.log("Error saving reservation:", error)
-        Swal.fire("Error", error.message || "No se pudo guardar la reserva.", "error")  
+        console.log("Error saving reservation:", error);
+        Swal.fire("Error", error.message || "No se pudo guardar la reserva.", "error");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
-}
-  
+  };
+
   // --- CANCELAR (Eliminar) ---
   const handleCancel = async (id) => {
-    if (!id) return
+    if (!id) return;
     const result = await Swal.fire({
       title: "¿ELIMINAR Reserva?",
       text: "¡Acción irreversible!",
@@ -773,39 +774,40 @@ const handleEventClick = (info) => {
       cancelButtonColor: "#3085d6",
       confirmButtonText: "Sí, eliminar",
       cancelButtonText: "No",
-    })
+    });
     if (result.isConfirmed) {
-      setLoading(true)
+      setLoading(true);
       try {
-        const response = await reservasService.deleteReservation(id)
+        const response = await reservasService.deleteReservation(id);
+        // IMPORTANTE: Usar el ID correcto (idReservations) para filtrar
         if (response && response.success !== false) {
-          setData((prevData) => prevData.filter((reserva) => reserva.id !== id))
-          setModalOpen(false)
-          Swal.fire("Eliminada", response.message || "Reserva eliminada.", "success")
+          setData((prevData) => prevData.filter((reserva) => reserva.idReservations !== id));
+          setModalOpen(false);
+          Swal.fire("Eliminada", response.message || "Reserva eliminada.", "success");
         } else {
-          Swal.fire("Error", response?.message || "No se pudo eliminar.", "error")
+          Swal.fire("Error", response?.message || "No se pudo eliminar.", "error");
         }
       } catch (error) {
-        console.error("Error deleting reservation:", error)
-        const errorMessage = error.response?.data?.message || error.message || "Error al eliminar."
-        Swal.fire("Error", errorMessage, "error")
+        console.error("Error deleting reservation:", error);
+        const errorMessage = error.response?.data?.message || error.message || "Error al eliminar.";
+        Swal.fire("Error", errorMessage, "error");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
-  }
+  };
 
   // --- Descargar Excel ---
   const handleDownloadExcel = () => {
     if (data.length === 0) {
-      Swal.fire("Vacío", "No hay datos.", "info")
-      return
+      Swal.fire("Vacío", "No hay datos.", "info");
+      return;
     }
     const dataToExport = data.map((r) => ({
-      ID: r.id,
+      ID: r.idReservations, // Usar idReservations
       Cliente: r.fullName,
       Asunto: r.matter,
-      FechaHora: r.dateTime,
+      FechaHora: r.dateTime ? new Date(r.dateTime).toLocaleString("es-CO") : "N/A", // Formato legible
       Duracion: r.timeDurationR,
       TipoEvento: r.evenType,
       NumPersonas: r.numberPeople,
@@ -813,20 +815,25 @@ const handleEventClick = (info) => {
       Restante: r.remaining,
       FormaPago: r.paymentMethod,
       Estado: r.status,
-    }))
-    const ws = utils.json_to_sheet(dataToExport)
-    const wb = utils.book_new()
-    utils.book_append_sheet(wb, ws, "Reservas")
-    writeFile(wb, "Reservas.xlsx")
-  }
+    }));
+    const ws = utils.json_to_sheet(dataToExport);
+    const wb = utils.book_new();
+    utils.book_append_sheet(wb, ws, "Reservas");
+    writeFile(wb, "Reservas.xlsx");
+  };
 
   // --- Formato de Moneda ---
   const formatCurrency = (value) => {
-    const n = Number.parseFloat(value)
+    const n = Number.parseFloat(value);
     return isNaN(n)
-      ? ""
-      : new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(n)
-  }
+      ? "$0" // Devolver $0 si no es un número válido
+      : new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(n);
+  };
+
+  // --- NUEVA FUNCIÓN: Toggle para el modal de la lista ---
+  const toggleListModal = () => {
+    setListModalOpen(!listModalOpen);
+  };
 
   // --- RENDERIZADO DEL COMPONENTE ---
   return (
@@ -858,6 +865,13 @@ const handleEventClick = (info) => {
           {" "}
           <h2>Calendario de Reservas</h2>{" "}
         </Col>
+        {/* <<<--- NUEVO BOTÓN --- */}
+        <Col xs="auto">
+          <Button color="info" onClick={toggleListModal} disabled={loading || data.length === 0}>
+            <FaList className="me-2" /> Ver Lista de Reservas
+          </Button>
+        </Col>
+        {/* --- Botón existente --- */}
         <Col xs="auto">
           <Button color="success" onClick={handleDownloadExcel} disabled={data.length === 0 || loading}>
             <FaFileExcel className="me-2" /> Descargar Excel
@@ -889,7 +903,7 @@ const handleEventClick = (info) => {
                 initialView="dayGridMonth"
                 events={filteredEvents}
                 dateClick={handleDateClick}
-                eventClick={handleEventClick}
+                eventClick={handleEventClick} // Ya abre el modal de edición
                 editable={true}
                 eventDrop={handleEventDrop}
                 locale="es"
@@ -903,7 +917,7 @@ const handleEventClick = (info) => {
         </Col>
       </Row>
 
-      {/* --- MODAL PARA CREAR/EDITAR RESERVA --- */}
+      {/* --- MODAL PARA CREAR/EDITAR RESERVA (Sin cambios) --- */}
       <Modal
         isOpen={modalOpen}
         toggle={() => !loading && setModalOpen(!modalOpen)}
@@ -924,71 +938,101 @@ const handleEventClick = (info) => {
               Datos del Cliente
             </legend>
             <Row>
+              {/* --- Búsqueda de cliente con react-select --- */}
               <Col md={7}>
                 <Label for="clienteBusqueda">
-                  <b>Seleccionar Cliente*</b>
+                  <b>Buscar y Seleccionar Cliente*</b>
                 </Label>
                 <Select
+                  id="clienteBusqueda"
                   value={
                     form.idCustomers
-                      ? { value: form.idCustomers, label: `${form.fullName} (${form.distintive || "Sin distintivo"})` }
+                      ? {
+                          value: form.idCustomers,
+                          label: `${form.fullName || "Cliente"} (ID: ${form.idCustomers})`,
+                        } // Mostrar ID para claridad
                       : null
                   }
-                  onChange={(selectedOption) =>
-                    setForm({
-                      ...form,
-                      idCustomers: selectedOption.value,
-                      fullName: selectedOption.label.split(" (")[0],
-                      distintive: selectedOption.label.includes("(")
-                        ? selectedOption.label.split("(")[1].replace(")", "")
-                        : "",
-                    })
-                  }
+                  onChange={(selectedOption) => {
+                    if (selectedOption) {
+                      // Lógica para encontrar el cliente completo en los resultados o hacer otra llamada si es necesario
+                      const clienteSeleccionado = clientSearchResults.find((c) => c.id === selectedOption.value);
+                      if (clienteSeleccionado) {
+                        selectClient(clienteSeleccionado); // Usar la función existente
+                      } else {
+                        // Si no se encuentra en los resultados (poco probable con onInputChange),
+                        // se podría intentar obtenerlo o manejar el error. Por ahora, actualizar lo básico.
+                        setForm((prev) => ({
+                          ...prev,
+                          idCustomers: selectedOption.value,
+                          fullName: selectedOption.label.split(" (ID:")[0], // Extraer nombre
+                        }));
+                      }
+                    } else {
+                      // Limpiar si se deselecciona
+                      setForm((prev) => ({
+                        ...prev,
+                        idCustomers: "",
+                        fullName: "",
+                        distintive: "",
+                        customerCategory: "",
+                        email: "",
+                        cellphone: "",
+                        address: "",
+                      }));
+                    }
+                  }}
                   onInputChange={(inputValue) => {
-                    handleClientSearch(inputValue) // Conectar la búsqueda
+                    if (inputValue.length > 1) {
+                      // Activar búsqueda solo después de 2 caracteres
+                      handleClientSearch(inputValue);
+                    } else if (inputValue.length <= 1) {
+                      setClientSearchResults([]); // Limpiar si se borra
+                    }
                   }}
                   options={clientSearchResults.map((cliente) => ({
-                    value: cliente.id,
-                    label: `${cliente.FullName} (${cliente.Distintive || "Sin distintivo"})`,
+                    value: cliente.id, // Usar el ID normalizado
+                    label: `${cliente.FullName || "Sin Nombre"} (ID: ${cliente.id})`, // Mostrar ID
                   }))}
-                  placeholder="Seleccione un cliente"
+                  placeholder="Escriba para buscar..."
                   isLoading={isClientSearchLoading}
+                  isClearable
+                  noOptionsMessage={() => (clientSearchText.length < 2 ? "Escriba al menos 2 letras" : "No hay coincidencias")}
                   styles={{
                     control: (base) => ({
                       ...base,
                       borderColor: errors.idCustomers ? "#dc3545" : base.borderColor,
                     }),
                   }}
+                  isDisabled={loading} // Deshabilitar si está cargando
                 />
-
                 {errors.idCustomers && <div className="text-danger mt-1 small">{errors.idCustomers}</div>}
               </Col>
+
+              {/* --- Campos autocompletados del cliente --- */}
               <Col md={5}>
-                <Label for="categoriaClienteDisplay">
-                  <b>Categoría</b>
-                </Label>
+                <Label for="categoriaClienteDisplay">Categoría</Label>
                 <Input
                   id="categoriaClienteDisplay"
-                  name="customerCategory"
-                  value={form.customerCategory}
+                  value={form.customerCategory || "-"}
                   readOnly
                   disabled
-                />
-              </Col>
-              <Col md={12} className="mt-2">
-                <Input
                   bsSize="sm"
-                  type="text"
-                  value={
-                    form.fullName
-                      ? `Seleccionado: ${form.fullName} (ID: ${form.idCustomers})`
-                      : "Ningún cliente seleccionado"
-                  }
-                  readOnly
-                  disabled
-                  title={form.fullName ? `ID: ${form.idCustomers}` : ""}
                 />
               </Col>
+              {/* Mostrar nombre completo seleccionado para confirmación */}
+              {form.fullName && (
+                <Col md={12} className="mt-2">
+                  <Input
+                    bsSize="sm"
+                    type="text"
+                    value={`Seleccionado: ${form.fullName} (Dist: ${form.distintive || "N/A"})`}
+                    readOnly
+                    disabled
+                    className="bg-light"
+                  />
+                </Col>
+              )}
             </Row>
           </FormGroup>
 
@@ -997,7 +1041,22 @@ const handleEventClick = (info) => {
             <legend className="w-auto px-2" style={{ fontSize: "1rem", fontWeight: "bold" }}>
               Detalles de la Reserva
             </legend>
-            <Row className="mt-3">
+            <Row>
+              <Col md={6}>
+                <Label for="dateTime">
+                  <b>Fecha y Hora*</b>
+                </Label>
+                <Input
+                  id="dateTime"
+                  name="dateTime"
+                  type="datetime-local"
+                  value={form.dateTime}
+                  onChange={handleChange}
+                  invalid={!!errors.dateTime}
+                  disabled={loading}
+                />
+                {errors.dateTime && <FormFeedback>{errors.dateTime}</FormFeedback>}
+              </Col>
               <Col md={6}>
                 <Label for="timeDurationR">
                   <b>Duración (HH:MM)*</b>
@@ -1009,11 +1068,13 @@ const handleEventClick = (info) => {
                   value={form.timeDurationR}
                   onChange={handleChange}
                   invalid={!!errors.timeDurationR}
-                  step="1800"
+                  step="1800" // Pasos de 30 min
                   disabled={loading}
                 />
                 {errors.timeDurationR && <FormFeedback>{errors.timeDurationR}</FormFeedback>}
               </Col>
+            </Row>
+            <Row className="mt-3">
               <Col md={6}>
                 <Label for="evenType">
                   <b>Tipo de Evento*</b>
@@ -1035,11 +1096,10 @@ const handleEventClick = (info) => {
                   <option value="Bautizo">Bautizo</option>
                   <option value="PrimeraComunion">Primera Comunión</option>
                   <option value="Matrimonio">Matrimonio</option>
+                  <option value="Otro">Otro</option>
                 </Input>
                 {errors.evenType && <FormFeedback>{errors.evenType}</FormFeedback>}
               </Col>
-            </Row>
-            <Row className="mt-3">
               <Col md={6}>
                 <Label for="numberPeople">
                   <b>Número de Personas*</b>
@@ -1056,17 +1116,17 @@ const handleEventClick = (info) => {
                 />
                 {errors.numberPeople && <FormFeedback>{errors.numberPeople}</FormFeedback>}
               </Col>
-              <Col md={6}>
-                <Label for="matter">
-                  <b>Observaciones</b>
-                </Label>
+            </Row>
+            <Row className="mt-3">
+              <Col md={12}>
+                <Label for="matter">Observaciones</Label>
                 <Input
                   id="matter"
                   name="matter"
                   type="textarea"
                   value={form.matter}
                   onChange={handleChange}
-                  rows="1"
+                  rows="2"
                   disabled={loading}
                 />
               </Col>
@@ -1076,7 +1136,7 @@ const handleEventClick = (info) => {
           {/* --- Servicios Adicionales --- */}
           <FormGroup tag="fieldset" className="border p-3 mb-3">
             <legend className="w-auto px-2" style={{ fontSize: "1rem", fontWeight: "bold" }}>
-              Servicios Adicionales
+              Servicios Adicionales*
             </legend>
             <Select
               id="servicios"
@@ -1084,7 +1144,7 @@ const handleEventClick = (info) => {
               options={serviceOptions}
               isMulti
               onChange={handleMultiServiceChange}
-              value={form.servicios}
+              value={form.servicios} // react-select maneja {value, label}
               placeholder="Seleccione servicios..."
               isLoading={loading && availableServices.length === 0}
               isDisabled={loading}
@@ -1095,6 +1155,7 @@ const handleEventClick = (info) => {
                   borderColor: errors.servicios ? "#dc3545" : "#ced4da",
                 }),
               }}
+              noOptionsMessage={() => "No hay servicios disponibles"}
             />
             {errors.servicios && <div className="text-danger mt-1 small">{errors.servicios}</div>}
           </FormGroup>
@@ -1113,6 +1174,7 @@ const handleEventClick = (info) => {
                   id="decorationAmount"
                   name="decorationAmount"
                   type="number"
+                  placeholder="Ej: 50000"
                   value={form.decorationAmount}
                   onChange={handleChange}
                   invalid={!!errors.decorationAmount}
@@ -1123,12 +1185,13 @@ const handleEventClick = (info) => {
               </Col>
               <Col md={6}>
                 <Label for="totalPay">
-                  <b>Total a Pagar*</b>
+                  <b>Total a Pagar (Reserva)*</b>
                 </Label>
                 <Input
                   id="totalPay"
                   name="totalPay"
                   type="number"
+                  placeholder="Ej: 300000"
                   value={form.totalPay}
                   onChange={handleChange}
                   invalid={!!errors.totalPay}
@@ -1138,6 +1201,8 @@ const handleEventClick = (info) => {
                 {errors.totalPay && <FormFeedback>{errors.totalPay}</FormFeedback>}
               </Col>
             </Row>
+
+            {/* --- Abonos --- */}
             <Row className="mt-3">
               <Col md={12}>
                 <Label>
@@ -1146,9 +1211,10 @@ const handleEventClick = (info) => {
                 {errors.pass && <div className="text-danger mb-2 small">{errors.pass}</div>}
                 {(form.pass || []).map((abono, index) => (
                   <Row key={index} className="mb-2 align-items-center">
-                    <Col md={5}>
+                    <Col md={5} xs={5}>
                       <Input
                         type="date"
+                        bsSize="sm"
                         value={abono.fecha}
                         onChange={(e) => handleAbonoChange(index, "fecha", e.target.value)}
                         invalid={!!errors[`pass-${index}-fecha`]}
@@ -1156,9 +1222,10 @@ const handleEventClick = (info) => {
                       />
                       {errors[`pass-${index}-fecha`] && <FormFeedback>{errors[`pass-${index}-fecha`]}</FormFeedback>}
                     </Col>
-                    <Col md={5}>
+                    <Col md={5} xs={5}>
                       <Input
                         type="number"
+                        bsSize="sm"
                         placeholder="Cantidad"
                         value={abono.cantidad}
                         onChange={(e) => handleAbonoChange(index, "cantidad", e.target.value)}
@@ -1170,8 +1237,15 @@ const handleEventClick = (info) => {
                         <FormFeedback>{errors[`pass-${index}-cantidad`]}</FormFeedback>
                       )}
                     </Col>
-                    <Col md={2}>
-                      <Button size="sm" color="danger" onClick={() => removeAbono(index)} disabled={loading}>
+                    <Col md={2} xs={2}>
+                      <Button
+                        size="sm"
+                        color="danger"
+                        outline
+                        onClick={() => removeAbono(index)}
+                        disabled={loading || (form.pass || []).length <= 1} // No eliminar el último
+                        title="Eliminar abono"
+                      >
                         <FaTrashAlt />
                       </Button>
                     </Col>
@@ -1182,6 +1256,8 @@ const handleEventClick = (info) => {
                 </Button>
               </Col>
             </Row>
+
+            {/* --- Restante y Forma de Pago --- */}
             <Row className="mt-3">
               <Col md={6}>
                 <Label for="remaining">
@@ -1190,16 +1266,17 @@ const handleEventClick = (info) => {
                 <Input
                   id="remaining"
                   name="remaining"
-                  type="number"
-                  value={form.remaining}
+                  type="text" // Para mostrar formato moneda
+                  value={formatCurrency(form.remaining)} // Mostrar formateado
                   readOnly
                   invalid={!!errors.remaining}
+                  className="fw-bold" // Resaltar
                 />
                 {errors.remaining && <FormFeedback>{errors.remaining}</FormFeedback>}
               </Col>
               <Col md={6}>
                 <Label for="paymentMethod">
-                  <b>Forma de Pago*</b>
+                  <b>Forma de Pago (Último)*</b>
                 </Label>
                 <Input
                   id="paymentMethod"
@@ -1230,7 +1307,7 @@ const handleEventClick = (info) => {
             <Row>
               <Col md={12}>
                 <Label for="status">
-                  <b>Estado (Visual)</b>
+                  <b>Estado (Visual)*</b>
                 </Label>
                 <Input
                   id="status"
@@ -1256,7 +1333,11 @@ const handleEventClick = (info) => {
             {loading ? <Spinner size="sm" /> : selectedReserva ? "Guardar Cambios" : "Crear Reserva"}
           </Button>
           {selectedReserva && (
-            <Button color="danger" onClick={() => handleCancel(selectedReserva.id)} disabled={loading}>
+            <Button
+              color="danger"
+              onClick={() => handleCancel(selectedReserva.idReservations)} // Usar idReservations
+              disabled={loading}
+            >
               {loading ? <Spinner size="sm" /> : "Eliminar Reserva"}
             </Button>
           )}
@@ -1265,10 +1346,83 @@ const handleEventClick = (info) => {
             onClick={() => setModalOpen(false)}
             disabled={loading}
           >
+            Cancelar
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* --- <<<--- NUEVO MODAL PARA MOSTRAR LA LISTA DE RESERVAS --- >>> */}
+      <Modal isOpen={listModalOpen} toggle={toggleListModal} size="xl" backdrop="static" scrollable>
+        <ModalHeader toggle={toggleListModal} style={{ background: "#0d6efd", color: "white" }}>
+          Lista de Reservas Creadas
+        </ModalHeader>
+        <ModalBody>
+          {data && data.length > 0 ? (
+            <Table striped bordered hover responsive size="sm">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Cliente</th>
+                  <th>Fecha y Hora</th>
+                  <th>Tipo Evento</th>
+                  <th>Personas</th>
+                  <th>Total</th>
+                  <th>Restante</th>
+                  <th>Estado</th>
+                  <th>Acciones</th> {/* Columna para acciones */}
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((reserva, index) => (
+                  <tr key={reserva.idReservations}>
+                    <td>{index + 1}</td>
+                    <td>{reserva.fullName || "N/A"}</td>
+                    <td>{reserva.dateTime ? new Date(reserva.dateTime).toLocaleString("es-CO") : "N/A"}</td>
+                    <td>{reserva.evenType || "N/A"}</td>
+                    <td>{reserva.numberPeople || "N/A"}</td>
+                    <td>{formatCurrency(reserva.totalPay)}</td>
+                    <td>{formatCurrency(reserva.remaining)}</td>
+                    <td>
+                      <span
+                        className={`badge bg-${
+                          colorMap[reserva.status] ? "" : "secondary" // Usa colorMap para el fondo si existe
+                        }`}
+                        style={
+                          colorMap[reserva.status] ? { backgroundColor: colorMap[reserva.status] + " !important" } : {}
+                        } // Estilo inline para asegurar color
+                      >
+                        {reserva.status ? reserva.status.replace("_", " ") : "N/A"}
+                      </span>
+                    </td>
+                    <td>
+                      <Button
+                        size="sm"
+                        color="primary"
+                        outline
+                        onClick={() => {
+                           // Simula el click en el evento del calendario para abrir el modal de edición
+                           handleEventClick({ event: { id: reserva.idReservations.toString() } });
+                           toggleListModal(); // Cierra el modal de lista
+                        }}
+                        title="Ver/Editar Reserva"
+                      >
+                        Ver/Editar
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          ) : (
+            <p>No hay reservas para mostrar.</p>
+          )}
+        </ModalBody>
+        <ModalFooter>
+          <Button color="secondary" onClick={toggleListModal}>
             Cerrar
           </Button>
         </ModalFooter>
       </Modal>
     </Container>
-  )
+  );
 }
