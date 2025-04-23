@@ -10,8 +10,7 @@ import Clientes from "./Clientes/Clientes"
 import Reservas from "./Reservas/Reservas"
 import Servicios from "./Servicios/Servicios"
 import ManoDeObra from "./ManoDeObra/ManoDeObra"
-import FichaTecnica from "./ProductoInsumo/FichaTecnica";
-import ListaFichasTecnicas from "./ProductoInsumo/ListaFichasTecnicas";
+import GestionComprasPage from "./Compras/GestionComprasPage";
 
 import {
   Home,
@@ -82,23 +81,13 @@ const routes = [
         path: "insumo",
         label: "Insumo",
         icon: <Boxes size={SUB_ICON_SIZE} />,
-        element: < Insumos/>,
+        element: <Insumos/>,
       },
       {
         path: "producto-insumo",
         label: "Producto Insumo",
         icon: <Boxes size={SUB_ICON_SIZE} />,
         element: <Productos />,
-      },
-      {
-        path: "ficha-tecnica",
-        label: "Ficha Técnica",
-        icon: <Box size={SUB_ICON_SIZE} />,
-        element: <FichaTecnica />,
-      },
-      {
-        path: "fichas-tecnicas/:idProduct",
-        element: <ListaFichasTecnicas />,
       },
       {
         path: "orden-produccion",
