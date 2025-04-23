@@ -11,9 +11,6 @@ import Reservas from "./Reservas/Reservas"
 import Servicios from "./Servicios/Servicios"
 import ManoDeObra from "./ManoDeObra/ManoDeObra"
 import GestionComprasPage from "./Compras/GestionComprasPage";
-import Insumos from "./Insumo/Insumo";
-import FichaTecnica from "./ProductoInsumo/FichaTecnica"
-import TablaGastos from "./ManoDeObra/TablaGastos";
 
 import {
   Home,
@@ -142,12 +139,6 @@ const routes = [
     label: "Mano de obra",
     icon: <Wrench size={ICON_SIZE} />,
     element: <ManoDeObra />,
-  },
-  {
-    path: "tabla-gastos",      // Ruta funcional
-    element: <TablaGastos />,  // Componente a renderizar
-    menu: false              // <-- ¡LA CLAVE! Indicar que NO va en el menú
-    // Ya no necesitas label ni icon si no va en el menú
   },
 ];
 

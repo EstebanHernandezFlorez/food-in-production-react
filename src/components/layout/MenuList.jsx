@@ -1,24 +1,17 @@
-// MenuList.js
+// src/components/layout/MenuList.js (CORREGIDO)
+
 import React, { useState, useRef } from 'react';
 import { Menu } from 'antd';
 import { Link } from 'react-router-dom';
-import {
-    Home, BadgeInfo, User, Package, Calendar, Wrench, Users,
-    Building, Box, ShoppingBag, ClipboardList, Factory,
-    ConciergeBell, CalendarCheck, Boxes
-} from 'lucide-react';
+// Importa SOLO las rutas que van al menú
+import routes from "../../views/module/pages.routes"; // <-- Usa pages.routes.js
 import '../../menu.css'; // Importante que se cargue
-import routes from "../../views/module/pages.routes"; // Import routes
 
-const ICON_SIZE = 18;
-const SUB_ICON_SIZE = ICON_SIZE - 2;
-
-// Recibe textColor como prop
 const MenuList = ({ collapsed, backgroundColor, textColor }) => {
     const [openKeys, setOpenKeys] = useState([]);
     const menuRef = useRef(null);
-    const rootSubmenuKeys = ['produccion_submenu', 'reservas_submenu'];
 
+    const rootSubmenuKeys = routes.filter(r => r.children).map(r => r.path);
     const onOpenChange = (keys) => {
         const latestOpenKey = keys.find((key) => openKeys.indexOf(key) === -1);
         if (rootSubmenuKeys.indexOf(latestOpenKey) === -1) {
@@ -26,64 +19,53 @@ const MenuList = ({ collapsed, backgroundColor, textColor }) => {
         } else {
           setOpenKeys(latestOpenKey ? [latestOpenKey] : []);
         }
-      };
-
-    const transformRoutesToMenuItems = (routes) => {
-        return routes.map((route) => {
-            const menuItem = {
-                key: route.path,
-                icon: route.icon,
-                label: route.label,
-                path: `/home/${route.path}`,
-            };
-
-            if (route.children) {
-                menuItem.children = transformRoutesToMenuItems(route.children);
-            }
-
-            return menuItem;
-        });
     };
 
-    const menuItems = transformRoutesToMenuItems(routes);
+    // --- FUNCIÓN CORREGIDA para generar items de menú con rutas anidadas ---
+    const renderMenuItem = (item, basePath = '/home') => { // Añade basePath, default '/home'
+        // Construye el path completo actual, evitando dobles barras
+        const currentPath = `${basePath}/${item.path}`.replace(/\/+/g, '/');
 
-    const renderMenuItem = (item) => {
-        if (item.children) {
+        // Si es una ruta final (hoja)
+        if (!item.children || item.children.length === 0) {
             return (
-                <Menu.SubMenu key={item.key} icon={item.icon} title={item.label} className="submenu-item">
-                    {item.children.map(renderMenuItem)}
-                </Menu.SubMenu>
+                <Menu.Item key={currentPath} icon={item.icon}> {/* Usa path completo como key */}
+                    {/* El Link AHORA apunta al path completo calculado */}
+                    <Link to={currentPath} style={{ textDecoration: 'none' }}>
+                        {item.label}
+                    </Link>
+                </Menu.Item>
             );
         }
+
+        // Si es un submenú (tiene hijos)
         return (
-            <Menu.Item key={item.key} icon={item.icon}>
-                <Link to={item.path} style={{ textDecoration: 'none' }}>
-                    {item.label}
-                </Link>
-            </Menu.Item>
+            <Menu.SubMenu key={currentPath} icon={item.icon} title={item.label}> {/* Usa path completo como key */}
+                {/* Llama recursivamente para los hijos, pasando el NUEVO basePath */}
+                {item.children.map(child => renderMenuItem(child, currentPath))}
+            </Menu.SubMenu>
         );
     };
+    // ---------------------------------------------------------------------
 
     return (
         <Menu
             ref={menuRef}
             mode="inline"
-            theme="light" // Mantenemos light, los estilos CSS hacen el trabajo
+            theme="light"
             openKeys={openKeys}
             onOpenChange={onOpenChange}
             style={{
                 borderRight: 0,
-                backgroundColor: 'transparent', // Fondo transparente para ver el del Sider
-                paddingBottom: '48px'
+                backgroundColor: 'transparent',
             }}
-            // Pasamos el textColor como una variable CSS para usar en menu.css
-            // Esto es opcional, también podrías definir el color directamente en menu.css
-            // como lo hacíamos antes, pero así es más dinámico si alguna vez cambia.
-            css={{ '--menu-text-icon-color-base': textColor }}
+             css={{ '--menu-text-icon-color-base': textColor }}
             className="menu-list-container"
             inlineCollapsed={collapsed}
         >
-            {menuItems.map(renderMenuItem)}
+            {/* Mapea las rutas de pages.routes.js iniciando la recursión */}
+            {/* La llamada inicial usa el basePath por defecto ('/home') */}
+            {routes.map(route => renderMenuItem(route))}
         </Menu>
     );
 };

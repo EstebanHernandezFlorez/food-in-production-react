@@ -366,8 +366,8 @@ const TablaGastos = () => {
     }, [clearFormErrors]);
 
     // --- Navigation Handlers ---
-    const handleNavigateToManoDeObra = useCallback(() => navigate('/mano_de_obra'), [navigate]);
-    const handleNavigateToEmployees = useCallback(() => navigate('/rendimiento-empleado'), [navigate]);
+    const handleNavigateToManoDeObra = useCallback(() => navigate('/home/mano-de-obra'), [navigate]);
+    const handleNavigateToEmployees = useCallback(() => navigate('/home/rendimiento-empleado'), [navigate]);
 
     // --- Filtering and Pagination Logic ---
     const filteredData = useMemo(() => {
