@@ -74,13 +74,28 @@ const fichaTecnicaService = {
     
     getSpecSheetsByProduct: async (idProduct) => {
         try {
-            console.log('Consultando fichas para el producto:', idProduct);
-            const response = await axios.get(`${BASE_URL}/specSheet/product/${idProduct}`); // Corregida la ruta para coincidir con el backend
-            console.log('Respuesta del servidor:', response.data);
-            return Array.isArray(response.data) ? response.data : [];
+            console.log('Consultando fichas técnicas para producto:', idProduct);
+            const response = await axios.get(`${BASE_URL}/specSheet/product/${idProduct}`);
+            console.log('Respuesta completa:', response);
+            console.log('Datos de la respuesta:', response.data);
+            
+            // Verificar si la respuesta es exitosa
+            if (response.data.success === false) {
+                throw new Error(response.data.message);
+            }
+
+            // Si los datos vienen dentro de una propiedad específica
+            const fichas = Array.isArray(response.data) ? response.data : [];
+            console.log('Fichas procesadas:', fichas);
+            
+            return fichas;
         } catch (error) {
             console.error('Error completo:', error);
-            console.error('URL intentada:', `${BASE_URL}/specSheet/product/${idProduct}`);
+            console.error('Detalles del error:', {
+                message: error.message,
+                response: error.response?.data,
+                status: error.response?.status
+            });
             throw error;
         }
     },
