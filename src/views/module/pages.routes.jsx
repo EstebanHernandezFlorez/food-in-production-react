@@ -11,7 +11,7 @@ import Reservas from "./Reservas/Reservas"
 import Servicios from "./Servicios/Servicios"
 import ManoDeObra from "./ManoDeObra/ManoDeObra"
 import GestionComprasPage from "./Compras/GestionComprasPage";
-import Insumos from "./Insumo/Insumo";
+import Insumos from "./Insumo/Insumo"
 
 import {
   Home,
@@ -82,13 +82,19 @@ const routes = [
         path: "insumo",
         label: "Insumo",
         icon: <Boxes size={SUB_ICON_SIZE} />,
-        element: < Insumos/>,
+        element: <Insumos/>,
       },
       {
         path: "producto-insumo",
         label: "Producto Insumo",
         icon: <Boxes size={SUB_ICON_SIZE} />,
         element: <Productos />,
+      },
+      {
+        path: "insumo",
+        label: "Insumo",
+        icon: <Boxes size={SUB_ICON_SIZE} />,
+        element: <Insumos />,
       },
       {
         path: "orden-produccion",
