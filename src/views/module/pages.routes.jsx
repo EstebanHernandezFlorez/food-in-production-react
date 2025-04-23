@@ -11,6 +11,7 @@ import Reservas from "./Reservas/Reservas"
 import Servicios from "./Servicios/Servicios"
 import ManoDeObra from "./ManoDeObra/ManoDeObra"
 import GestionComprasPage from "./Compras/GestionComprasPage";
+import Insumos from "./Insumo/Insumo";
 
 import {
   Home,
