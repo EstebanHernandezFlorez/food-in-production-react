@@ -18,21 +18,28 @@ const ListaFichasTecnicas = () => {
                     console.error('No hay idProduct');
                     return;
                 }
-                console.log('ID del producto:', idProduct);
+                console.log('Intentando cargar fichas para el producto:', idProduct);
                 const data = await fichaTecnicaService.getSpecSheetsByProduct(idProduct);
-                console.log('Datos recibidos:', data);
+                console.log('Datos recibidos del servicio:', data);
 
-                if (Array.isArray(data) && data.length > 0) {
-                    setFichas(data);
-                    toast.success(`Se encontraron ${data.length} fichas técnicas`);
+                if (Array.isArray(data)) {
+                    if (data.length > 0) {
+                        setFichas(data);
+                        toast.success(`Se encontraron ${data.length} fichas técnicas`);
+                    } else {
+                        setFichas([]);
+                        
+                        toast.info("No hay fichas técnicas para este producto");
+                    }
                 } else {
-                    setFichas([]);
-                    toast.info("No se encontraron fichas técnicas para este producto");
+                    console.error('La respuesta no es un array:', data);
+                    toast.error("Error en el formato de datos");
                 }
             } catch (error) {
                 console.error("Error detallado:", error);
-                console.error("Response:", error.response);
-                toast.error("Error al cargar las fichas técnicas");
+                console.error("Mensaje de error:", error.message);
+                console.error("Respuesta del servidor:", error.response?.data);
+                toast.error(error.response?.data?.message || "Error al cargar las fichas técnicas");
             }
         };
         
