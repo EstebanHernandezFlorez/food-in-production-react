@@ -7,6 +7,7 @@ import { authService } from '../services/authService'; // Asegúrate de importar
 // import axiosInstance from "./path/to/axiosInstance"; // Opcional: Usar instancia configurada
 
 const AuthContext = createContext();
+const url = "http://localhost:3000/api/auth/login"; // Cambia esto a tu URL de login
 
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
