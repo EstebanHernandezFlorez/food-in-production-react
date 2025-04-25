@@ -1,7 +1,7 @@
 import React from "react";
 import Dashboard from "./Dashboard/dashboard";
-import Roles from "./Roles/roles";
-import Usuarios from "./Usuarios/usuarios";
+import Roles from "./roles/roles";
+import Usuarios from "./usuarios/usuarios";
 import Proveedores from "./Proveedores/Proveedores"
 import Empleados from "./Empleados/Empleados";
 import Productos from "./ProductoInsumo/ProductoInsumo"
@@ -15,23 +15,19 @@ import Insumos from "./Insumo/Insumo"
 
 import {
   Home,
-  BadgeInfo,
-  User,
-  Package,
-  Calendar,
-  Wrench,
-  Users,
-  Building,
-  Box,
-  ShoppingBag,
-  ClipboardList,
-  Factory,
-  ConciergeBell,
-  CalendarCheck,
-  Boxes,
+  Key,
+  Users as UserIcon,
+  Package as PackageIcon,
+  Calendar as CalendarIcon,
+  Settings,
+  UserCog,
+  Box as BoxIcon,
+  ShoppingBag as ShoppingBagIcon,
+  Clipboard as ClipboardIcon,
+  Factory as FactoryIcon,
+  Bell,
+  CheckCircle,
 } from "lucide-react";
-import { patch } from "@mui/material";
-import { element } from "prop-types";
 
 const roles = {
   admin: 1,
@@ -52,103 +48,95 @@ const routes = [
   {
     path: "roles",
     label: "Roles",
-    icon: <BadgeInfo size={ICON_SIZE} />,
+    icon: <Key size={ICON_SIZE} />,
     element: <Roles />,
   },
   {
     path: "usuarios",
     label: "Usuarios",
-    icon: <User size={ICON_SIZE} />,
+    icon: <UserIcon size={ICON_SIZE} />,
     element: <Usuarios />,
   },
   {
     path: "produccion",
     label: "Producción",
-    icon: <Package size={ICON_SIZE} />,
+    icon: <PackageIcon size={ICON_SIZE} />,
     children: [
       {
         path: "proveedores",
         label: "Proveedores",
-        icon: <Building size={SUB_ICON_SIZE} />,
+        icon: <FactoryIcon size={SUB_ICON_SIZE} />,
         element: <Proveedores />,
       },
       {
         path: "empleados",
         label: "Empleados",
-        icon: <Users size={SUB_ICON_SIZE} />,
+        icon: <UserCog size={SUB_ICON_SIZE} />,
         element: <Empleados />,
       },
       {
         path: "insumo",
         label: "Insumo",
-        icon: <Boxes size={SUB_ICON_SIZE} />,
-        element: <Insumos/>,
+        icon: <BoxIcon size={SUB_ICON_SIZE} />,
+        element: <Insumos />,
       },
       {
         path: "producto-insumo",
         label: "Producto Insumo",
-        icon: <Boxes size={SUB_ICON_SIZE} />,
+        icon: <BoxIcon size={SUB_ICON_SIZE} />,
         element: <Productos />,
-      },
-      {
-        path: "insumo",
-        label: "Insumo",
-        icon: <Boxes size={SUB_ICON_SIZE} />,
-        element: <Insumos />,
       },
       {
         path: "orden-produccion",
         label: "Orden de producción",
-        icon: <Factory size={SUB_ICON_SIZE} />,
+        icon: <FactoryIcon size={SUB_ICON_SIZE} />,
         element: <Empleados />,
       },
       {
         path: "produccion",
         label: "Producción",
-        icon: <Factory size={SUB_ICON_SIZE} />,
+        icon: <FactoryIcon size={SUB_ICON_SIZE} />,
         element: <Produccion />,
       },
       {
-        path: "Gestion de compra",
+        path: "gestion-de-compra",
         label: "Gestión de compras",
-        icon: <Factory size={SUB_ICON_SIZE} />,
-        element: <GestionComprasPage   />,
+        icon: <ShoppingBagIcon size={SUB_ICON_SIZE} />,
+        element: <GestionComprasPage />,
       },
     ],
   },
   {
     path: "reservas",
     label: "Reservas",
-    icon: <Calendar size={ICON_SIZE} />,
-    children:[
+    icon: <CalendarIcon size={ICON_SIZE} />,
+    children: [
       {
         path: "clientes",
         label: "Clientes",
-        icon: <ClipboardList size={SUB_ICON_SIZE} />,
+        icon: <ClipboardIcon size={SUB_ICON_SIZE} />,
         element: <Clientes />,
       },
       {
         path: "reservas",
         label: "Reservas",
-        icon: <CalendarCheck size={SUB_ICON_SIZE} />,
+        icon: <CheckCircle size={SUB_ICON_SIZE} />,
         element: <Reservas />,
       },
       {
         path: "servicios",
         label: "Servicios",
-        icon: <ConciergeBell size={SUB_ICON_SIZE} />,
+        icon: <Bell size={SUB_ICON_SIZE} />,
         element: <Servicios />,
-      }
-    ]
+      },
+    ],
   },
   {
     path: "mano-de-obra",
     label: "Mano de obra",
-    icon: <Wrench size={ICON_SIZE} />,
+    icon: <Settings size={ICON_SIZE} />,
     element: <ManoDeObra />,
   },
 ];
 
-
-
-export default routes ;
+export default routes;

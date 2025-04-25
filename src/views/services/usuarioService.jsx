@@ -1,12 +1,32 @@
 // src/services/userService.js
-import axios from 'axios';
 
-const API_URL = 'http://localhost:3000/user'; // Endpoint para usuarios
+// import axios from 'axios'; // <-- ELIMINADO
+import axiosInstance from './axiosConfig'; // <-- AÑADIDO (¡Verifica que la ruta './axiosInstance' sea correcta!)
+
+const PROFILE_API_URL = '/users/profile/me';
+// Usa la ruta relativa
+const API_URL = '/users';
 
 const userService = {
+
+    getUserProfile: async () => {
+        try {
+            // Llama a la ruta específica del perfil en tu backend
+            const response = await axiosInstance.get(PROFILE_API_URL);
+            // Asume que response.data contiene el objeto del usuario con su 'role'
+            return response.data;
+        } catch (error) {
+            console.error("Error fetching user profile:", error);
+            // Podrías querer manejar errores específicos de autenticación aquí
+            // (ej. si el token es inválido/expirado y recibes un 401 o 403)
+            throw error;
+        }
+    },
+
     getAllUsers: async () => {
         try {
-            const response = await axios.get(API_URL);
+            // Usa axiosInstance
+            const response = await axiosInstance.get(API_URL);
             return response.data;
         } catch (error) {
             console.error("Error fetching users:", error);
@@ -14,19 +34,22 @@ const userService = {
         }
     },
 
-    getUserById: async (idUsers) => {
+    // Cambié el parámetro en la URL a 'id' para coincidir con tus rutas de Express (:id)
+    getUserById: async (id) => { // El nombre del argumento puede ser cualquiera (id, idUsers, etc.)
         try {
-            const response = await axios.get(`${API_URL}/${idUsers}`);
+            // Usa axiosInstance
+            const response = await axiosInstance.get(`${API_URL}/${id}`); // Usa 'id' en la URL
             return response.data;
         } catch (error) {
-            console.error(`Error fetching user with id ${idUsers}:`, error);
+            console.error(`Error fetching user with id ${id}:`, error);
             throw error;
         }
     },
 
     createUser: async (userData) => {
         try {
-            const response = await axios.post(API_URL, userData);
+             // Usa axiosInstance
+            const response = await axiosInstance.post(API_URL, userData);
             return response.data;
         } catch (error) {
             console.error("Error creating user:", error);
@@ -34,31 +57,37 @@ const userService = {
         }
     },
 
-    updateUser: async (idUsers, userData) => {
+    // Cambié el parámetro en la URL a 'id'
+    updateUser: async (id, userData) => { // Recibe 'id'
         try {
-            const response = await axios.put(`${API_URL}/${idUsers}`, userData);
+             // Usa axiosInstance
+            const response = await axiosInstance.put(`${API_URL}/${id}`, userData); // Usa 'id' en la URL
             return response.data;
         } catch (error) {
-            console.error(`Error updating user with id ${idUsers}:`, error);
+            console.error(`Error updating user with id ${id}:`, error);
             throw error;
         }
     },
 
-    deleteUser: async (idUsers) => {
+    // Cambié el parámetro en la URL a 'id'
+    deleteUser: async (id) => { // Recibe 'id'
         try {
-            await axios.delete(`${API_URL}/${idUsers}`);
+             // Usa axiosInstance
+            await axiosInstance.delete(`${API_URL}/${id}`); // Usa 'id' en la URL
         } catch (error) {
-            console.error(`Error deleting user with id ${idUsers}:`, error);
+            console.error(`Error deleting user with id ${id}:`, error);
             throw error;
         }
     },
 
-    changeStateUser: async (idUsers, status) => {
+    // Cambié el parámetro en la URL a 'id'
+    changeStateUser: async (id, status) => { // Recibe 'id'
         try {
-            const response = await axios.patch(`${API_URL}/${idUsers}`, { status });
+             // Usa axiosInstance
+            const response = await axiosInstance.patch(`${API_URL}/${id}`, { status }); // Usa 'id' en la URL
             return response.data;
         } catch (error) {
-            console.error(`Error changing status user with id ${idUsers}:`, error);
+            console.error(`Error changing status user with id ${id}:`, error);
             throw error;
         }
     }
