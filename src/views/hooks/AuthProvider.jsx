@@ -47,24 +47,10 @@ const AuthProvider = ({ children }) => {
   const loginAction = async (data) => {
     setLoading(true);
     try {
-<<<<<<< HEAD
-      const response = await axios.post(url, data);
-      
-      if (!response) {
-        throw new Error(response.message);
-      }
-
-
-      setUser(response.data.user);
-      setToken(response.data.token);
-      localStorage.setItem("token", response.data.token);
-
-=======
       const response = await authService.login(data);
       setUser(response.user);
       setToken(response.token);
       localStorage.setItem("token", response.token);
->>>>>>> 588cd8d1a8ec08d019336d99e1299394723c3e1e
       navigate("/home/dashboard");
     } catch (err) {
       console.error("Login failed:", err);
@@ -96,3 +82,8 @@ export default AuthProvider;
 export const useAuth = () => {
   return useContext(AuthContext);
 };
+
+
+
+
+
