@@ -1,22 +1,53 @@
-// AuthProvider.jsx
-import axios from "axios"; // Puedes usar axios global o tu instancia configurada
-import { useContext, createContext, useState, useEffect } from "react"; // Añade useEffect
+// src/views/hooks/AuthProvider.js
+
+import axios from "axios";
+import { useContext, createContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { authService } from '../services/authService'; // Asegúrate de importar correctamente
+import { authService } from '../services/authService'; // Asume que esto está bien
 
-// import axiosInstance from "./path/to/axiosInstance"; // Opcional: Usar instancia configurada
+// Cambia esta línea:
+// import { getUserProfile } from '../services/usuarioService'; // <-- LÍNEA INCORRECTA
+import userServiceApi from '../services/usuarioService'; // <-- LÍNEA CORREGIDA (Importa el default y renómbralo)
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  // Inicializa el token desde localStorage al cargar
   const [token, setToken] = useState(localStorage.getItem("token") || "");
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  // Asegúrate que esta URL es la correcta para TU endpoint de login
+
+  useEffect(() => {
+    const fetchInitialUser = async () => {
+      const storedToken = localStorage.getItem("token");
+      if (storedToken) {
+        try {
+          // Cambia esta línea:
+          // const profile = await getUserProfile(); // <-- LLAMADA INCORRECTA
+          const profile = await userServiceApi.getUserProfile(); // <-- LLAMADA CORREGIDA (Usa el objeto importado)
+          setUser(profile);
+          setToken(storedToken);
+        } catch (error) {
+          console.error("Failed to fetch user profile on load:", error);
+          localStorage.removeItem("token");
+          setToken("");
+          setUser(null);
+          // Solo navega si falla la carga inicial con token
+          navigate("/");
+        }
+      }
+      setLoading(false);
+    };
+
+    fetchInitialUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Ejecutar solo una vez al montar
+
 
   const loginAction = async (data) => {
+    setLoading(true);
     try {
+<<<<<<< HEAD
       const response = await axios.post(url, data);
       
       if (!response) {
@@ -28,22 +59,34 @@ const AuthProvider = ({ children }) => {
       setToken(response.data.token);
       localStorage.setItem("token", response.data.token);
 
+=======
+      const response = await authService.login(data);
+      setUser(response.user);
+      setToken(response.token);
+      localStorage.setItem("token", response.token);
+>>>>>>> 588cd8d1a8ec08d019336d99e1299394723c3e1e
       navigate("/home/dashboard");
     } catch (err) {
-      console.error(err);
+      console.error("Login failed:", err);
+      throw err;
+    } finally {
+       setLoading(false);
     }
   };
 
   const logOut = () => {
     setUser(null);
-    setToken(""); // Limpia el estado del token
-    localStorage.removeItem("token"); // Limpia localStorage
+    setToken("");
+    localStorage.removeItem("token");
     navigate("/");
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, loginAction, logOut }}>
-      {children}
+    <AuthContext.Provider value={{ token, user, loading, loginAction, logOut }}>
+      {/* Renderiza children DESPUÉS de la carga inicial, incluso si falla */}
+      {!loading && children}
+      {/* Muestra "Cargando" solo DURANTE la carga inicial */}
+      {loading && <div>Cargando sesión...</div>}
     </AuthContext.Provider>
   );
 };

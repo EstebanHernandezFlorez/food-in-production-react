@@ -10,31 +10,27 @@ export default function Login() {
 
   const [error, setError] = useState(null);
   const auth = useAuth();
-  const navigate = useNavigate(); // Hook para redirigir
+  const navigate = useNavigate();
 
-  const handleSubmitEvent = async (e) => { // Ahora es async
+  const handleSubmitEvent = async (e) => {
     e.preventDefault();
     if (input.email !== "" && input.password !== "") {
       try {
-        await auth.loginAction(input); // Espera que se complete
-        navigate("/home"); // Redirige después de un login exitoso
+        await auth.loginAction(input);
+        navigate("/home");
       } catch (err) {
-        setError(err.message); // Muestra el error si ocurre
+        setError(err.message);
       }
       return;
     }
     setError("Por favor, proporciona un correo y contraseña válidos.");
   };
-  
 
   return (
     <div className="row h-150 w-150">
       <div className="col-sm-12 col-md-6 d-flex justify-content-center align-items-center">
         <div className="d-flex justify-content-center align-items-center h-100 w-100 ">
-          <form
-            className="p-5 border border-black border border-3"
-            onSubmit={handleSubmitEvent}
-          >
+          <form className="p-5 border border-black border border-3" onSubmit={handleSubmitEvent}>
             <div className="d-flex justify-content-center">
               <img
                 src="../src/assets/logoFIP.png"
@@ -48,7 +44,6 @@ export default function Login() {
                 <strong>Usuario</strong>
               </label>
               <div className="input-group mb-3 w-100 justify-content-center">
-                <div className="input-group-prepend"></div>
                 <input
                   type="email"
                   className="form-control border border-black border-2"
@@ -64,9 +59,7 @@ export default function Login() {
               <label htmlFor="password" className="form-label">
                 <strong>Contraseña</strong>
               </label>
-
               <div className="input-group mb-3 w-100 justify-content-center">
-                <div className="input-group-prepend"></div>
                 <input
                   type="password"
                   className="form-control border border-black border-2"
@@ -80,10 +73,7 @@ export default function Login() {
 
             {error && <div className="text-danger mb-3">{error}</div>}
             <div className="my-3 text-center link-text">
-              <a href="#!">
-                {" "}
-                ¿Ha olvidado su contraseña?
-              </a>
+              <a href="#!">¿Ha olvidado su contraseña?</a>
             </div>
             <div className="btn-group w-100">
               <button
