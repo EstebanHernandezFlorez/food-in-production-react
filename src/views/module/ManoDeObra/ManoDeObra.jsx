@@ -406,7 +406,7 @@ const ManoDeObra = () => {
     const handleNavigateToOtherExpenses = useCallback(() => {
         // Antes (Incorrecto): navigate('/tabla-gastos');
         // Después (Correcto):
-        navigate('/home/tabla-gastos');
+        navigate('/home/conceptos-gasto');
     }, [navigate]); // Navigates to Conceptos Gasto list7
     const handleNavigateToEmployees = useCallback(() => navigate('/home/rendimiento-empleado'), [navigate]);
 

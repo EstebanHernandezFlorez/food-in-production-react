@@ -1,208 +1,100 @@
-/* menu.css */
-
-/* --- VARIABLES DE COLOR --- */
-:root {
-  /* Color base para texto/iconos (buen contraste con #FFF1E6) */
-  --menu-text-icon-color-base: #5C4033; /* Marrón oscuro */
-
-  /* Colores para estado Hover y Seleccionado */
-  --menu-hover-select-bg-color: #7e2d2d;    /* Vino tinto */
-  --menu-hover-select-text-icon-color: #FFFFFF; /* Blanco */
-
-  /* Tamaño de fuente */
-  --menu-font-size: 15px;
+.sidebar {
+  background-color: #FAF9F6;
+  border-right: 1px solid #E6E4E0;
 }
 
-/* --- ESTILOS BASE (Menú Principal y Submenús Abiertos) --- */
-
-/* Color de texto e icono base (aplicado a items y títulos de submenú) */
-.menu-list-container .ant-menu-item a,
-.menu-list-container .ant-menu-item,
-.menu-list-container .ant-menu-submenu-title {
-  color: var(--menu-text-icon-color-base) !important;
+.ant-menu-light .ant-menu-item a,
+.ant-menu-light .ant-menu-item,
+.ant-menu-light .ant-menu-submenu-title {
+  color: #3F3A36 !important;
   text-decoration: none;
-  font-size: var(--menu-font-size) !important;
-  line-height: 1.6;
 }
 
-/* Color del icono base (SVG y Font Icons) */
-.menu-list-container .ant-menu-item .ant-menu-item-icon,
-.menu-list-container .ant-menu-submenu-title .ant-menu-item-icon,
-.menu-list-container .ant-menu-item .ant-menu-item-icon svg,
-.menu-list-container .ant-menu-submenu-title .ant-menu-item-icon svg {
-  color: var(--menu-text-icon-color-base) !important;
-  /* stroke: var(--menu-text-icon-color-base) !important; */
+.ant-menu-light .ant-menu-item .ant-menu-item-icon,
+.ant-menu-light .ant-menu-submenu-title .ant-menu-item-icon,
+.ant-menu-light .ant-menu-item .ant-menu-item-icon svg,
+.ant-menu-light .ant-menu-submenu-title .ant-menu-item-icon svg {
+  color: #3F3A36 !important;
 }
 
-/* --- HOVER Y SELECCIÓN (Menú Principal y Submenús Abiertos) --- */
-
-/* Fondo en Hover */
-.menu-list-container .ant-menu-item:hover,
-.menu-list-container .ant-menu-submenu-title:hover {
-  background-color: var(--menu-hover-select-bg-color) !important;
+/* Hover */
+.ant-menu-light .ant-menu-item:hover,
+.ant-menu-light .ant-menu-submenu-title:hover {
+  background-color: #7E2D2D !important;
+  color: #FFFFFF !important;
 }
 
-/* Texto e Iconos en Hover */
-.menu-list-container .ant-menu-item:hover a,
-.menu-list-container .ant-menu-item:hover,
-.menu-list-container .ant-menu-submenu-title:hover,
-.menu-list-container .ant-menu-item:hover .ant-menu-item-icon,
-.menu-list-container .ant-menu-submenu-title:hover .ant-menu-item-icon,
-.menu-list-container .ant-menu-item:hover .ant-menu-item-icon svg,
-.menu-list-container .ant-menu-submenu-title:hover .ant-menu-item-icon svg {
-  color: var(--menu-hover-select-text-icon-color) !important;
-  /* stroke: var(--menu-hover-select-text-icon-color) !important; */
+.ant-menu-light .ant-menu-item:hover a,
+.ant-menu-light .ant-menu-submenu-title:hover {
+  color: #FFFFFF !important;
 }
 
-/* Fondo en Selección */
-.menu-list-container .ant-menu-item-selected,
-.menu-list-container .ant-menu-submenu-selected > .ant-menu-submenu-title {
-  background-color: var(--menu-hover-select-bg-color) !important;
+.ant-menu-light .ant-menu-item:hover .ant-menu-item-icon,
+.ant-menu-light .ant-menu-submenu-title:hover .ant-menu-item-icon,
+.ant-menu-light .ant-menu-item:hover .ant-menu-item-icon svg,
+.ant-menu-light .ant-menu-submenu-title:hover .ant-menu-item-icon svg {
+  color: #FFFFFF !important;
 }
 
-/* Texto e Iconos en Selección */
-.menu-list-container .ant-menu-item-selected a,
-.menu-list-container .ant-menu-item-selected,
-.menu-list-container .ant-menu-submenu-selected > .ant-menu-submenu-title,
-.menu-list-container .ant-menu-item-selected .ant-menu-item-icon,
-.menu-list-container .ant-menu-submenu-selected > .ant-menu-submenu-title .ant-menu-item-icon,
-.menu-list-container .ant-menu-item-selected .ant-menu-item-icon svg,
-.menu-list-container .ant-menu-submenu-selected > .ant-menu-submenu-title .ant-menu-item-icon svg {
-   color: var(--menu-hover-select-text-icon-color) !important;
-   /* stroke: var(--menu-hover-select-text-icon-color) !important; */
+/* Seleccionado */
+.ant-menu-light .ant-menu-item-selected,
+.ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title {
+  background-color: #7E2D2D !important;
+  color: #FFFFFF !important;
 }
 
-/* --- ESTILOS PARA EL POPUP DEL SUBMENÚ (Cuando el Sider está COLAPSADO) --- */
-
-/* Fondo base del popup */
-.ant-menu-submenu-popup.ant-menu-light {
-  background-color: #FFF1E6 !important; /* Mismo fondo durazno que el Sider */
-  border: 1px solid #E0C8B8; /* Borde similar */
-  box-shadow: 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 9px 28px 8px rgba(0, 0, 0, 0.05); /* Sombra Antd */
+.ant-menu-light .ant-menu-item-selected a,
+.ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title {
+  color: #FFFFFF !important;
 }
 
-/* Items dentro del popup (estado base) */
-.ant-menu-submenu-popup.ant-menu-light .ant-menu-item {
-  color: var(--menu-text-icon-color-base) !important; /* Texto marrón oscuro */
-  font-size: calc(var(--menu-font-size) - 1px) !important; /* Un poco más pequeño */
-}
-.ant-menu-submenu-popup.ant-menu-light .ant-menu-item .ant-menu-item-icon,
-.ant-menu-submenu-popup.ant-menu-light .ant-menu-item .ant-menu-item-icon svg {
-   color: var(--menu-text-icon-color-base) !important; /* Icono marrón oscuro */
+.ant-menu-light .ant-menu-item-selected .ant-menu-item-icon,
+.ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title .ant-menu-item-icon,
+.ant-menu-light .ant-menu-item-selected .ant-menu-item-icon svg,
+.ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title .ant-menu-item-icon svg {
+  color: #FFFFFF !important;
 }
 
-
-/* === CORRECCIÓN HOVER/SELECT EN POPUP === */
-/* Fondo en Hover DENTRO del popup */
-.ant-menu-submenu-popup.ant-menu-light .ant-menu-item:hover {
-  background-color: var(--menu-hover-select-bg-color) !important; /* Fondo Vino Tinto */
-}
-/* Texto/Icono en Hover DENTRO del popup */
-.ant-menu-submenu-popup.ant-menu-light .ant-menu-item:hover,
-.ant-menu-submenu-popup.ant-menu-light .ant-menu-item:hover a, /* Si hay Links dentro */
-.ant-menu-submenu-popup.ant-menu-light .ant-menu-item:hover .ant-menu-item-icon,
-.ant-menu-submenu-popup.ant-menu-light .ant-menu-item:hover .ant-menu-item-icon svg {
-  color: var(--menu-hover-select-text-icon-color) !important; /* Texto/Icono Blanco */
+/* Scrollbar */
+.sidebar::-webkit-scrollbar {
+  width: 8px;
 }
 
-/* Fondo en Selección DENTRO del popup */
-.ant-menu-submenu-popup.ant-menu-light .ant-menu-item-selected {
-  background-color: var(--menu-hover-select-bg-color) !important; /* Fondo Vino Tinto */
-}
-/* Texto/Icono en Selección DENTRO del popup */
-.ant-menu-submenu-popup.ant-menu-light .ant-menu-item-selected,
-.ant-menu-submenu-popup.ant-menu-light .ant-menu-item-selected a, /* Si hay Links dentro */
-.ant-menu-submenu-popup.ant-menu-light .ant-menu-item-selected .ant-menu-item-icon,
-.ant-menu-submenu-popup.ant-menu-light .ant-menu-item-selected .ant-menu-item-icon svg {
-   color: var(--menu-hover-select-text-icon-color) !important; /* Texto/Icono Blanco */
-}
-/* === FIN CORRECCIÓN HOVER/SELECT EN POPUP === */
-
-
-/* --- OTROS ESTILOS (Limpieza, Espaciado) --- */
-
-/* Quitar borde indicador azul/por defecto de Ant Design en selección */
-.menu-list-container .ant-menu-item-selected::after,
-.ant-menu-inline.ant-menu-root .ant-menu-item::after,
-.ant-menu-vertical.ant-menu-root .ant-menu-item::after {
-  border-right: none !important;
+.sidebar::-webkit-scrollbar-thumb {
+  background-color: #A94442;
+  border-radius: 10px;
 }
 
-/* Asegurar transparencia del contenedor del menú */
-.menu-list-container.ant-menu-light {
-  background-color: transparent !important;
-  border-right: none !important;
+.sidebar::-webkit-scrollbar-track {
+  background-color: transparent;
 }
 
-/* Espaciado icono-texto */
-.ant-menu-item .ant-menu-item-icon,
-.ant-menu-submenu-title .ant-menu-item-icon {
-  margin-right: 12px;
-  display: inline-flex;
-  align-items: center;
-  vertical-align: middle;
-}
-.ant-menu-title-content {
-  vertical-align: middle;
-}
-
-/* --- ESTILOS PARA MENÚ COLAPSADO (ICONOS CENTRADOS) --- */
-
-/* Contenedor del Item/SubmenuTitle cuando está colapsado */
+/* Colapsado, espaciado, etc... (mismo que antes) */
 .ant-menu-inline-collapsed > .ant-menu-item,
 .ant-menu-inline-collapsed > .ant-menu-submenu > .ant-menu-submenu-title {
-    /* --- Calculo de Padding --- */
-    /* Objetivo: dejar espacio SOLO para el icono en el centro. */
-    /* Padding Horizontal = (Ancho Colapsado / 2) - (Tamaño Icono / 2) */
-    /* Asumiendo SIDER_WIDTH_COLLAPSED = 80px */
-    /* Asumiendo ICON_SIZE = 18px */
-    /* Padding Horizontal = (80px / 2) - (18px / 2) = 40px - 9px = 31px */
-    padding: 0 31px !important; /* <-- ¡Verifica estos valores! */
-
-    height: 40px;       /* Altura consistente para los items */
-    line-height: 40px;    /* Alinear verticalmente usando line-height */
-    text-align: center; /* Centrar el contenido (el icono) horizontalmente */
-    overflow: hidden;   /* Evitar cualquier desbordamiento inesperado */
-    display: block;     /* Asegurar que se comporte como bloque */
+  padding: 0 calc(50% - (18px / 2)) !important;
+  justify-content: center;
+  align-items: center;
 }
 
-/* Ocultar COMPLETAMENTE el texto (label) cuando está colapsado */
-.ant-menu-inline-collapsed .ant-menu-title-content {
-    display: none !important; /* Método principal para ocultar */
-    width: 0 !important;      /* Sin ancho */
-    opacity: 0 !important;    /* Invisible */
-    margin: 0 !important;     /* Sin margen */
-    padding: 0 !important;    /* Sin padding */
-    overflow: hidden;         /* Ocultar contenido */
-    max-width: 0;             /* Ancho máximo cero */
-}
-
-/* Estilos específicos para el ICONO en estado colapsado */
-.ant-menu-inline-collapsed .ant-menu-item-icon {
-    font-size: 18px; /* Asegurar que el tamaño del icono sea el esperado (ICON_SIZE) */
-    line-height: 40px; /* Coincidir con la altura del item para alineación vertical */
-    margin: 0 !important; /* Eliminar cualquier margen alrededor del icono */
-    vertical-align: middle; /* Alinear verticalmente */
-    display: inline-block; /* Comportamiento en línea */
-    width: 18px; /* Ancho explícito igual al tamaño */
-    text-align: center; /* Centrar contenido dentro del icono si fuera necesario */
-}
-
-/* Específico para los iconos SVG (como los de Lucide) en estado colapsado */
-.ant-menu-inline-collapsed .ant-menu-item-icon svg {
-   display: block !important; /* Tratar el SVG como un bloque */
-   margin: 0 auto; /* Centrar el bloque SVG horizontalmente */
-   vertical-align: middle; /* Alinear verticalmente */
-}
-
-/* --- FIN ESTILOS PARA MENÚ COLAPSADO --- */
-
-
-/* Indentación submenús (cuando menú está expandido) */
 .submenu-item .ant-menu-item {
-    padding-left: 58px !important; /* Ajusta según necesidad */
-    font-size: calc(var(--menu-font-size) - 1px) !important;
+  padding-left: 48px !important;
 }
-.submenu-item .ant-menu-item .ant-menu-item-icon {
-    margin-right: 10px;
+/* Centrado de iconos cuando el menú está colapsado */
+.ant-menu-inline-collapsed > .ant-menu-item .ant-menu-item-icon,
+.ant-menu-inline-collapsed > .ant-menu-submenu > .ant-menu-submenu-title .ant-menu-item-icon {
+    margin-right: 0 !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+/* Asegura que el item colapsado tenga suficiente espacio y se centre */
+.ant-menu-inline-collapsed > .ant-menu-item,
+.ant-menu-inline-collapsed > .ant-menu-submenu > .ant-menu-submenu-title {
+    padding: 0 !important;
+    text-align: center;
+    height: 48px;
+    line-height: 48px;
 }

@@ -1,208 +1,362 @@
-import { useState, useEffect } from "react";
-import { 
-  Table, Button, FormGroup, Input, Container, Row, Col,
-  Modal, ModalHeader, ModalBody, ModalFooter
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  Table, Button, FormGroup, Input, Container, Row, Col, Label,
+  Modal, ModalHeader, ModalBody, ModalFooter, Spinner, Alert
 } from "reactstrap";
 import toast from "react-hot-toast";
-import axios from "axios";
 
-const DEFAULT_PERMISSIONS = [
-  { idPermission: 1, permissionName: "Dashboard", status: true },
-  { idPermission: 2, permissionName: "Roles", status: true },
-  { idPermission: 3, permissionName: "Usuarios", status: true },
-  { idPermission: 4, permissionName: "Proveedor", status: true },
-  { idPermission: 5, permissionName: "Insumo", status: true },
-  { idPermission: 6, permissionName: "Producto insumo", status: true },
-  { idPermission: 7, permissionName: "Orden de produccion", status: true },
-  { idPermission: 8, permissionName: "Registro compra", status: true },
-  { idPermission: 9, permissionName: "Reservas", status: true },
-  { idPermission: 10, permissionName: "Clientes", status: true },
-  { idPermission: 11, permissionName: "Servicios", status: true },
-  { idPermission: 12, permissionName: "Mano de obra", status: true }
-];
+// --- Service Imports ---
+import roleService from '../../services/roleServices';
+import permissionService from '../../services/permissionService';
+import privilegeService from '../../services/privilegeService';
 
-const DEFAULT_PRIVILEGES = [
-  { idPrivilege: 1, privilegeName: "Crear privilegio" },
-  { idPrivilege: 2, privilegeName: "Eliminar privilegio" },
-  { idPrivilege: 3, privilegeName: "Editar privilegio" },
-  { idPrivilege: 4, privilegeName: "Inhabilitar privilegio" },
-  { idPrivilege: 5, privilegeName: "Cambiar estado" }
-];
+// --- Frontend Definitions ---
+import { APP_MODULES, STANDARD_PRIVILEGES } from '../../../config/modules';
 
-export default function FormPermissions({ 
-  isOpen, 
-  toggle, 
-  onAddRole, 
-  onUpdateRole, 
-  selectedRole, 
-  nameRol 
+// --- Constants ---
+const LOG_PREFIX = "[FormPermissions]";
+
+// --- Component ---
+export default function FormPermissions({
+  isOpen,
+  toggle,
+  selectedRole,
+  onSave,
 }) {
-  const [permissions, setPermissions] = useState(DEFAULT_PERMISSIONS);
-  const [privileges, setPrivileges] = useState(DEFAULT_PRIVILEGES);
-  const [role, setRole] = useState({ roleName: "" });
-  const [rolePrivileges, setRolePrivileges] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  // --- State ---
+  const [roleName, setRoleName] = useState("");
+  const [backendPermissions, setBackendPermissions] = useState([]);
+  const [backendPrivileges, setBackendPrivileges] = useState([]);
+  const [assignments, setAssignments] = useState(new Set());
+  const [loadingData, setLoadingData] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (selectedRole) {
-      setRole({ roleName: selectedRole.roleName });
+  const isEditingExistingRole = useMemo(() => !!selectedRole?.idRole, [selectedRole]);
+  const isRoleInactive = useMemo(() => isEditingExistingRole && !selectedRole?.status, [isEditingExistingRole, selectedRole]);
 
-      if (selectedRole.privileges) {
-        const privilegesArray = selectedRole.privileges.map(
-          privilege => `${privilege.idPermission}-${privilege.idPrivilege}`
+  // --- Data Transformation (Memoized Maps) ---
+  const {
+    permissionMap,
+    privilegeMap,
+    permissionIdToKeyMap,
+    privilegeIdToKeyMap,
+    displayableModules,
+    displayablePrivileges
+  } = useMemo(() => {
+    const pMap = {}; const pIdToKey = {}; const displayModules = [];
+    const privMap = {}; const privIdToKey = {}; const displayPrivs = [];
+
+    if (Array.isArray(backendPermissions) && backendPermissions.length > 0) {
+      APP_MODULES.forEach(moduleDef => {
+        const backendPerm = backendPermissions.find(bp =>
+          (bp.permissionKey && bp.permissionKey === moduleDef.key) ||
+          bp.permissionName === moduleDef.name
         );
-        setRolePrivileges(privilegesArray);
-      } else {
-        setRolePrivileges([]);
-      }
-    } else {
-      setRole({ roleName: "" });
-      setRolePrivileges([]);
+        if (backendPerm && typeof backendPerm.idPermission === 'number') {
+          pMap[moduleDef.key] = backendPerm.idPermission;
+          pIdToKey[backendPerm.idPermission] = moduleDef.key;
+          displayModules.push(moduleDef);
+        }
+      });
     }
-  }, [selectedRole, isOpen]);
+    if (Array.isArray(backendPrivileges) && backendPrivileges.length > 0) {
+      STANDARD_PRIVILEGES.forEach(privDef => {
+        const backendPriv = backendPrivileges.find(bp =>
+          (bp.privilegeKey && bp.privilegeKey === privDef.key) ||
+          bp.privilegeName === privDef.name
+        );
+        if (backendPriv && typeof backendPriv.idPrivilege === 'number') {
+          privMap[privDef.key] = backendPriv.idPrivilege;
+          privIdToKey[backendPriv.idPrivilege] = privDef.key;
+          displayPrivs.push(privDef);
+        }
+      });
+    }
 
+    return {
+      permissionMap: pMap, privilegeMap: privMap, permissionIdToKeyMap: pIdToKey,
+      privilegeIdToKeyMap: privIdToKey, displayableModules: displayModules,
+      displayablePrivileges: displayPrivs
+    };
+  }, [backendPermissions, backendPrivileges]);
+
+  // --- Effect: Load Initial Data ---
+  useEffect(() => {
+    if (!isOpen) return;
+    let didCancel = false;
+    setError(null);
+    setAssignments(new Set());
+    setRoleName(isEditingExistingRole ? selectedRole.roleName : "");
+    setLoadingData(true);
+
+    const loadAllData = async () => {
+      try {
+        const [permData, privData] = await Promise.all([
+          permissionService.getAll(),
+          privilegeService.getAll()
+        ]);
+        if (didCancel) return;
+        const loadedPerms = Array.isArray(permData) ? permData : [];
+        const loadedPrivs = Array.isArray(privData) ? privData : [];
+        setBackendPermissions(loadedPerms);
+        setBackendPrivileges(loadedPrivs);
+
+        let assignmentsFromBackend = [];
+        if (isEditingExistingRole && selectedRole?.idRole) {
+          const result = await roleService.getRolePrivilegesByIds(selectedRole.idRole);
+          if (didCancel) return;
+          if (Array.isArray(result)) {
+            assignmentsFromBackend = result;
+          } else {
+            console.warn(`${LOG_PREFIX} Received unexpected data format for existing assignments. Expected array.`);
+            toast.error("No se pudieron cargar las asignaciones existentes correctamente.");
+            assignmentsFromBackend = [];
+          }
+        }
+
+        const tempPIdToKey = {};
+        loadedPerms.forEach(p => {
+          const moduleDef = APP_MODULES.find(m => (p.permissionKey && p.permissionKey === m.key) || p.permissionName === m.name);
+          if (moduleDef && typeof p.idPermission === 'number') tempPIdToKey[p.idPermission] = moduleDef.key;
+        });
+        const tempPrivIdToKey = {};
+        loadedPrivs.forEach(p => {
+          const privDef = STANDARD_PRIVILEGES.find(sp => (p.privilegeKey && p.privilegeKey === sp.key) || p.privilegeName === sp.name);
+          if (privDef && typeof p.idPrivilege === 'number') tempPrivIdToKey[p.idPrivilege] = privDef.key;
+        });
+
+        const initialAssignments = new Set();
+        assignmentsFromBackend.forEach(assignment => {
+          const moduleKey = tempPIdToKey[assignment.idPermission];
+          const privilegeKey = tempPrivIdToKey[assignment.idPrivilege];
+          if (moduleKey && privilegeKey) initialAssignments.add(`${moduleKey}-${privilegeKey}`);
+          else console.warn(`${LOG_PREFIX} Could not map existing assignment from backend IDs.`);
+        });
+        setAssignments(initialAssignments);
+
+      } catch (err) {
+        if (!didCancel) {
+          console.error(`${LOG_PREFIX} Error loading data:`, err.response?.data || err.message || err);
+          setError("Error al cargar datos. Intente de nuevo.");
+          toast.error("Error al cargar configuración.");
+          setBackendPermissions([]);
+          setBackendPrivileges([]);
+          setAssignments(new Set());
+        }
+      } finally {
+        if (!didCancel) {
+          setLoadingData(false);
+        }
+      }
+    };
+    loadAllData();
+    return () => { didCancel = true; };
+  }, [isOpen, selectedRole?.idRole, isEditingExistingRole]);
+
+  // --- Event Handlers ---
+  const handleAssignmentChange = useCallback((moduleKey, privilegeKey, isChecked) => {
+    setAssignments(prev => {
+      const newAssignments = new Set(prev);
+      const key = `${moduleKey}-${privilegeKey}`;
+      if (isChecked) newAssignments.add(key);
+      else newAssignments.delete(key);
+      return newAssignments;
+    });
+  }, []);
+
+  const handleSelectAllForModule = useCallback((moduleKey, shouldSelectAll) => {
+    setAssignments(prev => {
+      const newAssignments = new Set(prev);
+      displayablePrivileges.forEach(priv => {
+        const key = `${moduleKey}-${priv.key}`;
+        if (shouldSelectAll) newAssignments.add(key);
+        else newAssignments.delete(key);
+      });
+      return newAssignments;
+    });
+  }, [displayablePrivileges]);
+
+  // --- Form Submission ---
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (rolePrivileges.length === 0) return toast.error("Seleccione al menos un privilegio");
+    setError(null);
+    const trimmedRoleName = roleName.trim();
+    if (!isEditingExistingRole && !trimmedRoleName) {
+      toast.error("El nombre del rol es requerido.");
+      return;
+    }
 
-    const privilegesFormatted = rolePrivileges.map((item) => {
-      const [idPermission, idPrivilege] = item.split("-");
-      return { idPermission: parseInt(idPermission), idPrivilege: parseInt(idPrivilege) };
+    const rolePrivilegesFormatted = [];
+    let mappingOk = true;
+
+    assignments.forEach(keyString => {
+      const parts = keyString.split("-");
+      const moduleKey = parts[0];
+      const privilegeKey = parts[1];
+      const idPermission = permissionMap[moduleKey];
+      const idPrivilege = privilegeMap[privilegeKey];
+      if (typeof idPermission === 'number' && typeof idPrivilege === 'number') {
+        rolePrivilegesFormatted.push({ idPermission, idPrivilege });
+      } else {
+        console.error(`${LOG_PREFIX} CRITICAL MAPPING ERROR: Could not find valid IDs for assignment key: '${keyString}'.`);
+        mappingOk = false;
+      }
     });
 
-    const payload = {
-      roleName: role.roleName,
-      privileges: privilegesFormatted,
-      status: true,
-    };
+    if (!mappingOk) {
+       setError("Error interno: No se pudieron procesar todas las asignaciones. Revise consola.");
+       toast.error("Error interno al procesar asignaciones.");
+       return;
+    }
+    if (!isEditingExistingRole && rolePrivilegesFormatted.length === 0) {
+      toast.error("Debe asignar al menos un permiso/privilegio válido.");
+      return;
+    }
 
+    setSaving(true);
     try {
-      setIsLoading(true);
-      if (selectedRole) {
-        await axios.put(`http://localhost:3000/role/${selectedRole.idRole}`, payload);
-        toast.success("Rol actualizado correctamente");
-        onUpdateRole();
+      const payload = { 
+        roleName: trimmedRoleName, 
+        status: 1,  // Estableciendo el estado como 1 (activo)
+        rolePrivileges: rolePrivilegesFormatted
+      };
+      console.log("Payload enviado al backend:", payload);  // Ayuda a depurar el formato
+      if (isEditingExistingRole) {
+        await roleService.assignRolePrivileges(selectedRole.idRole, rolePrivilegesFormatted);
+        toast.success(`Asignaciones para "${selectedRole.roleName}" actualizadas.`);
       } else {
-        await axios.post("http://localhost:3000/role", payload);
-        toast.success("Rol creado correctamente");
-        onAddRole();
+        await roleService.createRole(payload);
+        toast.success(`Rol "${payload.roleName}" creado con sus asignaciones.`);
       }
+      if (onSave) onSave();
       toggle();
-    } catch (error) {
-      console.error("Error al guardar el rol:", error.response?.data || error);
-      toast.error("Error al guardar el rol");
+    } catch (err) {
+      console.error(`${LOG_PREFIX} Error saving:`, err.response?.data || err.message || err);
+      const errorMsg = `Error al guardar: ${err.response?.data?.message || err.message || 'Error inesperado.'}`;
+      setError(errorMsg);
+      toast.error("Error al guardar los cambios.");
     } finally {
-      setIsLoading(false);
+      setSaving(false);
     }
   };
 
-  const handleChangeRole = (e) => setRole({ ...role, [e.target.name]: e.target.value });
+  // --- Render Logic Variables ---
+  const canSubmit = !loadingData && !saving && !isRoleInactive && displayableModules.length > 0 && displayablePrivileges.length > 0;
+  const submitButtonText = saving
+    ? <><Spinner size="sm" className="me-1" /> Guardando...</>
+    : (isEditingExistingRole ? 'Guardar Cambios' : 'Crear Rol');
 
-  const handleChangePrivilege = (permissionId, privilegeId) => {
-    const key = `${permissionId}-${privilegeId}`;
-    setRolePrivileges((prev) =>
-      prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key]
-    );
-  };
-
-  const isRoleDisabled = selectedRole && nameRol && !nameRol.find((r) => r.idRole === selectedRole.idRole)?.status;
-
-  const handleSelectAllForPermission = (permissionId) => {
-    const allPrivilegeKeys = privileges.map(priv => `${permissionId}-${priv.idPrivilege}`);
-    const allSelected = allPrivilegeKeys.every(key => rolePrivileges.includes(key));
-    if (allSelected) {
-      setRolePrivileges(rolePrivileges.filter(key => !key.startsWith(`${permissionId}-`)));
-    } else {
-      const currentKeys = new Set(rolePrivileges);
-      allPrivilegeKeys.forEach(key => currentKeys.add(key));
-      setRolePrivileges(Array.from(currentKeys));
-    }
-  };
-
+  // --- JSX ---
   return (
-    <Modal isOpen={isOpen} toggle={toggle} size="lg">
-      <ModalHeader toggle={toggle}>
-        {selectedRole ? "Editar permisos del rol" : "Asignar permisos al nuevo rol"}
+    <Modal
+        isOpen={isOpen}
+        toggle={!saving ? toggle : undefined}
+        size="xl"
+        backdrop={saving ? "static" : true}
+        keyboard={!saving}
+        fade={false}
+        className="permissions-modal"
+        centered
+    >
+      <ModalHeader toggle={!saving ? toggle : undefined}>
+        {isEditingExistingRole ? `Editar Asignaciones: ${selectedRole.roleName}` : "Crear Nuevo Rol y Asignar Permisos"}
+        {isRoleInactive && <span className="ms-2 badge bg-warning text-dark">Rol Inactivo (Solo lectura)</span>}
       </ModalHeader>
       <ModalBody>
-        <Container>
-          <form id="permissionForm" onSubmit={handleSubmit}>
-            <Row>
-              <Col md={8}>
-                <FormGroup>
-                  <label htmlFor="role">Rol:</label>
-                  <Input
-                    className="form-control"
-                    name="roleName"
-                    value={role.roleName}
-                    onChange={handleChangeRole}
-                    required
-                    disabled={isRoleDisabled}
-                  />
-                </FormGroup>
-              </Col>
-            </Row>
+        {loadingData && (
+          <div className="text-center p-4">
+            <Spinner color="primary" style={{ width: '3rem', height: '3rem' }} />
+            <p className="mt-3 mb-0 text-muted fs-5">Cargando configuración...</p>
+          </div>
+        )}
 
-            <Row>
-              <Col md={12}>
-                <Table className="table table-hover">
-                  <thead>
-                    <tr>
-                      <th>Permiso</th>
-                      <th>Todo</th>
-                      {privileges.map((priv) => (
-                        <th key={priv.idPrivilege}>{priv.privilegeName}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {permissions.map((perm) => (
-                      <tr key={perm.idPermission}>
-                        <td>{perm.permissionName}</td>
-                        <td>
-                          <Input
-                            className="form-check-input"
-                            type="checkbox"
-                            onChange={() => handleSelectAllForPermission(perm.idPermission)}
-                            checked={privileges.every(priv => 
-                              rolePrivileges.includes(`${perm.idPermission}-${priv.idPrivilege}`)
-                            )}
-                            disabled={isRoleDisabled}
-                          />
-                        </td>
-                        {privileges.map((priv) => (
-                          <td key={`${perm.idPermission}-${priv.idPrivilege}`}>
+        {error && !loadingData && (
+          <Alert color="danger" fade={false} className="d-flex align-items-center">
+             {typeof(window) !== 'undefined' && window.bootstrap ? <i className="bi bi-exclamation-triangle-fill me-2"></i> : '⚠️ '}
+             {error}
+          </Alert>
+        )}
+
+        {!loadingData && (
+          <Container fluid>
+            <form id="permissionForm" onSubmit={handleSubmit}>
+              {!isEditingExistingRole && (
+                <Row className="mb-4">
+                  <Col md={6}>
+                    <FormGroup>
+                      <Label for="roleNameInput" className="fw-bold required">Nombre del Rol</Label>
+                      <Input
+                        id="roleNameInput" name="roleName" type="text" value={roleName}
+                        onChange={(e) => setRoleName(e.target.value)}
+                        placeholder="Ej: Administrador de Ventas" maxLength={100} required disabled={saving}
+                      />
+                    </FormGroup>
+                  </Col>
+                </Row>
+              )}
+              <h5 className="mb-3">Asignar Privilegios por Módulo</h5>
+              {(displayableModules.length === 0 || displayablePrivileges.length === 0) && !error && (
+                 <Alert color="warning" fade={false}>
+                    No se encontraron módulos o privilegios configurables. Verifique configuración.
+                 </Alert>
+              )}
+              {displayableModules.length > 0 && displayablePrivileges.length > 0 && (
+                <div className="table-responsive permission-table-container">
+                  <Table striped hover size="sm" responsive>
+                    <thead>
+                      <tr>
+                        <th>Seleccionar Todos</th>
+                        <th>Módulo</th>
+                        <th>Permisos</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {displayableModules.map(module => (
+                        <tr key={module.key}>
+                          <td>
                             <Input
-                              className="form-check-input"
                               type="checkbox"
-                              onChange={() => handleChangePrivilege(perm.idPermission, priv.idPrivilege)}
-                              checked={rolePrivileges.includes(`${perm.idPermission}-${priv.idPrivilege}`)}
-                              disabled={isRoleDisabled}
+                              checked={assignments.has(`${module.key}-`) || false}
+                              onChange={(e) => handleSelectAllForModule(module.key, e.target.checked)}
+                              disabled={saving}
                             />
                           </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </Col>
-            </Row>
-          </form>
-        </Container>
+                          <td>{module.name}</td>
+                          <td>
+                            {displayablePrivileges.map(priv => (
+                              <FormGroup check inline key={priv.key}>
+                                <Input
+                                  type="checkbox"
+                                  id={`checkbox-${module.key}-${priv.key}`}
+                                  checked={assignments.has(`${module.key}-${priv.key}`)}
+                                  onChange={(e) => handleAssignmentChange(module.key, priv.key, e.target.checked)}
+                                  disabled={saving}
+                                />
+                                <Label check>{priv.name}</Label>
+                              </FormGroup>
+                            ))}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
+              )}
+              <ModalFooter>
+                <Button color="secondary" onClick={toggle} disabled={saving}>Cancelar</Button>
+                <Button
+                  type="submit"
+                  color="primary"
+                  disabled={saving || !canSubmit}
+                >
+                  {submitButtonText}
+                </Button>
+              </ModalFooter>
+            </form>
+          </Container>
+        )}
       </ModalBody>
-      <ModalFooter>
-        <Button 
-          type="submit" 
-          form="permissionForm" 
-          color="primary" 
-          disabled={isRoleDisabled || isLoading}
-        >
-          {isLoading ? 'Guardando...' : 'Guardar'}
-        </Button>{' '}
-        <Button color="secondary" onClick={toggle}>
-          Cancelar
-        </Button>
-      </ModalFooter>
     </Modal>
   );
 }
