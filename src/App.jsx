@@ -85,6 +85,7 @@ import TablaGastos from "./views/module/ManoDeObra/TablaGastos"; // Verifica la 
 import RendimientoEmpleado from "./views/module/ManoDeObra/RendimientoEmpleado"; // Verifica la ruta real
 import RegistroCompra from './views/module/Compras/RegistroComprasPage'; // Se accede desde GestionCompras?
 import FichaTecnica from './views/module/ProductoInsumo/FichaTecnica'; // Verifica la ruta real
+import Insumo from './views/module/Insumo/Insumo'; // Verifica la ruta real
 
 // Opcional: Componente para rutas no encontradas
 // import NotFound from './views/NotFound';
@@ -148,6 +149,7 @@ export default function App() {
               {/* URL: /home/registrar-compra (o /home/compras/registrar si 'compras' es padre en pages.routes.js) */}
               <Route path="registrar-compra" element={<RegistroCompra />} />
               <Route path="ficha-tecnica" element={<FichaTecnica />} />
+              <Route path="insumos" element={<Insumo/>} />
 
               {/* Añade aquí otras rutas que necesiten el Layout pero no el menú */}
 

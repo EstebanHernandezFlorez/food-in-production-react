@@ -11,7 +11,7 @@ import Reservas from "./Reservas/Reservas"
 import Servicios from "./Servicios/Servicios"
 import ManoDeObra from "./ManoDeObra/ManoDeObra"
 import GestionComprasPage from "./Compras/GestionComprasPage";
-
+import Insumo from "./Insumo/Insumo"
 import {
   Home,
   BadgeInfo,
@@ -81,7 +81,7 @@ const routes = [
         path: "insumo",
         label: "Insumo",
         icon: <Boxes size={SUB_ICON_SIZE} />,
-        element: <Insumos/>,
+        element: <Insumo/>,
       },
       {
         path: "producto-insumo",
