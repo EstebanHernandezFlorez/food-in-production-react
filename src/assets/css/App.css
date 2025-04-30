@@ -1,0 +1,223 @@
+/* ============================================= */
+/* --- ESTILOS GENERALES TABLA Y COMPONENTES --- */
+/* ============================================= */
+
+/* Variables (Opcional, pero útil si quieres cambiar el vino tinto fácilmente) */
+/* :root {
+  --vinotinto-color: #800020;
+  --vinotinto-light-border: #e9ecef;
+  --vinotinto-transparent: rgba(128, 0, 32, 0.08);
+  --vinotinto-scrollbar: #A94442;
+} */
+
+/* --- Estilos Contenedor Tabla --- */
+.custom-table-container {
+  border-radius: 0.375rem;
+  overflow: hidden;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  position: relative; /* Para posicionamiento interno si es necesario */
+  margin-bottom: 1rem; /* Espacio debajo de la tabla */
+}
+
+/* --- Estilos Tabla Base --- */
+.custom-table {
+  border-collapse: collapse; /* Mejor manejo de bordes */
+  width: 100%;
+  margin-bottom: 0 !important; /* Anular margen de Bootstrap */
+  border: none; /* Quitar borde externo si el contenedor lo tiene */
+}
+
+/* --- Estilos Cabecera Tabla (thead th) --- */
+.custom-table thead th {
+  background-color: #f8f9fa; /* Fondo gris claro */
+  border: none;
+  /* Borde inferior vino tinto (usando variable o color directo) */
+  border-bottom: 2px solid var(--vinotinto-color, #800020);
+  padding: 0.75rem 1rem; /* Aumentar padding ligeramente */
+  text-align: left;
+  vertical-align: bottom;
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap; /* Evitar que el texto del encabezado se divida */
+  color: #343a40; /* Color de texto oscuro */
+}
+
+/* --- Estilos Cuerpo Tabla (tbody td) --- */
+.custom-table tbody td {
+  border: none;
+  /* Borde inferior gris claro (usando variable o color directo) */
+  border-bottom: 1px solid var(--vinotinto-light-border, #dee2e6); /* Gris un poco más visible */
+  padding: 0.75rem 1rem; /* Mismo padding que encabezado */
+  vertical-align: middle !important; /* Centrar verticalmente */
+  font-size: 0.9rem;
+  color: #495057; /* Color de texto gris oscuro */
+}
+
+/* Quitar borde inferior de la última fila */
+.custom-table tbody tr:last-child td {
+   border-bottom: none;
+}
+
+/* --- Efecto Hover para Filas --- */
+.custom-table.table-hover tbody tr:hover {
+  /* Fondo transparente vino tinto (usando variable o color directo) */
+  background-color: var(--vinotinto-transparent, rgba(128, 0, 32, 0.08)) !important;
+  /* cursor: pointer; */ /* Opcional: si la fila es clickeable */
+}
+
+/* --- Alineación Texto (asegurar override) --- */
+.custom-table thead th.text-center,
+.custom-table tbody td.text-center {
+  text-align: center !important;
+}
+.custom-table thead th.text-end, /* Para Bootstrap 5 */
+.custom-table tbody td.text-end,
+.custom-table thead th.text-right, /* Para Bootstrap 4 */
+.custom-table tbody td.text-right {
+  text-align: right !important;
+}
+
+/* --- Contenedor Botones Acción (para espaciado) --- */
+.custom-table .action-cell-content {
+    display: inline-flex; /* Era 'flex', pero 'inline-flex' es mejor si hay texto */
+    gap: 0.5rem; /* Espacio entre iconos */
+    align-items: center;
+    justify-content: center; /* Centra los botones si la celda es más ancha */
+    width: 100%; /* Ocupa el ancho de la celda para centrar bien */
+}
+
+
+/* --- Estilos Botones Acción (Iconos) --- */
+.action-button {
+  background-color: transparent !important;
+  border: none !important;
+  padding: 0.2rem !important;
+  margin: 0;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background-color 0.15s ease-in-out;
+  line-height: 1;
+  vertical-align: middle;
+  box-shadow: none !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+/* Colores Permanentes Iconos Acción */
+.action-button.action-edit {
+  color: #0d6efd !important; /* Azul */
+}
+.action-button.action-delete {
+  color: #dc3545 !important; /* Rojo */
+}
+
+/* Efecto Hover Botones Acción (solo fondo) */
+.action-button:hover,
+.action-button:focus {
+  background-color: rgba(0, 0, 0, 0.08);
+  outline: none;
+}
+
+.status-button {
+  border: 1px solid transparent; /* El borde ahora coincidirá con el fondo */
+  background-color: transparent; /* Se sobreescribirá abajo */
+  padding: 0.25rem 0.6rem;
+  min-width: 80px;
+  border-radius: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: white; /* Texto SIEMPRE blanco */
+  cursor: default; /* Cambiado a default ya que no es un botón de acción */
+  /* transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out; */ /* Transición opcional */
+  display: inline-block;
+  text-align: center;
+  line-height: 1.5;
+  /* Quitar sombra de foco si no es interactivo */
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* --- Estado ACTIVO (Fondo Verde Sólido) --- */
+.status-button.status-active {
+  background-color: var(--bs-success, #198754) !important; /* Fondo verde sólido */
+  border-color: var(--bs-success, #198754) !important;     /* Borde verde sólido */
+  color: white !important;                                /* Texto blanco */
+}
+/* Opcional: Ligero oscurecimiento en hover si aún quieres alguna interacción visual */
+/* .status-button.status-active:hover {
+  background-color: #157347 !important; /* Verde más oscuro */
+/*  border-color: #146c43 !important;
+/* } */
+
+/* --- Estado INACTIVO (Fondo Gris Sólido) --- */
+.status-button.status-inactive {
+  background-color: var(--bs-secondary, #6c757d) !important; /* Fondo gris sólido */
+  border-color: var(--bs-secondary, #6c757d) !important;     /* Borde gris sólido */
+  color: white !important;                                   /* Texto blanco */
+}
+/* Opcional: Ligero oscurecimiento en hover */
+/* .status-button.status-inactive:hover {
+/*  background-color: #5c636a !important; /* Gris más oscuro */
+/*  border-color: #565e64 !important;
+/* } */
+
+
+/* --- Limpieza: Quitar estilos de foco/hover si no son necesarios --- */
+/* Si decides no tener efecto hover, puedes comentar o eliminar estas reglas */
+/* .status-button.status-active:focus,
+.status-button.status-inactive:focus {
+   box-shadow: none !important;
+   outline: none !important;
+} */
+
+/* --- Estilo para Botón Genérico "Agregar" (ej. Proveedor) --- */
+/* Asume una clase como 'btn-add-custom' en tu botón */
+.btn-add-custom {
+  /* Puedes basarte en colores primarios o tu vino tinto */
+  background-color: var(--vinotinto-color, #800020);
+  color: white;
+  border-color: var(--vinotinto-color, #800020);
+  /* Hereda otros estilos de .btn de Bootstrap */
+}
+.btn-add-custom:hover {
+   background-color: #660019; /* Vino tinto más oscuro */
+   border-color: #590016;
+   color: white;
+}
+
+/* --- Estilos para Toasts (React Hot Toast) --- */
+/* Puedes personalizar aquí si lo deseas */
+/* .react-hot-toast {
+  border-radius: 0.375rem;
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.1);
+} */
+
+/* --- Estilos para Modal (Reactstrap/Bootstrap) --- */
+/* .modal-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+}
+.modal-title {
+  color: #343a40;
+  font-weight: 500;
+}
+.modal-footer {
+  background-color: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+} */
+
+/* --- Estilos para Formularios dentro de Modales (Tamaño Pequeño) --- */
+.form-label-sm {
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+  color: #ce6363; /* Color estándar para labels */
+  font-weight: 500;
+}
+
+/* Mensajes de error más pequeños */
+.invalid-feedback {
+    font-size: 0.75rem;
+}

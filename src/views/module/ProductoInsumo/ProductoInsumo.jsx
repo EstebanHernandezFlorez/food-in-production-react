@@ -8,7 +8,7 @@ import { FiEdit } from "react-icons/fi";
 import { PlusOutlined } from "@ant-design/icons";
 import toast, { Toaster } from "react-hot-toast";
 import { useNavigate } from "react-router-dom"; // Importa useNavigate
-import "../../../App.css";
+import "../../../assets/css/App.css";
 
 const Productos = () => { // Cambiado el nombre del componente
     const [data, setData] = useState([]);

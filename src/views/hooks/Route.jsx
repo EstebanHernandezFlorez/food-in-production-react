@@ -1,25 +1,36 @@
-// src/views/hooks/route.js (MODIFICADO)
+// src/views/hooks/route.js (o src/components/PrivateRoute.js)
+
 import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
-import { useAuth } from "./AuthProvider";
+import { useAuth } from "./AuthProvider"; // Asegúrate que la ruta a AuthProvider sea correcta
 
 const PrivateRoute = () => {
-  const { user, token, loading } = useAuth(); // Obtén loading del contexto
+  // 1. Obtiene el estado actual de autenticación y carga
+  const { user, token, loading } = useAuth();
 
+  // 2. Si está en proceso de carga/validación inicial...
   if (loading) {
-    // Muestra un estado de carga mientras el AuthProvider verifica el token/usuario
-    // Podrías retornar un Spinner/Loader de Antd aquí
-    return <div>Verificando autenticación...</div>;
+    // ...muestra un indicador y NO renderiza nada más.
+    // Esto es CRUCIAL para esperar la validación.
+    return (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f0f2f5' }}>
+            <span>Verificando autenticación...</span>
+            {/* Podrías usar un Spinner de Antd aquí: */}
+            {/* <Spin size="large" /> */}
+        </div>
+    );
   }
 
-  // Si no está cargando y no hay token (o usuario), redirige a login
-  if (!token) { // La verificación principal suele ser el token
-    // console.log("PrivateRoute: No token found, redirecting to /");
-    return <Navigate to="/" replace />; // Usa replace para no guardar la ruta privada en el historial
+  // 3. Si la carga terminó y NO hay token...
+  if (!token) {
+    // ...redirige al usuario a la página de login.
+    console.log("PrivateRoute: No hay token después de cargar. Redirigiendo a /");
+    return <Navigate to="/" replace />; // 'replace' es importante
   }
 
-  // Si no está cargando y hay token, permite el acceso al Outlet (rutas hijas)
-  // console.log("PrivateRoute: Token found, allowing access.");
+  // 4. Si la carga terminó y SÍ hay token...
+  // ...permite el acceso y renderiza la ruta hija correspondiente.
+  console.log("PrivateRoute: Token válido después de cargar. Permitiendo acceso.");
   return <Outlet />;
 };
 
