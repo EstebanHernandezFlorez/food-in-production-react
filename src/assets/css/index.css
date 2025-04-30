@@ -18,13 +18,3 @@ body {
   min-height: 100vh; /* Asegura que el fondo cubra toda la altura de la pantalla */
 }
 
-/* Estilos para la línea lateral en el submenú */
-.ant-menu-sub.submenu-open::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background-color: #7e2d2d; /* Color vinotinto */
-}

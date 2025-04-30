@@ -4,7 +4,7 @@ import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
 import serviciosService  from '../../services/serviciosService';
-import "../../../App.css";
+import "../../../assets/css/App.css";
 
 const Servicios = () => {
   const [data, setData] = useState([]); // Almacena los datos en formato frontend { id, Nombre, Estado }

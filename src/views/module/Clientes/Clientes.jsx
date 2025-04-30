@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
 // Importamos el nuevo servicio
 import clientesService from "../../services/clientesService"; // Asegúrate que la ruta es correcta
-import "../../../App.css"; // Si tienes estilos globales
+import "../../../assets/css/App.css"; // Si tienes estilos globales
 
 // Estado inicial vacío para el formulario (formato frontend)
 const initialFormState = {

@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router-dom';
 
 // --- External Libraries ---
 import 'bootstrap/dist/css/bootstrap.min.css';
-import '../../../App.css'; // <-- Verifica la ruta
-import '../../../index.css'; // Keep if needed
+import '../../../assets/css/App.css'; // <-- Verifica la ruta
+import '../../../assets/css/index.css'; // Keep if needed
 import {
     Table, Button, Container, Row, Col, Input, FormGroup, Label, FormFeedback,
     Modal, ModalHeader, ModalBody, ModalFooter, Spinner, Card, CardBody, CardHeader,

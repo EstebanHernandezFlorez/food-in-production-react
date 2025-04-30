@@ -6,7 +6,7 @@
  */
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import "../../../App.css"; // Ajusta la ruta si es necesario (para estilos globales)
+import "../../../assets/css/App.css"; // Ajusta la ruta si es necesario (para estilos globales)
 import {
     Table, Button, Container, Row, Col, Input,
     Modal, ModalHeader, ModalBody, ModalFooter, Spinner

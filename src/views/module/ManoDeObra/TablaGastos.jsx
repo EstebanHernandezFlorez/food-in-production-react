@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import '../../../App.css'; // Asegúrate que la ruta es correcta
+import '../../../assets/css/App.css'; // Asegúrate que la ruta es correcta
 import {
     Table, Button, Container, Row, Col, Form, FormGroup, Input, Label, FormFeedback, // Added FormFeedback
     Modal, ModalHeader, ModalBody, ModalFooter, Spinner, Alert // Added Alert, FormFeedback

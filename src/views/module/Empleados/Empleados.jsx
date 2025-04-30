@@ -1,7 +1,7 @@
 // src/components/Empleado/Empleados.jsx (Asegúrate que la ruta es correcta)
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import "../../../App.css"; // Asegúrate que esta ruta es correcta
+import "../../../assets/css/App.css"; // Asegúrate que esta ruta es correcta
 import {
     Table, Button, Container, Row, Col, Form, FormGroup, Input, Label,
     Modal, ModalHeader, ModalBody, ModalFooter, Spinner,

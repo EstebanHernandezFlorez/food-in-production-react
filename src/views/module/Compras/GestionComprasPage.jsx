@@ -19,7 +19,7 @@ import { formatCurrencyCOP } from "../../../utils/formatting"; // Verifica la ru
 import registroCompraService from '../../services/registroCompraService'; // Verifica la ruta
 
 // --- Styles ---
-import "../../../App.css"; // Verifica la ruta
+import "../../../assets/css/App.css"; // Verifica la ruta
 
 // --- Constants ---
 const ITEMS_PER_PAGE = 8;
