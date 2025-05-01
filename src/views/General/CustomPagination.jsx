@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { ChevronLeft, ChevronRight } from 'lucide-react'; // Iconos para prev/next
-import '../../CustomPagination.css'; // Importa los estilos para este componente
+import '../../assets/css/CustomPagination.css'; // Importa los estilos para este componente
 
 const CustomPagination = ({ currentPage, totalPages, onPageChange }) => {
     // No renderiza nada si solo hay una página o menos

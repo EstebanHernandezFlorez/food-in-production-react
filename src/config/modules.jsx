@@ -13,7 +13,7 @@ export const APP_MODULES = [
     { key: 'insumo', name: 'Insumo' },
     { key: 'producto-insumo', name: 'Producto Insumo' },
     { key: 'orden-produccion', name: 'Orden de producción' },
-    { key: 'Gestion de compra', name: 'Gestión de compras' },
+    { key: 'gestion-de-compra', name: 'Gestión de compras' },
     { key: 'reservas', name: 'Reservas' },
     { key: 'clientes', name: 'Clientes' },
     { key: 'servicios', name: 'Servicios' },

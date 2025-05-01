@@ -6,7 +6,7 @@ import { FaTrashAlt } from "react-icons/fa";
 import { FiEdit } from "react-icons/fi";
 import { PlusOutlined } from "@ant-design/icons";
 import toast, { Toaster } from "react-hot-toast";
-import "../../../App.css";
+import "../../../assets/css/App.css";
 
 const Insumos = () => {
     const [data, setData] = useState([]);

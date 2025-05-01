@@ -28,7 +28,7 @@ import insumoService from '../../services/insumoService'; // <= ¡Asegúrate que
 import providerService from '../../services/proveedorSevice'; // <= ¡Verifica nombre de archivo y función exportada!
 
 // --- Styles ---
-import "../../../App.css"; // Verifica la ruta
+import "../../../assets/css/App.css"; // Verifica la ruta
 
 // --- Constants ---
 const INITIAL_FORM_DATA = { idProvider: '', purchaseDate: dayjs().format('YYYY-MM-DD'), details: [] };

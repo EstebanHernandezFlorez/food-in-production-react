@@ -1,168 +1,107 @@
-// import {
-//   BrowserRouter as Router,
-//   Route,
-//   Routes,
-//   Outlet,
-// } from "react-router-dom";
-// import "./index.css";
-// import pagesRoutes from "./views/module/pages.routes";
-// import Login from "./views/module/Auth/Login";
-// import AppLayout from "./components/layout/AppLayout";
-// import PrivateRoute from "./views/hooks/route";
-// import AuthProvider from "./views/hooks/AuthProvider";
-// import TablaGastos from "./views/module/ManoDeObra/TablaGastos";
-// import ManoDeObra from "./views/module/ManoDeObra/ManoDeObra";
-
-// export default function App() {
-//   const renderRoutes = (routes) => {
-//     return routes.map((route, index) => {
-//       if (route.children) {
-//         return (
-//           <Route
-//             key={index}
-//             path={route.children.path}
-//             element={
-//               route.element || <Outlet /> // Renderiza Outlet si no hay un elemento explícito
-//             }
-//           >
-//             {renderRoutes(route.children)}
-//           </Route>
-//         );
-//       }
-//       return <Route key={index} path={route.path} element={route.element} />;
-//     });
-//   };
-
-//   return (
-//     <Router>
-//       <AuthProvider>
-//         <Routes>
-//           {/* rutas publicas */}
-//           <Route path="/" element={<Login />} />
-//           <Route path="/password" element={<Login />} />
-//           {/* rutas privadas */}
-//           <Route element={<PrivateRoute />}>
-//             <Route path="home" element={<AppLayout />}>
-//               {renderRoutes(pagesRoutes)}
-//             </Route>
-//             <Route path="conceptos-gasto" element={<TablaGastos />} />
-//             <Route path="mano-de-obra" element={<ManoDeObra />} />
-//           </Route>
-          
- //         </Routes>
-//       </AuthProvider>
-//     </Router>
-//   );
-// }
-
-
-// src/App.js (Versión Combinada y Corregida)
-
+// src/App.jsx
 import {
   BrowserRouter as Router,
-  Route,
   Routes,
-  Outlet, // Necesario si una ruta padre tiene 'element' y rutas hijas
+  Route,
+  Outlet,
+  Navigate,
 } from "react-router-dom";
-import "./index.css"; // Estilos globales
 
-// --- Componentes del Layout y Auth ---
-import AppLayout from "./components/layout/AppLayout"; // Tu Layout principal
-import Login from "./views/module/Auth/Login"; // Tu componente Login
-import AuthProvider from "./views/hooks/AuthProvider"; // Tu proveedor de Auth
-import PrivateRoute from "./views/hooks/route"; // Tu componente/hook de ruta privada
+import "./assets/css/App.css"; // Asegúrate que la ruta a tu CSS sea correcta
 
-// --- Rutas para el Menú ---
-import pagesRoutes from "./views/module/pages.routes";
+// --- Proveedor de autenticación y control de rutas privadas ---
+import AuthProvider, { useAuth } from "./views/hooks/AuthProvider";
+// Asegúrate que la importación de PrivateRoute o ProtectedRoute sea la correcta
+import ProtectedRoute from "./views/hooks/Route"; // O el nombre que uses (ej: PrivateRoute)
 
-// --- Componentes de Vistas (Asegúrate que las rutas de importación son correctas) ---
-// Importaciones que probablemente irán en pages.routes.jsimport Dashboard from "./views/module/Dashboard/dashboard";
-import GestionComprasPage from "./views/module/Compras/GestionComprasPage"; // Vista principal de compras?
+// --- Layout y vistas principales ---
+import AppLayout from "./components/layout/AppLayout";
+import Login from "./views/module/Auth/Login";
+import pagesRoutes from "./views/module/pages.routes"; // Rutas generadas por el menú
 
+// --- Importa el nuevo componente de Perfil ---
+import UserProfile from "./views/module/Auth/UserProfile"; // <-- ¡ASEGÚRATE QUE LA RUTA SEA CORRECTA!
 
-// Importaciones para rutas "ocultas" o específicas
-import TablaGastos from "./views/module/ManoDeObra/TablaGastos"; // Verifica la ruta real (Gastos o ManoDeObra?)
-import RendimientoEmpleado from "./views/module/ManoDeObra/RendimientoEmpleado"; // Verifica la ruta real
-import RegistroCompra from './views/module/Compras/RegistroComprasPage'; // Se accede desde GestionCompras?
-import FichaTecnica from './views/module/ProductoInsumo/FichaTecnica'; // Verifica la ruta real
-import Insumos from './views/module/Insumo/Insumo'; // Verifica la ruta real
+// --- Vistas adicionales fuera del menú ---
+import TablaGastos from "./views/module/ManoDeObra/TablaGastos";
+import RendimientoEmpleado from "./views/module/ManoDeObra/RendimientoEmpleado";
+import RegistroCompra from "./views/module/Compras/RegistroComprasPage";
+import FichaTecnica from "./views/module/ProductoInsumo/FichaTecnica";
+import Insumos from "./views/module/Insumo/Insumo";
+// import NotFound from "./views/NotFound"; // opcional
 
-// Opcional: Componente para rutas no encontradas
-// import NotFound from './views/NotFound';
+// Función recursiva para generar rutas del menú (si la usas)
+const renderRoutes = (routesArray) => {
+  if (!Array.isArray(routesArray)) return null; // Manejo si no es array
+  return routesArray.map((route, index) => {
+    // Añade validación por si falta 'path' o 'element'
+    if (!route.path) return null;
+
+    if (route.children && Array.isArray(route.children) && route.children.length > 0) {
+      return (
+        <Route
+          key={route.path || index} // Usa path como key si está disponible
+          path={route.path}
+          // Si el padre tiene elemento propio, úsalo, sino Outlet
+          element={route.element ? React.cloneElement(route.element, { children: <Outlet /> }) : <Outlet />}
+        >
+          {/* Llamada recursiva para los hijos */}
+          {renderRoutes(route.children)}
+        </Route>
+      );
+    }
+    // Ruta simple sin hijos (asegura que tenga elemento)
+    return <Route key={route.path || index} path={route.path} element={route.element || <div>Ruta sin elemento: {route.path}</div>} />;
+  });
+};
+
+// --- RUTA PROTEGIDA (si la defines aquí) ---
+// Si ya tienes PrivateRoute en su propio archivo, no necesitas esto.
+// const ProtectedRoute = () => {
+//   const { user, loading } = useAuth();
+//   if (loading) return <div>Cargando sesión...</div>; // O un spinner más elaborado
+//   return user ? <Outlet /> : <Navigate to="/" replace />;
+// };
 
 export default function App() {
-
-  // Función mejorada para renderizar rutas (maneja recursividad)
-  const renderRoutes = (routesArray) => {
-    return routesArray.map((route, index) => {
-      // Si la ruta tiene hijos, renderiza un Route padre (puede tener element o solo Outlet)
-      if (route.children && Array.isArray(route.children) && route.children.length > 0) {
-        return (
-          <Route key={index} path={route.path} element={route.element || <Outlet />}>
-            {/* Llama recursivamente para los hijos */}
-            {renderRoutes(route.children)}
-          </Route>
-        );
-      }
-      // Si no tiene hijos, es una ruta final
-      return <Route key={index} path={route.path} element={route.element} />;
-    });
-  };
-
   return (
     <Router>
-      {/* El AuthProvider envuelve todo para gestionar el estado de autenticación */}
       <AuthProvider>
         <Routes>
-          {/* === RUTAS PÚBLICAS === */}
-          {/* Ruta raíz para el Login */}
+          {/* === Ruta Pública === */}
           <Route path="/" element={<Login />} />
-          {/* Si tienes una página separada para recuperar contraseña: */}
-          {/* import RecoveryPassword from './views/module/Auth/olvidoContraseña'; */}
-          {/* <Route path="/password" element={<RecoveryPassword />} /> */}
 
-
-          {/* === RUTAS PRIVADAS (Requieren autenticación) === */}
-          <Route element={<PrivateRoute />}> {/* Protege todas las rutas anidadas */}
-
-            {/* --- Ruta Padre "/home" que aplica el Layout Principal --- */}
+          {/* === Rutas Privadas (Requieren Login) === */}
+          {/* Envuelve las rutas privadas con el componente ProtectedRoute */}
+          <Route element={<ProtectedRoute />}>
+            {/* Define el Layout principal para las rutas bajo /home */}
             <Route path="home" element={<AppLayout />}>
 
-              {/* 1. Rutas del Menú Principal */}
-              {/* Renderiza las rutas definidas en pages.routes.js */}
-              {/* Ej: /home/dashboard, /home/roles, /home/mano-de-obra, etc. */}
+              {/* 1. Rutas generadas a partir de pages.routes (tu menú) */}
               {renderRoutes(pagesRoutes)}
 
-              {/* 2. Rutas Específicas o "Ocultas" (Usan el Layout pero no están en el menú) */}
-              {/* Se definen aquí para que estén anidadas bajo /home y usen AppLayout */}
+              {/* 2. Ruta específica para el Perfil del Usuario */}
+              <Route path="profile" element={<UserProfile />} />
+              {/*    ^^^^^^^^^^^^ URL será /home/profile */}
 
-              {/* Ruta para Conceptos de Gasto (accedida desde ManoDeObra) */}
-              {/* URL: /home/conceptos-gasto */}
+              {/* 3. Otras rutas específicas que no están en pages.routes */}
               <Route path="conceptos-gasto" element={<TablaGastos />} />
-
-              {/* Ruta para Rendimiento Empleado (ej. accedida desde Empleados o ManoDeObra) */}
-              {/* URL: /home/rendimiento-empleado */}
               <Route path="rendimiento-empleado" element={<RendimientoEmpleado />} />
-
-              {/* Ruta para Registrar Compra (ej. accedida desde Gestion Compras) */}
-              {/* Puedes usar un path más específico si quieres, ej: compras/registrar */}
-              {/* URL: /home/registrar-compra (o /home/compras/registrar si 'compras' es padre en pages.routes.js) */}
               <Route path="registrar-compra" element={<RegistroCompra />} />
               <Route path="ficha-tecnica" element={<FichaTecnica />} />
-              <Route path="insumos" element={<Insumos/>} />
+              <Route path="insumos" element={<Insumos />} />
 
-              {/* Añade aquí otras rutas que necesiten el Layout pero no el menú */}
+              {/* Opcional: Ruta por defecto si se accede a /home */}
+              {/* Si quieres redirigir /home a /home/dashboard por defecto: */}
+              {/* <Route index element={<Navigate to="dashboard" replace />} /> */}
 
-              {/* Opcional: Una ruta catch-all DENTRO de /home si no se encuentra nada */}
-              {/* <Route path="*" element={<Dashboard />} /> O un componente NotFound específico */}
+              {/* Opcional: Ruta "No Encontrada" dentro del layout /home */}
+              {/* <Route path="*" element={<div>Página no encontrada dentro de Home</div>} /> */}
 
-            </Route>
-            {/* --- Fin de la ruta /home --- */}
+            </Route> {/* Fin de rutas bajo /home */}
+          </Route> {/* Fin de Rutas Protegidas */}
 
-          </Route>
-          {/* === FIN RUTAS PRIVADAS === */}
-
-          {/* Opcional: Ruta global para Not Found (404) si ninguna ruta coincide */}
+          {/* Opcional: Ruta global 404 (fuera del layout y sin protección) */}
           {/* <Route path="*" element={<NotFound />} /> */}
 
         </Routes>
