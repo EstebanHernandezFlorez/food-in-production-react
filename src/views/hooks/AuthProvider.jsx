@@ -20,6 +20,12 @@ const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(!!localStorage.getItem("token"));
   const navigate = useNavigate();
 
+
+
+
+
+  
+
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
 

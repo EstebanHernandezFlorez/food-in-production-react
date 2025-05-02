@@ -114,7 +114,6 @@ const MenuList = ({ collapsed, textColor }) => {
             </Menu.SubMenu>
         );
     };
-    // -------------------------------------------------------------
 
     if (!user || filteredRoutes.length === 0) {
         return null;
