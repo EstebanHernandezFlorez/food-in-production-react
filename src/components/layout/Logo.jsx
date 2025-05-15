@@ -1,7 +1,7 @@
 // Logo.jsx
 
 import React from "react";
-import backgroundLogo from '../../assets/logoFIP.png';
+import backgroundLogo from '../../assets/fipModificado.png';
 import '../../assets/css/logo.css'; // Importa el archivo CSS
 
 const Logo = ({ collapsed, backgroundColor }) => {

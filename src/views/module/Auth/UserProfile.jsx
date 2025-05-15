@@ -1,16 +1,45 @@
-// src/views/module/Auth/UserProfile.jsx
-
-import React from 'react';
-import { Card, Avatar, Descriptions, Typography, Spin, Alert, Button } from 'antd';
-import { UserOutlined, EditOutlined } from '@ant-design/icons'; // Importa iconos de Antd
-import { useAuth } from '../../hooks/AuthProvider'; // Ajusta la ruta si es necesario
+import React, { useState } from 'react';
+import {
+  Card,
+  Avatar,
+  Descriptions,
+  Typography,
+  Spin,
+  Alert,
+  Button,
+  Modal,
+  Input,
+  Form,
+  message
+} from 'antd';
+import { Eye, EyeOff, Pencil } from 'lucide-react';
+import { useAuth } from '../../hooks/AuthProvider';
+import userService from '../../services/usuarioService';
 
 const { Title, Text } = Typography;
 
 const UserProfile = () => {
-  const { user, loading } = useAuth(); // Obtén el usuario y el estado de carga
+  const { user, loading } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [form] = Form.useForm();
 
-  // Muestra un spinner mientras se carga la información del usuario (si aplica)
+  const togglePasswordVisibility = () => setShowPassword(!showPassword);
+
+  const handleEditPassword = async () => {
+    try {
+      const values = await form.validateFields();
+      const userId = user.id;
+      await userService.updateUser(userId, { password: values.password });
+      message.success('Contraseña actualizada correctamente');
+      setIsModalVisible(false);
+      form.resetFields();
+    } catch (error) {
+      message.error('Error al actualizar la contraseña');
+      console.error('Error al cambiar contraseña:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
@@ -19,7 +48,6 @@ const UserProfile = () => {
     );
   }
 
-  // Muestra un mensaje si no se pudo obtener el usuario
   if (!user) {
     return (
       <Alert
@@ -31,46 +59,109 @@ const UserProfile = () => {
     );
   }
 
-  // Renderiza la información del perfil
   return (
-    <Card
-      title={<Title level={3}>Mi Perfil</Title>}
-      bordered={false} // Opcional: quitar borde de la Card
-      style={{ maxWidth: '700px', margin: 'auto' }} // Centrar y limitar ancho
-      // Extra actions (ej: botón editar)
-      extra={
-        <Button
-            type="link" // O "primary" si prefieres
-            icon={<EditOutlined />}
-            // onClick={() => {/* Lógica para abrir modal de edición o navegar */}}
-            // disabled // Habilita cuando tengas la funcionalidad
-        >
-            Editar Perfil
-        </Button>
-      }
-    >
-      <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-        <Avatar size={100} icon={<UserOutlined />} /> {/* Avatar grande */}
-      </div>
+    <>
+      <Card
+        title={<Title level={3} style={{ color: '#5C4033' }}>👤 Mi Perfil</Title>}
+        bordered={false}
+        style={{
+          maxWidth: '700px',
+          margin: 'auto',
+          backgroundColor: '#fefbf5',
+          borderRadius: '20px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+          padding: '24px'
+        }}
+        extra={
+          <Button
+            icon={<Pencil size={16} />}
+            style={{
+              color: '#fff',
+              backgroundColor: '#9e3535',
+              borderColor: '#9e3535',
+              transition: '0.3s',
+            }}
+            onClick={() => setIsModalVisible(true)}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#7a2929')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#9e3535')}
+          >
+            Editar Contraseña
+          </Button>
+        }
+      >
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <Avatar
+            size={100}
+            style={{
+              backgroundColor: '#d0b88e',
+              color: '#5C4033',
+              fontWeight: 'bold',
+              border: '2px solid #9e3535'
+            }}
+          >
+            {user.full_name?.[0]?.toUpperCase() || 'U'}
+          </Avatar>
+          <Title level={4} style={{ color: '#5C4033', marginTop: '12px' }}>
+            {user.full_name}
+          </Title>
+        </div>
 
-      {/* Descriptions es ideal para mostrar pares clave-valor */}
-      <Descriptions bordered column={1} layout="horizontal">
-        <Descriptions.Item label="Nombre Completo">
-          <Text strong>{user.full_name || 'No disponible'}</Text>
-        </Descriptions.Item>
-        <Descriptions.Item label="Correo Electrónico">
-          <Text>{user.email || 'No disponible'}</Text>
-        </Descriptions.Item>
-        <Descriptions.Item label="Rol">
-          {/* Accede al nombre del rol de forma segura */}
-          <Text>{user.role?.name || 'No asignado'}</Text>
-        </Descriptions.Item>
-        {/* Puedes añadir más campos si están disponibles en tu objeto 'user' */}
-        {/* <Descriptions.Item label="ID de Usuario">
-          <Text code>{user.id}</Text>
-        </Descriptions.Item> */}
-      </Descriptions>
-    </Card>
+        <Descriptions
+          column={1}
+          layout="horizontal"
+          bordered
+          labelStyle={{ fontWeight: 'bold', color: '#5C4033', backgroundColor: '#f9f4ea' }}
+          contentStyle={{ color: '#5C4033', backgroundColor: '#fffaf2' }}
+        >
+          <Descriptions.Item label="Correo Electrónico">
+            <Text>{user.email || 'No disponible'}</Text>
+          </Descriptions.Item>
+          <Descriptions.Item label="Rol">
+            <Text>{user.role?.name || 'No asignado'}</Text>
+          </Descriptions.Item>
+          <Descriptions.Item label="Contraseña">
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <Input.Password
+                value={user.password || '********'}
+                type={showPassword ? 'text' : 'password'}
+                readOnly
+                style={{ border: 'none', backgroundColor: '#fffaf2' }}
+                iconRender={() =>
+                  showPassword ? (
+                    <EyeOff onClick={togglePasswordVisibility} style={{ stroke: '#5C4033', cursor: 'pointer' }} />
+                  ) : (
+                    <Eye onClick={togglePasswordVisibility} style={{ stroke: '#5C4033', cursor: 'pointer' }} />
+                  )
+                }
+              />
+            </div>
+          </Descriptions.Item>
+        </Descriptions>
+      </Card>
+
+      <Modal
+        title="Editar Contraseña"
+        open={isModalVisible}
+        onOk={handleEditPassword}
+        onCancel={() => {
+          setIsModalVisible(false);
+          form.resetFields();
+        }}
+        okText="Guardar"
+        cancelText="Cancelar"
+        centered
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item
+            name="password"
+            label="Nueva Contraseña"
+            rules={[{ required: true, message: 'Por favor ingresa la nueva contraseña' }]}
+          >
+            <Input.Password />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </>
   );
 };
 

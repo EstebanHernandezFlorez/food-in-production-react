@@ -1,584 +1,495 @@
-// src/components/permissions/FormPermissions.jsx (o ruta similar)
+// src/components/permissions/FormPermissions.jsx
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Table, Button, FormGroup, Input, Container, Row, Col, Label,
-  Modal, ModalHeader, ModalBody, ModalFooter, Spinner, Alert
-} from "reactstrap"; // O tu librería UI (ej: antd)
+  Modal, ModalHeader, ModalBody, ModalFooter, Spinner, Alert, Card, CardBody
+} from "reactstrap";
 import toast from "react-hot-toast";
 
-// --- Service Imports (Ajusta rutas) ---
+// --- Lucide Icon Imports ---
+import { 
+  PlusCircle, Edit3, Trash2, AlertTriangle, CheckCircle, 
+  XCircle, Save, CheckSquare, Settings, ListTree // Añadido ListTree para la tabla de asignados
+} from 'lucide-react';
+
+// --- Service Imports ---
+// ... (sin cambios)
 import roleService from '../../services/roleServices';
 import permissionService from '../../services/permissionService';
 import privilegeService from '../../services/privilegeService';
 
-// --- Constants ---
 const LOG_PREFIX = "[FormPermissions]";
 
-// --- Component ---
 export default function FormPermissions({
-  isOpen,      // Booleano para controlar la visibilidad del modal
-  toggle,      // Función para cerrar el modal
-  selectedRole, // Objeto del rol a editar (null o undefined si es nuevo)
-  onSave,      // Callback opcional a llamar después de guardar exitosamente
+  isOpen,
+  toggle,
+  selectedRole,
+  onSave,
 }) {
   // --- State ---
-  const [roleName, setRoleName] = useState(""); // Nombre del rol (para creación/edición)
-  // Guardamos los datos crudos de permisos (módulos) y privilegios del backend
+  // ... (sin cambios en la definición de estados)
+  const [roleName, setRoleName] = useState("");
   const [backendPermissions, setBackendPermissions] = useState([]);
   const [backendPrivileges, setBackendPrivileges] = useState([]);
-  // Set para guardar las asignaciones seleccionadas (formato 'moduloKey-privilegeKey')
-  const [assignments, setAssignments] = useState(new Set());
-  const [loadingData, setLoadingData] = useState(false); // Estado de carga inicial
-  const [saving, setSaving] = useState(false); // Estado de guardado
-  const [error, setError] = useState(null); // Para mostrar errores generales
+  const [configuredRoleModules, setConfiguredRoleModules] = useState([]);
+  const [currentSelectedModuleKey, setCurrentSelectedModuleKey] = useState('');
+  const [currentModulePrivileges, setCurrentModulePrivileges] = useState(new Set());
+  const [loadingData, setLoadingData] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
-  // --- Derived State & Memoization ---
-  // Determina si estamos editando un rol existente basado en si selectedRole tiene un ID
+
+  // --- Memos & Effects ---
+  // ... (sin cambios en isEditingExistingRole, isRoleInactive, maps, availableModulesForSelection, useEffect de carga)
   const isEditingExistingRole = useMemo(() => !!selectedRole?.idRole, [selectedRole]);
-  // Determina si el rol que se está editando está inactivo (para deshabilitar cambios)
   const isRoleInactive = useMemo(() => isEditingExistingRole && !selectedRole?.status, [isEditingExistingRole, selectedRole]);
 
-  // Transforma los datos crudos del backend (backendPermissions, backendPrivileges)
-  // en estructuras útiles para la UI y el procesamiento (mapas y listas ordenadas)
-  // Se recalcula solo si los datos crudos cambian.
   const {
-    permissionMap,       // Map: permissionKey -> idPermission
-    privilegeMap,        // Map: privilegeKey -> idPrivilege
-    permissionIdToKeyMap,// Map: idPermission -> permissionKey (para mapeo inverso si es necesario)
-    privilegeIdToKeyMap, // Map: idPrivilege -> privilegeKey (para mapeo inverso si es necesario)
-    displayableModules,  // Array: [{ key, name, idPermission }, ...] para renderizar la tabla
-    displayablePrivileges// Array: [{ key, name, idPrivilege }, ...] para renderizar la tabla
+    permissionMap, privilegeMap, displayableModules, displayablePrivileges
   } = useMemo(() => {
-    console.log(`${LOG_PREFIX} Recalculating maps and displayable items...`);
-    const pMap = {}; const pIdToKey = {}; const modules = [];
-    const privMap = {}; const privIdToKey = {}; const privileges = [];
-
-    // Procesa Permisos (Módulos) del backend
+    const pMap = {}; const modules = [];
+    const privMap = {}; const privileges = [];
     if (Array.isArray(backendPermissions)) {
       backendPermissions.forEach(perm => {
-        // Valida que el permiso tenga los datos necesarios (ID numérico y clave string)
         if (perm && typeof perm.idPermission === 'number' && perm.permissionKey && typeof perm.permissionKey === 'string') {
           const moduleKey = perm.permissionKey;
-          // Usa el nombre proporcionado, o el nombre clave, o la clave como último recurso
           const moduleName = perm.name || perm.permissionName || moduleKey;
-
-          pMap[moduleKey] = perm.idPermission; // Mapa clave -> ID
-          pIdToKey[perm.idPermission] = moduleKey; // Mapa ID -> clave
-          modules.push({ // Objeto para mostrar en la UI
-            key: moduleKey,
-            name: moduleName,
-            idPermission: perm.idPermission
-          });
-        } else {
-          console.warn(`${LOG_PREFIX} Invalid permission data skipped:`, perm);
+          pMap[moduleKey] = perm.idPermission;
+          modules.push({ key: moduleKey, name: moduleName, idPermission: perm.idPermission });
         }
       });
     }
-
-    // Procesa Privilegios del backend
     if (Array.isArray(backendPrivileges)) {
       backendPrivileges.forEach(priv => {
-        // Valida que el privilegio tenga los datos necesarios
         if (priv && typeof priv.idPrivilege === 'number' && priv.privilegeKey && typeof priv.privilegeKey === 'string') {
           const privilegeKey = priv.privilegeKey;
           const privilegeName = priv.name || priv.privilegeName || privilegeKey;
-
-          privMap[privilegeKey] = priv.idPrivilege; // Mapa clave -> ID
-          privIdToKey[priv.idPrivilege] = privilegeKey; // Mapa ID -> clave
-          privileges.push({ // Objeto para mostrar en la UI
-            key: privilegeKey,
-            name: privilegeName,
-            idPrivilege: priv.idPrivilege
-          });
-        } else {
-           console.warn(`${LOG_PREFIX} Invalid privilege data skipped:`, priv);
+          privMap[privilegeKey] = priv.idPrivilege;
+          privileges.push({ key: privilegeKey, name: privilegeName, idPrivilege: priv.idPrivilege });
         }
       });
     }
-
-    // Ordenar alfabéticamente para una presentación consistente
     modules.sort((a, b) => a.name.localeCompare(b.name));
-    // Podrías tener un orden personalizado para privilegios (ej: view, create, edit, delete...)
-    privileges.sort((a, b) => a.name.localeCompare(b.name)); // Orden alfabético por ahora
+    privileges.sort((a, b) => a.name.localeCompare(b.name));
+    return { permissionMap: pMap, privilegeMap: privMap, displayableModules: modules, displayablePrivileges: privileges };
+  }, [backendPermissions, backendPrivileges]);
 
-    console.log(`${LOG_PREFIX} Generated Maps:`, { pMap, privMap, pIdToKey, privIdToKey });
-    console.log(`${LOG_PREFIX} Generated Displayable Items:`, { modules, privileges });
+  const availableModulesForSelection = useMemo(() => {
+    if (!displayableModules || displayableModules.length === 0) return [];
+    const configuredKeys = new Set(configuredRoleModules.map(m => m.moduleKey));
+    return displayableModules.filter(
+      mod => !configuredKeys.has(mod.key) || mod.key === currentSelectedModuleKey
+    );
+  }, [displayableModules, configuredRoleModules, currentSelectedModuleKey]);
 
-    return {
-      permissionMap: pMap,
-      privilegeMap: privMap,
-      permissionIdToKeyMap: pIdToKey,
-      privilegeIdToKeyMap: privIdToKey,
-      displayableModules: modules,
-      displayablePrivileges: privileges
-    };
-  }, [backendPermissions, backendPrivileges]); // Dependencias: recalcular solo si cambian los datos base
+  useEffect(() => {
+    if (!isOpen) {
+        setCurrentSelectedModuleKey(''); setCurrentModulePrivileges(new Set());
+        setConfiguredRoleModules([]); setRoleName(""); setError(null);
+        return;
+    }
+    const controller = new AbortController(); const signal = controller.signal;
+    setError(null); setRoleName(isEditingExistingRole ? selectedRole.roleName : "");
+    setLoadingData(true); setBackendPermissions([]); setBackendPrivileges([]);
+    setConfiguredRoleModules([]); setCurrentSelectedModuleKey(''); setCurrentModulePrivileges(new Set());
 
-
-  // --- Effect: Carga de Datos Iniciales y Mapeo de Asignaciones Existentes ---
-   useEffect(() => {
-    // No ejecutar si el modal no está abierto
-    if (!isOpen) return;
-
-    // AbortController para cancelar peticiones si el componente se desmonta o el modal se cierra
-    const controller = new AbortController();
-    const signal = controller.signal;
-
-    // Resetea estados al abrir/cambiar de rol
-    setError(null);
-    setAssignments(new Set()); // Limpiar asignaciones previas
-    setRoleName(isEditingExistingRole ? selectedRole.roleName : "");
-    setLoadingData(true);
-    // Limpiar datos crudos fuerza la actualización de useMemo
-    setBackendPermissions([]);
-    setBackendPrivileges([]);
-
-    // Función async para cargar y procesar datos
     const loadAndProcessData = async () => {
-      let loadedPerms = [];
-      let loadedPrivs = [];
-      let assignmentsFromBackend = [];
-
+      let loadedPerms = []; let loadedPrivs = []; let assignmentsFromBackend = [];
       try {
-        // Paso 1: Cargar permisos (módulos) y privilegios base en paralelo
-        // Asegurarse de que devuelvan array vacío en caso de error o dato inválido
         [loadedPerms, loadedPrivs] = await Promise.all([
-          permissionService.getAll(/* { signal } */).then(data => Array.isArray(data) ? data : []).catch(err => { console.error("Error loading permissions:", err); return []; }),
-          privilegeService.getAll(/* { signal } */).then(data => Array.isArray(data) ? data : []).catch(err => { console.error("Error loading privileges:", err); return []; })
+          permissionService.getAll().then(data => Array.isArray(data) ? data : []).catch(err => { if(signal.aborted) throw err; console.error("Perm err:", err); return []; }),
+          privilegeService.getAll().then(data => Array.isArray(data) ? data : []).catch(err => { if(signal.aborted) throw err; console.error("Priv err:", err); return []; })
         ]);
-        // Si el componente se desmontó mientras cargaba, no continuar
         if (signal.aborted) return;
+        setBackendPermissions(loadedPerms); setBackendPrivileges(loadedPrivs);
 
-        // Actualiza estado con los datos crudos para que useMemo genere los mapas
-        setBackendPermissions(loadedPerms);
-        setBackendPrivileges(loadedPrivs);
-
-        // Paso 2: Si estamos editando un rol existente, cargar sus asignaciones actuales
         if (isEditingExistingRole && selectedRole?.idRole) {
-          console.log(`${LOG_PREFIX} Editing role ID: ${selectedRole.idRole}. Fetching existing assignments...`);
           try {
-            const result = await roleService.getRolePrivilegesByIds(selectedRole.idRole /*, { signal } */);
-             if (signal.aborted) return;
-             // Verifica que la respuesta sea un array
-             if (Array.isArray(result)) {
-               assignmentsFromBackend = result;
-               console.log(`${LOG_PREFIX} Existing assignments loaded:`, assignmentsFromBackend);
-             } else {
-               console.warn(`${LOG_PREFIX} Received unexpected data format for existing assignments. Expected array. Got:`, result);
-               toast.error("Error al cargar asignaciones existentes.");
-             }
-          } catch (assignErr) {
-             if (signal.aborted) return;
-             console.error(`${LOG_PREFIX} Error loading existing assignments for role ${selectedRole.idRole}:`, assignErr);
-             toast.error("Error al cargar asignaciones existentes.");
-             // Continuar sin asignaciones previas marcadas
-          }
+            const result = await roleService.getRolePrivilegesByIds(selectedRole.idRole);
+            if (signal.aborted) return;
+            if (Array.isArray(result)) assignmentsFromBackend = result;
+            else toast.error("Err cargando asignaciones.");
+          } catch (assignErr) { if (signal.aborted) return; console.error("Assign err", assignErr); toast.error("Err cargando asignaciones.");}
         }
-
-        // Paso 3: Mapear las asignaciones existentes (si las hay) al formato del Set ('moduloKey-privilegeKey')
-        // Usamos mapas temporales recalculados aquí para asegurar que se usan los datos recién cargados,
-        // evitando problemas de timing con la actualización de estado y useMemo.
-        const tempPIdToKey = {};
-        loadedPerms.forEach(p => {
-           if (p && typeof p.idPermission === 'number' && p.permissionKey) tempPIdToKey[p.idPermission] = p.permissionKey;
-        });
-        const tempPrivIdToKey = {};
-        loadedPrivs.forEach(p => {
-          if (p && typeof p.idPrivilege === 'number' && p.privilegeKey) tempPrivIdToKey[p.idPrivilege] = p.privilegeKey;
-        });
-
-        const initialAssignments = new Set();
-        if (assignmentsFromBackend.length > 0) {
-           console.log(`${LOG_PREFIX} Mapping assignments from backend data using temp maps...`);
-           assignmentsFromBackend.forEach(assignment => {
-              // Busca las claves string correspondientes a los IDs recibidos
-              const moduleKey = tempPIdToKey[assignment.idPermission];
-              const privilegeKey = tempPrivIdToKey[assignment.idPrivilege];
-              // Si se encontraron ambas claves, construye el string y añádelo al Set
-              if (moduleKey && privilegeKey) {
-                const assignmentKey = `${moduleKey}-${privilegeKey}`;
-                initialAssignments.add(assignmentKey);
-                // console.log(`${LOG_PREFIX} Mapped backend assignment: ${assignmentKey}`);
-              } else {
-                 // Advierte si no se pudo mapear una asignación (quizás el permiso/privilegio fue eliminado)
-                 console.warn(`${LOG_PREFIX} Could not map existing assignment from backend IDs (maybe deprecated?): ID_P:${assignment.idPermission}, ID_Priv:${assignment.idPrivilege}`);
-              }
-           });
-           console.log(`${LOG_PREFIX} Initial assignments set from backend:`, initialAssignments);
+        if (assignmentsFromBackend.length > 0 && loadedPerms.length > 0 && loadedPrivs.length > 0) {
+            const tempPIdToInfo = {}; loadedPerms.forEach(p => { if (p && typeof p.idPermission === 'number' && p.permissionKey) tempPIdToInfo[p.idPermission] = { key: p.permissionKey, name: p.name || p.permissionName || p.permissionKey, idPermission: p.idPermission };});
+            const tempPrivIdToKey = {}; loadedPrivs.forEach(p => { if (p && typeof p.idPrivilege === 'number' && p.privilegeKey) tempPrivIdToKey[p.idPrivilege] = p.privilegeKey; });
+            const groupedByModule = {};
+            assignmentsFromBackend.forEach(assignment => {
+                const moduleInfo = tempPIdToInfo[assignment.idPermission]; const privilegeKey = tempPrivIdToKey[assignment.idPrivilege];
+                if (moduleInfo && privilegeKey) {
+                    if (!groupedByModule[moduleInfo.key]) groupedByModule[moduleInfo.key] = { moduleKey: moduleInfo.key, moduleName: moduleInfo.name, idPermission: moduleInfo.idPermission, selectedPrivileges: new Set() };
+                    groupedByModule[moduleInfo.key].selectedPrivileges.add(privilegeKey);
+                }
+            });
+            setConfiguredRoleModules(Object.values(groupedByModule));
         }
-        // Actualiza el estado 'assignments' con las encontradas
-        setAssignments(initialAssignments);
-
-      } catch (err) {
-         // Ignora errores si fueron por cancelación (AbortError)
-         if (err.name !== 'AbortError' && !signal.aborted) {
-            console.error(`${LOG_PREFIX} Error loading data:`, err.response?.data || err.message || err);
-            setError("Error crítico al cargar datos de configuración. Intente cerrar y abrir de nuevo.");
-            toast.error("Error crítico al cargar configuración.");
-            // Limpia todo en caso de error grave
-            setBackendPermissions([]);
-            setBackendPrivileges([]);
-            setAssignments(new Set());
-         }
-      } finally {
-        // Solo quita el estado de carga si no se abortó la operación
-        if (!signal.aborted) {
-          setLoadingData(false);
-        }
-      }
+      } catch (err) { if (err.name !== 'AbortError' && !signal.aborted) { console.error("Load data err:", err); setError("Err crítico."); toast.error("Err crítico conf."); }}
+      finally { if (!signal.aborted) setLoadingData(false); }
     };
-
-    // Llama a la función para cargar y procesar
     loadAndProcessData();
-
-    // Función de limpieza: se ejecuta cuando el componente se desmonta o las dependencias cambian
-    return () => {
-      console.log(`${LOG_PREFIX} Cleaning up load effect, aborting fetch.`);
-      controller.abort(); // Cancela cualquier petición en curso
-    };
-  // Dependencias: Ejecutar este efecto si cambia el estado 'isOpen' o el ID del rol seleccionado
-  }, [isOpen, selectedRole?.idRole, isEditingExistingRole]);
+    return () => controller.abort();
+  }, [isOpen, selectedRole?.idRole, isEditingExistingRole, selectedRole?.roleName]);
 
 
   // --- Event Handlers ---
+  // ... (handleModuleSelectChange, handleCurrentPrivilegeChange, handleToggleAllPrivileges, areAllPrivilegesSelected, handleSaveModuleConfiguration, handleEditConfiguredModule, handleRemoveModuleFromRole sin cambios)
+  const handleModuleSelectChange = (e) => {
+    const newModuleKey = e.target.value;
+    setCurrentSelectedModuleKey(newModuleKey);
+    const existingConfig = configuredRoleModules.find(m => m.moduleKey === newModuleKey);
+    if (existingConfig) {
+        setCurrentModulePrivileges(new Set(existingConfig.selectedPrivileges));
+    } else {
+        setCurrentModulePrivileges(new Set());
+    }
+  };
 
-  // Maneja el cambio de estado de un checkbox individual
-  const handleAssignmentChange = useCallback((moduleKey, privilegeKey, isChecked) => {
-    setAssignments(prev => {
-      const newAssignments = new Set(prev); // Copia el Set actual
-      const key = `${moduleKey}-${privilegeKey}`; // Construye la clave combinada
-      if (isChecked) {
-        newAssignments.add(key); // Añade la clave si se marcó
+  const handleCurrentPrivilegeChange = (privilegeKey, isChecked) => {
+    setCurrentModulePrivileges(prev => {
+      const newPrivs = new Set(prev);
+      if (isChecked) newPrivs.add(privilegeKey);
+      else newPrivs.delete(privilegeKey);
+      return newPrivs;
+    });
+  };
+
+  const handleToggleAllPrivileges = (isChecked) => {
+    if (isChecked) {
+      const allPrivilegeKeys = displayablePrivileges.map(p => p.key);
+      setCurrentModulePrivileges(new Set(allPrivilegeKeys));
+    } else {
+      setCurrentModulePrivileges(new Set());
+    }
+  };
+
+  const areAllPrivilegesSelected = useMemo(() => {
+    if (!currentSelectedModuleKey || displayablePrivileges.length === 0) return false; // Añadido currentSelectedModuleKey
+    return displayablePrivileges.every(priv => currentModulePrivileges.has(priv.key));
+  }, [currentModulePrivileges, displayablePrivileges, currentSelectedModuleKey]);
+
+  const handleSaveModuleConfiguration = () => {
+    if (!currentSelectedModuleKey) { toast.error("Seleccione un módulo."); return; }
+    const moduleData = displayableModules.find(m => m.key === currentSelectedModuleKey);
+    if (!moduleData) { toast.error("Módulo no encontrado."); return; }
+    setConfiguredRoleModules(prevConfigured => {
+      const existingIndex = prevConfigured.findIndex(m => m.moduleKey === currentSelectedModuleKey);
+      const newModuleConfig = { moduleKey: moduleData.key, moduleName: moduleData.name, idPermission: moduleData.idPermission, selectedPrivileges: new Set(currentModulePrivileges) };
+      let updatedConfiguredModules;
+      if (existingIndex > -1) {
+        updatedConfiguredModules = [...prevConfigured]; updatedConfiguredModules[existingIndex] = newModuleConfig;
+        toast.success(<span><CheckCircle size={16} className="me-1" />Privilegios para "{moduleData.name}" actualizados.</span>);
       } else {
-        newAssignments.delete(key); // Elimina la clave si se desmarcó
+        updatedConfiguredModules = [...prevConfigured, newModuleConfig];
+        toast.success(<span><CheckCircle size={16} className="me-1" />Módulo "{moduleData.name}" agregado.</span>);
       }
-      // console.log(`${LOG_PREFIX} Assignment change: ${key} -> ${isChecked}. New set:`, newAssignments);
-      return newAssignments; // Devuelve el nuevo Set para actualizar el estado
+      return updatedConfiguredModules;
     });
-  }, []); // No tiene dependencias externas, solo opera sobre el estado 'assignments'
+    setCurrentSelectedModuleKey(''); setCurrentModulePrivileges(new Set());
+  };
 
-  // Maneja el cambio del checkbox "Seleccionar Todos" para un módulo
-  const handleSelectAllForModule = useCallback((moduleKey, shouldSelectAll) => {
-    setAssignments(prev => {
-      const newAssignments = new Set(prev);
-      // Itera sobre los privilegios *actualmente disponibles* (de useMemo) para construir/eliminar claves
-      displayablePrivileges.forEach(priv => {
-        const key = `${moduleKey}-${priv.key}`; // Usa priv.key (la clave string del privilegio)
-        if (shouldSelectAll) {
-          newAssignments.add(key); // Añade todas las combinaciones para este módulo
-        } else {
-          newAssignments.delete(key); // Elimina todas las combinaciones para este módulo
-        }
-      });
-      // console.log(`${LOG_PREFIX} Select all for module '${moduleKey}' -> ${shouldSelectAll}. New set:`, newAssignments);
-      return newAssignments;
-    });
-  }, [displayablePrivileges]); // Depende de displayablePrivileges para saber qué claves crear/borrar
+  const handleEditConfiguredModule = (moduleToEdit) => {
+    setCurrentSelectedModuleKey(moduleToEdit.moduleKey);
+    setCurrentModulePrivileges(new Set(moduleToEdit.selectedPrivileges));
+    toast.info(`Editando privilegios para ${moduleToEdit.moduleName}.`);
+  };
+
+  const handleRemoveModuleFromRole = (moduleKeyToRemove) => {
+    const moduleName = configuredRoleModules.find(m => m.moduleKey === moduleKeyToRemove)?.moduleName || "El módulo";
+    setConfiguredRoleModules(prev => prev.filter(m => m.moduleKey !== moduleKeyToRemove));
+    toast.success(<span><Trash2 size={16} className="me-1" />{moduleName} quitado.</span>);
+    if (currentSelectedModuleKey === moduleKeyToRemove) { setCurrentSelectedModuleKey(''); setCurrentModulePrivileges(new Set());}
+  };
 
 
-  // --- Form Submission Handler (CON PARSEO CORREGIDO) ---
+  // --- Submit Handler ---
+  // ... (handleSubmit sin cambios)
   const handleSubmit = async (e) => {
-    e.preventDefault(); // Previene recarga de página
-    setError(null); // Limpia errores previos
+    e.preventDefault(); setError(null);
     const trimmedRoleName = roleName.trim();
-
-    // Validación básica del nombre (solo si es creación)
-    if (!isEditingExistingRole && !trimmedRoleName) {
-      toast.error("El nombre del rol es requerido.");
-      setError("Por favor, ingrese un nombre para el nuevo rol.");
-      return;
-    }
-
-    // Array para guardar las asignaciones formateadas para el backend ({ idPermission, idPrivilege })
-    const rolePrivilegesFormatted = [];
-    let mappingOk = true; // Flag para detener si falla el mapeo
-
-    console.log(`${LOG_PREFIX} Starting submit. Assignments to process:`, assignments);
-    console.log(`${LOG_PREFIX} Using permissionMap:`, permissionMap);
-    console.log(`${LOG_PREFIX} Using privilegeMap:`, privilegeMap);
-
-    // Itera sobre cada clave combinada ('moduloKey-privilegeKey') en el Set 'assignments'
-    assignments.forEach(keyString => {
-      let foundMatch = false;
-      let parsedModuleKey = null;
-      let parsedPrivilegeKey = null;
-      let idPermission = undefined;
-      let idPrivilege = undefined;
-
-      // Itera a través de las claves de privilegio conocidas (cargadas del backend y en privilegeMap)
-      // Ordenar por longitud descendente puede ayudar a encontrar 'view-details' antes que 'view' o 'details'
-      const sortedPrivilegeKeys = Object.keys(privilegeMap).sort((a, b) => b.length - a.length);
-
-      for (const knownPrivilegeKey of sortedPrivilegeKeys) {
-          const suffix = `-${knownPrivilegeKey}`; // Construye el sufijo a buscar, ej: "-view-details"
-
-          // Comprueba si la keyString (ej: "reservas-view-details") TERMINA con el sufijo
-          if (keyString.endsWith(suffix)) {
-              // Si termina, la parte ANTERIOR al sufijo es la clave del módulo
-              parsedModuleKey = keyString.substring(0, keyString.length - suffix.length);
-              // La clave del privilegio es la que usamos para encontrar el sufijo
-              parsedPrivilegeKey = knownPrivilegeKey;
-
-              // Intenta buscar los IDs numéricos usando las claves parseadas CORRECTAMENTE
-              idPermission = permissionMap[parsedModuleKey]; // Busca ID del módulo
-              idPrivilege = privilegeMap[parsedPrivilegeKey]; // Busca ID del privilegio
-
-              // Si encontramos AMBOS IDs numéricos, el parseo es válido
-              if (typeof idPermission === 'number' && typeof idPrivilege === 'number') {
-                  foundMatch = true; // Marcamos que encontramos una combinación válida
-                  console.log(`${LOG_PREFIX} Successfully parsed '${keyString}' -> Module: '${parsedModuleKey}' (ID:${idPermission}), Privilege: '${parsedPrivilegeKey}' (ID:${idPrivilege})`);
-                  break; // Salimos del bucle de privilegios, ya encontramos el match correcto
-              } else {
-                   // Si no se encontraron IDs para esta separación, fue un match parcial o incorrecto.
-                   // No hacemos nada y continuamos el bucle para probar otras claves de privilegio.
-                   console.log(`${LOG_PREFIX} Partial match for '${keyString}' with privilege '${knownPrivilegeKey}', but failed ID lookup (P:${idPermission}, Priv:${idPrivilege}). Continuing search...`);
-                   // Reseteamos por si acaso, aunque no es estrictamente necesario aquí
-                   parsedModuleKey = null;
-                   parsedPrivilegeKey = null;
-                   idPermission = undefined;
-                   idPrivilege = undefined;
-              }
-          }
-      } // Fin del bucle for (knownPrivilegeKey)
-
-      // Después de probar todas las claves de privilegio posibles para la keyString actual:
-      if (foundMatch && typeof idPermission === 'number' && typeof idPrivilege === 'number') {
-        // Si encontramos un match válido con IDs, lo añadimos al formato del backend
-        rolePrivilegesFormatted.push({ idPermission, idPrivilege });
-      } else {
-        // Si no se encontró ninguna combinación válida para esta keyString
-        console.error(`${LOG_PREFIX} MAPPING ERROR on submit: Could not parse or find valid IDs for assignment key: '${keyString}'.`);
-        mappingOk = false; // Marcamos que hubo un error en el mapeo general
-      }
-    }); // Fin del assignments.forEach
-
-    // Si hubo algún error durante el mapeo, no continuar
-    if (!mappingOk) {
-       setError("Error interno: No se pudieron procesar algunas asignaciones. Revise la consola para más detalles.");
-       toast.error("Error interno al procesar asignaciones.");
-       return;
-    }
-
-    // Opcional: Validar si hay al menos una asignación (¿es válido un rol sin permisos?)
-    if (!isEditingExistingRole && rolePrivilegesFormatted.length === 0) {
-      console.warn(`${LOG_PREFIX} Creating a new role with zero assignments.`);
-      // Podrías mostrar una confirmación aquí o un error si no es permitido
-      // if (!confirm("¿Está seguro de crear un rol sin ningún permiso asignado?")) return;
-    }
-
-    // Inicia estado de guardado
+    if (!isEditingExistingRole && !trimmedRoleName) { toast.error("Nombre del rol requerido."); setError("Ingrese nombre."); return; }
+    if (configuredRoleModules.length === 0 && !isEditingExistingRole) { toast.error("Debe asignar permisos."); setError("Agregue módulos."); return;}
+    const rolePrivilegesFormatted = []; let mappingErrorOccurred = false;
+    configuredRoleModules.forEach(configuredModule => {
+      const idPermission = configuredModule.idPermission;
+      configuredModule.selectedPrivileges.forEach(privilegeKey => {
+        const idPrivilege = privilegeMap[privilegeKey];
+        if (typeof idPermission === 'number' && typeof idPrivilege === 'number') rolePrivilegesFormatted.push({ idPermission, idPrivilege });
+        else { console.error(`Map err: M:${configuredModule.moduleName}(${idPermission}), P:${privilegeKey}(${idPrivilege})`); mappingErrorOccurred = true; }
+      });
+    });
+    if (mappingErrorOccurred) { setError("Err interno asignaciones."); toast.error("Err interno."); return; }
     setSaving(true);
     try {
-      let successMessage = "";
-
-      // Lógica diferente para editar vs crear
+      let successMessage = ""; let successToastMessage = "";
       if (isEditingExistingRole) {
-          // --- EDITAR: Llama al servicio para REEMPLAZAR las asignaciones del rol ---
-          // Este endpoint debe borrar las asignaciones viejas y poner las nuevas
-          console.log(`${LOG_PREFIX} Updating assignments for Role ID ${selectedRole.idRole} with:`, rolePrivilegesFormatted);
           await roleService.assignRolePrivileges(selectedRole.idRole, rolePrivilegesFormatted);
-          successMessage = `Asignaciones para "${selectedRole.roleName}" actualizadas correctamente.`;
-
-          // Opcional: Si el nombre del rol también se pudiera editar en este form,
-          // llamarías a roleService.updateRole aquí también.
-          // if (selectedRole.roleName !== trimmedRoleName && trimmedRoleName) { ... }
-
+          successMessage = `Asignaciones para "${selectedRole.roleName}" actualizadas.`;
       } else {
-          // --- CREAR: Llama al servicio para crear el rol con sus asignaciones ---
-          const payload = {
-            roleName: trimmedRoleName,
-            status: 1, // Asume activo por defecto al crear
-            rolePrivileges: rolePrivilegesFormatted // Array de { idPermission, idPrivilege }
-          };
-          console.log(`${LOG_PREFIX} Creating new role with payload:`, payload);
+          const payload = { roleName: trimmedRoleName, status: 1, rolePrivileges: rolePrivilegesFormatted };
           await roleService.createRole(payload);
-          successMessage = `Rol "${payload.roleName}" creado exitosamente con sus asignaciones.`;
+          successMessage = `Rol "${payload.roleName}" creado.`;
       }
-
-      // Éxito
-      toast.success(successMessage);
-      if (onSave) onSave(); // Llama al callback para refrescar (si se proporcionó)
-      toggle(); // Cierra el modal
-
+      successToastMessage = <span><CheckCircle size={18} className="me-1" /> {successMessage}</span>;
+      toast.success(successToastMessage);
+      if (onSave) onSave();
+      toggle();
     } catch (err) {
-      // Manejo de errores del backend
-      console.error(`${LOG_PREFIX} Error saving role/assignments:`, err.response?.data || err.message || err);
-      const errorMsgFromServer = err.response?.data?.message || err.message || 'Ocurrió un error inesperado.';
-      const finalErrorMsg = `Error al guardar: ${errorMsgFromServer}`;
-      setError(finalErrorMsg);
-      toast.error("Error al guardar los cambios. Intente de nuevo.");
-    } finally {
-      // Termina estado de guardado independientemente del resultado
-      setSaving(false);
-    }
-  }; // Fin de handleSubmit
+      console.error("Save err:", err.response?.data || err.message || err);
+      const errorMsgFromServer = err.response?.data?.message || err.message || 'Err inesperado.';
+      setError(`Err guardando: ${errorMsgFromServer}`);
+      toast.error(<span><XCircle size={18} className="me-1" /> Err guardando.</span>);
+    } finally { setSaving(false); }
+  };
 
-  // --- Render Logic Variables ---
-  // Determina si el botón de submit debe estar habilitado
-  const canSubmit = !loadingData && !saving && !isRoleInactive && displayableModules.length > 0 && displayablePrivileges.length > 0;
-  // Texto dinámico para el botón de submit
-  const submitButtonText = saving
-    ? <><Spinner size="sm" className="me-1" /> Guardando...</>
-    : (isEditingExistingRole ? 'Guardar Cambios' : 'Crear Rol');
 
-  // --- JSX Structure ---
+  // --- Derived State for UI ---
+  // ... (canSubmitOverall, submitButtonText, currentModuleBeingConfigured, isEditingAConfiguredModule, addOrUpdateModuleButtonText, addOrUpdateModuleButtonIcon sin cambios)
+  const canSubmitOverall = !loadingData && !saving && !isRoleInactive &&
+                       (isEditingExistingRole || configuredRoleModules.length > 0) &&
+                       (isEditingExistingRole || !!roleName.trim());
+  const submitButtonText = saving ? <><Spinner size="sm" className="me-1" /> Guardando...</> : (isEditingExistingRole ? 'Guardar Cambios' : 'Crear Rol');
+  const currentModuleBeingConfigured = displayableModules.find(m => m.key === currentSelectedModuleKey);
+  const isEditingAConfiguredModule = configuredRoleModules.some(m => m.moduleKey === currentSelectedModuleKey);
+  const addOrUpdateModuleButtonText = isEditingAConfiguredModule ? "Actualizar Módulo" : "Agregar Módulo";
+  const addOrUpdateModuleButtonIcon = isEditingAConfiguredModule ? <Save size={16} className="me-1" /> : <PlusCircle size={16} className="me-1" />;
+
+
   return (
     <Modal
-        isOpen={isOpen} // Controlado por el estado del padre
-        toggle={!saving ? toggle : undefined} // Permite cerrar solo si no está guardando
-        size="xl" // Modal grande para la tabla
-        backdrop={saving ? "static" : true} // Impide cerrar clickeando fuera si está guardando
-        keyboard={!saving} // Impide cerrar con Esc si está guardando
-        fade={true}
-        className="permissions-modal" // Clase CSS opcional
-        centered // Centrar verticalmente
+        isOpen={isOpen} toggle={!saving ? toggle : undefined}
+        size="lg" backdrop={saving ? "static" : true} keyboard={!saving}
+        className="permissions-modal-compact" centered
     >
-      {/* Cabecera del Modal */}
-      <ModalHeader toggle={!saving ? toggle : undefined}>
-        {/* Título dinámico */}
-        {isEditingExistingRole ? `Editar Asignaciones: ${selectedRole?.roleName || 'Rol Desconocido'}` : "Crear Nuevo Rol y Asignar Permisos"}
-        {/* Badge si el rol está inactivo */}
-        {isRoleInactive && <span className="ms-2 badge bg-warning text-dark">Rol Inactivo (Solo lectura)</span>}
+      <ModalHeader toggle={!saving ? toggle : undefined} className="bg-light border-bottom"> {/* Estilo sutil */}
+        {isEditingExistingRole ? `Editar Rol: ${selectedRole?.roleName || 'Rol'}` : "Crear Nuevo Rol"}
+        {isRoleInactive && <span className="ms-2 badge bg-warning text-dark">Inactivo</span>}
       </ModalHeader>
 
-      {/* Cuerpo del Modal */}
-      <ModalBody>
-        {/* Indicador de Carga */}
+      <ModalBody className="pb-3"> {/* Ajustado padding inferior del body */}
         {loadingData && (
-          <div className="text-center p-4">
-            <Spinner color="primary" style={{ width: '3rem', height: '3rem' }} />
-            <p className="mt-3 mb-0 text-muted fs-5">Cargando configuración...</p>
-          </div>
+          <div className="text-center py-5"><Spinner /><p className="mt-2">Cargando...</p></div>
         )}
-
-        {/* Mensaje de Error General */}
         {error && !loadingData && (
-          <Alert color="danger" fade={false} className="d-flex align-items-center">
-             {'⚠️ '} {/* Icono simple */}
-             {error}
+          <Alert color="danger" className="d-flex align-items-center mb-3 py-2">
+             <AlertTriangle size={20} className="me-2 flex-shrink-0" /> {error}
           </Alert>
         )}
 
-        {/* Contenido Principal (solo si no está cargando) */}
         {!loadingData && (
-          <Container fluid>
-            {/* Formulario */}
+          <Container fluid className="px-0">
             <form id="permissionForm" onSubmit={handleSubmit}>
-
-              {/* Input para Nombre del Rol (solo en modo creación) */}
               {!isEditingExistingRole && (
-                <Row className="mb-4">
-                  <Col md={6}>
+                <Row className="mb-3 px-3"> {/* Añadido padding lateral para esta fila */}
+                  <Col md={7}>
                     <FormGroup>
-                      <Label for="roleNameInput" className="fw-bold">Nombre del Rol <span className="text-danger">*</span></Label>
-                      <Input
-                        id="roleNameInput" name="roleName" type="text" value={roleName}
+                      <Label for="roleNameInput" className="fw-bold form-label">Nombre del Rol <span className="text-danger">*</span></Label>
+                      <Input id="roleNameInput" bsSize="sm" name="roleName" type="text" value={roleName}
                         onChange={(e) => setRoleName(e.target.value)}
-                        placeholder="Ej: Administrador de Ventas" maxLength={100} required disabled={saving}
-                      />
+                        placeholder="Ej: Administrador de Ventas" maxLength={100} required disabled={saving} />
                     </FormGroup>
                   </Col>
-                  {/* Podrías añadir input para 'status' aquí si fuera necesario */}
                 </Row>
               )}
 
-              <h5 className="mb-3">Asignar Privilegios por Módulo</h5>
+              {/* Selector de módulo (fuera del Card) */}
+              <Row className="mb-3 px-3"> {/* Añadido padding lateral */}
+                <Col md={6}>
+                  <FormGroup>
+                    <Label for="moduleSelect" className="fw-bold form-label d-flex align-items-center">
+                      <Settings size={16} className="me-2 text-primary" /> Configurar Módulo
+                    </Label>
+                    <Input type="select" name="moduleSelect" id="moduleSelect" bsSize="sm"
+                      value={currentSelectedModuleKey} onChange={handleModuleSelectChange}
+                      disabled={saving || isRoleInactive || (availableModulesForSelection.length === 0 && !currentSelectedModuleKey)}
+                      // className="form-select-sm" // bsSize="sm" ya lo hace
+                    >
+                      <option value="">-- Seleccione un módulo --</option>
+                      {availableModulesForSelection.map(mod => (
+                        <option key={mod.key} value={mod.key}>{mod.name}</option>
+                      ))}
+                    </Input>
+                  </FormGroup>
+                </Col>
+              </Row>
 
-              {/* Mensaje si no hay datos para mostrar */}
-              {(displayableModules.length === 0 || displayablePrivileges.length === 0) && !error && (
-                 <Alert color="info" fade={false} className="mt-3">
-                    No se encontraron módulos o privilegios configurados en el sistema.
+              {/* Card para los privilegios del módulo seleccionado */}
+              {currentSelectedModuleKey && (
+                <Card className="mb-4 mx-3 shadow-sm"> {/* Añadido mx-3 para padding lateral, mb-4 para espacio abajo */}
+                  <CardBody className="p-3">
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                        <h6 className="card-title fw-bold d-flex align-items-center mb-0">
+                        {isEditingAConfiguredModule ? (
+                            <Edit3 size={18} className="me-2 text-primary" />
+                        ) : (
+                            <PlusCircle size={18} className="me-2 text-success" />
+                        )}
+                        {isEditingAConfiguredModule 
+                            ? `Editando: ${currentModuleBeingConfigured?.name}`
+                            : `Privilegios para: ${currentModuleBeingConfigured?.name}`
+                        }
+                        </h6>
+                        {/* Checkbox para seleccionar todos, alineado a la derecha */}
+                        {displayablePrivileges.length > 0 && (
+                            <FormGroup check className="mb-0 ms-auto">
+                                <Input
+                                type="checkbox"
+                                id="select-all-privileges"
+                                checked={areAllPrivilegesSelected}
+                                onChange={(e) => handleToggleAllPrivileges(e.target.checked)}
+                                disabled={saving || isRoleInactive}
+                                className="form-check-input"
+                                />
+                                <Label check for="select-all-privileges" className="fw-normal text-primary d-flex align-items-center small">
+                                <CheckSquare size={14} className="me-1" /> Seleccionar todos
+                                </Label>
+                            </FormGroup>
+                        )}
+                    </div>
+                    
+                    {displayablePrivileges.length > 0 ? (
+                        // Lista de privilegios
+                        <div className="privileges-checkbox-group border-top pt-3">
+                            <Row>
+                                {displayablePrivileges.map(priv => (
+                                <Col xs={12} sm={6} md={4} key={priv.key} className="mb-2">
+                                    <FormGroup check className="form-check-compact privileges-item">
+                                    <Input 
+                                        type="checkbox" 
+                                        className="form-check-input"
+                                        id={`priv-${currentSelectedModuleKey}-${priv.key}`}
+                                        checked={currentModulePrivileges.has(priv.key)}
+                                        onChange={(e) => handleCurrentPrivilegeChange(priv.key, e.target.checked)}
+                                        disabled={saving || isRoleInactive} 
+                                    />
+                                    <Label check for={`priv-${currentSelectedModuleKey}-${priv.key}`} className="form-check-label-compact">
+                                        {priv.name}
+                                    </Label>
+                                    </FormGroup>
+                                </Col>
+                                ))}
+                            </Row>
+                        </div>
+                    ) : (
+                        <p className="text-muted text-center my-3">Este módulo no tiene privilegios configurables.</p>
+                    )}
+                    
+                    {/* Botón para agregar/actualizar módulo */}
+                    <div className="d-flex justify-content-end mt-3 border-top pt-3">
+                      <Button 
+                        type="button" 
+                        color={isEditingAConfiguredModule ? "primary" : "success"} 
+                        size="sm"
+                        onClick={handleSaveModuleConfiguration}
+                        disabled={saving || isRoleInactive || !currentSelectedModuleKey || (currentModulePrivileges.size === 0 && !isEditingAConfiguredModule)}
+                        className="d-inline-flex align-items-center"
+                      >
+                        {addOrUpdateModuleButtonIcon}
+                        {addOrUpdateModuleButtonText}
+                      </Button>
+                    </div>
+                  </CardBody>
+                </Card>
+              )}
+              
+              {!currentSelectedModuleKey && !loadingData && (
+                 <Alert color="info" className="text-center mx-3 py-3">
+                    <Settings size={20} className="me-2" />
+                    Seleccione un módulo de la lista superior para configurar sus permisos.
                  </Alert>
               )}
 
-              {/* Tabla de Permisos (renderizar solo si hay datos) */}
-              {displayableModules.length > 0 && displayablePrivileges.length > 0 && (
-                <div className="table-responsive permission-table-container border rounded shadow-sm"> {/* Mejoras UI */}
-                  <Table striped hover size="sm" className="mb-0 align-middle"> {/* Alineación vertical */}
-                    <thead className="table-light sticky-top"> {/* Cabecera fija (parcialmente) */}
-                      <tr>
-                        <th style={{ width: '30%', minWidth: '200px' }}>Módulo</th> {/* Ancho mínimo */}
-                        <th style={{ width: '15%', textAlign: 'center', minWidth: '150px' }}>Todos</th> {/* Texto más corto */}
-                        <th>Privilegios</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {/* Mapea los módulos para crear filas */}
-                      {displayableModules.map(module => {
-                         // Calcula si todos los privilegios para este módulo están marcados
-                         const areAllPrivilegesForModuleSelected = displayablePrivileges.every(
-                            priv => assignments.has(`${module.key}-${priv.key}`)
-                         );
 
-                         return (
-                            <tr key={module.key}>
-                              {/* Nombre del Módulo */}
-                              <td className="fw-medium">{module.name}</td>
-
-                              {/* Checkbox "Seleccionar Todos" */}
-                              <td className="text-center">
-                                <FormGroup check className="d-inline-block m-0 p-0"> {/* Sin margen/padding extra */}
-                                    <Input
-                                      bsSize="lg" // Checkbox un poco más grande
-                                      type="checkbox"
-                                      className="form-check-input" // Clase estándar
-                                      id={`select-all-${module.key}`}
-                                      checked={displayablePrivileges.length > 0 && areAllPrivilegesForModuleSelected}
-                                      onChange={(e) => handleSelectAllForModule(module.key, e.target.checked)}
-                                      // Deshabilitado si guarda, si rol inactivo o si no hay privilegios
-                                      disabled={saving || isRoleInactive || displayablePrivileges.length === 0}
-                                      title={`Seleccionar/Deseleccionar todos para ${module.name}`}
-                                    />
-                                </FormGroup>
+              {/* Tabla de módulos configurados (FUERA DEL CARD ANTERIOR) */}
+              {configuredRoleModules.length > 0 && (
+                <div className="px-3 mt-4"> {/* Padding lateral y margen superior */}
+                    <h6 className="fw-bold form-label d-flex align-items-center mb-2">
+                        <ListTree size={18} className="me-2 text-success" /> Permisos Ya Asignados al Rol
+                    </h6>
+                    <div className="table-responsive permissions-table-container-compact shadow-sm border rounded" 
+                         style={{maxHeight: '250px'}}> {/* Aumentada un poco la altura */}
+                      <Table hover striped className="mb-0 align-middle permissions-table-compact">
+                        <thead className="table-light sticky-top">
+                          <tr>
+                            <th style={{width: '40%'}}>Módulo</th>
+                            <th>Privilegios Asignados</th>
+                            <th className="text-center" style={{width: '100px'}}>Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {configuredRoleModules.sort((a,b) => a.moduleName.localeCompare(b.moduleName)).map(modConfig => (
+                            <tr key={modConfig.moduleKey}>
+                              <td className="fw-medium">{modConfig.moduleName}</td>
+                              <td style={{fontSize: '0.8rem', whiteSpace: 'normal'}}>
+                                {modConfig.selectedPrivileges.size > 0
+                                  ? Array.from(modConfig.selectedPrivileges)
+                                      .map(privKey => displayablePrivileges.find(p => p.key === privKey)?.name || privKey)
+                                      .join(', ')
+                                  : <span className="text-muted fst-italic">Ninguno asignado</span>
+                                }
                               </td>
-
-                              {/* Privilegios Individuales */}
-                              <td>
-                                <div className="d-flex flex-wrap gap-3"> {/* Flexbox para wrap */}
-                                  {displayablePrivileges.map(priv => (
-                                    <FormGroup check inline key={priv.key} className="m-0"> {/* Sin margen */}
-                                      <Input
-                                        type="checkbox"
-                                        id={`checkbox-${module.key}-${priv.key}`}
-                                        checked={assignments.has(`${module.key}-${priv.key}`)}
-                                        onChange={(e) => handleAssignmentChange(module.key, priv.key, e.target.checked)}
-                                        disabled={saving || isRoleInactive}
-                                      />
-                                      <Label check for={`checkbox-${module.key}-${priv.key}`}>{priv.name}</Label>
-                                    </FormGroup>
-                                  ))}
-                                </div>
+                              <td className="text-center">
+                                {/* Estilo de botones de acción similar a RolePage */}
+                                <Button 
+                                    color="info" 
+                                    outline 
+                                    size="sm" 
+                                    className="me-1 action-button p-1" // p-1 para padding más pequeño
+                                    onClick={() => handleEditConfiguredModule(modConfig)}
+                                    disabled={saving || isRoleInactive} 
+                                    title="Editar Permisos"
+                                >
+                                  <Edit3 size={14} />
+                                </Button>
+                                <Button 
+                                    color="danger" 
+                                    outline 
+                                    size="sm" 
+                                    className="action-button p-1"
+                                    onClick={() => handleRemoveModuleFromRole(modConfig.moduleKey)}
+                                    disabled={saving || isRoleInactive} 
+                                    title="Quitar Módulo"
+                                >
+                                  <Trash2 size={14} />
+                                </Button>
                               </td>
                             </tr>
-                         );
-                      })}
-                    </tbody>
-                  </Table>
+                          ))}
+                        </tbody>
+                      </Table>
+                    </div>
                 </div>
               )}
+              
+              {/* Mensaje si no hay módulos configurados y no se está editando uno */}
+              {configuredRoleModules.length === 0 && !currentSelectedModuleKey && !loadingData && (
+                <Alert color="secondary" className="text-center mx-3 mt-4 py-3">
+                  <AlertTriangle size={20} className="me-2" />
+                  Este rol aún no tiene permisos asignados.
+                </Alert>
+              )}
 
-              {/* Footer del Modal (se mueve fuera del form si usas submit externo) */}
-              {/* Los botones están dentro del form aquí */}
-              <ModalFooter className="mt-4 border-top pt-3"> {/* Separador visual */}
-                <Button color="secondary" type="button" onClick={toggle} disabled={saving}>
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit" // Botón de submit del formulario
-                  form="permissionForm" // Asocia explícitamente al form (buena práctica)
-                  color="primary"
-                  disabled={!canSubmit} // Habilitado según la variable calculada
-                  title={!canSubmit ? "Complete la información o verifique el estado del rol" : (isEditingExistingRole ? 'Guardar cambios en asignaciones' : 'Crear nuevo rol')}
-                >
-                  {submitButtonText} {/* Texto dinámico (Guardando... o texto normal) */}
-                </Button>
-              </ModalFooter>
-
-            </form> {/* Fin del form */}
+            </form>
           </Container>
         )}
       </ModalBody>
+      
+      <ModalFooter className="bg-light border-top pt-2 pb-2"> {/* Padding ajustado */}
+        <Button color="secondary" outline type="button" onClick={toggle} disabled={saving} className="me-auto d-inline-flex align-items-center">
+          <XCircle size={16} className="me-1" /> Cancelar
+        </Button>
+        <Button 
+          type="submit" 
+          form="permissionForm" 
+          color="primary" // Cambiado a primary para el botón principal de guardado
+          disabled={!canSubmitOverall}
+          title={isEditingExistingRole ? 'Guardar cambios del rol' : 'Crear nuevo rol'}
+          className="d-inline-flex align-items-center"
+        >
+          <Save size={16} className="me-1" /> {submitButtonText}
+        </Button>
+      </ModalFooter>
     </Modal>
   );
 }

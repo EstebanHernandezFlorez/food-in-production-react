@@ -33,6 +33,7 @@ const INITIAL_CONFIRM_PROPS = {
     actionCallback: null
 };
 const ITEMS_PER_PAGE = 7; // Número de roles por página
+const ADMIN_ROLE_ID = 1; // ID del rol de Administrador que no se puede desactivar/eliminar
 
 // --- Main Component ---
 const RolePage = () => {
@@ -51,49 +52,34 @@ const RolePage = () => {
 
     // --- Fetch Roles ---
     const refreshData = useCallback(async (showSpinner = true) => {
-        // Mostrar spinner grande solo en la carga inicial
-        // Leer el valor MÁS RECIENTE de initialLoadComplete directamente aquí
         if (showSpinner && !initialLoadComplete) setIsLoading(true);
-        // Mostrar indicador de carga más pequeño para refresh
         else if (showSpinner) setIsLoading(true);
 
-        console.log("[REFRESH ROLES] Refreshing role data...");
         try {
             const rolesResponse = await roleService.getAllRoles();
             setData(Array.isArray(rolesResponse) ? rolesResponse : []);
-            // Solo actualiza initialLoadComplete si aún no está completo
-            // Necesitamos leer el estado *anterior* para esta lógica
             if (!initialLoadComplete) {
                  setInitialLoadComplete(true);
             }
-            console.log("[REFRESH ROLES] Roles state set.");
         } catch (error) {
-            console.error("[REFRESH ROLES ERROR]", error);
             toast.error(`Error al actualizar roles: ${error.response?.data?.message || error.message}`);
-             // Actualiza incluso si hay error para evitar bloqueos
-             // Necesitamos leer el estado *anterior* para esta lógica
             if (!initialLoadComplete) {
                 setInitialLoadComplete(true);
             }
         } finally {
              setIsLoading(false);
-            console.log("[REFRESH ROLES] Finished.");
         }
-    // --- CORREGIDO: Eliminar 'initialLoadComplete' de las dependencias ---
-    // Solo depende de initialLoadComplete LEÍDO DENTRO de la función, no como dependencia de useCallback
-    }, [initialLoadComplete]); // Ahora refreshData solo cambia si initialLoadComplete cambia (o se podría quitar también si no se usa para lógica de dependencias)
+    }, [initialLoadComplete]);
 
-    // Efecto para la carga inicial de datos al montar el componente
     useEffect(() => {
         refreshData(true);
-     // Ya no depende de refreshData como tal, sino de su ejecución inicial
      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Ejecutar solo una vez al montar
+    }, []);
 
     // --- Event Handlers ---
     const handleTableSearch = useCallback((e) => {
         setTableSearchText(e.target.value);
-        setCurrentPage(1); // Resetear a la página 1 al buscar
+        setCurrentPage(1);
     }, []);
 
     // --- Modal Toggles ---
@@ -142,9 +128,8 @@ const RolePage = () => {
                 await confirmModalState.actionCallback(confirmModalState.itemDetails);
             } catch (error) {
                 console.error("Error durante la ejecución de la acción confirmada:", error);
-                 setIsConfirmActionLoading(false); // Asegurar quitar loading si callback falla antes del finally
+                 setIsConfirmActionLoading(false);
             }
-            // El finally está en el callback de acción (executeChangeStatus/executeDelete)
         } else {
             console.error("No actionCallback definido para confirmar.");
             toggleConfirmModal();
@@ -159,6 +144,14 @@ const RolePage = () => {
              toggleConfirmModal();
              return;
         }
+        // NUEVA VALIDACIÓN: No desactivar el rol ADMIN
+        if (details.idRole === ADMIN_ROLE_ID && !details.newStatus) {
+            toast.error("El rol de Administrador no puede ser desactivado.", { icon: <AlertTriangle className="text-warning" /> });
+            setIsConfirmActionLoading(false);
+            toggleConfirmModal();
+            return;
+        }
+
         const { idRole, newStatus, roleName } = details;
         const actionText = newStatus ? "activado" : "desactivado";
         const toastId = toast.loading(`${newStatus ? 'Activando' : 'Desactivando'} rol "${roleName || 'N/A'}"...`);
@@ -183,15 +176,22 @@ const RolePage = () => {
              toggleConfirmModal();
              return;
         }
+        // NUEVA VALIDACIÓN: No eliminar el rol ADMIN
+        if (roleToDelete.idRole === ADMIN_ROLE_ID) {
+            toast.error("El rol de Administrador no puede ser eliminado.", { icon: <AlertTriangle className="text-warning" /> });
+            setIsConfirmActionLoading(false);
+            toggleConfirmModal();
+            return;
+        }
+
         const toastId = toast.loading(`Eliminando rol "${roleToDelete.roleName || 'N/A'}"...`);
-        const itemsBeforeDelete = data.length; // Guardar longitud ANTES de eliminar
+        const itemsBeforeDelete = data.length;
 
         try {
             await roleService.deleteRole(roleToDelete.idRole);
             toast.success(`Rol "${roleToDelete.roleName}" eliminado permanentemente.`, { id: toastId, icon: <CheckCircle className="text-success" /> });
              await refreshData(false);
 
-             // Ajustar paginación
              const itemsAfterDeleteAttempt = itemsBeforeDelete - 1;
              const newTotalPages = Math.ceil(itemsAfterDeleteAttempt / ITEMS_PER_PAGE);
 
@@ -213,13 +213,19 @@ const RolePage = () => {
             setIsConfirmActionLoading(false);
             toggleConfirmModal();
         }
-    // --- CORREGIDO: Quitar refreshData de dependencias si no causa bucles, mantener data y currentPage ---
-    }, [toggleConfirmModal, data, currentPage]); // Quitar refreshData si causa bucles, ya que se llama dentro
+    }, [refreshData, toggleConfirmModal, data, currentPage]);
 
     // --- Preparación de Modales de Confirmación ---
     const requestChangeStatusConfirmation = useCallback((role) => {
         if (!role || role.idRole === undefined) return;
         const { idRole, status: currentStatus, roleName } = role;
+
+        // VALIDACIÓN: Si es el rol Admin y se intenta desactivar, mostrar toast y no abrir modal.
+        if (idRole === ADMIN_ROLE_ID && currentStatus) { // currentStatus es true, significa que está activo y se intentaría desactivar
+            toast.error("El rol de Administrador no puede ser desactivado.", { icon: <AlertTriangle className="text-warning" /> });
+            return;
+        }
+
         const actionText = currentStatus ? "desactivar" : "activar";
         prepareConfirmation(executeChangeStatus, {
             title: `Confirmar ${actionText.charAt(0).toUpperCase() + actionText.slice(1)} Rol`,
@@ -232,11 +238,18 @@ const RolePage = () => {
 
     const requestDeleteConfirmation = useCallback((role) => {
         if (!role || !role.idRole) return;
+
+        // VALIDACIÓN: Si es el rol Admin, mostrar toast y no abrir modal.
+        if (role.idRole === ADMIN_ROLE_ID) {
+            toast.error("El rol de Administrador no puede ser eliminado.", { icon: <AlertTriangle className="text-warning" /> });
+            return;
+        }
+
         prepareConfirmation(executeDelete, {
             title: "Confirmar Eliminación Definitiva",
             message: <>
                         <p>¿Está seguro de eliminar permanentemente el rol <strong>{role.roleName || 'N/A'}</strong>?</p>
-                        <p><strong className="text-danger">¡Esta acción no se puede deshacer!</strong></p> {/* Mensaje simplificado */}
+                        <p><strong className="text-danger">¡Esta acción no se puede deshacer!</strong></p>
                      </>,
             confirmText: "Eliminar Definitivamente",
             confirmColor: "danger",
@@ -251,6 +264,13 @@ const RolePage = () => {
     }, []);
 
     const openEditModal = useCallback((role) => {
+        // VALIDACIÓN: El rol de Admin podría tener edición de permisos restringida o no.
+        // Por ahora, se permite editar permisos del rol Admin.
+        // Si quisieras evitarlo, podrías añadir una condición aquí:
+        // if (role.idRole === ADMIN_ROLE_ID) {
+        //     toast.error("Los permisos del rol Administrador no se pueden modificar directamente desde aquí.", { icon: <AlertTriangle className="text-warning" /> });
+        //     return;
+        // }
         setSelectedRoleForPermissions(role);
         setPermissionsModalOpen(true);
     }, []);
@@ -280,11 +300,10 @@ const RolePage = () => {
         setCurrentPage(Math.max(1, Math.min(pageNumber, totalPages || 1)));
     }, [totalPages]);
 
-    // --- Callback para después de Guardar en FormPermissions ---
      const handlePermissionsSave = useCallback(() => {
         refreshData(false);
-    // --- CORREGIDO: Quitar refreshData de dependencias si no causa bucles ---
-    }, []); // Quitar refreshData si causa bucles
+    }, [refreshData]);
+
 
     // --- Renderizado del Componente ---
     return (
@@ -292,7 +311,6 @@ const RolePage = () => {
             <Toaster position="top-center" toastOptions={{ duration: 3500 }} />
             <h2 className="mb-4">Gestión de Roles</h2>
 
-             {/* --- Barra de Búsqueda y Botón Agregar --- */}
             <Row className="mb-3 align-items-center">
                  <Col md={6} lg={4}>
                     <Input type="text" bsSize="sm" placeholder="Buscar por nombre de rol..."
@@ -307,7 +325,6 @@ const RolePage = () => {
                 </Col>
             </Row>
 
-            {/* --- Tabla de Roles --- */}
             <div className="table-responsive shadow-sm custom-table-container mb-3">
                 <Table hover striped size="sm" className="mb-0 custom-table" aria-live="polite">
                      <thead>
@@ -316,53 +333,87 @@ const RolePage = () => {
                         </tr>
                     </thead>
                     <tbody>
-                         {/* Estado: Carga Inicial */}
                          {isLoading && !initialLoadComplete && (
                             <tr><td colSpan="4" className="text-center p-5"><Spinner color="primary" /> Cargando roles...</td></tr>
                          )}
-                         {/* Estado: Sin Datos (después de carga inicial) */}
                          {!isLoading && data.length === 0 && initialLoadComplete && !tableSearchText && (
                             <tr><td colSpan="4" className="text-center fst-italic p-4">No hay roles registrados. Puede agregar uno nuevo.</td></tr>
                          )}
-                         {/* Estado: Mostrando Datos */}
                          {!isLoading && currentItems.length > 0 && (
-                            currentItems.map((item) => (
-                                <tr key={item.idRole} style={{ verticalAlign: 'middle' }}>
-                                    <th scope="row">{item.idRole}</th>
-                                    <td>{item.roleName || '-'}</td>
-                                    <td className="text-center">
-                                        <Button size="sm" className={`status-button ${item.status ? 'status-active' : 'status-inactive'}`}
-                                            onClick={() => requestChangeStatusConfirmation(item)} disabled={isConfirmActionLoading}
-                                            title={item.status ? "Rol Activo (Click para desactivar)" : "Rol Inactivo (Click para activar)"}>
-                                            {item.status ? "Activo" : "Inactivo"}
-                                        </Button>
-                                    </td>
-                                    <td className="text-center">
-                                        <div className="d-inline-flex flex-wrap justify-content-center gap-1">
-                                            <Button size="sm" color="info" outline onClick={() => openDetailsModal(item)}
-                                                disabled={isConfirmActionLoading} title="Ver Detalles y Permisos" className="action-button action-view">
-                                                <Eye size={18} />
+                            currentItems.map((item) => {
+                                const isAdminRole = item.idRole === ADMIN_ROLE_ID;
+                                const canBeDeactivated = !isAdminRole || !item.status; // Admin no se desactiva si está activo
+                                const canBeDeleted = !isAdminRole && item.status; // Admin no se elimina, otros solo si están activos
+
+                                return (
+                                    <tr key={item.idRole} style={{ verticalAlign: 'middle' }}>
+                                        <th scope="row">{item.idRole}</th>
+                                        <td>{item.roleName || '-'}</td>
+                                        <td className="text-center">
+                                            <Button
+                                                size="sm"
+                                                className={`status-button ${item.status ? 'status-active' : 'status-inactive'}`}
+                                                onClick={() => requestChangeStatusConfirmation(item)}
+                                                disabled={isConfirmActionLoading || (isAdminRole && item.status)} // No desactivar admin si está activo
+                                                title={
+                                                    (isAdminRole && item.status)
+                                                        ? "El rol de Administrador no puede ser desactivado"
+                                                        : item.status
+                                                            ? "Rol Activo (Click para desactivar)"
+                                                            : "Rol Inactivo (Click para activar)"
+                                                }
+                                            >
+                                                {item.status ? "Activo" : "Inactivo"}
                                             </Button>
-                                            <Button disabled={isConfirmActionLoading} size="sm" onClick={() => openEditModal(item)}
-                                                title="Editar Rol y Permisos" className="action-button action-edit">
-                                                <Edit size={18} />
-                                            </Button>
-                                            <Button disabled={isConfirmActionLoading || !item.status} size="sm"
-                                                onClick={() => requestDeleteConfirmation(item)}
-                                                title={item.status ? "Eliminar Rol Permanentemente" : "No se puede eliminar un rol inactivo"}
-                                                className="action-button action-delete">
-                                                <Trash2 size={18} />
-                                            </Button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))
+                                        </td>
+                                        <td className="text-center">
+                                            <div className="d-inline-flex flex-wrap justify-content-center gap-1">
+                                                <Button
+                                                    size="sm"
+                                                    color="info"
+                                                    outline
+                                                    onClick={() => openDetailsModal(item)}
+                                                    disabled={isConfirmActionLoading}
+                                                    title="Ver Detalles y Permisos"
+                                                    className="action-button action-view"
+                                                >
+                                                    <Eye size={18} />
+                                                </Button>
+                                                <Button
+                                                    disabled={isConfirmActionLoading /* Puedes añadir: || isAdminRole para no editar admin */}
+                                                    size="sm"
+                                                    onClick={() => openEditModal(item)}
+                                                    title={
+                                                        /* isAdminRole ? "Permisos de Administrador no modificables aquí" : */ "Editar Rol y Permisos"
+                                                    }
+                                                    className="action-button action-edit"
+                                                >
+                                                    <Edit size={18} />
+                                                </Button>
+                                                <Button
+                                                    disabled={isConfirmActionLoading || !item.status || isAdminRole} // Admin no se elimina
+                                                    size="sm"
+                                                    onClick={() => requestDeleteConfirmation(item)}
+                                                    title={
+                                                        isAdminRole
+                                                            ? "El rol de Administrador no puede ser eliminado"
+                                                            : !item.status
+                                                                ? "No se puede eliminar un rol inactivo"
+                                                                : "Eliminar Rol Permanentemente"
+                                                    }
+                                                    className="action-button action-delete"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </Button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })
                          )}
-                         {/* Estado: Búsqueda sin resultados */}
                          {!isLoading && currentItems.length === 0 && tableSearchText && (
                              <tr><td colSpan="4" className="text-center fst-italic p-4">{`No se encontraron roles que coincidan con "${tableSearchText}".`}</td></tr>
                          )}
-                         {/* Estado: Indicador durante Refresh */}
                          {isLoading && initialLoadComplete && (
                               <tr><td colSpan="4" className="text-center p-2 text-muted"><Spinner size="sm" color="secondary" /> Actualizando lista...</td></tr>
                          )}
@@ -370,12 +421,10 @@ const RolePage = () => {
                 </Table>
             </div>
 
-            {/* --- Paginación --- */}
             { totalPages > 1 && initialLoadComplete && !isLoading && (
                 <CustomPagination currentPage={validCurrentPage} totalPages={totalPages} onPageChange={handlePageChange} />
             )}
 
-            {/* --- Modal de Confirmación Genérico --- */}
             <Modal isOpen={confirmModalState.isOpen} toggle={toggleConfirmModal} centered backdrop="static" keyboard={!isConfirmActionLoading}>
                 <ModalHeader toggle={!isConfirmActionLoading ? toggleConfirmModal : undefined}>
                     <div className="d-flex align-items-center">
@@ -392,7 +441,6 @@ const RolePage = () => {
                 </ModalFooter>
             </Modal>
 
-            {/* --- Modal de Permisos (Crear/Editar Rol) --- */}
              {permissionsModalOpen && (
                  <FormPermissions
                      isOpen={permissionsModalOpen}
@@ -402,7 +450,6 @@ const RolePage = () => {
                  />
              )}
 
-            {/* --- Modal de Detalles (Ver Rol) --- */}
              {detailsModalOpen && (
                  <RoleDetailsModal
                      isOpen={detailsModalOpen}

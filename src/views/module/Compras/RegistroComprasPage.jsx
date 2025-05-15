@@ -470,7 +470,7 @@ const purchaseDetailsForApi = form.details.map(({ key, subtotal, ...detail }) =>
                 </CardBody>
                  {/* Footer de la Card con Botones */}
                  <CardHeader className="bg-light d-flex justify-content-end gap-2 border-top">
-                    <Button color="secondary" outline onClick={() => navigate('/gestion-compras')} disabled={isSubmitting}>
+                    <Button color="secondary" outline onClick={() => navigate('/home/gestion-compras')} disabled={isSubmitting}>
                         <IconError size={18} className="me-1" /> Cancelar
                     </Button>
                     <Button color="primary" type="submit" form="registerPurchaseForm"
