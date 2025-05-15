@@ -1,31 +1,45 @@
 import React from 'react';
-import { MoreHorizontal, TrendingUp, TrendingDown } from 'lucide-react';
-// Importa su CSS específico si decides hacerlo así
-// import './cards.css'; // O una ruta más general si `cards.css` está en `assets/css`
+import { TrendingUp, TrendingDown } from 'lucide-react';
 
-const StatCardFinance = ({ title, subtitle, value, changePercent, changeDirection, onViewReport, children }) => {
-  const isPositive = changeDirection === 'up';
+// No necesita su propio CSS si los estilos están en dashboard-flup-content-style.css
+
+const StatCardFinance = ({
+  title,
+  value,
+  changePercent, // Ya es un string formateado como "+2.5%" o "-0.2%"
+  changeDirection, // 'up' o 'down'
+  icon: Icon, // Icono para la tarjeta (ej. DollarSign)
+  children, // Para contenido adicional como ProgressBar
+}) => {
+  const numericChange = parseFloat(changePercent); // Extraer el número para lógica
+  let changeColorClass = 'neutral';
+
+  if (changePercent != null) {
+    // La imagen de ejemplo usa verde para aumento y rojo para disminución
+    // independientemente de si es costo o ingreso.
+    if (changeDirection === 'up' && numericChange > 0) {
+      changeColorClass = 'positive';
+    } else if (changeDirection === 'down' && numericChange < 0) {
+      changeColorClass = 'negative';
+    }
+    // Si el cambio es 0%, se queda 'neutral' (gris)
+  }
+
   return (
-    <div className="kpi-card-finance">
-      <div className="kpi-card-finance-header">
-        <div className="kpi-card-finance-title-block">
-          <h3>{title}</h3>
-          {subtitle && <p>{subtitle}</p>}
-        </div>
-        {onViewReport && (
-          <button onClick={onViewReport} className="kpi-card-finance-view-report-btn">
-            View Report
-          </button>
-        )}
+    <div className="flup-stat-card">
+      <div className="card-header">
+        <h3 className="card-title">{title}</h3>
+        {Icon && <Icon size={18} className="card-icon" />}
       </div>
-      {value && <p className="kpi-card-finance-main-value">{value}</p>}
-      {changePercent && (
-        <span className={`kpi-card-finance-change ${isPositive ? 'positive' : 'negative'}`}>
-          {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-          {changePercent}
-        </span>
+      {value != null && <p className="card-value">{value}</p>}
+      {changePercent != null && (
+        <div className={`card-change ${changeColorClass}`}>
+          {changeDirection === 'up' && numericChange > 0 ? <TrendingUp size={14} /> : null}
+          {changeDirection === 'down' && numericChange < 0 ? <TrendingDown size={14} /> : null}
+          <span>{changePercent}</span>
+        </div>
       )}
-      {children && <div className="kpi-card-finance-content">{children}</div>}
+      {children && <div className="card-content">{children}</div>}
     </div>
   );
 };

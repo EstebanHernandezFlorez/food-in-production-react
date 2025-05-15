@@ -1,0 +1,46 @@
+/* assets/css/tables.css */
+
+.dashboard-table-finance {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem; /* 14px */
+  background-color: var(--bg-card-finance); /* Para que tenga fondo si no está en una content-card */
+}
+.dashboard-table-finance th,
+.dashboard-table-finance td {
+  padding: 0.875rem 1rem; /* Más padding */
+  text-align: left;
+  border-bottom: 1px solid var(--border-color-finance);
+}
+.dashboard-table-finance thead th {
+  font-weight: 600;
+  color: var(--text-secondary-finance);
+  background-color: #F9FAFB; /* Un fondo muy sutil para el header de la tabla */
+  border-bottom-width: 2px; /* Borde inferior más grueso para el header */
+}
+.dashboard-table-finance tbody tr:last-child td {
+  border-bottom: none;
+}
+.dashboard-table-finance tbody tr:hover {
+  background-color: var(--button-bg-finance); /* Hover sutil */
+}
+
+/* Para celdas de acciones en tablas */
+.table-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+.table-actions .action-btn {
+    background: none;
+    border: none;
+    padding: 0.25rem;
+    cursor: pointer;
+    color: var(--text-tertiary-finance);
+    transition: color 0.2s;
+}
+.table-actions .action-btn:hover {
+    color: var(--accent-blue-finance);
+}
+.table-actions .action-btn.delete:hover {
+    color: var(--accent-red-finance);
+}

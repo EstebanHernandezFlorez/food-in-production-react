@@ -1,4 +1,4 @@
-/* header.css */
+/* assets/css/header.css */
 
 .app-header {
   height: var(--header-height-finance);
@@ -8,74 +8,61 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  position: sticky;
+  position: sticky; /* Para que se quede fijo arriba */
   top: 0;
-  z-index: 100;
+  z-index: 1000; /* Alto z-index */
   box-shadow: var(--shadow-header-finance);
 }
 
 .header-left {
   display: flex;
   align-items: center;
+  gap: 0.75rem; /* Espacio entre logo/icono y título opcional */
 }
-
-.app-navigation ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  height: var(--header-height-finance);
+.header-left .app-logo-icon { /* Si usas un icono específico para el logo */
+ color: var(--accent-blue-finance);
 }
-
-.app-navigation li {
-  margin-right: 0.5rem;
-}
-
-.nav-button {
-  display: flex;
-  align-items: center;
-  padding: 0 1rem;
-  height: calc(var(--header-height-finance) - 2px);
-  border: none;
-  background-color: transparent;
-  color: var(--text-secondary-finance);
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: color 0.2s ease, border-color 0.2s ease;
-}
-.nav-button:hover {
-  color: var(--text-primary-finance);
-}
-.nav-button.active {
-  color: var(--text-primary-finance);
+.header-left .app-title { /* Si quieres un título en el header */
+  font-size: 1.125rem;
   font-weight: 600;
-  border-bottom-color: var(--accent-blue-finance);
+  color: var(--text-primary-finance);
 }
-.nav-button .lucide {
-  margin-right: 0.5rem;
-  width: 16px;
-  height: 16px;
-}
+
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1rem; /* Espacio entre filtros y otros elementos del header (ej. perfil) */
 }
 
 .date-filters select {
   background-color: var(--button-bg-finance);
-  border: 1px solid var(--border-color-finance);
-  border-radius: 0.375rem;
-  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--button-border-finance); /* Usar variable de borde de botón */
+  border-radius: 0.375rem; /* Bootstrap md rounded */
+  padding: 0.4rem 0.75rem; /* Ajustar padding */
   font-size: 0.875rem;
   color: var(--text-secondary-finance);
+  transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 .date-filters select:focus {
   outline: none;
   border-color: var(--accent-blue-finance);
-  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
+  box-shadow: 0 0 0 3px rgba(var(--accent-blue-finance), 0.2); /* Sombra de foco más estándar */
+}
+
+/* Si tienes un dropdown de perfil o notificaciones */
+.user-profile-dropdown .dropdown-toggle {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+.user-profile-dropdown .dropdown-toggle::after {
+  display: none; /* Ocultar flecha de Bootstrap si usas icono personalizado */
+}
+.user-profile-dropdown .user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border-color-finance);
 }

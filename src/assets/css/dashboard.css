@@ -1,27 +1,252 @@
-/* dashboard.css (Archivo principal para importar los demás) */
+/* assets/css/dashboard.css */
 
-@import './base.css';
-@import './headerDashboard.css';
-@import './cards.css';
-@import './charts.css';
+/* --- IMPORTACIONES --- */
+@import './base.css'; /* Asegúrate que aquí defines tus variables CSS globales como --content-padding-finance, etc. */
+@import './headerDashboard.css'; /* Estilos específicos del app-header (altura, logo, filtros de fecha, etc.) */
+@import './cards.css';           /* Estilos para StatCardFinance, content-card-finance, etc. */
+@import './charts.css';          /* Estilos relacionados con los contenedores de gráficos o leyendas */
+@import './tables.css';          /* Estilos para dashboard-table-finance */
+/* @import './forms.css'; */
+/* @import './utilities.css'; */
 
-/* Estilos específicos del layout del contenido principal del dashboard si es necesario */
-.main-dashboard-content {
+
+/* --- VARIABLES LOCALES (SI NO ESTÁN EN BASE.CSS) ---*/
+:root {
+  --header-height-finance: 60px; /* Ejemplo */
+  --sidebar-width-finance: 280px; /* Para el nuevo sidebar derecho */
+  --content-padding-finance: 1.25rem;
+  --border-color-finance: #e5e7eb;
+  --bg-sidebar-finance: #ffffff;
+  --text-primary-finance: #1f2937;
+  --text-secondary-finance: #6b7280;
+  --accent-blue-finance: #3b82f6;
+  --button-bg-finance: #f3f4f6; /* Ejemplo para hover de botones */
+  --shadow-sm-finance: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --background-primary-finance: #ffffff;
+  --background-secondary-finance: #f9fafb;
+  --element-padding-finance: 1rem; /* Ejemplo para móvil */
+}
+----------------------------------------------------------- */
+
+
+/* --- LAYOUT PRINCIPAL DEL DASHBOARD --- */
+.dashboard-app-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--background-secondary-finance, #f9fafb); /* Fondo general del dashboard */
+}
+
+/* .app-header está definido en headerDashboard.css y se ajusta para el nuevo layout */
+
+/* --- LAYOUT DEL CUERPO: CONTENIDO PRINCIPAL + SIDEBAR DERECHA --- */
+.dashboard-body-layout-flex {
+  display: flex;
+  flex-direction: row; /* Contenido a la izquierda, sidebar a la derecha */
   flex-grow: 1;
-  padding: var(--content-padding-finance);
+  overflow: hidden; /* Evitar doble scrollbar si el contenido de flex hijos es más alto que el viewport */
+  /* La altura se gestiona para que ocupe el espacio restante después del header */
+  height: calc(100vh - var(--header-height-finance)); /* Asume que --header-height-finance está definido */
 }
 
-.page-header-finance {
-  margin-bottom: var(--content-padding-finance);
+.dashboard-main-content-area-flex {
+  flex-grow: 1; /* El contenido principal toma el espacio restante */
+  padding: var(--content-padding-finance);
+  overflow-y: auto; /* Scroll solo para el área de contenido principal */
+  display: flex; /* Necesario si el contenido interno (como el saludo + módulos) necesita flex */
+  flex-direction: column;
 }
-.page-header-finance h1 {
-  font-size: 1.5rem;
+
+.dashboard-sidebar-bonus-right { /* Renombrado para claridad */
+  width: var(--sidebar-width-finance, 280px); /* Ancho fijo para la sidebar de bonus */
+  min-width: 240px; /* Ancho mínimo */
+  background-color: var(--bg-sidebar-finance, var(--background-primary-finance));
+  padding: var(--content-padding-finance);
+  border-left: 1px solid var(--border-color-finance);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto; /* Scroll para la sidebar si el contenido es largo */
+  flex-shrink: 0; /* Para que no se encoja si el contenido principal es muy ancho */
+  /* No necesita ser sticky si el scroll está en el contenedor padre o en sí mismo */
+}
+
+.sidebar-bonus-header {
+  margin-bottom: 1.25rem;
+}
+.sidebar-bonus-header h2 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.05rem;
   font-weight: 600;
   color: var(--text-primary-finance);
-  margin: 0;
 }
-.page-header-finance p {
+.sidebar-bonus-header p { /* Para la fecha en la sidebar */
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary-finance);
+}
+
+.sidebar-bonus-cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem; /* Espacio entre las StatCards pequeñas en la sidebar */
+}
+
+
+/* --- NAVEGACIÓN DE MÓDULOS (TABS) EN EL HEADER --- */
+/* Estos estilos se aplican a .module-navigation-tabs y .nav-button cuando están DENTRO del .app-header */
+.app-header .module-navigation-tabs { /* Selector más específico */
+  margin-left: 1.5rem; /* Espacio después del logo/título del dashboard */
+}
+.app-header .module-navigation-tabs ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 0.25rem; /* Espacio ajustado entre botones de módulo */
+}
+.app-header .nav-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem; /* Padding para botones en header */
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary-finance); /* Color de texto normal para pestañas en header */
+  background-color: transparent;
+  border: none;
+  border-radius: 0.375rem; /* Bootstrap md rounded */
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+.app-header .nav-button:hover {
+  background-color: var(--button-bg-finance); /* Un fondo sutil al hacer hover */
+  color: var(--text-primary-finance);
+}
+.app-header .nav-button.active {
+  background-color: var(--accent-blue-finance); /* Color de fondo para la pestaña activa */
+  color: white; /* Texto blanco para la pestaña activa */
+  box-shadow: var(--shadow-sm-finance);
+}
+.app-header .nav-button.active .lucide { /* Icono en botón activo */
+    color: white;
+}
+
+
+/* --- PAGE HEADER (Bienvenido, títulos de módulo) DENTRO DEL ÁREA DE CONTENIDO --- */
+.page-header-finance { 
+  margin-bottom: var(--content-padding-finance);
+  /* Podrías añadir un borde inferior si quieres separar visualmente el header del contenido */
+  /* border-bottom: 1px solid var(--border-color-finance); */
+  /* padding-bottom: 0.75rem; */
+}
+.page-header-finance h1 {
+  font-size: 1.5rem; /* 24px - Título de bienvenida o módulo */
+  font-weight: 600;
+  color: var(--text-primary-finance);
+  margin: 0 0 0.25rem 0;
+}
+.page-header-finance p { /* Subtítulo o descripción */
   font-size: 0.9rem;
   color: var(--text-secondary-finance);
   margin-top: 0.25rem;
+}
+
+
+/* --- RESPONSIVIDAD --- */
+
+/* Tablets y dispositivos medianos (ej. < 1024px) */
+@media (max-width: 1023px) { /* Cambiado a 1023px para ser más preciso con lg de Tailwind */
+  .dashboard-body-layout-flex {
+    flex-direction: column-reverse; /* Sidebar de Bonus abajo, contenido arriba */
+    overflow: visible; /* Permitir que el scroll general de la página maneje el desbordamiento */
+    height: auto; /* La altura será determinada por el contenido */
+  }
+
+  .dashboard-main-content-area-flex {
+    /* No necesita tanto ajuste aquí ya que el scroll general lo maneja */
+  }
+
+  .dashboard-sidebar-bonus-right {
+    width: 100%; /* Ocupa todo el ancho */
+    border-left: none; /* Quitar borde lateral */
+    border-top: 1px solid var(--border-color-finance); /* Borde superior para separar del contenido */
+    /* position: static; Ya no es necesario */
+    height: auto; 
+    overflow-y: visible; /* Para que no corte las sombras de las tarjetas */
+    flex-shrink: 1; /* Permitir que se encoja si es necesario */
+  }
+
+  .sidebar-bonus-cards-container {
+    display: grid;
+    /* Ajusta minmax para que las tarjetas no sean demasiado pequeñas ni demasiado grandes */
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+    gap: 1rem;
+  }
+
+  .app-header .module-navigation-tabs {
+    margin-left: 0.5rem; /* Reducir margen en tablets */
+  }
+   .app-header .nav-button {
+    padding: 0.5rem 0.75rem; /* Botones de navegación un poco más pequeños */
+   }
+
+   .page-header-finance h1 { 
+    font-size: 1.375rem; /* 22px */
+  }
+}
+
+
+/* Móviles (< 768px) */
+@media (max-width: 767px) {
+  /* Redefinir variables para móviles si es necesario (o hacerlo en base.css) */
+  /* :root {
+    --content-padding-finance: 1rem;
+    --element-padding-finance: 0.75rem;
+    --header-height-finance: 56px;
+  } */
+
+  /* El .app-header puede necesitar ajustes si el contenido (logo, tabs, filtros) no cabe */
+  /* Esto debería estar en headerDashboard.css pero como referencia: */
+  .app-header {
+    /* flex-wrap: wrap; /* Si los elementos del header no caben */
+    /* height: auto; */
+    /* padding-bottom: 0.5rem; */
+  }
+
+  .app-header .module-navigation-tabs {
+    order: 1; /* Para mover las pestañas abajo en el header si se envuelve */
+    width: 100%; /* Ocupar todo el ancho si se envuelve */
+    margin-left: 0;
+    margin-top: 0.5rem; /* Espacio si se envuelve debajo de otros elementos del header */
+  }
+  .app-header .module-navigation-tabs ul {
+    overflow-x: auto; /* Permite scroll horizontal para los tabs */
+    padding-bottom: 0.5rem; /* Espacio si aparece scrollbar */
+    white-space: nowrap; 
+    -ms-overflow-style: none;  /* IE y Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .app-header .module-navigation-tabs ul::-webkit-scrollbar { /* Chrome, Safari, Opera */
+    display: none;
+  }
+  .app-header .nav-button {
+    padding: 0.5rem 0.6rem; /* Aún más compactos */
+    font-size: 0.8rem;
+  }
+
+
+  .sidebar-bonus-cards-container {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+    gap: 0.75rem;
+  }
+  /* Los estilos para .kpi-card-finance-small y similares deben estar en cards.css */
+  
+  .page-header-finance h1 {
+    font-size: 1.25rem; /* 20px */
+  }
+  .page-header-finance p {
+    font-size: 0.85rem;
+  }
+
+  /* Los estilos para .content-card-finance y .kpi-card-finance deben estar en cards.css */
 }
