@@ -1,590 +1,764 @@
-import { useState, useEffect } from "react"; // Quitamos PropTypes si no lo usamos directamente aquí
-import 'bootstrap/dist/css/bootstrap.min.css';
-// Añadimos Spinner
-import { Table, Button, Container, FormGroup, Input, Modal,
- ModalHeader, ModalBody, ModalFooter, Spinner, Label } from 'reactstrap';
- import { FaEdit, FaTrashAlt } from 'react-icons/fa';
-//                                                                                                                        ^^^^^ ¡Añadido aquí!import { FaEdit, FaTrashAlt } from 'react-icons/fa';
-import Swal from 'sweetalert2';
-import 'sweetalert2/dist/sweetalert2.min.css';
-// Importamos el nuevo servicio
-import clientesService from "../../services/clientesService"; // Asegúrate que la ruta es correcta
-import "../../../assets/css/App.css"; // Si tienes estilos globales
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import "bootstrap/dist/css/bootstrap.min.css";
+import "../../../assets/css/App.css"; // Asegúrate que la ruta es correcta
+import {
+    Table, Button, Container, Row, Col, Form, FormGroup, Input, Label,
+    Modal, ModalHeader, ModalBody, ModalFooter, Spinner,
+} from "reactstrap";
+// Usaremos los mismos iconos que en Proveedores para consistencia
+import { Trash2, Edit, Plus, AlertTriangle, CheckCircle, XCircle, UserCheck, UserX } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 
-// Estado inicial vacío para el formulario (formato frontend)
-const initialFormState = {
-  id: '',
-  NombreCompleto: '',
-  Distintivo: '',
-  CategoriaCliente: '', // Asegúrate que el valor inicial ('') sea válido para tu <select> o pon uno por defecto
-  Celular: '',
-  Correo: '',
-  Direccion: '',
-  Estado: 'Activo' // Usaremos 'Activo'/'Inactivo' consistentemente en el estado del form
-};
+// --- Service Import ---
+import clientesService from '../../services/clientesService'; // Asegúrate que la ruta es correcta
 
-const Clientes = () => {
+// --- Reusable Components ---
+import CustomPagination from '../../General/CustomPagination'; // Asume que está en la misma carpeta que el de Proveedores
+import FondoForm from "../../../assets/login.jpg"; // Reutiliza la imagen o cambia si tienes una específica para clientes
 
-  const [data, setData] = useState([]); // Datos de la API (formato frontend)
-  const [filteredData, setFilteredData] = useState([]); // Para búsqueda/paginación
-  const [loading, setLoading] = useState(true); // Estado de carga
-  const [form, setForm] = useState(initialFormState);
-  // Mantenemos errores locales para validación rápida en frontend (opcional)
-  const [errors, setErrors] = useState({
-    NombreCompleto: '', Distintivo: '', CategoriaCliente: '',
-    Celular: '', Correo: '', Direccion: '',
-  });
-  // Estados para los modales (como en Servicios.jsx)
-  const [modalInsertar, setModalInsertar] = useState(false);
-  const [modalEditar, setModalEditar] = useState(false);
-
-  const [searchText, setSearchText] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 7;
-
-  // --- Hook para cargar datos iniciales ---
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  // --- Hook para filtrar datos cuando cambian los datos o el texto de búsqueda ---
-   useEffect(() => {
-    const lowercasedFilter = searchText.toLowerCase();
-    const filtered = data.filter(item =>
-        // Adapta los campos a buscar si es necesario
-        item.NombreCompleto.toLowerCase().includes(lowercasedFilter) ||
-        item.Distintivo.toLowerCase().includes(lowercasedFilter) ||
-        item.CategoriaCliente.toLowerCase().includes(lowercasedFilter) ||
-        (item.Celular && item.Celular.includes(searchText)) || // Cuidado con null/undefined
-        (item.Correo && item.Correo.toLowerCase().includes(lowercasedFilter))
-    );
-    setFilteredData(filtered);
-    setCurrentPage(1); // Resetea a página 1 al filtrar
-  }, [data, searchText]);
-
-
-  // --- Función para obtener datos de la API ---
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const clientes = await clientesService.getAllClientes(); // Usa el servicio
-      setData(clientes || []); // Asegura que sea un array
-    } catch (error) {
-      console.error("Error cargando clientes:", error);
-      Swal.fire('Error', 'No se pudieron cargar los clientes.', 'error');
-      setData([]); // Resetea data en caso de error
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // --- Handlers ---
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm(prevForm => ({
-      ...prevForm,
-      [name]: value
-    }));
-    // Validar campo al cambiar (opcional, para feedback rápido)
-    setErrors(prevErrors => ({
-      ...prevErrors,
-      [name]: validateField(name, value) // Usa tu función de validación local
-    }));
-  };
-
-  const handleSearch = (e) => {
-    setSearchText(e.target.value); // No necesita toLowerCase aquí
-  };
-
-  // --- Validación Frontend (Opcional pero útil para feedback rápido) ---
-  const validateField = (name, value) => {
-    // Reutiliza tus reglas de validación existentes
-     switch (name) {
-      case 'NombreCompleto':
-         return value.trim() ? '' : 'Nombre Completo es requerido.'; // Simple validación de requerido
-        // return /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value) ? '' : 'Nombre Completo solo debe contener letras y espacios.';
-      case 'Distintivo':
-         return value.trim() ? '' : 'Distintivo es requerido.';
-        // return /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value) ? '' : 'Distintivo solo debe contener letras.';
-      case 'CategoriaCliente':
-         return value ? '' : 'Categoría Cliente es requerida.'; // Para select, verifica que no esté vacío
-      case 'Celular':
-         // Hacer la validación de 10 dígitos opcional o ajustar según backend
-         return !value || /^\d{10}$/.test(value) ? '' : 'Celular debe tener 10 dígitos (si se ingresa).';
-      case 'Correo':
-         // Hacer opcional
-         return !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? '' : 'Correo electrónico inválido (si se ingresa).';
-      case 'Direccion':
-         // Hacer opcional
-         return !value || value.trim() !== '' ? '' : 'Dirección es requerida (si se ingresa).';
-      default:
-        return '';
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-    let isValid = true;
-    const fieldsToValidate = ['NombreCompleto', 'Distintivo', 'CategoriaCliente', 'Celular', 'Correo', 'Direccion']; // Ajusta según campos requeridos
-
-    fieldsToValidate.forEach(key => {
-        const error = validateField(key, form[key]);
-        newErrors[key] = error;
-        // Solo marca inválido si hay error Y el campo es requerido (ajusta lógica si es necesario)
-        if (error && ['NombreCompleto', 'Distintivo', 'CategoriaCliente'].includes(key)) {
-             isValid = false;
-        } else if (error) {
-             // Si hay error en campos opcionales pero mal formateados
-             isValid = false;
-        }
-    });
-
-    setErrors(newErrors);
-    return isValid;
-  };
-
-
-  // --- Funciones CRUD adaptadas ---
-
-  const insertar = async () => {
-    if (!validateForm()) {
-       Swal.fire('Error de Validación', 'Por favor, corrija los errores en el formulario.', 'warning');
-       return;
-    }
-
-    // No necesitamos la confirmación Swal aquí si ya está en el modal (o añadirla si se prefiere)
-    setLoading(true);
-    try {
-       // Crea un objeto solo con los datos necesarios para crear (excluye id)
-       // El servicio se encarga del mapeo a formato backend
-       const dataToCreate = { ...form, Estado: 'Activo' }; // Asegura que se crea como Activo
-       delete dataToCreate.id; // No enviar id al crear
-
-       await clientesService.createCliente(dataToCreate);
-
-       setModalInsertar(false); // Cierra el modal
-       setForm(initialFormState); // Limpia el formulario
-       setErrors({}); // Limpia errores locales
-       await Swal.fire('Agregado', 'El cliente ha sido agregado con éxito.', 'success');
-       fetchData(); // Recarga los datos
-    } catch (error) {
-      console.error("Error al insertar cliente:", error);
-      // --- Manejo de errores MEJORADO ---
-      let errorMessage = 'No se pudo agregar el cliente.';
-      if (error.response) {
-          if (error.response.data?.errors && Array.isArray(error.response.data.errors) && error.response.data.errors.length > 0) {
-              errorMessage = error.response.data.errors.map(err => err.msg).join(' ');
-          } else if (error.response.data?.message) {
-              errorMessage = error.response.data.message;
-          } else if (error.response.status === 400) {
-              errorMessage = "Error de validación. Verifique los datos ingresados.";
-          } else if (error.message) {
-              errorMessage = error.message;
-          }
-      } else if (error.request) {
-          errorMessage = "No se pudo conectar con el servidor.";
-      } else {
-          errorMessage = error.message || "Ocurrió un error inesperado.";
-      }
-      Swal.fire('Error', errorMessage, 'error');
-      setLoading(false); // Asegura quitar loading en caso de error
-    }
-     // setLoading es manejado por fetchData() o en el catch del error
-  };
-
-  const editar = async () => {
-    if (!validateForm()) {
-       Swal.fire('Error de Validación', 'Por favor, corrija los errores en el formulario.', 'warning');
-       return;
-    }
-
-     // No necesitamos confirmación Swal aquí si está en el modal
-    setLoading(true);
-    try {
-       // Pasamos el ID (que SÍ está en el form state al editar) y los datos del form
-       // El servicio mapeará a formato backend
-       await clientesService.updateCliente(form.id, form);
-
-       setModalEditar(false);
-       setForm(initialFormState);
-       setErrors({});
-       await Swal.fire('Editado', 'El cliente ha sido editado con éxito.', 'success');
-       fetchData(); // Recarga datos (obligatorio por 204 de la API)
-    } catch (error) {
-       console.error("Error al editar cliente:", error);
-       // --- Manejo de errores MEJORADO (similar a insertar, ajusta mensajes si es necesario) ---
-       let errorMessage = 'No se pudo editar el cliente.';
-       if (error.response) {
-           if (error.response.data?.errors && Array.isArray(error.response.data.errors) && error.response.data.errors.length > 0) {
-               errorMessage = error.response.data.errors.map(err => err.msg).join(' ');
-           } else if (error.response.data?.message) {
-               errorMessage = error.response.data.message;
-           } else if (error.response.status === 400) {
-               errorMessage = "Error de validación al editar.";
-           } else if (error.response.status === 404) {
-                errorMessage = "El cliente que intenta editar no fue encontrado.";
-           } else if (error.message) {
-               errorMessage = error.message;
-           }
-       } else if (error.request) {
-           errorMessage = "No se pudo conectar con el servidor.";
-       } else {
-           errorMessage = error.message || "Ocurrió un error inesperado al editar.";
-       }
-       Swal.fire('Error', errorMessage, 'error');
-       setLoading(false);
-    }
-  };
-
-  const eliminar = async (cliente) => { // Renombrado para consistencia
-    const result = await Swal.fire({
-      title: '¿Está seguro?',
-      text: `¿Desea eliminar el cliente "${cliente.NombreCompleto}"?`, // Usa NombreCompleto
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#2e8322', // Ajusta colores si quieres
-      cancelButtonColor: '#6d0f0f',
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar'
-    });
-
-    if (result.isConfirmed) {
-      setLoading(true);
-      try {
-        await clientesService.deleteCliente(cliente.id); // Usa el servicio, pasa el ID
-        await Swal.fire('Eliminado', 'El cliente ha sido eliminado con éxito.', 'success');
-        fetchData(); // Recarga datos
-      } catch (error) {
-        console.error("Error al eliminar cliente:", error);
-        // --- Manejo de errores ---
-        let errorMessage = 'No se pudo eliminar el cliente.';
-         if (error.response) {
-             if (error.response.data?.message) {
-                 errorMessage = error.response.data.message;
-             } else if (error.response.status === 404) {
-                 errorMessage = "El cliente que intenta eliminar no fue encontrado.";
-             } else if (error.message) {
-                 errorMessage = error.message;
-             }
-         } else if (error.request) {
-             errorMessage = "No se pudo conectar con el servidor.";
-         } else {
-             errorMessage = error.message || "Ocurrió un error inesperado al eliminar.";
-         }
-        Swal.fire('Error', errorMessage, 'error');
-        setLoading(false);
-      }
-    }
-  };
-
-  const cambiarEstado = async (id) => {
-    // Busca el cliente en el estado 'data' (formato frontend)
-    const cliente = data.find(c => c.id === id);
-    if (!cliente) return;
-
-    // Determina el nuevo estado en formato frontend ('Activo'/'Inactivo')
-    const nuevoEstado = cliente.Estado === "Activo" ? "Inactivo" : "Activo";
-
-    const result = await Swal.fire({
-      title: "¿Desea cambiar el estado del cliente?",
-      text: `El cliente "${cliente.NombreCompleto}" pasará a ${nuevoEstado}`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#2e8322", // Ajusta colores
-      cancelButtonColor: "#6d0f0f",
-      confirmButtonText: "Sí, cambiar",
-      cancelButtonText: "Cancelar",
-    });
-
-    if (result.isConfirmed) {
-      setLoading(true);
-      try {
-        // Llama al servicio pasando el ID y el NUEVO estado en formato frontend
-        await clientesService.changeStateCliente(id, nuevoEstado);
-
-        await Swal.fire('Actualizado', `El estado del cliente ha sido actualizado a ${nuevoEstado}.`, 'success');
-        fetchData(); // Recarga datos (obligatorio por 204)
-      } catch (error) {
-        console.error("Error al cambiar estado cliente:", error);
-        // --- Manejo de errores ---
-         let errorMessage = 'No se pudo actualizar el estado.';
-        if (error.response) {
-            if (error.response.data?.message) {
-                errorMessage = error.response.data.message;
-            } else if (error.response.status === 404) {
-                errorMessage = "El cliente cuyo estado intenta cambiar no fue encontrado.";
-            } else if (error.message) {
-                errorMessage = error.message;
-            }
-        } else if (error.request) {
-            errorMessage = "No se pudo conectar con el servidor.";
-        } else {
-            errorMessage = error.message || "Ocurrió un error inesperado al cambiar el estado.";
-        }
-        Swal.fire('Error', errorMessage, 'error');
-        setLoading(false);
-      }
-    }
-  };
-
-
-  // --- Lógica de Paginación (sin cambios aparentes necesarios) ---
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  // Usa filteredData para paginar
-  const currentItems = Array.isArray(filteredData) ? filteredData.slice(indexOfFirstItem, indexOfLastItem) : [];
-  const pageNumbers = [];
-  if (Array.isArray(filteredData)) {
-      for (let i = 1; i <= Math.ceil(filteredData.length / itemsPerPage); i++) {
-          pageNumbers.push(i);
-      }
-  }
-
-  // --- Renderizado ---
-  return (
-    <Container>
-      <h2 className="text-center mt-4">Lista de Clientes</h2>
-      <br />
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <Input
-          type="text"
-          placeholder="Buscar cliente..." // Placeholder ajustado
-          value={searchText}
-          onChange={handleSearch}
-          style={{ width: '300px' }} // Ancho ajustado
-        />
-        {/* Botón para abrir el MODAL de insertar */}
-        <Button style={{ backgroundColor: '#2e8322', color: 'white' }} onClick={() => {
-            setForm(initialFormState); // Limpia form
-            setErrors({}); // Limpia errores locales
-            setModalInsertar(true); // Abre modal insertar
-        }}>
-            Agregar Cliente
-        </Button>
-      </div>
-
-      {/* Indicador de Carga */}
-      {loading && (
-         <div className="text-center my-5">
-             <Spinner color="primary" />
-             <p>Cargando...</p>
-         </div>
-       )}
-
-      {/* Tabla de Datos (solo se muestra si no está cargando) */}
-      {!loading && (
-        <>
-          <div className="table-responsive">
-            {/* Ajusta las columnas y el mapeo de datos */}
-            <Table className="table table-bordered table-hover text-center">
-              <thead>
-                <tr>
-                  <th>Id</th>
-                  <th>Nombre Completo</th>
-                  <th>Distintivo</th>
-                  <th>Categoría</th>
-                  <th>Celular</th>
-                  <th>Correo</th>
-                  <th>Dirección</th>
-                  <th>Estado</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentItems.length > 0 ? currentItems.map((cliente) => (
-                  // Asegúrate que los nombres de campo coinciden con el estado 'data' (formato frontend)
-                  <tr key={cliente.id} style={{ backgroundColor: cliente.Estado === "Inactivo" ? "#f8f9fa" : "white" }}>
-                    <td>{cliente.id}</td>
-                    <td>{cliente.NombreCompleto}</td>
-                    <td>{cliente.Distintivo}</td>
-                    <td>{cliente.CategoriaCliente}</td>
-                    <td>{cliente.Celular || '-'}</td> {/* Muestra '-' si está vacío */}
-                    <td>{cliente.Correo || '-'}</td>
-                    <td>{cliente.Direccion || '-'}</td>
-                    <td>
-                      <Button
-                        color={cliente.Estado === "Activo" ? "success" : "secondary"}
-                        onClick={() => cambiarEstado(cliente.id)}
-                        size="sm"
-                        className="me-1"
-                        style={{ minWidth: '80px', color: "white", padding: '0.25rem 0.5rem' }}
-                        disabled={loading}
-                      >
-                        {cliente.Estado}
-                      </Button>
-                    </td>
-                    <td>
-                      <Button
-                        color="dark" // O el color que prefieras
-                        size="sm"
-                        className="me-1"
-                        onClick={() => {
-                            setForm(cliente); // Carga datos del cliente en el form
-                            setErrors({}); // Limpia errores previos
-                            setModalEditar(true); // Abre modal editar
-                         }}
-                         disabled={loading}
-                       >
-                          <FaEdit />
-                      </Button>
-                      <Button
-                        color="danger"
-                        size="sm"
-                        onClick={() => eliminar(cliente)} // Llama a la función eliminar
-                        disabled={loading}
-                      >
-                          <FaTrashAlt />
-                      </Button>
-                    </td>
-                  </tr>
-                )) : (
-                  <tr>
-                    <td colSpan="9" className="text-center">No hay clientes para mostrar.</td> {/* Ajusta colSpan */}
-                  </tr>
-                )}
-              </tbody>
-            </Table>
-          </div>
-
-          {/* Paginación */}
-          {filteredData.length > itemsPerPage && (
-            <div className="d-flex justify-content-center">
-                 <ul className="pagination">
-                    {pageNumbers.map(number => (
-                    <li key={number} className={`page-item ${currentPage === number ? 'active' : ''}`}>
-                        <Button
-                            onClick={() => setCurrentPage(number)}
-                            className="page-link"
-                        >
-                        {number}
-                        </Button>
-                    </li>
-                    ))}
-                 </ul>
+// --- Confirmation Modal Component (igual que en Proveedores) ---
+const ConfirmationModal = ({ isOpen, toggle, title, children, onConfirm, confirmText = "Confirmar", confirmColor = "primary", isConfirming = false }) => (
+    <Modal isOpen={isOpen} toggle={!isConfirming ? toggle : undefined} centered backdrop="static" keyboard={!isConfirming}>
+        <ModalHeader toggle={!isConfirming ? toggle : undefined}>
+             <div className="d-flex align-items-center">
+                <AlertTriangle size={24} className={`text-${confirmColor === 'danger' ? 'danger' : (confirmColor === 'warning' ? 'warning' : 'primary')} me-2`} />
+                <span className="fw-bold">{title}</span>
             </div>
-           )}
-        </>
-      )}
-
-      {/* --- Modales (Adaptados de Servicios.jsx) --- */}
-
-      {/* Modal Insertar */}
-      <Modal isOpen={modalInsertar} toggle={() => !loading && setModalInsertar(!modalInsertar)}>
-        <ModalHeader toggle={() => !loading && setModalInsertar(!modalInsertar)} style={{ background: '#6d0f0f', color: 'white' }}>
-          Agregar Cliente
         </ModalHeader>
         <ModalBody>
-           {/* Campos del formulario para insertar - Usa los nombres del 'form' state */}
-          <FormGroup>
-            <Label for="NombreCompletoInsertar"><b>Nombre Completo:</b></Label>
-            <Input id="NombreCompletoInsertar" name="NombreCompleto" type="text" onChange={handleChange} value={form.NombreCompleto} invalid={!!errors.NombreCompleto}/>
-            {errors.NombreCompleto && <span className="text-danger">{errors.NombreCompleto}</span>}
-          </FormGroup>
-           <FormGroup>
-            <Label for="DistintivoInsertar"><b>Distintivo:</b></Label>
-            <Input id="DistintivoInsertar" name="Distintivo" type="text" onChange={handleChange} value={form.Distintivo} invalid={!!errors.Distintivo}/>
-             {errors.Distintivo && <span className="text-danger">{errors.Distintivo}</span>}
-          </FormGroup>
-          <FormGroup>
-            <Label for="CategoriaClienteInsertar"><b>Categoría Cliente:</b></Label>
-            <Input id="CategoriaClienteInsertar" name="CategoriaCliente" type="select" onChange={handleChange} value={form.CategoriaCliente} invalid={!!errors.CategoriaCliente}>
-                <option value="">Seleccione una categoría</option>
-                <option value="Familiar">Familiar</option>
-                <option value="Empresarial">Empresarial</option>
-                <option value="Preferencial">Preferencial</option>
-                <option value="Nuevo">Nuevo</option> {/* Ajusta opciones según necesites */}
-            </Input>
-             {errors.CategoriaCliente && <span className="text-danger">{errors.CategoriaCliente}</span>}
-          </FormGroup>
-           <FormGroup>
-            <Label for="CelularInsertar"><b>Celular:</b></Label>
-            <Input id="CelularInsertar" name="Celular" type="text" onChange={handleChange} value={form.Celular} invalid={!!errors.Celular}/>
-             {errors.Celular && <span className="text-danger">{errors.Celular}</span>}
-          </FormGroup>
-           <FormGroup>
-            <Label for="CorreoInsertar"><b>Correo:</b></Label>
-            <Input id="CorreoInsertar" name="Correo" type="email" onChange={handleChange} value={form.Correo} invalid={!!errors.Correo}/>
-             {errors.Correo && <span className="text-danger">{errors.Correo}</span>}
-          </FormGroup>
-           <FormGroup>
-            <Label for="DireccionInsertar"><b>Dirección:</b></Label>
-            <Input id="DireccionInsertar" name="Direccion" type="text" onChange={handleChange} value={form.Direccion} invalid={!!errors.Direccion}/>
-             {errors.Direccion && <span className="text-danger">{errors.Direccion}</span>}
-          </FormGroup>
-          {/* No se necesita campo Estado al insertar, se asume Activo */}
+            {children}
         </ModalBody>
         <ModalFooter>
-          <Button color="success" onClick={insertar} disabled={loading}>
-            {loading ? <Spinner size="sm" /> : 'Agregar'}
-          </Button>
-          <Button color="secondary" onClick={() => setModalInsertar(false)} disabled={loading}>Cancelar</Button>
+            <Button color="secondary" outline onClick={toggle} disabled={isConfirming}>
+                Cancelar
+            </Button>
+            <Button color={confirmColor} onClick={onConfirm} disabled={isConfirming}>
+                {isConfirming ? (
+                    <><Spinner size="sm" className="me-1"/> Procesando...</>
+                ) : (
+                    confirmText
+                )}
+            </Button>
         </ModalFooter>
-      </Modal>
+    </Modal>
+);
 
-      {/* Modal Editar */}
-      <Modal isOpen={modalEditar} toggle={() => !loading && setModalEditar(!modalEditar)}>
-        <ModalHeader toggle={() => !loading && setModalEditar(!modalEditar)} style={{ background: '#6d0f0f', color: 'white' }}>
-          Editar Cliente
-        </ModalHeader>
-        <ModalBody>
-           {/* Campos del formulario para editar - Usa los nombres del 'form' state */}
-           {/* Repite la estructura de FormGroup/Label/Input del modal de insertar */}
-           <FormGroup>
-            <Label for="NombreCompletoEditar"><b>Nombre Completo:</b></Label>
-            <Input id="NombreCompletoEditar" name="NombreCompleto" type="text" onChange={handleChange} value={form.NombreCompleto} invalid={!!errors.NombreCompleto}/>
-             {errors.NombreCompleto && <span className="text-danger">{errors.NombreCompleto}</span>}
-          </FormGroup>
-           <FormGroup>
-            <Label for="DistintivoEditar"><b>Distintivo:</b></Label>
-            <Input id="DistintivoEditar" name="Distintivo" type="text" onChange={handleChange} value={form.Distintivo} invalid={!!errors.Distintivo}/>
-             {errors.Distintivo && <span className="text-danger">{errors.Distintivo}</span>}
-          </FormGroup>
-          <FormGroup>
-            <Label for="CategoriaClienteEditar"><b>Categoría Cliente:</b></Label>
-            <Input id="CategoriaClienteEditar" name="CategoriaCliente" type="select" onChange={handleChange} value={form.CategoriaCliente} invalid={!!errors.CategoriaCliente}>
-                 <option value="">Seleccione una categoría</option>
-                 <option value="Familiar">Familiar</option>
-                 <option value="Empresarial">Empresarial</option>
-                 <option value="Preferencial">Preferencial</option>
-                 <option value="Nuevo">Nuevo</option>
-            </Input>
-            {errors.CategoriaCliente && <span className="text-danger">{errors.CategoriaCliente}</span>}
-          </FormGroup>
-           <FormGroup>
-            <Label for="CelularEditar"><b>Celular:</b></Label>
-            <Input id="CelularEditar" name="Celular" type="text" onChange={handleChange} value={form.Celular} invalid={!!errors.Celular}/>
-            {errors.Celular && <span className="text-danger">{errors.Celular}</span>}
-          </FormGroup>
-           <FormGroup>
-            <Label for="CorreoEditar"><b>Correo:</b></Label>
-            <Input id="CorreoEditar" name="Correo" type="email" onChange={handleChange} value={form.Correo} invalid={!!errors.Correo}/>
-             {errors.Correo && <span className="text-danger">{errors.Correo}</span>}
-          </FormGroup>
-           <FormGroup>
-            <Label for="DireccionEditar"><b>Dirección:</b></Label>
-            <Input id="DireccionEditar" name="Direccion" type="text" onChange={handleChange} value={form.Direccion} invalid={!!errors.Direccion}/>
-             {errors.Direccion && <span className="text-danger">{errors.Direccion}</span>}
-          </FormGroup>
-          {/* Opcional: Mostrar el estado pero no permitir editarlo en este modal */}
-          <FormGroup>
-              <Label for="estadoEditar"><b>Estado:</b></Label>
-              <Input id="estadoEditar" name="Estado" type="text" value={form.Estado} readOnly disabled/>
-          </FormGroup>
-        </ModalBody>
-        <ModalFooter>
-          <Button color="primary" onClick={editar} disabled={loading}>
-             {loading ? <Spinner size="sm" /> : 'Guardar Cambios'}
-          </Button>
-          <Button color="secondary" onClick={() => setModalEditar(false)} disabled={loading}>Cancelar</Button>
-        </ModalFooter>
-      </Modal>
-    </Container>
-  );
+// --- Constants ---
+// Estado inicial adaptado para Clientes
+const INITIAL_FORM_STATE = {
+    id: "", // Usaremos 'id' como en el código original de Clientes
+    NombreCompleto: "",
+    Distintivo: "",
+    CategoriaCliente: "", // Campo específico de Clientes
+    Celular: "",
+    Correo: "",
+    Direccion: "",
+    Estado: "Activo", // Mantén 'Activo'/'Inactivo' como en el código original de Clientes
 };
 
-// PropTypes ya no son necesarios si no se pasan props
-// Clientes.propTypes = {
-//   data: PropTypes.array, // Ya no se pasa como prop
-// };
+// Errores iniciales adaptados para Clientes
+const INITIAL_FORM_ERRORS = {
+    NombreCompleto: false,
+    Distintivo: false,
+    CategoriaCliente: false,
+    Celular: false, // Opcional?
+    Correo: false, // Opcional?
+    Direccion: false, // Opcional?
+};
+
+const INITIAL_CONFIRM_PROPS = {
+    title: "",
+    message: null,
+    confirmText: "Confirmar",
+    confirmColor: "primary",
+    itemDetails: null,
+};
+
+// Opciones para el select de Categoría Cliente
+const CATEGORIAS_CLIENTE = [
+    { value: "Familiar", label: "Familiar" },
+    { value: "Empresarial", label: "Empresarial" },
+    { value: "Preferencial", label: "Preferencial" },
+    { value: "Nuevo", label: "Nuevo" },
+];
+
+const ITEMS_PER_PAGE = 5; // Puedes ajustar esto
+
+// --- Main Component ---
+const Clientes = () => {
+    // --- State ---
+    const [data, setData] = useState([]);
+    const [form, setForm] = useState(INITIAL_FORM_STATE);
+    const [isEditing, setIsEditing] = useState(false);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [tableSearchText, setTableSearchText] = useState("");
+    const [isLoading, setIsLoading] = useState(true);
+    const [formErrors, setFormErrors] = useState(INITIAL_FORM_ERRORS);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+    const [confirmModalProps, setConfirmModalProps] = useState(INITIAL_CONFIRM_PROPS);
+    const [isConfirmActionLoading, setIsConfirmActionLoading] = useState(false);
+
+    // --- Refs ---
+    const confirmActionRef = useRef(null); // Almacena la función a ejecutar en confirmación
+
+    // --- Data Fetching ---
+    const fetchData = useCallback(async (showLoadingSpinner = true) => {
+        if (showLoadingSpinner) setIsLoading(true);
+        console.log("[FETCH] Fetching clients...");
+        try {
+            // Usa el servicio de clientes y espera el formato frontend
+            const clientes = await clientesService.getAllClientes();
+            setData(clientes || []);
+            console.log("[FETCH] Clients loaded:", clientes);
+        } catch (error) {
+            console.error("[FETCH ERROR] Failed to load clients:", error);
+            toast.error("Error al cargar clientes. Verifique la conexión.");
+            setData([]); // Asegura que data es un array incluso en error
+        } finally {
+             if (showLoadingSpinner) setIsLoading(false);
+             console.log("[FETCH] Fetching finished.");
+        }
+    }, []); // No tiene dependencias externas que cambien
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    // --- Form Helper Functions ---
+    const resetForm = useCallback(() => {
+        setForm(INITIAL_FORM_STATE);
+    }, []);
+
+    const clearFormErrors = useCallback(() => {
+        setFormErrors(INITIAL_FORM_ERRORS);
+    }, []);
+
+    // Validación adaptada para Clientes
+    const validateForm = useCallback(() => {
+        // 1. Asegurar que los valores sean strings antes de trim/validar (manejar null/undefined)
+        const nombreCompletoString = String(form.NombreCompleto ?? '').trim();
+        const distintivoString = String(form.Distintivo ?? '').trim();
+        const celularString = String(form.Celular ?? '').trim();
+        const correoString = String(form.Correo ?? '').trim();
+        const direccionString = String(form.Direccion ?? '').trim(); // Aunque opcional, validar si se ingresa
+
+        // 2. Realizar las validaciones
+        const errors = {
+            NombreCompleto: !nombreCompletoString, // Requerido
+            Distintivo: !distintivoString,         // Requerido
+            CategoriaCliente: !form.CategoriaCliente, // Requerido (Select)
+            // Validaciones opcionales pero con formato correcto si se ingresan
+            Celular: celularString && !/^\d{10}$/.test(celularString), // 10 dígitos si no está vacío
+            Correo: correoString && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoString), // Formato email si no está vacío
+            Direccion: false, // No marcamos error si está vacío, ya que es opcional
+        };
+
+        setFormErrors(errors);
+        // Devuelve true si NO hay errores en los campos REQUERIDOS y
+        // si los campos opcionales INGRESADOS tienen formato válido.
+        return !errors.NombreCompleto && !errors.Distintivo && !errors.CategoriaCliente &&
+               !errors.Celular && !errors.Correo;
+
+    }, [form]);
+
+    // --- Event Handlers ---
+    const handleChange = useCallback((e) => {
+        const { name, value } = e.target;
+        setForm((prevForm) => ({ ...prevForm, [name]: value }));
+        // Limpia el error específico del campo al cambiarlo
+        if (formErrors[name]) {
+            setFormErrors(prev => ({ ...prev, [name]: false }));
+        }
+    }, [formErrors]); // Depende de formErrors para poder limpiarlo
+
+    const handleTableSearch = useCallback((e) => {
+        setTableSearchText(e.target.value.toLowerCase());
+        setCurrentPage(1); // Reset page on new search
+    }, []);
+
+    // --- Modal Toggles (igual que Proveedores) ---
+    const toggleMainModal = useCallback(() => {
+        const closing = modalOpen;
+        setModalOpen(prev => !prev);
+        if (closing) {
+            resetForm();
+            clearFormErrors();
+            setIsEditing(false);
+        }
+    }, [modalOpen, resetForm, clearFormErrors]);
+
+    const toggleConfirmModal = useCallback(() => {
+        if (isConfirmActionLoading) return; // No permitir cerrar si está procesando
+        setConfirmModalOpen(prev => !prev);
+    }, [isConfirmActionLoading]);
+
+    // --- Effect to Reset Confirmation Modal State When Closed (igual que Proveedores) ---
+     useEffect(() => {
+        if (!confirmModalOpen && !isConfirmActionLoading) {
+            setConfirmModalProps(INITIAL_CONFIRM_PROPS);
+            confirmActionRef.current = null;
+        }
+    }, [confirmModalOpen, isConfirmActionLoading]);
+
+    // --- Confirmation Preparation (igual que Proveedores) ---
+    const prepareConfirmation = useCallback((actionFn, props) => {
+        const detailsToPass = props.itemDetails;
+        confirmActionRef.current = () => {
+            if (actionFn) {
+                actionFn(detailsToPass); // Pasa los detalles a la función de ejecución
+            } else {
+                 console.error("[CONFIRM ACTION] actionFn is null or undefined in ref execution.");
+                 toast.error("Error interno al intentar ejecutar la acción confirmada.");
+                 toggleConfirmModal();
+            }
+        };
+        setConfirmModalProps(props);
+        setConfirmModalOpen(true);
+    }, [toggleConfirmModal]); // Incluye toggleConfirmModal por si se usa en el error
+
+    // --- CRUD Operations (adaptadas para Clientes) ---
+
+    // ADD CLIENT (Submit Handler)
+    const handleSubmit = useCallback(async () => {
+        console.log("[ADD CLIENT] Attempting submit:", form);
+        if (!validateForm()) {
+            toast.error("Por favor, complete los campos requeridos correctamente.", { duration: 4000 });
+            return;
+        }
+
+        // Opcional: Añadir validación de duplicados si es necesario (ej. por Correo o Celular si son únicos)
+        // const correoExistente = data.some(c => c.Correo && c.Correo.toLowerCase() === String(form.Correo ?? '').trim().toLowerCase());
+        // if (correoExistente) {
+        //     toast.error("Ya existe un cliente con este correo electrónico.", { duration: 4000 });
+        //     setFormErrors(prev => ({ ...prev, Correo: true }));
+        //     return;
+        // }
+
+        const toastId = toast.loading('Agregando cliente...');
+        try {
+            // El servicio espera el objeto con formato frontend ('Activo'/'Inactivo')
+            // Aseguramos que se cree como 'Activo' y excluimos el 'id'
+            const { id, ...newClientData } = form;
+            const clientToSend = { ...newClientData, Estado: 'Activo' }; // Forzar estado Activo al crear
+
+            console.log("[ADD CLIENT] Calling service with:", clientToSend);
+            await clientesService.createCliente(clientToSend); // Llama al servicio de clientes
+
+            toast.success("Cliente agregado exitosamente!", { id: toastId });
+            toggleMainModal(); // Cierra modal principal
+            await fetchData(false); // Recarga datos sin spinner de pantalla completa
+            setCurrentPage(1); // Vuelve a la primera página
+
+        } catch (error) {
+            console.error("[ADD CLIENT ERROR]", error);
+            const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
+            toast.error(`Error al agregar: ${errorMsg}`, { id: toastId, duration: 5000 });
+        }
+    }, [form, data, validateForm, toggleMainModal, fetchData]); // Añadir 'data' si se hace validación de duplicados
+
+    // EDIT CLIENT (Request Confirmation)
+    const requestEditConfirmation = useCallback(() => {
+        console.log("[EDIT CLIENT REQ] Requesting confirmation for:", form);
+        if (!validateForm()) {
+           toast.error("Por favor, complete los campos requeridos correctamente.", { duration: 4000 });
+           return;
+        }
+
+        // Opcional: Validar duplicados excluyendo el cliente actual si es necesario
+        // const currentId = form.id;
+        // const correoExistente = data.some(c =>
+        //     c.id !== currentId &&
+        //     c.Correo &&
+        //     c.Correo.toLowerCase() === String(form.Correo ?? '').trim().toLowerCase()
+        // );
+        // if (correoExistente) {
+        //    toast.error("Ya existe otro cliente con este correo electrónico.", { duration: 4000 });
+        //    setFormErrors(prev => ({ ...prev, Correo: true }));
+        //    return;
+        // }
+
+        if (!form.id) {
+            console.error("[EDIT CLIENT REQ ERROR] Client ID (id) missing.");
+            toast.error("Error interno: No se puede identificar el cliente a editar.");
+            return;
+        }
+
+        // Prepara la confirmación pasando la función de ejecución y los datos del formulario
+        prepareConfirmation(executeEdit, {
+            title: "Confirmar Actualización",
+            message: <p>¿Está seguro que desea guardar los cambios para <strong>{form.NombreCompleto || 'este cliente'}</strong>?</p>,
+            confirmText: "Confirmar Cambios",
+            confirmColor: "primary",
+            itemDetails: { ...form } // Pasa una copia de los datos actuales del formulario
+        });
+    }, [form, data, validateForm, prepareConfirmation]); // Añadir 'data' si se valida duplicidad
+
+    // EDIT CLIENT (Execute Action)
+    const executeEdit = useCallback(async (clientToUpdate) => {
+        console.log("[EDIT CLIENT EXEC] Attempting execution with received data:", clientToUpdate);
+
+        // Valida el argumento recibido, no el estado
+        if (!clientToUpdate || !clientToUpdate.id) {
+             console.error("[EDIT CLIENT EXEC ERROR] Missing client data or ID in received argument.", clientToUpdate);
+             toast.error("Error interno: Datos para actualizar no encontrados.");
+             toggleConfirmModal(); // Cierra modal de confirmación
+             return;
+        }
+
+        setIsConfirmActionLoading(true); // Inicia el estado de carga para la confirmación
+        const toastId = toast.loading('Actualizando cliente...');
+
+        try {
+            // El servicio de clientes espera el ID y el objeto con formato frontend
+            console.log("[EDIT CLIENT EXEC] Calling service with ID:", clientToUpdate.id, "Data:", clientToUpdate);
+            await clientesService.updateCliente(clientToUpdate.id, clientToUpdate); // Llama al servicio de clientes
+
+            toast.success("Cliente actualizado exitosamente!", { id: toastId });
+            toggleConfirmModal(); // Cierra modal de confirmación
+            toggleMainModal();    // Cierra modal de formulario principal
+            await fetchData(false); // Recarga datos
+
+        } catch (error) {
+            console.error("[EDIT CLIENT EXEC ERROR]", error);
+            const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
+            toast.error(`Error al actualizar: ${errorMsg}`, { id: toastId, duration: 5000 });
+            toggleConfirmModal(); // Cierra modal de confirmación en caso de error
+        } finally {
+             setIsConfirmActionLoading(false); // Finaliza el estado de carga
+        }
+    }, [toggleConfirmModal, toggleMainModal, fetchData]); // No depende de confirmModalProps
+
+    // CHANGE STATUS (Request Confirmation)
+    const requestChangeStatusConfirmation = useCallback((idCliente, currentStatus, nombreCliente) => {
+        if (!idCliente) {
+            console.error("[STATUS CLIENT REQ ERROR] Invalid client ID:", idCliente);
+            return;
+        }
+        console.log(`[STATUS CLIENT REQ] Requesting change for ID: ${idCliente}, Current Status: ${currentStatus}`);
+        // Determina la acción y el color basado en el estado actual ('Activo'/'Inactivo')
+        const isCurrentlyActive = currentStatus === "Activo";
+        const actionText = isCurrentlyActive ? "desactivar" : "activar";
+        const futureStatusText = isCurrentlyActive ? "Inactivo" : "Activo";
+        const confirmColor = isCurrentlyActive ? "warning" : "success"; // warning para desactivar, success para activar
+        const IconComponent = isCurrentlyActive ? UserX : UserCheck; // Íconos apropiados
+
+        prepareConfirmation(executeChangeStatus, {
+            title: "Confirmar Cambio de Estado",
+            message: (
+                <p>¿Está seguro que desea <strong>{actionText}</strong> al cliente <strong>{nombreCliente || 'seleccionado'}</strong>? <br /> Su nuevo estado será: <strong>{futureStatusText}</strong>.</p>
+            ),
+            confirmText: (
+                <>
+                  <IconComponent size={16} className="me-1" />
+                  {`Confirmar ${actionText.charAt(0).toUpperCase() + actionText.slice(1)}`}
+                </>
+            ),
+            confirmColor: confirmColor,
+            itemDetails: { idCliente, currentStatus, nombreCliente, futureStatusText } // Pasa los detalles necesarios
+        });
+    }, [prepareConfirmation]);
+
+    // CHANGE STATUS (Execute Action)
+    const executeChangeStatus = useCallback(async (details) => {
+        console.log("[STATUS CLIENT EXEC] Attempting execution with received details:", details);
+
+        if (!details || !details.idCliente) {
+            console.error("[STATUS CLIENT EXEC ERROR] Missing details or client ID in received argument.", details);
+            toast.error("Error interno: No se pudieron obtener los detalles para cambiar el estado.", { duration: 5000 });
+            toggleConfirmModal();
+            return;
+        }
+
+        const { idCliente, currentStatus, nombreCliente, futureStatusText } = details;
+        // El servicio espera el nuevo estado en formato frontend ('Activo' o 'Inactivo')
+        const newStatusFrontend = futureStatusText;
+        const actionText = currentStatus === "Activo" ? "desactivar" : "activar";
+
+        console.log(`[STATUS CLIENT EXEC] Executing for ID: ${idCliente} to New Status: ${newStatusFrontend}`);
+        setIsConfirmActionLoading(true);
+        const toastId = toast.loading(`${actionText.charAt(0).toUpperCase() + actionText.slice(1)}ndo cliente...`);
+
+        try {
+            console.log("[STATUS CLIENT EXEC] Calling service changeStateCliente with ID:", idCliente, "New Status:", newStatusFrontend);
+            await clientesService.changeStateCliente(idCliente, newStatusFrontend); // Llama al servicio de clientes
+
+            toast.success(`Cliente ${nombreCliente || ''} ${actionText === 'activar' ? 'activado' : 'desactivado'} correctamente.`, { id: toastId });
+            toggleConfirmModal(); // Cierra modal de confirmación
+            await fetchData(false); // Recarga datos
+
+        } catch (error) {
+            console.error("[STATUS CLIENT EXEC ERROR]", error);
+            const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
+            toast.error(`Error al ${actionText}: ${errorMsg}`, { id: toastId, duration: 5000 });
+            toggleConfirmModal(); // Cierra modal de confirmación en error
+        } finally {
+            setIsConfirmActionLoading(false);
+            console.log("[STATUS CLIENT EXEC] Execution finished.");
+        }
+    }, [toggleConfirmModal, fetchData]); // No depende de confirmModalProps
+
+    // DELETE CLIENT (Request Confirmation)
+    const requestDeleteConfirmation = useCallback(async (cliente) => {
+        if (!cliente || !cliente.id) {
+            console.error("[DELETE CLIENT REQ ERROR] Invalid client data received:", cliente);
+            return;
+        }
+        console.log("[DELETE CLIENT REQ] Requesting confirmation for client:", JSON.stringify(cliente));
+
+        // **Importante:** A diferencia de Proveedores, el código original de Clientes no verifica asociaciones antes de eliminar.
+        // Mantenemos ese comportamiento a menos que se requiera añadir la verificación.
+        // Si se necesitara, aquí iría la llamada a un `clientesService.isClienteAssociated...`
+
+        console.log("[DELETE CLIENT REQ] Proceeding with confirmation setup.");
+        prepareConfirmation(executeDelete, {
+            title: "Confirmar Eliminación",
+            message: (
+                <>
+                    <p>¿Está seguro que desea eliminar permanentemente al cliente <strong>{cliente.NombreCompleto || 'seleccionado'}</strong>?</p>
+                    <p><strong className="text-danger">Esta acción no se puede deshacer.</strong></p>
+                </>
+            ),
+            confirmText: "Eliminar Definitivamente",
+            confirmColor: "danger",
+            itemDetails: { ...cliente } // Pasa una copia de los detalles del cliente
+        });
+
+    }, [prepareConfirmation]);
+
+    // DELETE CLIENT (Execute Action)
+    const executeDelete = useCallback(async (clienteToDelete) => {
+        console.log("[DELETE CLIENT EXEC] Attempting execution with received data:", JSON.stringify(clienteToDelete));
+
+        if (!clienteToDelete || !clienteToDelete.id) {
+             console.error("[DELETE CLIENT EXEC ERROR] Missing client data or ID in received argument.", clienteToDelete);
+             toast.error("Error interno: Datos para eliminar no encontrados.");
+             toggleConfirmModal();
+             return;
+        }
+        console.log("[DELETE CLIENT EXEC] Executing delete for client:", JSON.stringify(clienteToDelete));
+
+        setIsConfirmActionLoading(true);
+        const toastId = toast.loading('Eliminando cliente...');
+
+        try {
+            console.log("[DELETE CLIENT EXEC] Calling service deleteCliente with ID:", clienteToDelete.id);
+            await clientesService.deleteCliente(clienteToDelete.id); // Llama al servicio de clientes
+
+            toast.success(`Cliente "${clienteToDelete.NombreCompleto}" eliminado correctamente.`, {
+                id: toastId, icon: <CheckCircle className="text-success" />
+            });
+            toggleConfirmModal(); // Cierra modal de confirmación
+            await fetchData(false); // Refresca datos
+
+        } catch (error) {
+            console.error("[DELETE CLIENT EXEC ERROR] API call failed:", error);
+            const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
+            toast.error(`Error al eliminar: ${errorMsg}`, {
+                id: toastId, icon: <XCircle className="text-danger" />, duration: 5000
+            });
+            toggleConfirmModal(); // Cierra modal de confirmación en error
+        } finally {
+            setIsConfirmActionLoading(false);
+        }
+    }, [toggleConfirmModal, fetchData]); // No depende de confirmModalProps
+
+    // --- Modal Opening Handlers ---
+    const openAddModal = useCallback(() => {
+        resetForm();
+        clearFormErrors();
+        setIsEditing(false);
+        setModalOpen(true);
+    }, [resetForm, clearFormErrors]);
+
+    const openEditModal = useCallback((cliente) => {
+        // Carga los datos del cliente en el formulario, asegurando que los opcionales sean string vacío si son null/undefined
+        setForm({
+            id: String(cliente.id || ""),
+            NombreCompleto: cliente.NombreCompleto || "",
+            Distintivo: cliente.Distintivo || "",
+            CategoriaCliente: cliente.CategoriaCliente || "",
+            Celular: String(cliente.Celular ?? ""), // Convertir a string o vacío
+            Correo: cliente.Correo || "",
+            Direccion: cliente.Direccion || "",
+            Estado: cliente.Estado || "Activo", // Default a Activo si no viene
+        });
+        setIsEditing(true);
+        clearFormErrors(); // Limpia errores de validaciones anteriores
+        setModalOpen(true);
+    }, [clearFormErrors]);
+
+
+    // --- Filtering and Pagination Logic (igual que Proveedores) ---
+    const filteredData = useMemo(() => {
+        if (!tableSearchText) return data;
+        return data.filter(
+            (item) =>
+                (item?.NombreCompleto?.toLowerCase() ?? '').includes(tableSearchText) ||
+                (item?.Distintivo?.toLowerCase() ?? '').includes(tableSearchText) ||
+                (item?.CategoriaCliente?.toLowerCase() ?? '').includes(tableSearchText) ||
+                (String(item?.Celular ?? '').toLowerCase()).includes(tableSearchText) || // Busca también por celular
+                (item?.Correo?.toLowerCase() ?? '').includes(tableSearchText) // Busca también por correo
+        );
+    }, [data, tableSearchText]);
+
+    const totalItems = useMemo(() => filteredData.length, [filteredData]);
+    const totalPages = useMemo(() => Math.ceil(totalItems / ITEMS_PER_PAGE), [totalItems]);
+    // Asegura que currentPage sea válido
+    const validCurrentPage = useMemo(() => Math.max(1, Math.min(currentPage, totalPages || 1)), [currentPage, totalPages]);
+
+    // Calcula los items para la página actual
+    const currentItems = useMemo(() => {
+        const startIndex = (validCurrentPage - 1) * ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
+        // Asegúrate que filteredData es un array antes de slice
+        return Array.isArray(filteredData) ? filteredData.slice(startIndex, endIndex) : [];
+    }, [filteredData, validCurrentPage]);
+
+    // Ajusta la página actual si se elimina el último ítem de la última página
+    useEffect(() => {
+        if (currentPage > totalPages && totalPages > 0) {
+            setCurrentPage(totalPages);
+        }
+        // Si estamos en página 1 y se vacía, nos quedamos en 1
+        else if (totalPages === 0 && currentPage !== 1) {
+             setCurrentPage(1);
+        }
+    }, [totalPages, currentPage]);
+
+    const handlePageChange = useCallback((pageNumber) => {
+        const newPage = Math.max(1, Math.min(pageNumber, totalPages || 1));
+        setCurrentPage(newPage);
+    }, [totalPages]);
+
+    // --- Render ---
+    return (
+        <Container fluid className="p-4 main-content">
+             <Toaster
+                position="top-center"
+                toastOptions={{
+                    success: { duration: 3000 },
+                    error: { duration: 5000 },
+                    style: { background: '#363636', color: '#fff' }
+                }}
+             />
+
+            {/* Header and Actions */}
+            <h2 className="mb-4">Gestión de Clientes</h2>
+            <Row className="mb-3 align-items-center">
+                 <Col md={6} lg={4}>
+                    {/* Search Input igual que Proveedores */}
+                    <Input
+                        type="text"
+                        bsSize="sm"
+                        placeholder="Buscar por nombre, distintivo, categoría, celular o correo..."
+                        value={tableSearchText}
+                        onChange={handleTableSearch}
+                        style={{ borderRadius: '0.25rem' }}
+                        aria-label="Buscar clientes"
+                    />
+                </Col>
+                <Col md={6} lg={8} className="text-md-end mt-2 mt-md-0">
+                    {/* Add Button igual que Proveedores */}
+                    <Button color="success" size="sm" onClick={openAddModal} className="button-add">
+                        <Plus size={18} className="me-1" /> Agregar Cliente
+                    </Button>
+                </Col>
+            </Row>
+
+            {/* Data Table */}
+            <div className="table-responsive shadow-sm custom-table-container mb-3">
+                 {/* Table con estilo de Proveedores */}
+                 <Table hover size="sm" className="mb-0 custom-table" aria-live="polite">
+                     <thead>
+                        <tr>
+                            {/* Columnas adaptadas para Clientes */}
+                            <th scope="col">ID</th>
+                            <th scope="col">Nombre Completo</th>
+                            <th scope="col">Distintivo</th>
+                            <th scope="col">Categoría</th>
+                            <th scope="col">Celular</th>
+                            <th scope="col">Correo</th>
+                            {/* <th scope="col">Dirección</th> Podrías añadirla si es relevante en la tabla */}
+                            <th scope="col" className="text-center">Estado</th>
+                            <th scope="col" className="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                         {isLoading ? (
+                            <tr><td colSpan="8" className="text-center p-5"><Spinner color="primary" /> Cargando...</td></tr>
+                         ) : currentItems.length > 0 ? (
+                            // Mapea los 'currentItems' que ya están paginados y filtrados
+                            currentItems.map((item) => (
+                                <tr key={item.id} style={{ verticalAlign: 'middle', backgroundColor: item.Estado === "Inactivo" ? "#f8f9fa" : undefined }}>
+                                    <th scope="row">{item.id}</th>
+                                    <td>{item.NombreCompleto || '-'}</td>
+                                    <td>{item.Distintivo || '-'}</td>
+                                    <td>{item.CategoriaCliente || '-'}</td>
+                                    <td>{item.Celular || '-'}</td>
+                                    <td>{item.Correo || '-'}</td>
+                                    {/* <td>{item.Direccion || '-'}</td> */}
+                                    <td className="text-center">
+                                        {/* Status Button como en Proveedores, adaptado a 'Activo'/'Inactivo' */}
+                                        <Button
+                                            size="sm"
+                                            className={`status-button ${item.Estado === 'Activo' ? 'status-active' : 'status-inactive'}`}
+                                            onClick={() => requestChangeStatusConfirmation(item.id, item.Estado, item.NombreCompleto)}
+                                            disabled={!item.id || isLoading || isConfirmActionLoading} // Deshabilita si está cargando o procesando una confirmación
+                                            title={item.Estado === 'Activo' ? "Clic para Desactivar" : "Clic para Activar"}
+                                            aria-label={`Cambiar estado de ${item.NombreCompleto}. Estado actual: ${item.Estado}`}
+                                        >
+                                            {item.Estado === 'Activo' ? <><UserCheck size={14} className="me-1"/>Activo</> : <><UserX size={14} className="me-1"/>Inactivo</>}
+                                        </Button>
+                                    </td>
+                                    <td className="text-center">
+                                        {/* Action Buttons como en Proveedores */}
+                                        <div className="d-inline-flex gap-1 action-cell-content" role="group" aria-label={`Acciones para ${item.NombreCompleto}`}>
+                                            <Button
+                                                disabled={!item.id || isLoading || isConfirmActionLoading}
+                                                size="sm"
+                                                onClick={() => openEditModal(item)}
+                                                title="Editar"
+                                                className="action-button action-edit"
+                                                aria-label={`Editar ${item.NombreCompleto}`}
+                                            >
+                                                <Edit size={20} />
+                                            </Button>
+                                            <Button
+                                                disabled={!item.id || isLoading || isConfirmActionLoading}
+                                                size="sm"
+                                                onClick={() => requestDeleteConfirmation(item)}
+                                                title="Eliminar"
+                                                className="action-button action-delete"
+                                                aria-label={`Eliminar ${item.NombreCompleto}`}
+                                             >
+                                                 <Trash2 size={20} />
+                                             </Button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
+                         ) : (
+                            // Mensaje si no hay datos (después de filtrar o si la tabla está vacía)
+                            <tr><td colSpan="8" className="text-center fst-italic p-4">
+                                {tableSearchText ? "No se encontraron clientes que coincidan con la búsqueda." : "No hay clientes registrados."}
+                            </td></tr>
+                        )}
+                    </tbody>
+                </Table>
+            </div>
+
+             {/* Paginator como en Proveedores */}
+             { totalPages > 1 && !isLoading && (
+                <CustomPagination
+                    currentPage={validCurrentPage} // Usa la página validada
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                />
+             )}
+
+             {/* Add/Edit Modal (Sin Imagen) */}
+             <Modal isOpen={modalOpen} toggle={toggleMainModal} centered size="lg" backdrop="static" keyboard={!modalOpen || isConfirmActionLoading} aria-labelledby="clientModalTitle">
+                <ModalHeader toggle={!isConfirmActionLoading ? toggleMainModal : undefined} id="clientModalTitle"  >
+                     {isEditing ? 'Editar Cliente' : 'Agregar Nuevo Cliente'}
+                </ModalHeader>
+                <ModalBody>
+                     <Form id="clientForm" noValidate onSubmit={(e) => e.preventDefault()}>
+                         {/* La Row principal ahora solo contiene la columna de campos */}
+                         <Row>
+                            {/* Columna ÚNICA para campos, ocupando todo el ancho */}
+                            <Col md={12}> {/* Cambiado de md={7} lg={8} a md={12} */}
+                                <Row className="g-3"> {/* g-3 añade espacio entre columnas */}
+
+                                     {/* --- Fila 1: Nombre Completo --- */}
+                                     <Col md={12}>
+                                        <FormGroup>
+                                            <Label for="modalNombreCompleto" className="form-label fw-bold">Nombre Completo <span className="text-danger">*</span></Label>
+                                            <Input id="modalNombreCompleto" type="text" name="NombreCompleto" value={form.NombreCompleto} onChange={handleChange} invalid={formErrors.NombreCompleto} required aria-required="true" aria-describedby="nombreError"/>
+                                            {formErrors.NombreCompleto && <div id="nombreError" className="invalid-feedback d-block">El nombre completo es obligatorio.</div>}
+                                        </FormGroup>
+                                    </Col>
+
+                                     {/* --- Fila 2: Distintivo y Categoría --- */}
+                                     <Col md={6}>
+                                        <FormGroup>
+                                            <Label for="modalDistintivo" className="form-label fw-bold">Distintivo <span className="text-danger">*</span></Label>
+                                            <Input id="modalDistintivo" type="text" name="Distintivo" value={form.Distintivo} onChange={handleChange} invalid={formErrors.Distintivo} required aria-required="true" aria-describedby="distintivoError"/>
+                                            {formErrors.Distintivo && <div id="distintivoError" className="invalid-feedback d-block">El distintivo es obligatorio.</div>}
+                                        </FormGroup>
+                                    </Col>
+                                     <Col md={6}>
+                                        <FormGroup>
+                                            <Label for="modalCategoriaCliente" className="form-label fw-bold">Categoría Cliente <span className="text-danger">*</span></Label>
+                                            <Input id="modalCategoriaCliente" type="select" name="CategoriaCliente" value={form.CategoriaCliente} onChange={handleChange} invalid={formErrors.CategoriaCliente} required aria-required="true" aria-describedby="categoriaError">
+                                                <option value="" disabled>Seleccione...</option>
+                                                {CATEGORIAS_CLIENTE.map((cat) => (<option key={cat.value} value={cat.value}>{cat.label}</option>))}
+                                            </Input>
+                                            {formErrors.CategoriaCliente && <div id="categoriaError" className="invalid-feedback d-block">Seleccione una categoría.</div>}
+                                        </FormGroup>
+                                    </Col>
+
+                                    {/* --- Fila 3: Celular y Correo --- */}
+                                    <Col md={6}>
+                                        <FormGroup>
+                                            <Label for="modalCelular" className="form-label fw-bold">Celular</Label> {/* Opcional */}
+                                            <Input id="modalCelular" type="tel" inputMode="tel" pattern="[0-9]{10}" name="Celular" value={form.Celular} onChange={handleChange} invalid={formErrors.Celular} aria-describedby="celularError"/>
+                                            {formErrors.Celular && <div id="celularError" className="invalid-feedback d-block">Ingrese un número de celular válido (10 dígitos numéricos).</div>}
+                                        </FormGroup>
+                                    </Col>
+                                    <Col md={6}>
+                                        <FormGroup>
+                                            <Label for="modalCorreo" className="form-label fw-bold">Correo Electrónico</Label> {/* Opcional */}
+                                            <Input id="modalCorreo" type="email" inputMode="email" name="Correo" value={form.Correo} onChange={handleChange} invalid={formErrors.Correo} aria-describedby="correoError"/>
+                                            {formErrors.Correo && <div id="correoError" className="invalid-feedback d-block">Ingrese una dirección de correo electrónico válida.</div>}
+                                        </FormGroup>
+                                    </Col>
+
+                                    {/* --- Fila 4: Dirección --- */}
+                                    <Col md={12}>
+                                        <FormGroup>
+                                            <Label for="modalDireccion" className="form-label fw-bold">Dirección</Label> {/* Opcional */}
+                                            <Input id="modalDireccion" type="text" name="Direccion" value={form.Direccion} onChange={handleChange} invalid={formErrors.Direccion} />
+                                            {/* No se muestra error de formato específico aquí */}
+                                        </FormGroup>
+                                    </Col>
+
+                                </Row> {/* Fin de Row g-3 */}
+                            </Col> {/* Fin de Col md={12} */}
+
+                        </Row> {/* Fin de Row principal */}
+                    </Form>
+                </ModalBody>
+                <ModalFooter>
+                    {/* Botones (sin cambios) */}
+                     <Button color="secondary" outline onClick={toggleMainModal} disabled={isConfirmActionLoading}>Cancelar</Button>
+                    <Button
+                        type="button"
+                        color="primary"
+                        onClick={isEditing ? requestEditConfirmation : handleSubmit}
+                        disabled={isConfirmActionLoading}
+                    >
+                        {isEditing ? <><Edit size={18} className="me-1"/> Guardar Cambios</> : <><Plus size={18} className="me-1"/> Agregar Cliente</>}
+                    </Button>
+                </ModalFooter>
+            </Modal>
+
+            {/* Confirmation Modal (igual que Proveedores) */}
+            <ConfirmationModal
+                isOpen={confirmModalOpen}
+                toggle={toggleConfirmModal}
+                title={confirmModalProps.title}
+                onConfirm={() => confirmActionRef.current && confirmActionRef.current()} // Ejecuta la acción guardada en el ref
+                confirmText={confirmModalProps.confirmText}
+                confirmColor={confirmModalProps.confirmColor}
+                isConfirming={isConfirmActionLoading} // Pasa el estado de carga
+            >
+                {/* El contenido (mensaje) se establece en confirmModalProps */}
+                {confirmModalProps.message}
+            </ConfirmationModal>
+
+        </Container>
+    );
+};
 
 export default Clientes;
