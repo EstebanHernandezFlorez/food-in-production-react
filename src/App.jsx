@@ -28,6 +28,8 @@ import RendimientoEmpleado from "./views/module/ManoDeObra/RendimientoEmpleado";
 import RegistroCompra from "./views/module/Compras/RegistroComprasPage";
 import FichaTecnica from "./views/module/ProductoInsumo/FichaTecnica";
 import Insumos from "./views/module/Insumo/Insumo";
+import ListaFichasTecnicas from "./views/module/ProductoInsumo/ListaFichasTecnicas";
+
 // import NotFound from "./views/NotFound"; // opcional
 
 // Función recursiva para generar rutas del menú (si la usas)
@@ -90,6 +92,10 @@ export default function App() {
               <Route path="registrar-compra" element={<RegistroCompra />} />
               <Route path="ficha-tecnica" element={<FichaTecnica />} />
               <Route path="insumos" element={<Insumos />} />
+              <Route path="producto/:idProduct/fichas" element={<ListaFichasTecnicas />} />
+              <Route path="fichas-tecnicas/:idProduct" element={<ListaFichasTecnicas />} />
+              <Route path="ficha-tecnica/editar/:idSpecsheet" element={<FichaTecnica />} />
+
 
               {/* Opcional: Ruta por defecto si se accede a /home */}
               {/* Si quieres redirigir /home a /home/dashboard por defecto: */}

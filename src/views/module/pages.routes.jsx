@@ -7,16 +7,17 @@ import Roles from "./roles/roles";
 import Usuarios from "./usuarios/usuarios";
 import Proveedores from "./Proveedores/Proveedores";
 import Empleados from "./Empleados/Empleados";
-import Productos from "./ProductoInsumo/ProductoInsumo";
+import ProductosInsumo from "./ProductoInsumo/ProductoInsumo";
 // 🚨 Importa el componente correcto para Orden de Producción si existe
 // import OrdenProduccion from "./Produccion/OrdenProduccion";
-import Produccion from "./Produccion/produccion"; // Asegúrate que este es el componente correcto para "Orden de Producción" o crea/importa el adecuado
 import GestionComprasPage from "./Compras/GestionComprasPage";
 import Clientes from "./Clientes/Clientes";
 import Reservas from "./Reservas/Reservas"; // Componente para la lista de reservas
 import Servicios from "./Servicios/Servicios";
 import ManoDeObra from "./ManoDeObra/ManoDeObra";
 import Insumos from "./Insumo/Insumo";
+import OrdenProduccion from "./OrdenProduccion/OrdenProduccion"; // Asegúrate que este es el componente correcto para "Producción"
+import Historial from "./OrdenProduccion/Historial"; // Asegúrate que este es el componente correcto para "Historial"
 // --- FIN IMPORTS ---
 
 // --- ICONOS ---
@@ -83,18 +84,24 @@ const routes = [
         requiredPermission: "insumo-view", // <-- String literal
       },
       {
-        path: "producto-insumo",
+        path: "producto_insumo",
         label: "Producto Insumo",
         icon: <BoxIcon size={SUB_ICON_SIZE} />,
-        element: <Productos />,
+        element: <ProductosInsumo />,
         requiredPermission: "producto-insumo-view", // <-- String literal
       },
       {
         path: "orden-produccion",
         label: "Orden de producción",
         icon: <FactoryIcon size={SUB_ICON_SIZE} />,
-         // 🚨 REVISAR COMPONENTE: ¿Es <Produccion /> o debería ser <OrdenProduccion />?
-        element: <Produccion />,
+        element: <OrdenProduccion />,
+        requiredPermission: "orden-produccion-view", // <-- String literal
+      },
+      {
+        path: "Historial",
+        label: "Historial",
+        icon: <FactoryIcon size={SUB_ICON_SIZE} />,
+        element: <Historial />,
         requiredPermission: "orden-produccion-view", // <-- String literal
       },
       {

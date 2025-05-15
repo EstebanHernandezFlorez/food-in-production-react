@@ -13,7 +13,21 @@ const productoInsumoService = {
             throw error;
         }
     },
-    
+    getProductById: async (idProduct) => {
+        try {
+            // Asegúrate que la ruta '/product/:idProduct' sea la correcta en tu backend
+            // para obtener un solo producto por su ID.
+            const response = await axios.get(`${BASE_URL}/product/${idProduct}`);
+            return response.data; // Esto debería ser el objeto del producto
+        } catch (error) {
+            console.error(`Error al obtener producto con ID ${idProduct}:`, error);
+            // Puedes ser más específico aquí si el error es un 404
+            if (error.response && error.response.status === 404) {
+                console.warn(`Producto con ID ${idProduct} no encontrado en el backend.`);
+            }
+            throw error;
+        }
+    },
    
     // Crear un nuevo producto
     createProduct: async (productData) => {
