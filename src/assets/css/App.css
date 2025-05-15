@@ -221,3 +221,52 @@
 .invalid-feedback {
     font-size: 0.75rem;
 }
+
+/* ===================================================== */
+/* --- ESTILOS PARA BORDES DE INPUTS MÁS GRUESOS --- */
+/* ===================================================== */
+
+/* Estilo para todos los form-control (inputs, selects, textareas de Bootstrap) */
+.form-control {
+  border-width: 1.5px; /* Puedes ajustar este valor, e.g., 2px o 1.8px */
+  /* Opcional: Mantener o cambiar el color del borde por defecto si es necesario */
+  /* border-color: #ced4da; */ /* Color por defecto de Bootstrap */
+}
+
+/* Estilo específico para cuando un input está en foco */
+.form-control:focus {
+  border-width: 1.5px; /* Asegura que el grosor se mantenga en foco */
+  /* Los estilos de Bootstrap para box-shadow y border-color en foco suelen ser buenos,
+     pero puedes sobreescribirlos si quieres un comportamiento diferente. */
+  /* border-color: #86b7fe; */ /* Color de foco por defecto de Bootstrap */
+  /* box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); */ /* Sombra de foco por defecto */
+}
+
+/* Estilo para inputs pequeños (bsSize="sm") */
+.form-control-sm {
+  border-width: 1.5px; /* Asegura que los inputs pequeños también tengan el borde más grueso */
+}
+.form-control-sm:focus {
+  border-width: 1.5px; /* Y también en su estado de foco */
+}
+
+/* Estilo para inputs inválidos (con error) */
+.form-control.is-invalid {
+  border-width: 1.5px; /* Borde más grueso también para errores */
+  /* border-color: #dc3545; */ /* Color de borde de error por defecto de Bootstrap */
+}
+.form-control.is-invalid:focus {
+  border-width: 1.5px;
+  /* border-color: #dc3545; */
+  /* box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25); */ /* Sombra de foco para error por defecto */
+}
+
+/* Si tienes inputs de tamaño grande (form-control-lg), podrías añadir: */
+/*
+.form-control-lg {
+  border-width: 1.5px;
+}
+.form-control-lg:focus {
+  border-width: 1.5px;
+}
+*/

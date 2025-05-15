@@ -25,14 +25,22 @@ const fichaTecnicaService = {
 
     createSpecSheet: async (data) => {
         try {
-            // Asegurarse que measurementUnit no esté vacío
+            // ESTA VALIDACIÓN EN EL SERVICIO ES UN POCO EXTRAÑA.
+            // Si 'measurementUnit' es realmente opcional para el backend o se valida de otra forma,
+            // esta línea podría causar un error ANTES de llegar al backend.
+            // Tu validación en el componente (validateForm) ya verifica 'measurementUnit'.
+            // Considera si esta validación en el servicio es necesaria o si es mejor dejar
+            // que el backend maneje todas las validaciones de datos.
             if (!data.measurementUnit) {
-                throw new Error('La unidad de medida es requerida');
+                throw new Error('La unidad de medida es requerida'); // Si esto se lanza, error.response no existirá.
             }
-
+    
             const response = await axios.post(`${BASE_URL}/specSheet`, {
                 ...data,
-                measurementUnit: data.measurementUnit.trim() // Asegurarse que no haya espacios en blanco
+                // Estás sobreescribiendo measurementUnit con su versión trim().
+                // Si measurementUnit es un select, trim() no es necesario.
+                // Si es un input de texto, está bien.
+                measurementUnit: data.measurementUnit.trim()
             });
             return response.data;
         } catch (error) {

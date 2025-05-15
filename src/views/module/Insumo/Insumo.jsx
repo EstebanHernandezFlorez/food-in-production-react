@@ -1,440 +1,523 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import axios from "axios";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Table, Button, Container, Row, Col, FormGroup, Input, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
-import { FaTrashAlt } from "react-icons/fa";
-import { FiEdit } from "react-icons/fi";
-import { PlusOutlined } from "@ant-design/icons";
-import toast, { Toaster } from "react-hot-toast";
-import "../../../assets/css/App.css";
+import "../../../assets/css/App.css"; // Asegúrate que la ruta es correcta y contiene estilos necesarios
+import {
+    Table, Button, Container, Row, Col, Form, FormGroup, Input, Label,
+    Modal, ModalHeader, ModalBody, ModalFooter, Spinner, Alert, FormFeedback
+} from 'reactstrap';
+import { Trash2, Edit, Plus, AlertTriangle, CheckCircle, XCircle } from 'lucide-react'; // Iconos lucide
+import toast, { Toaster } from 'react-hot-toast';
 
+// --- Reusable Components ---
+import CustomPagination from '../../General/CustomPagination'; // Asegúrate que la ruta es correcta
+
+// --- Confirmation Modal Component ---
+const ConfirmationModal = ({ isOpen, toggle, title, children, onConfirm, confirmText = "Confirmar", confirmColor = "primary", isConfirming = false }) => (
+    <Modal isOpen={isOpen} toggle={!isConfirming ? toggle : undefined} centered backdrop="static" keyboard={!isConfirming}>
+        <ModalHeader toggle={!isConfirming ? toggle : undefined}>
+             <div className="d-flex align-items-center">
+                <AlertTriangle size={24} className={`text-${confirmColor === 'danger' ? 'danger' : (confirmColor === 'warning' ? 'warning' : 'primary')} me-2`} />
+                <span className="fw-bold">{title}</span>
+            </div>
+        </ModalHeader>
+        <ModalBody>{children}</ModalBody>
+        <ModalFooter>
+            <Button color="secondary" outline onClick={toggle} disabled={isConfirming}>Cancelar</Button>
+            <Button color={confirmColor} onClick={onConfirm} disabled={isConfirming}>
+                {isConfirming ? <><Spinner size="sm" className="me-1"/> Procesando...</> : confirmText}
+            </Button>
+        </ModalFooter>
+    </Modal>
+);
+
+// --- Constantes para Insumos ---
+const API_BASE_URL = 'http://localhost:3000';
+const LOG_PREFIX = "[Insumos]";
+
+const INITIAL_FORM_STATE = {
+    idSupplier: '',
+    supplierName: '',
+    measurementUnit: '', // Guarda el 'value' (ej: 'kg')
+    status: true,
+};
+
+const INITIAL_FORM_ERRORS = {
+    supplierName: false,
+    measurementUnit: false,
+    general: '',
+};
+
+const INITIAL_CONFIRM_PROPS = {
+    title: "", message: null, confirmText: "Confirmar", confirmColor: "primary", itemDetails: null,
+};
+
+const ITEMS_PER_PAGE = 7; // O el que prefieras
+
+// --- Main Component ---
 const Insumos = () => {
+    // --- State ---
     const [data, setData] = useState([]);
-    const [form, setForm] = useState(getInitialFormState());
+    const [form, setForm] = useState(INITIAL_FORM_STATE);
     const [isEditing, setIsEditing] = useState(false);
-    const [showForm, setShowForm] = useState(false);
-    const [tableSearchText, setTableSearchText] = useState('');
+    const [modalOpen, setModalOpen] = useState(false);
+    const [tableSearchText, setTableSearchText] = useState("");
+    const [isLoading, setIsLoading] = useState(true);
+    const [formErrors, setFormErrors] = useState(INITIAL_FORM_ERRORS);
     const [currentPage, setCurrentPage] = useState(1);
-    const [detailModalOpen, setDetailModalOpen] = useState(false);
-    
-    const [formErrors, setFormErrors] = useState({});
-    const itemsPerPage = 10;
+    const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+    const [confirmModalProps, setConfirmModalProps] = useState(INITIAL_CONFIRM_PROPS);
+    const [isConfirmActionLoading, setIsConfirmActionLoading] = useState(false);
+    const [isSavingForm, setIsSavingForm] = useState(false);
 
-    const measurementUnits = [ // Lista de opciones para el desplegable
-        { value: 'kg', label: 'Kilogramos (kg)' },
-        { value: 'g', label: 'Gramos (g)' },
-        { value: 'mg', label: 'Miligramos (mg)' },
-        { value: 'lb', label: 'Libras (lb)' },
-        { value: 'oz', label: 'Onzas (oz)' },
-        { value: 'L', label: 'Litros (L)' },
-        { value: 'mL', label: 'Mililitros (mL)' },
-        { value: 'gal', label: 'Galones (gal)' },
-        { value: 'm', label: 'Metros (m)' },
-        { value: 'cm', label: 'Centímetros (cm)' },
-        { value: 'mm', label: 'Milímetros (mm)' },
-        { value: 'unidad', label: 'Unidad(es)' },
+    // --- Refs ---
+    const confirmActionRef = useRef(null);
+
+    // --- Opciones Unidad de Medida ---
+    const measurementUnits = useMemo(() => [
+        { value: 'kg', label: 'Kilogramos' }, { value: 'g', label: 'Gramos' }, { value: 'mg', label: 'Miligramos' },
+        { value: 'lb', label: 'Libras' }, { value: 'oz', label: 'Onzas' }, { value: 'L', label: 'Litros' },
+        { value: 'mL', label: 'Mililitros' }, { value: 'gal', label: 'Galones' }, { value: 'm', label: 'Metros' },
+        { value: 'cm', label: 'Centímetros' }, { value: 'mm', label: 'Milímetros' }, { value: 'unidad', label: 'Unidad(es)' },
         { value: 'docena', label: 'Docena(s)' },
-        { value: 'gramos', label: 'Gramos (gramos)' },
-        { value: 'kilogramos', label: 'Kilogramos (kilogramos)' },
-        { value: 'miligramos', label: 'Miligramos (miligramos)' },
-        { value: 'libras', label: 'Libras (libras)' },
-        { value: 'onzas', label: 'Onzas (onzas)' },
-        { value: 'litros', label: 'Litros (litros)' },
-        { value: 'mililitros', label: 'Mililitros (mililitros)' },
-        { value: 'galones', label: 'Galones (galones)' },
-        { value: 'metros', label: 'Metros (metros)' },
-        { value: 'centimetros', label: 'Centímetros (centimetros)' },
-        { value: 'milimetros', label: 'Milímetros (milimetros)' },
-        { value: 'unidades', label: 'Unidades (unidades)' },
-        { value: 'docenas', label: 'Docenas (docenas)' },
-        // Agrega más unidades aquí si es necesario
-    ];
+    ], []);
+    const measurementUnitMap = useMemo(() => {
+        const map = {};
+        measurementUnits.forEach(unit => { map[unit.value] = unit.label; });
+        return map;
+    }, [measurementUnits]);
+
+    // --- Función Helper para label de unidad ---
+    const getUnitLabel = useCallback((value) => {
+        return measurementUnitMap[value] || value || '-';
+    }, [measurementUnitMap]);
+
+    // ***** INICIO: LÓGICA DE FILTRADO Y PAGINACIÓN (declarada ANTES) *****
+    const filteredData = useMemo(() => {
+        if (!tableSearchText) return data;
+        const search = tableSearchText;
+        return data.filter(item =>
+            (item?.supplierName?.toLowerCase() ?? '').includes(search) ||
+            (item?.measurementUnit?.toLowerCase() ?? '').includes(search) ||
+            (getUnitLabel(item?.measurementUnit)?.toLowerCase() ?? '').includes(search) ||
+            (String(item?.idSupplier ?? '').toLowerCase()).includes(search)
+        );
+    }, [data, tableSearchText, getUnitLabel]);
+
+    const totalItems = useMemo(() => filteredData.length, [filteredData]);
+    const totalPages = useMemo(() => Math.ceil(totalItems / ITEMS_PER_PAGE), [totalItems]);
+    const validCurrentPage = useMemo(() => Math.max(1, Math.min(currentPage, totalPages || 1)), [currentPage, totalPages]);
+
+    const currentItems = useMemo(() => {
+        const startIndex = (validCurrentPage - 1) * ITEMS_PER_PAGE;
+        return filteredData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    }, [filteredData, validCurrentPage]);
+    // ***** FIN: LÓGICA DE FILTRADO Y PAGINACIÓN *****
+
+    // --- Data Fetching ---
+    const fetchData = useCallback(async (showLoadingSpinner = true) => {
+        if (showLoadingSpinner) setIsLoading(true);
+        console.log(`${LOG_PREFIX} [FETCH] Fetching suppliers...`);
+        try {
+            const response = await axios.get(`${API_BASE_URL}/supplier`);
+            setData(Array.isArray(response.data) ? response.data : []);
+        } catch (error) {
+            console.error(`${LOG_PREFIX} [FETCH ERROR]`, error);
+            toast.error("Error al cargar insumos.");
+            setData([]);
+        } finally {
+            if (showLoadingSpinner) setIsLoading(false);
+        }
+    }, []); // Sin dependencias externas
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [fetchData]); // Llama a fetchData al montar
 
-    function getInitialFormState() {
-        return {
-            idSupplier: '',
-            supplierName: '',
-            measurementUnit: '',
-            status: true
-        };
-    }
+    // --- Form Helper Functions ---
+    const resetForm = useCallback(() => setForm(INITIAL_FORM_STATE), []);
+    const clearFormErrors = useCallback(() => setFormErrors(INITIAL_FORM_ERRORS), []);
 
-    const fetchData = async () => {
-        try {
-            const response = await axios.get('http://localhost:3000/supplier');
-            setData(response.data);
-        } catch (error) {
-            console.error("Error fetching suppliers:", error);
-            toast.error('No se pudo conectar con el servidor');
-        }
-    };
-
-    const handleTableSearch = (e) => {
-        setTableSearchText(e.target.value.toLowerCase());
-    };
-
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setForm({ ...form, [name]: value });
-        setFormErrors({ ...formErrors, [name]: '' }); // Clear individual error on change
-    };
-
-    const handlePageChange = (pageNumber) => {
-        setCurrentPage(pageNumber);
-    };
-
-    const validateForm = () => {  // Frontend validation
-        const errors = {};
+    // --- VALIDACIÓN (Restaurada y usando booleanos) ---
+    const validateForm = useCallback(() => {
+        const errors = { ...INITIAL_FORM_ERRORS }; // Resetea a false
         let isValid = true;
+        errors.general = '';
+        const trimmedName = String(form.supplierName ?? '').trim();
 
-        if (!form.supplierName?.trim()) {
-            errors.supplierName = "El nombre del insumo es requerido.";
-            isValid = false;
-        } else if (form.supplierName.length < 3) {
-            errors.supplierName = "El nombre del insumo debe tener al menos 3 caracteres";
-            isValid = false;
-        } else if (!/^[a-zA-Z0-9\s]+$/.test(form.supplierName)) {
-            errors.supplierName = "El nombre solo puede contener letras, números y espacios";
-            isValid = false;
+        if (!trimmedName) { errors.supplierName = true; isValid = false; }
+        else if (trimmedName.length < 3) { errors.supplierName = true; isValid = false; }
+        else if (!/^[a-zA-Z0-9\s]+$/.test(trimmedName)) { errors.supplierName = true; isValid = false; }
+
+        if (!form.measurementUnit) { errors.measurementUnit = true; isValid = false; }
+
+        setFormErrors(errors); // Actualiza estado de errores
+        if (!isValid) {
+            toast.error("Revise los campos marcados."); // Notificación si hay error
         }
-
-        if (!form.measurementUnit) { // Validamos si se seleccionó una opción
-            errors.measurementUnit = "La unidad de medida es requerida.";
-            isValid = false;
-        }
-
-        setFormErrors(errors);
         return isValid;
-    };
+    }, [form]); // Depende del formulario
 
-    const handleSubmit = async () => {
-        if (!validateForm()) {
-            return;  // Stop if frontend validation fails
+    // --- Event Handlers ---
+    const handleChange = useCallback((e) => {
+        const { name, value } = e.target;
+        setForm(prev => ({ ...prev, [name]: value }));
+        // Limpia error específico al cambiar
+        if (formErrors[name]) {
+            setFormErrors(prevErr => ({ ...prevErr, [name]: false, general: '' }));
         }
+    }, [formErrors]); // Depende de formErrors para limpiar
 
+    const handleTableSearch = useCallback((e) => {
+        setTableSearchText(e.target.value.toLowerCase());
+        setCurrentPage(1);
+    }, []); // Sin dependencias
+
+    const handlePageChange = useCallback((pageNumber) => {
+        const newPage = Math.max(1, Math.min(pageNumber, totalPages || 1));
+        setCurrentPage(newPage);
+    }, [totalPages]); // Depende de totalPages
+
+    // --- Modal Toggles ---
+    const toggleMainModal = useCallback(() => {
+        const closing = modalOpen;
+        setModalOpen(prev => !prev);
+        if (closing) { resetForm(); clearFormErrors(); setIsEditing(false); }
+    }, [modalOpen, resetForm, clearFormErrors]);
+
+    const toggleConfirmModal = useCallback(() => {
+        if (isConfirmActionLoading) return;
+        setConfirmModalOpen(prev => !prev);
+    }, [isConfirmActionLoading]);
+
+    // --- Effect to Reset Confirmation Modal State ---
+     useEffect(() => {
+        if (!confirmModalOpen && !isConfirmActionLoading) {
+            setConfirmModalProps(INITIAL_CONFIRM_PROPS);
+            confirmActionRef.current = null;
+        }
+    }, [confirmModalOpen, isConfirmActionLoading]);
+
+    // --- Confirmation Preparation ---
+    const prepareConfirmation = useCallback((actionFn, props) => {
+        const detailsToPass = props.itemDetails;
+        confirmActionRef.current = () => {
+            if (actionFn) { actionFn(detailsToPass); }
+            else { toast.error("Error interno."); toggleConfirmModal(); }
+        };
+        setConfirmModalProps(props);
+        setConfirmModalOpen(true);
+    }, [toggleConfirmModal]); // toggleConfirmModal es estable
+
+    // --- CRUD Operations ---
+
+    // SUBMIT (Agregar/Editar)
+    const handleSubmit = useCallback(async () => {
+        // *** LLAMA A LA VALIDACIÓN ***
+        if (!validateForm()) return;
+
+        setIsSavingForm(true);
+        const actionText = isEditing ? 'Actualizando' : 'Agregando';
+        const toastId = toast.loading(`${actionText} insumo...`);
         try {
-            const supplierData = { ...form };
-            let response;
-            let url = 'http://localhost:3000/supplier';
-            let method = 'post';
-
-            if (isEditing) {
-                if (!form.idSupplier) {
-                    toast.error("ID de insumo no válido para la actualización.");
-                    return;
-                }
-                url = `http://localhost:3000/supplier/${form.idSupplier}`;
-                method = 'put';
-            }
-
-            const config = {
-                method: method,
-                url: url,
-                data: supplierData
+            const url = isEditing ? `${API_BASE_URL}/supplier/${form.idSupplier}` : `${API_BASE_URL}/supplier`;
+            const method = isEditing ? 'put' : 'post';
+            const dataToSend = {
+                supplierName: form.supplierName.trim(),
+                measurementUnit: form.measurementUnit,
             };
+            if (!isEditing) { dataToSend.status = true; }
+            else if (!form.idSupplier) { throw new Error("ID no encontrado para actualizar."); }
 
-            response = await axios(config);
-
-            toast.success(isEditing ? "Insumo actualizado exitosamente" : "Insumo agregado exitosamente");
-            fetchData();
-            resetForm();
-            setShowForm(false);
-            setIsEditing(false);
-
+            await axios({ method, url, data: dataToSend });
+            toast.success(`Insumo ${isEditing ? 'actualizado' : 'agregado'}!`, { id: toastId });
+            toggleMainModal();
+            await fetchData(false); // Refresca datos sin spinner principal
+            setCurrentPage(1);
         } catch (error) {
-            console.error("Error en la solicitud:", error);
-            if (error.response && error.response.data && error.response.data.errors) {
-                // Backend validation errors
-                const backendErrors = {};
-                error.response.data.errors.forEach(err => {
-                    backendErrors[err.path] = err.msg;
-                });
-                setFormErrors(prevErrors => ({ ...prevErrors, ...backendErrors }));
-            } else if (error.response) {
-                toast.error(`Error del servidor: ${JSON.stringify(error.response.data)}`);
-            } else {
-                toast.error("Error de conexión. Verifica la conexión con el servidor.");
-            }
-        }
-    };
+            const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
+            setFormErrors(prev => ({ ...prev, general: `Error: ${errorMsg}` })); // Muestra error general en alert
+            toast.error(`Error al ${actionText.toLowerCase()}: ${errorMsg}`, { id: toastId, duration: 5000 });
+        } finally { setIsSavingForm(false); }
+    // Asegúrate de incluir todas las dependencias necesarias
+    }, [form, isEditing, validateForm, toggleMainModal, fetchData]);
 
-    const resetForm = () => {
-        setForm(getInitialFormState());
-        setFormErrors({});
-    };
+    // CAMBIAR ESTADO (Solicitud)
+    const requestChangeStatusConfirmation = useCallback((insumo) => {
+        if (!insumo || !insumo.idSupplier) return;
+        const { idSupplier, status: currentStatus, supplierName } = insumo;
+        const actionText = currentStatus ? "desactivar" : "activar";
+        const futureStatusText = currentStatus ? "Inactivo" : "Activo";
+        const confirmColor = currentStatus ? "warning" : "success";
+        // *** LLAMA A prepareConfirmation ***
+        prepareConfirmation(executeChangeStatus, {
+            title: "Confirmar Cambio de Estado",
+            message: <p>¿<strong>{actionText}</strong> el insumo <strong>{supplierName || 'seleccionado'}</strong>? <br /> Estado será: <strong>{futureStatusText}</strong>.</p>,
+            confirmText: `Sí, ${actionText}`, confirmColor,
+            itemDetails: { idSupplier, currentStatus, supplierName }
+        });
+    }, [prepareConfirmation]); // Depende de prepareConfirmation
 
-    const confirmStatusChange = (idSupplier) => {
-        toast((t) => (
-            <div>
-                <p>¿Desea cambiar el estado del insumo?</p>
-                <div>
-                    <Button color="primary" onClick={() => {
-                        handleStatusChange(idSupplier);
-                        toast.dismiss(t.id);
-                    }}>
-                        Cambiar
-                    </Button>
-                    <Button color="secondary" onClick={() => toast.dismiss(t.id)}>Cancelar</Button>
-                </div>
-            </div>
-        ), { duration: 5000 });
-    };
-
-    const confirmDelete = (supplier) => {
-        toast((t) => (
-            <div>
-                <p>¿Desea eliminar el insumo?</p>
-                <div>
-                    <Button
-                        color="primary"
-                        onClick={async () => {
-                            try {
-                                await axios.delete(`http://localhost:3000/supplier/${supplier.idSupplier}`);
-                                const updatedData = data.filter(sup => sup.idSupplier !== supplier.idSupplier);
-                                setData(updatedData);
-                                toast.success('Insumo eliminado exitosamente');
-                            } catch (error) {
-                                console.error("Error deleting supplier:", error);
-                                toast.error('Error al eliminar el insumo');
-                            }
-                            toast.dismiss(t.id);
-                        }}
-                    >
-                        Eliminar
-                    </Button>
-                    <Button color="secondary" onClick={() => toast.dismiss(t.id)}>
-                        Cancelar
-                    </Button>
-                </div>
-            </div>
-        ), { duration: 5000 });
-    };
-
-    const handleStatusChange = async (idSupplier) => {
+    // CAMBIAR ESTADO (Ejecución)
+    const executeChangeStatus = useCallback(async (details) => {
+        if (!details || !details.idSupplier) { toast.error("Error interno."); toggleConfirmModal(); return; }
+        const { idSupplier, currentStatus, supplierName } = details;
+        const newStatus = !currentStatus;
+        const actionText = newStatus ? "activado" : "desactivado";
+        // *** MANEJA ESTADO DE CARGA ***
+        setIsConfirmActionLoading(true);
+        const toastId = toast.loading(`${currentStatus ? 'Desactivando' : 'Activando'}...`);
         try {
-            const supplier = data.find(sup => sup.idSupplier === idSupplier);
-            if (!supplier) {
-                toast.error("Insumo no encontrado");
-                return;
-            }
+            await axios.patch(`${API_BASE_URL}/supplier/${idSupplier}`, { status: newStatus });
 
-            const updatedStatus = !supplier.status;
-            await axios.patch(`http://localhost:3000/supplier/${idSupplier}`, { status: updatedStatus });
+            // Actualización optimista
+             setData(prevData => {
+                const newData = prevData.map(item =>
+                    item.idSupplier === idSupplier ? { ...item, status: newStatus } : item
+                );
+                 return newData;
+             });
 
-            const updatedData = data.map(sup =>
-                sup.idSupplier === idSupplier ? { ...sup, status: updatedStatus } : sup
-            );
-            setData(updatedData);
+            toast.success(`Insumo "${supplierName || ''}" ${actionText}.`, { id: toastId });
+            toggleConfirmModal(); // Cierra modal de confirmación
+            // await fetchData(false); // Opcional si la optimista es suficiente
 
-            toast.success(`Estado actualizado a ${updatedStatus ? 'Activo' : 'Inactivo'}`);
         } catch (error) {
-            console.error("Error updating status:", error);
-            toast.error("Error al actualizar estado");
+            const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
+            toast.error(`Error al ${currentStatus ? 'desactivar' : 'activar'}: ${errorMsg}`, { id: toastId });
+            toggleConfirmModal();
+        } finally {
+            setIsConfirmActionLoading(false); // Termina estado de carga
         }
-    };
+    // Asegúrate de dependencias correctas
+    }, [toggleConfirmModal /*, fetchData */]);
 
-    const filteredData = data.filter(item =>
-        Object.values(item).some(value =>
-            value && value.toString().toLowerCase().includes(tableSearchText)
-        )
-    );
+    // ELIMINAR (Solicitud)
+    const requestDeleteConfirmation = useCallback((insumo) => {
+        if (!insumo || !insumo.idSupplier) return;
+        // *** LLAMA A prepareConfirmation ***
+        prepareConfirmation(executeDelete, {
+            title: "Confirmar Eliminación",
+            message: (<><p>¿Eliminar <strong>{insumo.supplierName || 'este insumo'}</strong>?</p><p><strong className="text-danger">¡Acción irreversible!</strong></p></>),
+            confirmText: "Eliminar Definitivamente", confirmColor: "danger",
+            itemDetails: { ...insumo } // Pasa detalles completos
+        });
+    }, [prepareConfirmation]); // Depende de prepareConfirmation
 
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
-    const pageNumbers = [...Array(Math.ceil(filteredData.length / itemsPerPage)).keys()].map(i => i + 1);
+    // ELIMINAR (Ejecución)
+    const executeDelete = useCallback(async (insumoToDelete) => {
+        if (!insumoToDelete || !insumoToDelete.idSupplier) { toast.error("Error interno."); toggleConfirmModal(); return; }
+        // *** MANEJA ESTADO DE CARGA ***
+        setIsConfirmActionLoading(true);
+        const toastId = toast.loading(`Eliminando...`);
+        try {
+            await axios.delete(`${API_BASE_URL}/supplier/${insumoToDelete.idSupplier}`);
+            toast.success(`Insumo "${insumoToDelete.supplierName || ''}" eliminado.`, { id: toastId, icon: <CheckCircle className="text-success" /> });
+            toggleConfirmModal(); // Cierra modal de confirmación
 
-    const toggleDetailModal = () => setDetailModalOpen(!detailModalOpen);
+            // Actualiza estado local y maneja paginación
+            let newTotalItemsAfterDelete = 0;
+            setData(prevData => {
+                 const nextData = prevData.filter(item => item.idSupplier !== insumoToDelete.idSupplier);
+                 // Calcula nuevo total filtrado
+                 newTotalItemsAfterDelete = nextData.filter(item =>
+                     (item?.supplierName?.toLowerCase() ?? '').includes(tableSearchText) ||
+                     (item?.measurementUnit?.toLowerCase() ?? '').includes(tableSearchText) ||
+                     (getUnitLabel(item?.measurementUnit)?.toLowerCase() ?? '').includes(tableSearchText) ||
+                     (String(item?.idSupplier ?? '').toLowerCase()).includes(tableSearchText)
+                 ).length;
+                 return nextData;
+            });
 
-    
+            // Ajusta paginación
+            const newTotalPages = Math.ceil(newTotalItemsAfterDelete / ITEMS_PER_PAGE);
+             if (currentPage > newTotalPages && newTotalPages > 0) {
+                 setCurrentPage(newTotalPages);
+             } else if (currentPage > 1 && newTotalItemsAfterDelete > 0 && newTotalItemsAfterDelete % ITEMS_PER_PAGE === 0 && newTotalItemsAfterDelete === (currentPage - 1) * ITEMS_PER_PAGE) {
+                 setCurrentPage(currentPage - 1);
+             } else if (newTotalItemsAfterDelete === 0) {
+                 setCurrentPage(1);
+             }
+             // await fetchData(false); // Alternativa si el manejo de paginación es complejo
 
-    const startEditing = (item) => {
-        setForm(item);
-        setIsEditing(true);
-        setShowForm(true);
-    };
+        } catch (error) {
+            const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
+            toast.error(`Error al eliminar: ${errorMsg}`, { id: toastId, icon: <XCircle className="text-danger" /> });
+            toggleConfirmModal();
+        } finally {
+            setIsConfirmActionLoading(false); // Termina estado de carga
+        }
+    // Dependencias actualizadas
+    }, [toggleConfirmModal, currentPage, tableSearchText, getUnitLabel]);
 
-    const toggleFormModal = () => {
-        setShowForm(!showForm);
-        setIsEditing(false);
-        resetForm();
-    };
+    // --- Modal Opening Handlers ---
+    const openAddModal = useCallback(() => {
+        resetForm(); clearFormErrors(); setIsEditing(false); setModalOpen(true);
+    }, [resetForm, clearFormErrors]);
 
+    const openEditModal = useCallback((insumo) => {
+        setForm({
+            idSupplier: insumo.idSupplier || '',
+            supplierName: insumo.supplierName || '',
+            measurementUnit: insumo.measurementUnit || '',
+            status: insumo.status !== undefined ? insumo.status : true,
+        });
+        setIsEditing(true); clearFormErrors(); setModalOpen(true);
+    }, [clearFormErrors]);
+
+    // --- Effecto para ajustar página ---
+     useEffect(() => {
+         const calculatedTotalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE)
+         if (currentPage > calculatedTotalPages && calculatedTotalPages > 0) {
+             setCurrentPage(calculatedTotalPages);
+         } else if (currentItems.length === 0 && currentPage > 1) {
+              setCurrentPage(prev => Math.max(1, calculatedTotalPages));
+         }
+     }, [filteredData.length, currentPage, currentItems.length]);
+
+
+    // --- Render Logic Variables ---
+    const modalTitle = isEditing ? `Editar Insumo` : "Agregar Nuevo Insumo";
+    const submitButtonText = isSavingForm
+        ? <><Spinner size="sm" className="me-1" /> Guardando...</>
+        : (isEditing ? <><Edit size={18} className="me-1"/> Actualizar</> : <><Plus size={18} className="me-1"/> Guardar</>);
+    const canSubmitForm = !isSavingForm;
+
+    // --- JSX Structure (Con validaciones y confirmaciones funcionales) ---
     return (
-        <Container>
-            <Toaster position="top-center" />
-            <br />
+        <Container fluid className="p-4 main-content">
+             <Toaster position="top-center" toastOptions={{ duration: 3500 }} />
+            <h2 className="mb-4">Gestión de Insumos</h2>
 
-            <>
-                <h2>Lista de insumos</h2>
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                    <Input
-                        type="text"
-                        placeholder="Buscar insumos"
-                        value={tableSearchText}
-                        onChange={handleTableSearch}
-                        style={{ width: '50%' }}
-                    />
-                    <Button style={{ backgroundColor: '#228b22', color: 'black' }} onClick={toggleFormModal}>
-                        Agregar insumo
-                        <PlusOutlined style={{ fontSize: '16px', color: 'black', padding: '5px' }} />
-                    </Button>
-                </div>
+            <Row className="mb-3 align-items-center">
+                 <Col md={6} lg={4}>
+                    <Input type="text" bsSize="sm" placeholder="Buscar por nombre, unidad o ID..." value={tableSearchText} onChange={handleTableSearch} disabled={isLoading && data.length === 0} style={{ borderRadius: '0.25rem' }} aria-label="Buscar insumos"/>
+                </Col>
+                <Col md={6} lg={8} className="text-md-end mt-2 mt-md-0">
+                    <Button color="success" size="sm" onClick={openAddModal} className="button-add"> <Plus size={18} className="me-1" /> Agregar Insumo </Button>
+                </Col>
+            </Row>
 
-                <Table
-                    className="table table-borderless table-hover"
-                    style={{ borderRadius: "10px", overflow: "hidden" }}
-                >
-                    <thead style={{ backgroundColor: '#f2f2f2' }}>
+            <div className="table-responsive shadow-sm custom-table-container mb-3">
+                 <Table hover striped size="sm" className="mb-0 custom-table align-middle">
+                     <thead className="table-light">
                         <tr>
-                            <th className="text-center">ID</th>
-                            <th>Nombre</th>
-                            <th>Unidad de medida</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
+                            <th scope="col" className="text-center" style={{ width: '10%' }}>ID</th>
+                            <th scope="col" style={{ width: '40%' }}>Nombre Insumo</th>
+                            <th scope="col" style={{ width: '20%' }}>Unidad Medida</th>
+                            <th scope="col" className="text-center" style={{ width: '15%' }}>Estado</th>
+                            <th scope="col" className="text-center" style={{ width: '15%' }}>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {currentItems.length > 0 ? (
+                         {isLoading && data.length === 0 ? (
+                            <tr><td colSpan="5" className="text-center p-5"><Spinner color="primary" /> Cargando...</td></tr>
+                         ) : currentItems.length > 0 ? (
                             currentItems.map((item) => (
-                                <tr key={item.idSupplier} style={{ borderBottom: '1px solid #e9ecef' }}>
-                                    <td className="text-center">{item.idSupplier}</td>
-                                    <td>{item.supplierName}</td>
-                                    <td>{item.measurementUnit}</td>
-                                    <td>
-                                        <Button
-                                            color={item.status ? "success" : "secondary"}
-                                            onClick={() => confirmStatusChange(item.idSupplier)}
-                                            className="btn-sm"
-                                            style={{ padding: '0.25rem 0.5rem' }}
-                                        >
+                                <tr key={item.idSupplier}>
+                                    <th scope="row" className="text-center">{item.idSupplier}</th>
+                                    <td>{item.supplierName || '-'}</td>
+                                    <td>{getUnitLabel(item.measurementUnit)}</td>
+                                    <td className="text-center">
+                                        {/* BOTÓN DE ESTADO FUNCIONAL */}
+                                        <Button size="sm" className={`status-button ${item.status ? 'status-active' : 'status-inactive'}`} onClick={() => requestChangeStatusConfirmation(item)} disabled={isConfirmActionLoading} title={item.status ? "Activo (Desactivar)" : "Inactivo (Activar)"}>
                                             {item.status ? "Activo" : "Inactivo"}
                                         </Button>
                                     </td>
-                                    <td>
-                                        <div className="d-flex justify-content-between align-items-center w-100">
-                                            <Button
-                                                color="dark"
-                                                onClick={() => startEditing(item)}
-                                                className="btn-sm"
-                                                style={{ padding: '0.25rem 0.5rem' }}
-                                            >
-                                                <FiEdit style={{ fontSize: '0.75rem' }} />
-                                            </Button>
-
-                                            <Button
-                                                color="danger"
-                                                onClick={() => confirmDelete(item)}
-                                                className="btn-sm"
-                                                style={{ padding: '0.15rem 0.5rem' }}
-                                            >
-                                                <FaTrashAlt style={{ fontSize: '0.75rem' }} />
-                                           
-                                            </Button>
+                                    <td className="text-center">
+                                        {/* BOTONES DE ACCIÓN FUNCIONALES */}
+                                        <div className="d-inline-flex gap-1 action-cell-content">
+                                            <Button disabled={isConfirmActionLoading} size="sm" onClick={() => openEditModal(item)} title="Editar" className="action-button action-edit" color="secondary" outline> <Edit size={18} /> </Button>
+                                            <Button disabled={isConfirmActionLoading} size="sm" onClick={() => requestDeleteConfirmation(item)} title="Eliminar" className="action-button action-delete" color="danger" outline> <Trash2 size={18} /> </Button>
                                         </div>
                                     </td>
                                 </tr>
                             ))
-                        ) : (
-                            <tr>
-                                <td colSpan="13" className="text-center">No hay datos disponibles</td>
-                            </tr>
-                        )}
+                         ) : (
+                            <tr><td colSpan="5" className="text-center fst-italic p-4"> {tableSearchText ? "No se encontraron insumos." : "No hay insumos registrados."} </td></tr>
+                         )}
+                          {isLoading && data.length > 0 && (
+                              <tr><td colSpan="5" className="text-center p-2"><Spinner size="sm" color="secondary" /> Actualizando...</td></tr>
+                         )}
                     </tbody>
                 </Table>
+            </div>
 
-                <ul className="pagination">
-                    {pageNumbers.map(number => (
-                        <li key={number} className={`page-item ${currentPage === number ? "active" : ""}`}>
-                            <Button className="page-link" onClick={() => handlePageChange(number)}>
-                                {number}
-                            </Button>
-                        </li>
-                    ))}
-                </ul>
-            </>
+             { totalPages > 1 && !isLoading && (
+                <CustomPagination currentPage={validCurrentPage} totalPages={totalPages} onPageChange={handlePageChange} />
+             )}
 
-            {/* Form Modal */}
-            <Modal isOpen={showForm} toggle={toggleFormModal}>
-                <ModalHeader toggle={toggleFormModal}>
-                    {isEditing ? 'Editar Insumo' : 'Agregar Insumo'}
+            {/* MODAL DE FORMULARIO CON VALIDACIONES FUNCIONALES */}
+            <Modal isOpen={modalOpen} toggle={!isSavingForm ? toggleMainModal : undefined} centered size="lg" backdrop="static" keyboard={!isSavingForm} aria-labelledby="insumoModalTitle">
+                <ModalHeader toggle={!isSavingForm ? toggleMainModal : undefined} id="insumoModalTitle">
+                    <div className="d-flex align-items-center">
+                       {isEditing ? <Edit size={20} className="me-2"/> : <Plus size={20} className="me-2"/>}
+                       {modalTitle}
+                   </div>
                 </ModalHeader>
                 <ModalBody>
-                    <Row>
-                        <Col md={6}>
-                            <FormGroup>
-                                <label style={{ fontSize: "15px", padding: "5px" }}>
-                                    Nombre
-                                </label>
-                                <Input
-                                    type="text"
-                                    name="supplierName"
-                                    value={form.supplierName}
-                                    onChange={handleChange}
-                                    placeholder="Nombre del insumo"
-                                    style={{ border: "1px solid black" }}
-                                    className={formErrors.supplierName ? "is-invalid" : ""}
-                                />
-                                {formErrors.supplierName && (
-                                    <div className="invalid-feedback text-center">
-                                        {formErrors.supplierName}
-                                    </div>
-                                )}
-                            </FormGroup>
-                        </Col>
-                        <Col md={6}>
-                            <FormGroup>
-                                <label style={{ fontSize: "15px", padding: "5px" }}>
-                                    Unidad de Medida
-                                </label>
-                                <Input // Cambiado de Input de texto a Select
-                                    type="select"
-                                    name="measurementUnit"
-                                    value={form.measurementUnit}
-                                    onChange={handleChange}
-                                    style={{ border: "1px solid black" }}
-                                    className={formErrors.measurementUnit ? "is-invalid" : ""}
-                                >
-                                    <option value="">Seleccione una unidad</option> {/*  <-- Opción por defecto */}
-                                    {measurementUnits.map(unit => (
-                                        <option key={unit.value} value={unit.value}>
-                                            {unit.label}
-                                        </option>
-                                    ))}
-                                </Input>
-                                {formErrors.measurementUnit && (
-                                    <div className="invalid-feedback text-center">
-                                        {formErrors.measurementUnit}
-                                    </div>
-                                )}
-                            </FormGroup>
-                        </Col>
-                    </Row>
+                    {formErrors.general && (
+                         <Alert color="danger" fade={false} className="d-flex align-items-center py-2 mb-3">
+                            <AlertTriangle size={18} className="me-2"/> {formErrors.general}
+                         </Alert>
+                     )}
+                    <Form id="insumoForm" noValidate onSubmit={(e) => {e.preventDefault(); handleSubmit();}}>
+                        <Row className="g-3">
+                            <Col md={6}>
+                                <FormGroup>
+                                    <Label for="modalSupplierName" className="form-label fw-bold">Nombre Insumo <span className="text-danger">*</span></Label>
+                                    <Input
+                                        id="modalSupplierName" type="text" name="supplierName"
+                                        value={form.supplierName} onChange={handleChange}
+                                        invalid={formErrors.supplierName} // Usa booleano
+                                        required aria-describedby="supplierNameFeedback"
+                                        disabled={isSavingForm} placeholder="Ej: Harina de Trigo"
+                                    />
+                                    <FormFeedback id="supplierNameFeedback">
+                                        {formErrors.supplierName && "Nombre requerido (mín. 3 caracteres, letras/números/espacios)."}
+                                    </FormFeedback>
+                                </FormGroup>
+                            </Col>
+                            <Col md={6}>
+                                <FormGroup>
+                                    <Label for="modalMeasurementUnit" className="form-label fw-bold">Unidad de Medida <span className="text-danger">*</span></Label>
+                                    <Input
+                                        id="modalMeasurementUnit" type="select" name="measurementUnit"
+                                        value={form.measurementUnit} onChange={handleChange}
+                                        invalid={formErrors.measurementUnit} // Usa booleano
+                                        required aria-describedby="measurementUnitFeedback"
+                                        disabled={isSavingForm}
+                                    >
+                                         <option value="" disabled>Seleccione...</option>
+                                         {measurementUnits.map((unit) => (<option key={unit.value} value={unit.value}>{unit.label}</option>))}
+                                    </Input>
+                                    <FormFeedback id="measurementUnitFeedback">
+                                        {formErrors.measurementUnit && "Seleccione una unidad de medida."}
+                                    </FormFeedback>
+                                </FormGroup>
+                            </Col>
+                        </Row>
+                    </Form>
                 </ModalBody>
-                <ModalFooter>
-                    <Button style={{ background: "#2e8322", marginRight: "10px" }} onClick={handleSubmit}>
-                        {isEditing ? "Actualizar" : "Guardar"}
-                    </Button>
-                    <Button style={{ background: "#6d0f0f" }} onClick={toggleFormModal}>
-                        Cancelar
+                <ModalFooter className="border-top pt-3">
+                     <Button color="secondary" outline onClick={toggleMainModal} disabled={isSavingForm}>Cancelar</Button>
+                    {/* BOTÓN DE SUBMIT FUNCIONAL CON VALIDACIÓN */}
+                    <Button type="submit" form="insumoForm" color="primary" disabled={!canSubmitForm} onClick={handleSubmit}>
+                         {submitButtonText}
                     </Button>
                 </ModalFooter>
             </Modal>
 
-            <Toaster position="top-center" reverseOrder={false} />
-
-            {/* Modal de detalle */}
-            <Modal
-                isOpen={detailModalOpen}
-                toggle={toggleDetailModal}
-                style={{ maxWidth: "40%", marginTop: "10px", marginBottom: "3px" }}
+            {/* MODAL DE CONFIRMACIÓN FUNCIONAL */}
+            <ConfirmationModal
+                isOpen={confirmModalOpen} toggle={toggleConfirmModal} title={confirmModalProps.title}
+                onConfirm={() => confirmActionRef.current && confirmActionRef.current()} // Llama a la acción guardada
+                confirmText={confirmModalProps.confirmText} confirmColor={confirmModalProps.confirmColor}
+                isConfirming={isConfirmActionLoading} // Muestra spinner si está cargando
             >
-              {/* ... (resto del código) ... */}
-            </Modal>
+                {confirmModalProps.message}
+            </ConfirmationModal>
+
         </Container>
     );
 };
