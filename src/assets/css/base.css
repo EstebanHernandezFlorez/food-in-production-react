@@ -1,40 +1,52 @@
-/* base.css */
+/* assets/css/base.css */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
   --font-family-sans: 'Inter', sans-serif;
 
-  /* Paleta Principal (Inspirada en la nueva referencia financiera) */
+  /* Paleta Principal */
   --bg-app-finance: #F3F4F6; 
   --bg-header-finance: #FFFFFF;
   --bg-card-finance: #FFFFFF;
+  --bg-sidebar-finance: #FFFFFF; /* Para la nueva sidebar */
   
   --text-primary-finance: #111827; 
-  --text-secondary-finance: #6B7280; 
+  --text-secondary-finance: #4B5563; /* Ligeramente más oscuro para mejor contraste */
   --text-tertiary-finance: #9CA3AF; 
 
-  /* Colores de Acento para Gráficos y Elementos */
-  --accent-green-finance: #34D399; 
-  --accent-purple-finance: #A78BFA; 
-  --accent-blue-finance: #60A5FA; 
-  --accent-orange-finance: #FDBA74; 
-  --accent-pink-finance: #F472B6; 
-  --accent-teal-finance: #2DD4BF; 
-  --accent-yellow-finance: #FACC15; 
-  --accent-red-finance: #F87171; 
+  /* Colores de Acento */
+  --accent-green-finance: #10B981; /* Ajustado a un verde más vibrante */
+  --accent-purple-finance: #8B5CF6; 
+  --accent-blue-finance: #3B82F6; 
+  --accent-orange-finance: #F59E0B; 
+  --accent-pink-finance: #EC4899; 
+  --accent-teal-finance: #14B8A6; 
+  --accent-yellow-finance: #FBBF24; 
+  --accent-red-finance: #EF4444; 
 
   --border-color-finance: #E5E7EB; 
   --button-bg-finance: #F9FAFB; 
   --button-text-finance: var(--text-secondary-finance);
   --button-border-finance: var(--border-color-finance);
 
-  --card-border-radius-finance: 0.75rem;
-  --header-height-finance: 65px; 
-  --content-padding-finance: 1.25rem;
-  --element-padding-finance: 0.75rem;
+  --card-border-radius-finance: 0.5rem; /* Un poco menos redondeado para un look más sharp */
+  --header-height-finance: 60px; /* Ligeramente más compacto */
+  --sidebar-width-finance: 260px; /* Ancho de la sidebar */
+  --content-padding-finance: 1.5rem; /* Padding general más generoso */
+  --element-padding-finance: 1rem; /* Padding para elementos internos de tarjetas */
 
-  --shadow-card-finance: 0 4px 12px rgba(0, 0, 0, 0.05);
-  --shadow-header-finance: 0 2px 4px rgba(0,0,0,0.03);
+  --shadow-sm-finance: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md-finance: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg-finance: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  
+  --shadow-card-finance: var(--shadow-md-finance);
+  --shadow-header-finance: var(--shadow-sm-finance);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
@@ -44,28 +56,16 @@ body {
   color: var(--text-primary-finance);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-.dashboard-layout {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
+  line-height: 1.6;
 }
 
 /* Animación (global) */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(8px); } /* Sutil */
   to { opacity: 1; transform: translateY(0); }
 }
 .animate-fadeIn {
-  animation: fadeIn 0.4s ease-out forwards;
+  animation: fadeIn 0.35s ease-out forwards;
 }
 
-/* Footer (Opcional, global) */
-.app-footer {
-  text-align: center;
-  padding: 1.5rem;
-  font-size: 0.8rem;
-  color: var(--text-tertiary-finance);
-  margin-top: auto;
-}
+/* Puedes añadir más resets o estilos base aquí si es necesario */
