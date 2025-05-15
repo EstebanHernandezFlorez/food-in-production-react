@@ -1,0 +1,27 @@
+/* dashboard.css (Archivo principal para importar los demás) */
+
+@import './base.css';
+@import './headerDashboard.css';
+@import './cards.css';
+@import './charts.css';
+
+/* Estilos específicos del layout del contenido principal del dashboard si es necesario */
+.main-dashboard-content {
+  flex-grow: 1;
+  padding: var(--content-padding-finance);
+}
+
+.page-header-finance {
+  margin-bottom: var(--content-padding-finance);
+}
+.page-header-finance h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary-finance);
+  margin: 0;
+}
+.page-header-finance p {
+  font-size: 0.9rem;
+  color: var(--text-secondary-finance);
+  margin-top: 0.25rem;
+}

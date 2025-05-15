@@ -1,143 +1,331 @@
+// src/components/layout/AppLayout.jsx
 import React, { useState } from "react";
-import { Layout, Button, Dropdown, Menu, Avatar, Space } from "antd";
-import { PanelLeftClose, PanelRightClose, User as UserIcon, LogOut } from "lucide-react";
-import { UserOutlined } from '@ant-design/icons';
-import Logo from "./Logo"; // Asegúrate que la ruta sea correcta
-import MenuList from "./MenuList"; // Asegúrate que la ruta sea correcta
-import "../../assets/css/layout.css"; // Estilos generales del layout si los tienes
+import {
+  Layout,
+  Button as AntButton,
+  Dropdown,
+  // Menu, // Menu component might not be needed directly here anymore
+  Avatar,
+  Space,
+} from "antd";
+import {
+  PanelLeftClose,
+  PanelRightClose,
+  User as UserIconLucide,
+  LogOut as LogOutIconLucide,
+  AlertTriangle,
+} from "lucide-react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { useAuth } from '../../views/hooks/AuthProvider'; // Verifica la ruta
+import {
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  Spinner,
+} from "reactstrap";
+import { useAuth } from "../../views/hooks/AuthProvider";
+import Logo from "./Logo";
+import MenuList from "./MenuList"; // Your updated MenuList
+import "../../assets/css/layout.css";
 
 const { Header, Sider, Content } = Layout;
 
-// --- CONSTANTES - Opción 3: Gradiente Sutil ---
+// --- Constantes de estilo (sin cambios) ---
+// ... (keep your style constants) ...
 const SIDER_WIDTH_EXPANDED = 260;
-const SIDER_WIDTH_COLLAPSED = 60;
-// No definimos un color sólido para el Sider, usaremos el gradiente
-const SIDER_GRADIENT = "linear-gradient(to bottom, #FAF9F6, #F0EBE0)"; // Gradiente para Sider
-const BORDER_COLOR = "#E6E4E0"; // Borde estándar
-const SIDER_TEXT_COLOR = "#5D4037"; // Marrón oscuro para texto/iconos base
-const HEADER_BACKGROUND_COLOR = "#FAF9F6"; // Color superior del gradiente para Header
-// ---------------------------------------------
+const SIDER_WIDTH_COLLAPSED = 80;
+const HEADER_HEIGHT = 64;
+const PRIMARY_SIDER_BACKGROUND = "#d0b88e";
+const ACCENT_COLOR = "#9e3535";
+const TEXT_ON_ACCENT_BG = "#FFFFFF";
+const BORDER_COLOR_DARKER_BEIGE_SIDER = "#b8a078";
+const CONTENT_BACKGROUND_LIGHT = "#F5F1E6";
+const HEADER_TEXT_COLOR = "#4A3B2A";
+const SIDER_DEFINED_SHADOW = `2px 0px 6px -1px rgba(74, 59, 42, 0.22)`;
+const SIDER_TOP_HIGHLIGHT_BORDER_COLOR = `rgba(255, 255, 255, 0.35)`;
+const NEW_HEADER_WHITE_BACKGROUND = "#FFFFFF";
+// --- Fin Constantes de estilo ---
+
 
 const AppLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const { user, logOut, loading } = useAuth();
   const navigate = useNavigate();
 
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // --- MODIFIED: Define the handler directly ---
   const handleMenuClick = ({ key }) => {
-    if (key === 'profile') {
-      navigate('/home/profile'); // Ajusta tu ruta de perfil
-    } else if (key === 'logout') {
-      logOut();
+    if (key === "profile") {
+      navigate("/home/profile");
+    } else if (key === "logout") {
+      setIsLogoutModalOpen(true);
     }
   };
 
-  const menuItems = [
-    { key: 'profile', icon: <UserIcon size={16} />, label: 'Mi Perfil' },
-    { key: 'logout', icon: <LogOut size={16} />, label: 'Cerrar Sesión', danger: true },
+  const confirmLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logOut();
+    } catch (err) {
+      console.error("Error al cerrar sesión:", err);
+    } finally {
+      setIsLoggingOut(false);
+      setIsLogoutModalOpen(false);
+    }
+  };
+
+  // --- MODIFIED: Define the items array directly ---
+  const userMenuDropdownItems = [
+    {
+      key: "profile",
+      icon: <UserIconLucide size={16} /* style={{ color: TEXT_ON_ACCENT_BG }} */ />, // Style might be applied by Dropdown/Menu theme now
+      label: <span /* style={{ color: TEXT_ON_ACCENT_BG }} */ >Mi Perfil</span>,
+    },
+    {
+      key: "logout",
+      icon: <LogOutIconLucide size={16} /* style={{ color: TEXT_ON_ACCENT_BG }} */ />,
+      label: (
+        <span /* style={{ color: TEXT_ON_ACCENT_BG }} */ >Cerrar Sesión</span>
+      ),
+      danger: true,
+    },
   ];
-  const userMenu = <Menu onClick={handleMenuClick} items={menuItems} />;
+
+  // --- REMOVED: The old userMenu variable is no longer needed ---
+  // const userMenu = (
+  //   <Menu
+  //     onClick={handleMenuClick}
+  //     items={userMenuDropdownItems}
+  //     style={{
+  //       backgroundColor: ACCENT_COLOR,
+  //       border: `1px solid ${ACCENT_COLOR}`,
+  //     }}
+  //     className="user-dropdown-menu-custom" // You might need to style the dropdown differently now
+  //   />
+  // );
+
+  const currentSiderWidth = collapsed
+    ? SIDER_WIDTH_COLLAPSED
+    : SIDER_WIDTH_EXPANDED;
 
   return (
-    <Layout style={{ minHeight: "100vh" }}>
-      {/* === SIDERA === */}
-      <Sider
-        className="sidebar" // Clase para estilos CSS (scrollbar, etc.)
-        collapsible
-        trigger={null}
-        collapsed={collapsed}
-        width={SIDER_WIDTH_EXPANDED}
-        collapsedWidth={SIDER_WIDTH_COLLAPSED}
-        style={{
-          overflow: "auto",
-          height: "100vh",
-          position: "fixed",
-          left: 0,
-          top: 0,
-          bottom: 0,
-          // Aplicando el GRADIENTE como fondo
-          background: SIDER_GRADIENT,
-          borderRight: `1px solid ${BORDER_COLOR}`,
-          zIndex: 10,
-        }}
+    <>
+      {/* --- Modal (sin cambios) --- */}
+      <Modal
+        isOpen={isLogoutModalOpen}
+        toggle={() => setIsLogoutModalOpen(false)}
+        centered
+        backdrop="static"
+        keyboard={!isLoggingOut}
       >
-        <Logo
-          collapsed={collapsed}
-          // El fondo del logo coincidirá con el del header (parte superior del gradiente)
-          backgroundColor={HEADER_BACKGROUND_COLOR}
-        />
-        <MenuList
-          collapsed={collapsed}
-          // El menú será transparente para mostrar el gradiente
-          textColor={SIDER_TEXT_COLOR} // Pasa el color base del texto
-          // No necesita menuTheme="dark"
-        />
-      </Sider>
+         {/* ... Modal content ... */}
+         <ModalHeader toggle={!isLoggingOut ? () => setIsLogoutModalOpen(false) : undefined}>
+          <div className="d-flex align-items-center">
+            <AlertTriangle size={24} className="text-danger me-2" />
+            <span className="fw-bold">Confirmar cierre de sesión</span>
+          </div>
+        </ModalHeader>
+        <ModalBody>
+          ¿Estás seguro de que deseas cerrar sesión?
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            color="secondary"
+            outline
+            onClick={() => setIsLogoutModalOpen(false)}
+            disabled={isLoggingOut}
+          >
+            Cancelar
+          </Button>
+          <Button color="danger" onClick={confirmLogout} disabled={isLoggingOut}>
+            {isLoggingOut ? (
+              <>
+                <Spinner size="sm" /> Cerrando sesión...
+              </>
+            ) : (
+              "Cerrar sesión"
+            )}
+          </Button>
+        </ModalFooter>
+      </Modal>
 
-      {/* === LAYOUT PRINCIPAL === */}
-      <Layout
-        className="site-layout"
-        style={{
-          marginLeft: collapsed ? SIDER_WIDTH_COLLAPSED : SIDER_WIDTH_EXPANDED,
-          transition: "margin-left 0.2s",
-          minHeight: "100vh",
-          backgroundColor: "#FFFFFF", // Fondo blanco para el área de contenido
-        }}
-      >
-        {/* === HEADER === */}
-        <Header
-          className="site-layout-background header-sticky"
+      {/* --- Layout Principal --- */}
+      <Layout style={{ minHeight: "100vh" }}>
+        {/* --- Sider (sin cambios - using your updated MenuList) --- */}
+        <Sider
+          collapsible
+          trigger={null}
+          collapsed={collapsed}
+          width={SIDER_WIDTH_EXPANDED}
+          collapsedWidth={SIDER_WIDTH_COLLAPSED}
+          theme="light"
           style={{
-            padding: "0 16px",
-            backgroundColor: HEADER_BACKGROUND_COLOR, // Color sólido para header
-            borderBottom: `1px solid ${BORDER_COLOR}`,
-            position: "sticky",
-            top: 0,
-            zIndex: 9,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
+             // ... Sider styles ...
+             overflow: "auto",
+             height: "100vh",
+             position: "fixed",
+             left: 0,
+             top: 0,
+             bottom: 0,
+             background: PRIMARY_SIDER_BACKGROUND,
+             borderTop: `1px solid ${SIDER_TOP_HIGHLIGHT_BORDER_COLOR}`,
+             borderRight: `1px solid ${BORDER_COLOR_DARKER_BEIGE_SIDER}`,
+             boxShadow: SIDER_DEFINED_SHADOW,
+             zIndex: 20,
           }}
         >
-          {/* Botón Colapso */}
-          <Button
-            type="text"
-            icon={ collapsed ? <PanelRightClose size={18} /> : <PanelLeftClose size={18} /> }
-            onClick={() => setCollapsed(!collapsed)}
+          <Logo collapsed={collapsed} backgroundColor={PRIMARY_SIDER_BACKGROUND} />
+          {/* Uses the updated MenuList */}
+          <MenuList collapsed={collapsed} />
+        </Sider>
+
+        <Layout className="site-layout" style={{ minHeight: "100vh" }}>
+           {/* --- Header --- */}
+          <Header
             style={{
-              padding: '0 15px', height: '100%',
-              color: SIDER_TEXT_COLOR, // Color de icono consistente con menú
-              display: "flex", alignItems: "center", justifyContent: "center",
-              border: 'none', borderRadius: 0,
+                // ... Header styles ...
+                padding: 0,
+                backgroundColor: NEW_HEADER_WHITE_BACKGROUND,
+                borderBottom: `2px solid ${ACCENT_COLOR}`,
+                height: `${HEADER_HEIGHT}px`,
+                lineHeight: `${HEADER_HEIGHT}px`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                position: "fixed",
+                top: 0,
+                left: 0,
+                width: "100%",
+                zIndex: 10,
             }}
-            aria-label={collapsed ? "Expandir menú" : "Colapsar menú"}
-          />
+          >
+            {/* Botón Colapsar/Expandir (sin cambios) */}
+            <div
+              style={{
+                  // ... styles ...
+                  display: "flex",
+                  alignItems: "center",
+                  height: "100%",
+                  paddingLeft: currentSiderWidth + 16 + "px",
+                  transition: "padding-left 0.2s",
+              }}
+            >
+              <AntButton
+                type="text"
+                icon={ collapsed ? <PanelRightClose size={18} /> : <PanelLeftClose size={18} />}
+                onClick={() => setCollapsed(!collapsed)}
+                style={{
+                    // ... button styles ...
+                    padding: "0",
+                    width: "48px",
+                    height: "100%",
+                    color: HEADER_TEXT_COLOR,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "none",
+                    borderRadius: 0,
+                    fontSize: "18px",
+                }}
+                aria-label={collapsed ? "Expandir menú" : "Colapsar menú"}
+              />
+            </div>
 
-          {/* Dropdown Usuario */}
-          <div style={{ marginRight: '16px' }}>
-            {!loading && user ? (
-              <Dropdown overlay={userMenu} trigger={['click']}>
-                <a onClick={(e) => e.preventDefault()} style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}>
-                  <Space>
-                    <Avatar size="small" icon={<UserOutlined />} />
-                    {/* Texto del usuario con el color base */}
-                    <span style={{ color: SIDER_TEXT_COLOR, fontWeight: 500 }}>
-                      {user.full_name || 'Usuario'}
-                    </span>
-                  </Space>
-                </a>
-              </Dropdown>
-            ) : null}
-          </div>
-        </Header>
+            {/* Menú de Usuario (Dropdown MODIFICADO) */}
+            <div
+              style={{
+                  // ... styles ...
+                  display: "flex",
+                  alignItems: "center",
+                  paddingRight: "24px",
+                  height: "100%",
+              }}
+            >
+              {!loading && user ? (
+                // --- MODIFIED: Use 'menu' prop instead of 'overlay' ---
+                <Dropdown
+                   menu={{ // Pass configuration object
+                       items: userMenuDropdownItems, // The array of items
+                       onClick: handleMenuClick, // The click handler
+                       // Add other Menu props here if needed (like style, className)
+                       // style: { backgroundColor: ACCENT_COLOR /* ... */ }, // Example
+                       // className: 'user-dropdown-menu-custom' // Example
+                   }}
+                   trigger={["click"]}
+                   // --- Optional: Add dropdownRender prop for more complex customization if needed ---
+                   // dropdownRender={(menu) => (
+                   //   <div style={{ backgroundColor: ACCENT_COLOR, boxShadow: '...', borderRadius: '...' }}>
+                   //     {React.cloneElement(menu, { style: { color: TEXT_ON_ACCENT_BG }})}
+                   //   </div>
+                   // )}
+                >
+                  {/* The trigger element remains the same */}
+                  <a
+                    onClick={(e) => e.preventDefault()}
+                    style={{
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      height: "100%",
+                    }}
+                  >
+                    <Space size="small">
+                      <Avatar
+                        size={32}
+                        icon={<UserIconLucide size={18} />}
+                        style={{ backgroundColor: ACCENT_COLOR, flexShrink: 0 }}
+                      />
+                      <span
+                        style={{
+                            // ... span styles ...
+                            color: HEADER_TEXT_COLOR,
+                            fontWeight: 500,
+                            display: "inline-block",
+                            maxWidth: "150px",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            verticalAlign: "middle",
+                        }}
+                      >
+                        {user.full_name || "Usuario"}
+                      </span>
+                    </Space>
+                  </a>
+                </Dropdown>
+              ) : (
+                // Placeholder (sin cambios)
+                <Space>
+                  <Avatar
+                    size={32}
+                    icon={<UserIconLucide size={18} />}
+                    style={{ backgroundColor: '#ccc' }}
+                  />
+                </Space>
+              )}
+            </div>
+          </Header>
 
-        {/* === CONTENT === */}
-        <Content style={{ margin: "24px 16px", padding: 24, minHeight: 280, }} >
-          <Outlet />
-        </Content>
+          {/* --- Content (sin cambios) --- */}
+          <Content
+            style={{
+                // ... Content styles ...
+                padding: 24,
+                minHeight: 280,
+                backgroundColor: CONTENT_BACKGROUND_LIGHT,
+                marginTop: `${HEADER_HEIGHT}px`,
+                marginLeft: currentSiderWidth,
+                transition: "margin-left 0.2s ease-in-out",
+            }}
+          >
+            <Outlet />
+          </Content>
+        </Layout>
       </Layout>
-    </Layout>
+    </>
   );
 };
 

@@ -8,11 +8,9 @@ import {
 } from "react-router-dom";
 
 import "./assets/css/App.css"; // Asegúrate que la ruta a tu CSS sea correcta
-
 // --- Proveedor de autenticación y control de rutas privadas ---
-import AuthProvider, { useAuth } from "./views/hooks/AuthProvider";
-// Asegúrate que la importación de PrivateRoute o ProtectedRoute sea la correcta
-import ProtectedRoute from "./views/hooks/Route"; // O el nombre que uses (ej: PrivateRoute)
+import { AuthProvider, useAuth } from "./views/hooks/AuthProvider";
+import ProtectedRoute from "./views/hooks/Route"; // O el nombre correcto del archivo donde defines la ruta protegida
 
 // --- Layout y vistas principales ---
 import AppLayout from "./components/layout/AppLayout";
@@ -28,6 +26,7 @@ import RendimientoEmpleado from "./views/module/ManoDeObra/RendimientoEmpleado";
 import RegistroCompra from "./views/module/Compras/RegistroComprasPage";
 import FichaTecnica from "./views/module/ProductoInsumo/FichaTecnica";
 import Insumos from "./views/module/Insumo/Insumo";
+import Dashboard from "./views/module/Dashboard/dashboard"
 import ListaFichasTecnicas from "./views/module/ProductoInsumo/ListaFichasTecnicas";
 
 // import NotFound from "./views/NotFound"; // opcional
@@ -70,48 +69,36 @@ export default function App() {
     <Router>
       <AuthProvider>
         <Routes>
-          {/* === Ruta Pública === */}
+          {/* === Ruta Pública para el Login === */}
+          <Route path="/login" element={<Login />} /> {/* <--- CAMBIO AQUÍ */}
+
+          {/* Opcional: Si también quieres que "/" sea el login */}
           <Route path="/" element={<Login />} />
 
           {/* === Rutas Privadas (Requieren Login) === */}
-          {/* Envuelve las rutas privadas con el componente ProtectedRoute */}
           <Route element={<ProtectedRoute />}>
-            {/* Define el Layout principal para las rutas bajo /home */}
             <Route path="home" element={<AppLayout />}>
-
-              {/* 1. Rutas generadas a partir de pages.routes (tu menú) */}
+              {/* ... tus otras rutas ... */}
+              <Route index element={<Navigate to="dashboard" replace />} /> {/* Por ejemplo, para /home */}
+              <Route path="dashboard" element={<Dashboard/>} /> {/* Ejemplo */}
               {renderRoutes(pagesRoutes)}
-
-              {/* 2. Ruta específica para el Perfil del Usuario */}
               <Route path="profile" element={<UserProfile />} />
-              {/*    ^^^^^^^^^^^^ URL será /home/profile */}
-
-              {/* 3. Otras rutas específicas que no están en pages.routes */}
               <Route path="conceptos-gasto" element={<TablaGastos />} />
               <Route path="rendimiento-empleado" element={<RendimientoEmpleado />} />
               <Route path="registrar-compra" element={<RegistroCompra />} />
               <Route path="ficha-tecnica" element={<FichaTecnica />} />
               <Route path="insumos" element={<Insumos />} />
+            </Route>
+          </Route>
               <Route path="producto/:idProduct/fichas" element={<ListaFichasTecnicas />} />
               <Route path="fichas-tecnicas/:idProduct" element={<ListaFichasTecnicas />} />
               <Route path="ficha-tecnica/editar/:idSpecsheet" element={<FichaTecnica />} />
 
 
-              {/* Opcional: Ruta por defecto si se accede a /home */}
-              {/* Si quieres redirigir /home a /home/dashboard por defecto: */}
-              {/* <Route index element={<Navigate to="dashboard" replace />} /> */}
-
-              {/* Opcional: Ruta "No Encontrada" dentro del layout /home */}
-              {/* <Route path="*" element={<div>Página no encontrada dentro de Home</div>} /> */}
-
-            </Route> {/* Fin de rutas bajo /home */}
-          </Route> {/* Fin de Rutas Protegidas */}
-
-          {/* Opcional: Ruta global 404 (fuera del layout y sin protección) */}
-          {/* <Route path="*" element={<NotFound />} /> */}
-
+          {/* Opcional: Ruta catch-all para 404 */}
+          {/* <Route path="*" element={<Navigate to="/login" replace />} /> */}
         </Routes>
       </AuthProvider>
     </Router>
   );
-}
+}   

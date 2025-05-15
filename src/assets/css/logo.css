@@ -26,8 +26,8 @@
     background-repeat: no-repeat;
     background-position: center;
     /* Tamaño original/expandido, ajusta según tu logo */
-    width: 120px;
-    height: 100px; /* O la altura que corresponda a 120px de ancho */
+    width: 150px;
+    height: 120px; /* O la altura que corresponda a 120px de ancho */
     transition: width 0.3s, height 0.3s;
     display: inline-block;
 }

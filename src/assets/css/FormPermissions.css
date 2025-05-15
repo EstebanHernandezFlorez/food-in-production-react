@@ -1,241 +1,190 @@
-/* Estilos para el formulario de permisos - Tema Elegante */
+/* Estilos para el formulario de permisos - Tema Compacto y Limpio */
 
-/* Colores principales */
+/* Variables (puedes ajustarlas a tu tema) */
 :root {
-    --burgundy: #800020;
-    --dark-green: #1a472a;
-    --accent-gold: #d4af37;
-    --neutral-bg: #f8f5f0;
-    --light-burgundy: rgba(128, 0, 32, 0.1);
-    --light-green: rgba(26, 71, 42, 0.1);
-    --header-bg: #2c3e50;
-    --active-highlight: #d4af37;
-    --checkbox-size: 16px;
-  }
-  
-  /* Estilo general del Modal */
-  .permissions-modal .modal-content {
-    border-radius: 8px;
-    border: none;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-  }
-  
-  .permissions-modal .modal-header {
-    background-color: var(--header-bg);
-    color: white;
-    border-radius: 8px 8px 0 0;
-    padding: 12px 20px;
-  }
-  
-  .permissions-modal .modal-header .close {
-    color: white;
-  }
-  
-  .permissions-modal .modal-title {
-    font-size: 1.2rem;
-    font-weight: 600;
-  }
-  
-  .permissions-modal .modal-body {
-    padding: 15px;
-    background-color: var(--neutral-bg);
-  }
-  
-  /* Input de nombre del rol */
-  .permissions-modal .form-group label.fw-bold {
-    color: var(--burgundy);
-    font-size: 0.9rem;
-  }
-  
-  .permissions-modal .form-control:focus {
-    border-color: var(--dark-green);
-    box-shadow: 0 0 0 0.2rem rgba(26, 71, 42, 0.25);
-  }
-  
-  /* Título de sección */
-  .permissions-modal h5 {
-    color: var(--dark-green);
-    border-bottom: 2px solid var(--accent-gold);
-    padding-bottom: 8px;
-    margin-bottom: 12px;
-    font-size: 1rem;
-  }
-  
-  /* Tabla de permisos compacta */
-  .permission-table {
-    font-size: 0.85rem;
-    border: 1px solid #dee2e6;
-  }
-  
-  .permission-table.sticky-header {
-    border-collapse: separate;
-    border-spacing: 0;
-  }
-  
-  /* Cabecera de tabla */
-  .permission-table.sticky-header thead th {
-    position: sticky;
-    top: 0;
-    background-color: var(--dark-green) !important;
-    color: white;
-    z-index: 10;
-    padding: 8px 4px;
-    font-size: 0.8rem;
-    text-align: center;
-    vertical-align: middle;
-    border: 1px solid #2d5a40;
-  }
-  
-  /* Primera columna fija */
-  .permission-table .sticky-col {
-    position: sticky;
-    left: 0;
-    background-color: #f5f5f5;
-    z-index: 5;
-    min-width: 120px;
-    max-width: 120px;
-    padding: 6px 8px !important;
-    font-size: 0.8rem;
-    border-right: 2px solid #dee2e6;
-  }
-  
-  /* Columna de acción "Asignar Todo" */
-  .permission-table .sticky-col-action {
-    position: sticky;
-    left: 120px;
-    background-color: #f0f0f0;
-    z-index: 5;
-    width: 70px !important;
-    font-size: 0.75rem;
-    border-right: 2px solid #dee2e6;
-  }
-  
-  /* Para que funcione bien con bordes en las cabeceras fijas */
-  .permission-table.sticky-header thead th.sticky-col,
-  .permission-table.sticky-header thead th.sticky-col-action {
-    z-index: 15;
-    background-color: var(--burgundy) !important;
-    border-bottom: 2px solid var(--accent-gold);
-  }
-  
-  /* Tabla más compacta */
-  .permission-table td {
-    padding: 4px !important;
-    vertical-align: middle;
-  }
-  
-  /* Estilo para filas alternas */
-  .permission-table tbody tr:nth-child(odd) {
-    background-color: var(--light-burgundy);
-  }
-  
-  .permission-table tbody tr:nth-child(even) {
-    background-color: var(--light-green);
-  }
-  
-  /* Hover en las filas */
-  .permission-table tbody tr:hover {
-    background-color: rgba(212, 175, 55, 0.15);
-  }
-  
-  /* Checkboxes personalizados */
-  .permission-table .form-check-input {
-    width: var(--checkbox-size);
-    height: var(--checkbox-size);
-    margin: 0;
-    cursor: pointer;
-  }
-  
-  .permission-table .form-check-input:checked {
-    background-color: var(--burgundy);
-    border-color: var(--burgundy);
-  }
-  
-  .permission-table .sticky-col-action .form-check-input:checked {
-    background-color: var(--dark-green);
-    border-color: var(--dark-green);
-  }
-  
-  /* Reducir el tamaño del contenedor de la tabla */
-  .table-responsive {
-    max-height: 400px !important; /* Tabla más pequeña en altura */
-    overflow: auto;
-    border-radius: 4px;
-    border: 1px solid #dee2e6;
-  }
-  
-  /* Spinner más estilizado */
-  .permissions-modal .spinner-border {
-    color: var(--burgundy);
-  }
-  
-  /* Botones del footer */
-  .permissions-modal .modal-footer {
-    background-color: var(--neutral-bg);
-    border-top: 1px solid #e9ecef;
-    padding: 12px 20px;
-    border-radius: 0 0 8px 8px;
-  }
-  
-  .permissions-modal .btn-secondary {
-    background-color: #6c757d;
-    border-color: #6c757d;
-    color: white;
-  }
-  
-  .permissions-modal .btn-secondary.outline {
-    background-color: transparent;
-    color: #6c757d;
-  }
-  
-  .permissions-modal .btn-primary {
-    background-color: var(--burgundy);
-    border-color: var(--burgundy);
-  }
-  
-  .permissions-modal .btn-primary:hover {
-    background-color: #6b001b;
-    border-color: #6b001b;
-  }
-  
-  /* Estilo para rol inactivo */
-  .permissions-modal .badge.bg-warning {
-    background-color: var(--accent-gold) !important;
-    font-size: 0.7rem;
-    font-weight: normal;
-  }
-  
-  /* Alertas */
-  .permissions-modal .alert-danger {
-    background-color: #f8d7da;
-    border-color: #f5c6cb;
-    color: #721c24;
-    font-size: 0.9rem;
-  }
-  
-  .permissions-modal .alert-warning {
-    background-color: #fff3cd;
-    border-color: #ffeeba;
-    color: #856404;
-    font-size: 0.9rem;
-  }
-  
-  /* Hacer scrollbars más delgados y estilizados */
-  .table-responsive::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  
-  .table-responsive::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-  }
-  
-  .table-responsive::-webkit-scrollbar-thumb {
-    background: var(--dark-green);
-    border-radius: 4px;
-  }
-  
-  .table-responsive::-webkit-scrollbar-thumb:hover {
-    background: var(--burgundy);
-  }
+  --pm-primary-color: #007bff; /* Un azul estándar, puedes usar tu --burgundy o --dark-green */
+  --pm-light-gray: #f8f9fa;
+  --pm-medium-gray: #e9ecef;
+  --pm-dark-gray: #495057;
+  --pm-text-color: #212529;
+  --pm-border-color: #dee2e6;
+  --pm-header-bg: #343a40; /* Un gris oscuro para el header, o tu color primario */
+  --pm-header-color: white;
+  --pm-checkbox-size: 1.1em; /* Checkboxes ligeramente más grandes para facilitar click */
+}
+
+.permissions-modal-compact .modal-content {
+  border-radius: 0.3rem; /* Bordes un poco menos redondeados */
+  border: none;
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.1);
+}
+
+.permissions-modal-compact .modal-header {
+  background-color: var(--pm-header-bg);
+  color: var(--pm-header-color);
+  padding: 0.75rem 1rem; /* Padding más ajustado */
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+.permissions-modal-compact .modal-header .btn-close { /* Para Bootstrap 5 close button */
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+.permissions-modal-compact .modal-header .close { /* Para Reactstrap/Bootstrap 4 close button */
+ color: var(--pm-header-color);
+ opacity: 0.7;
+}
+.permissions-modal-compact .modal-header .close:hover {
+ opacity: 1;
+}
+
+
+.permissions-modal-compact .modal-title {
+  font-size: 1.1rem; /* Título ligeramente más pequeño */
+  font-weight: 500;
+}
+
+.permissions-modal-compact .modal-body {
+  padding: 1rem; /* Padding ajustado en el body */
+  background-color: #fff;
+}
+
+/* Estilo para el input del nombre del rol */
+.permissions-modal-compact .form-label-sm {
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+  color: var(--pm-dark-gray);
+}
+.permissions-modal-compact .form-control-sm { /* Si usas bsSize="sm" */
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Título de sección */
+.permissions-modal-compact .section-title {
+  color: var(--pm-text-color);
+  font-weight: 500;
+  font-size: 0.95rem;
+  border-bottom: 1px solid var(--pm-medium-gray);
+  padding-bottom: 0.4rem;
+  margin-top: 0.5rem; /* Espacio antes del título de la tabla */
+}
+
+/* Contenedor de la tabla */
+.permissions-table-container-compact {
+  max-height: 350px; /* Altura máxima para la tabla, ajusta según necesidad */
+  overflow-y: auto;
+  border: 1px solid var(--pm-border-color);
+  border-radius: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+/* Tabla de permisos */
+.permissions-table-compact {
+  font-size: 0.875rem; /* Texto de tabla ligeramente más pequeño */
+  border-collapse: separate; /* Necesario para sticky header con borders */
+  border-spacing: 0;
+}
+
+.permissions-table-compact thead th {
+  background-color: var(--pm-light-gray) !important; /* Fondo claro para header */
+  color: var(--pm-dark-gray);
+  font-weight: 500;
+  padding: 0.5rem 0.75rem; /* Padding en celdas de header */
+  border-bottom: 2px solid var(--pm-border-color) !important;
+  white-space: nowrap; /* Evitar que el texto del header se parta */
+  top: 0; /* Para sticky header */
+  z-index: 10;
+}
+
+.permissions-table-compact tbody td {
+  padding: 0.5rem 0.75rem; /* Padding en celdas de tabla */
+  vertical-align: middle;
+  border-bottom: 1px solid var(--pm-medium-gray); /* Línea sutil entre filas */
+}
+.permissions-table-compact tbody tr:last-child td {
+  border-bottom: none; /* Sin borde en la última fila */
+}
+
+.permissions-table-compact tbody tr:hover {
+  background-color: var(--pm-light-gray); /* Hover sutil */
+}
+
+.permissions-table-compact .module-name-cell {
+  color: var(--pm-text-color);
+}
+
+/* Checkboxes y Labels */
+.permissions-table-compact .form-check-compact {
+  min-height: auto; /* Reset min-height de Bootstrap */
+  padding-left: 0; /* Si el input está antes del label o se maneja diferente */
+  display: flex;
+  align-items: center;
+}
+
+.permissions-table-compact .form-check-input {
+  width: var(--pm-checkbox-size);
+  height: var(--pm-checkbox-size);
+  margin-top: 0; /* Alinear con el texto del label */
+  cursor: pointer;
+  border-color: #adb5bd;
+}
+.permissions-table-compact .form-check-input:checked {
+  background-color: var(--pm-primary-color);
+  border-color: var(--pm-primary-color);
+}
+.permissions-table-compact .form-check-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.permissions-table-compact .form-check-label-compact {
+  font-size: 0.85rem;
+  padding-left: 0.4rem; /* Espacio entre checkbox y label */
+  margin-bottom: 0; /* Reset de Bootstrap */
+  line-height: var(--pm-checkbox-size); /* Alinear con el checkbox */
+  cursor: pointer;
+  color: var(--pm-text-color);
+}
+.permissions-table-compact .privilege-group .form-check-compact {
+   margin-bottom: 0.2rem; /* Pequeño espacio si se envuelven */
+}
+
+/* Footer del Modal */
+.permissions-modal-compact .modal-footer {
+  background-color: var(--pm-light-gray);
+  border-top: 1px solid var(--pm-border-color);
+  padding: 0.75rem 1rem; /* Padding ajustado */
+}
+
+.permissions-modal-compact .modal-footer .btn-link.text-secondary {
+  color: var(--pm-dark-gray) !important;
+  text-decoration: none;
+}
+.permissions-modal-compact .modal-footer .btn-link.text-secondary:hover {
+  text-decoration: underline;
+}
+
+.permissions-modal-compact .btn-primary {
+  background-color: var(--pm-primary-color);
+  border-color: var(--pm-primary-color);
+}
+.permissions-modal-compact .btn-primary:hover {
+  opacity: 0.85;
+}
+
+/* Scrollbars (opcional, pero ayuda al look limpio) */
+.permissions-table-container-compact::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.permissions-table-container-compact::-webkit-scrollbar-track {
+  background: var(--pm-medium-gray);
+  border-radius: 3px;
+}
+.permissions-table-container-compact::-webkit-scrollbar-thumb {
+  background: var(--pm-dark-gray);
+  border-radius: 3px;
+}
+.permissions-table-container-compact::-webkit-scrollbar-thumb:hover {
+  background: var(--pm-primary-color);
+}

@@ -1,0 +1,113 @@
+/* cards.css */
+
+/* Estilo de Tarjeta Principal para Contenido de Sección (tablas, etc.) */
+.content-card-finance {
+  background-color: var(--bg-card-finance);
+  padding: var(--content-padding-finance);
+  border-radius: var(--card-border-radius-finance);
+  box-shadow: var(--shadow-card-finance);
+  margin-bottom: var(--content-padding-finance);
+}
+.content-card-finance .text-lg {
+    font-size: 1.125rem;
+}
+.content-card-finance .font-semibold {
+    font-weight: 600;
+}
+
+/* Estilo para Tarjetas de KPI (StatCardFinance) */
+.kpi-card-finance {
+  background-color: var(--bg-card-finance);
+  padding: 1rem;
+  border-radius: var(--card-border-radius-finance);
+  box-shadow: var(--shadow-card-finance);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.kpi-card-finance-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start; 
+  margin-bottom: 0.5rem;
+}
+.kpi-card-finance-title-block h3 {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-primary-finance);
+  margin: 0;
+}
+.kpi-card-finance-title-block p {
+  font-size: 0.75rem;
+  color: var(--text-tertiary-finance);
+  margin: 0.1rem 0 0 0;
+}
+.kpi-card-finance-view-report-btn {
+  background-color: var(--button-bg-finance);
+  color: var(--button-text-finance);
+  border: 1px solid var(--button-border-finance);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.3rem 0.7rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.kpi-card-finance-view-report-btn:hover { background-color: #F0F0F0; }
+
+.kpi-card-finance-main-value {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--text-primary-finance);
+  margin: 0.75rem 0 0.25rem 0;
+}
+.kpi-card-finance-change {
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+.kpi-card-finance-change .lucide { width: 12px; height: 12px; margin-right: 0.2rem; }
+.kpi-card-finance-change.positive { color: var(--accent-green-finance); }
+.kpi-card-finance-change.negative { color: var(--accent-red-finance); }
+
+.kpi-card-finance-content {
+  flex-grow: 1; 
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Para listas como suscripciones (dentro de una content-card-finance o kpi-card-finance) */
+.subscription-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.subscription-icon-name { display: flex; align-items: center; }
+.subscription-icon-name .lucide { width: 20px; height: 20px; margin-right: 0.75rem; }
+.subscription-name { font-size: 0.9rem; font-weight: 500; color: var(--text-primary-finance); }
+.subscription-date { font-size: 0.75rem; color: var(--text-tertiary-finance); }
+.subscription-price { font-size: 0.9rem; font-weight: 500; color: var(--text-primary-finance); }
+
+/* Mini tarjetas de metas (Dream Car, etc.) */
+.kpi-card-finance.p-3 .lucide {
+    color: var(--text-primary-finance);
+}
+.kpi-card-finance.p-3 h4 {
+    font-size: 0.8rem;
+}
+.kpi-card-finance.p-3 .text-xxs {
+    font-size: 0.65rem;
+}
+
+/* ProgressBar (puede ir aquí o en un `progress.css` si se usa mucho) */
+.progress-bar-track {
+  background-color: var(--border-color-finance);
+  height: 6px;
+  border-radius: 3px;
+}
+.progress-bar-fill {
+  height: 6px;
+  border-radius: 3px;
+}

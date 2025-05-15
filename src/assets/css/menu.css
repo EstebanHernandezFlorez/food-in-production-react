@@ -1,45 +1,50 @@
-/* ======================================== */
-/* --- MENU CSS - PALETA GRADIENTE SUTIL --- */
-/* ======================================== */
+/* ================================================= */
+/* --- ESTILOS GLOBALES PARA EL MENÚ DEL SIDER --- */
+/* ================================================= */
 
-/* --- 1. Colores Y TAMAÑOS Base --- */
+/* --- 1. Colores Y TAMAÑOS Base (Sider Menu - theme="light") --- */
+/* Sider background: #d0b88e (Beige) */
+/* Base Text/Icon color: #5C4033 (Dark Brown) */
+/* Accent color (hover/selected bg): #9e3535 (Burgundy) */
+/* Text/Icon on Accent color: #FFFFFF (White) */
+
 .ant-menu-light .ant-menu-item a,
 .ant-menu-light .ant-menu-item,
 .ant-menu-light .ant-menu-submenu-title {
-  color: #5D4037 !important;
+  color: #5C4033 !important; /* Dark Brown text on Beige Sider */
   text-decoration: none;
-  /* <<< AUMENTAR TAMAÑO TEXTO >>> */
-  font-size: 15px !important; /* Ajusta este valor (ej: 14px, 15px, 16px) */
-  /* Añadir un poco más de altura a los items */
-  height: 44px !important; /* Predeterminado es 40px */
+  font-size: 15px !important;
+  height: 44px !important;
   line-height: 44px !important;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  margin-block: 4px !important; /* Adds a little vertical space between items */
 }
+
 /* Iconos Base */
 .ant-menu-light .ant-menu-item .ant-menu-item-icon,
 .ant-menu-light .ant-menu-submenu-title .ant-menu-item-icon {
-  color: #5D4037 !important;
-  /* <<< AUMENTAR TAMAÑO ICONO (usando font-size) >>> */
-  font-size: 18px !important; /* Ajusta (ej: 18px, 20px) */
-  /* <<< AUMENTAR MARGEN para icono más grande >>> */
+  color: #5C4033 !important; /* Dark Brown icon */
+  font-size: 18px !important;
   margin-right: 12px !important;
-  /* Centrado vertical (ya estaba) */
-  display: inline-flex;
-  align-items: center;
-}
-/* Específico para SVG si font-size no funciona solo */
-.ant-menu-light .ant-menu-item .ant-menu-item-icon svg,
-.ant-menu-light .ant-menu-submenu-title .ant-menu-item-icon svg {
-  color: #5D4037 !important;
-  /* Los SVGs de Lucide suelen responder a 'font-size' de su contenedor,
-     pero si no, podrías necesitar width/height aquí */
-  /* width: 18px; height: 18px; */
+  display: inline-flex !important;
+  align-items: center !important;
+  transition: color 0.2s ease;
 }
 
-/* --- 2. Estado Hover --- */
+/* Específico para SVG dentro de los iconos */
+.ant-menu-light .ant-menu-item .ant-menu-item-icon svg,
+.ant-menu-light .ant-menu-submenu-title .ant-menu-item-icon svg {
+  color: #5C4033 !important; /* Dark Brown icon */
+  /* fill: #5C4033 !important; */ /* Uncomment if 'color' doesn't work for your SVGs */
+  /* stroke: #5C4033 !important; */ /* For Lucide icons, stroke is often what you need */
+}
+
+/* --- 2. Estado Hover (Sider Menu) --- */
 .ant-menu-light .ant-menu-item:hover,
 .ant-menu-light .ant-menu-submenu-title:hover {
-  background-color: #7E2D2D !important; /* Vino Tinto */
+  background-color: #9e3535 !important; /* ACCENT_COLOR - Burgundy */
 }
+
 /* Color de texto e icono en hover */
 .ant-menu-light .ant-menu-item:hover a,
 .ant-menu-light .ant-menu-item:hover,
@@ -48,14 +53,17 @@
 .ant-menu-light .ant-menu-submenu-title:hover .ant-menu-item-icon,
 .ant-menu-light .ant-menu-item:hover .ant-menu-item-icon svg,
 .ant-menu-light .ant-menu-submenu-title:hover .ant-menu-item-icon svg {
-  color: #FFFFFF !important; /* Blanco */
+  color: #FFFFFF !important; /* White text/icon on Burgundy */
+  /* fill: #FFFFFF !important; */
+  /* stroke: #FFFFFF !important; */
 }
 
-/* --- 3. Estado Seleccionado --- */
+/* --- 3. Estado Seleccionado (Sider Menu) --- */
 .ant-menu-light .ant-menu-item-selected,
 .ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title {
-  background-color: #7E2D2D !important; /* Vino Tinto */
+  background-color: #9e3535 !important; /* ACCENT_COLOR - Burgundy */
 }
+
 /* Color de texto e icono en seleccionado */
 .ant-menu-light .ant-menu-item-selected a,
 .ant-menu-light .ant-menu-item-selected,
@@ -64,54 +72,130 @@
 .ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title .ant-menu-item-icon,
 .ant-menu-light .ant-menu-item-selected .ant-menu-item-icon svg,
 .ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title .ant-menu-item-icon svg {
-   color: #FFFFFF !important; /* Blanco */
+   color: #FFFFFF !important; /* White text/icon on Burgundy */
+   /* fill: #FFFFFF !important; */
+   /* stroke: #FFFFFF !important; */
 }
 
-/* --- 4. Ajustes Adicionales --- */
-/* Quitar borde indicador */
+/* --- 4. Ajustes Adicionales (Sider Menu) --- */
+/* Quitar el borde indicador de Ant Design */
 .ant-menu-light .ant-menu-item-selected::after,
 .ant-menu-inline.ant-menu-root .ant-menu-item::after,
 .ant-menu-vertical.ant-menu-root .ant-menu-item::after {
-    border-right: none !important; border-left: none !important;
-}
-/* Fondo transparente del menú */
-.ant-menu-light.ant-menu-root {
-  background-color: transparent !important; border-right: none !important;
+    border-right: none !important;
+    border-left: none !important;
 }
 
-/* --- Estilos Menú Colapsado (Ajustado para iconos más grandes) --- */
-.ant-menu-inline-collapsed > .ant-menu-item .ant-menu-item-icon,
-.ant-menu-inline-collapsed > .ant-menu-submenu > .ant-menu-submenu-title .ant-menu-item-icon {
-    margin-right: 0 !important;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    /* <<< TAMAÑO ICONO COLAPSADO >>> */
-    font-size: 20px !important; /* Un poco más grande cuando está colapsado */
+/* Menú raíz transparente para heredar fondo del Sider */
+.ant-menu-light.ant-menu-root.ant-menu-inline {
+  background-color: transparent !important;
+  border-right: none !important;
 }
+
+/* --- 5. Estilos Menú Colapsado (Sider Menu) --- */
+/* Targets the <li> menu item or submenu title when collapsed */
 .ant-menu-inline-collapsed > .ant-menu-item,
 .ant-menu-inline-collapsed > .ant-menu-submenu > .ant-menu-submenu-title {
+    padding: 0 !important; /* Remove all internal padding from the item */
+    margin-inline: 0 !important; /* Remove any horizontal margin antd might add */
+    width: 100% !important; /* Ensure item takes full width of collapsed sider */
+    height: 48px !important; /* Your desired height */
+    display: flex !important;
+    justify-content: center !important; /* Horizontally center content (the icon wrapper) */
+    align-items: center !important; /* Vertically center content (the icon wrapper) */
+    /* text-align: center; is redundant with flex justify-content */
+    /* line-height: 48px; is redundant with flex align-items */
+}
+
+/* Targets the <span> wrapper around the icon */
+.ant-menu-inline-collapsed .ant-menu-item-icon,
+.ant-menu-inline-collapsed .ant-menu-submenu-title .ant-menu-item-icon {
+    margin-right: 0 !important; /* Remove right margin typical in expanded state */
+    font-size: 20px !important; /* Sets size for font-icons & basis for SVG 'em' units */
+    line-height: 1 !important; /* Prevents unusual spacing around the icon */
+    display: flex !important; /* Helps center the actual SVG/icon if it's smaller */
+    justify-content: center !important;
+    align-items: center !important;
+    /* Colors are inherited from parent .ant-menu-item hover/selected/base states */
+}
+
+/* Targets SVG elements specifically within the collapsed icon wrapper */
+.ant-menu-inline-collapsed .ant-menu-item-icon svg,
+.ant-menu-inline-collapsed .ant-menu-submenu-title .ant-menu-item-icon svg {
+    /* Colors are inherited */
+    width: 1em; /* Makes SVG width scale with parent .ant-menu-item-icon font-size */
+    height: 1em; /* Makes SVG height scale with parent .ant-menu-item-icon font-size */
+    display: block !important; /* Or inline-block, ensures it's rendered as a block-level element */
+}
+
+/* Explicitly hide the text label (ant-menu-title-content) when menu is collapsed */
+.ant-menu-inline-collapsed > .ant-menu-item .ant-menu-title-content,
+.ant-menu-inline-collapsed > .ant-menu-submenu > .ant-menu-submenu-title .ant-menu-title-content {
+    display: none !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
     padding: 0 !important;
-    text-align: center;
-    /* <<< AJUSTAR ALTURA ITEM COLAPSADO >>> */
-    height: 48px !important; /* Más alto para acomodar icono */
-    line-height: 48px !important;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    overflow: hidden !important;
+    position: absolute !important; /* Further ensures it takes no space and is out of flow */
 }
 
-/* Indentación para subitems (Ajustar padding si el texto base es más grande) */
-.ant-menu-submenu-inline .ant-menu-item {
-    padding-left: 52px !important; /* Un poco más de indentación */
-     /* <<< AJUSTAR ALTURA SUBITEM >>> */
-    height: 40px !important; /* Puede ser un poco menos que el principal */
+/* Hide submenu arrow when collapsed (Ant Design usually does this for inlineCollapsed) */
+.ant-menu-inline-collapsed > .ant-menu-submenu > .ant-menu-submenu-title .ant-menu-submenu-arrow {
+    display: none !important;
+}
+
+
+/* --- 6. Indentación subitems (Sider Menu) --- */
+.ant-menu-light .ant-menu-submenu-inline .ant-menu-item { /* Aplica a items dentro de submenús */
+    padding-left: 48px !important; /* Ajusta según necesites para la indentación */
+    height: 40px !important;
     line-height: 40px !important;
-    font-size: 14px !important; /* Texto de subitem ligeramente más pequeño? */
+    font-size: 14px !important;
+    background-color: rgba(0,0,0,0.03) !important; /* Ligero fondo para distinguirlos */
+}
+.ant-menu-light .ant-menu-submenu-inline .ant-menu-item:hover {
+    background-color: #9e3535 !important; /* Mismo hover que items principales */
+}
+.ant-menu-light .ant-menu-submenu-inline .ant-menu-item.ant-menu-item-selected {
+     background-color: #9e3535 !important; /* Mismo selected que items principales */
 }
 
-/* --- 5. Estilos del Scrollbar (Sin cambios) --- */
+
+/* --- Estilos del Scrollbar (Sider) --- */
 .sidebar::-webkit-scrollbar { width: 6px; }
-.sidebar::-webkit-scrollbar-thumb { background-color: #A94442; border-radius: 10px; border: 1px solid #FAF9F6; }
-.sidebar::-webkit-scrollbar-track { background-color: transparent; }
+.sidebar::-webkit-scrollbar-thumb {
+  background-color: #9e3535; border-radius: 10px; border: 1px solid #d0b88e;
+}
+.sidebar::-webkit-scrollbar-track { background-color: rgba(208, 184, 142, 0.3); }
+
+/* --- Estilos para el Dropdown del Usuario --- */
+.user-dropdown-menu-custom .ant-dropdown-menu-item,
+.user-dropdown-menu-custom .ant-dropdown-menu-item-group-title {
+  color: #FFFFFF !important; /* TEXT_ON_ACCENT_BG */
+}
+.user-dropdown-menu-custom .ant-dropdown-menu-item .ant-dropdown-menu-item-icon { /* Target Ant Design icon wrapper */
+  color: #FFFFFF !important; /* TEXT_ON_ACCENT_BG */
+}
+/* Ensure Lucide icons inside dropdown also get the color */
+.user-dropdown-menu-custom .ant-dropdown-menu-item .ant-dropdown-menu-item-icon svg {
+  color: #FFFFFF !important;
+  /* stroke: #FFFFFF !important; */ /* if needed for specific svgs */
+}
+
+.user-dropdown-menu-custom .ant-dropdown-menu-item:hover,
+.user-dropdown-menu-custom .ant-dropdown-menu-item-active {
+  background-color: #8c2d2d !important; /* Lighter burgundy for hover */
+}
+.user-dropdown-menu-custom .ant-dropdown-menu-item-danger {
+  color: #FFCCCB !important; /* Light red for danger on burgundy */
+}
+.user-dropdown-menu-custom .ant-dropdown-menu-item-danger:hover {
+  background-color: #7a2626 !important; /* Darker burgundy for danger hover */
+  color: #FFFFFF !important;
+}
+/* Target icon color on danger hover */
+.user-dropdown-menu-custom .ant-dropdown-menu-item-danger:hover .ant-dropdown-menu-item-icon,
+.user-dropdown-menu-custom .ant-dropdown-menu-item-danger:hover .ant-dropdown-menu-item-icon svg {
+  color: #FFFFFF !important;
+}

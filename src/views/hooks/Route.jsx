@@ -1,37 +1,29 @@
-// src/views/hooks/route.js (o src/components/PrivateRoute.js)
-
+// src/views/hooks/Route.jsx (o donde definas PrivateRoute)
 import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
-import { useAuth } from "./AuthProvider"; // Asegúrate que la ruta a AuthProvider sea correcta
+import { useAuth } from "./AuthProvider"; // Ajusta la ruta si es necesario
 
 const PrivateRoute = () => {
-  // 1. Obtiene el estado actual de autenticación y carga
-  const { user, token, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
 
-  // 2. Si está en proceso de carga/validación inicial...
   if (loading) {
-    // ...muestra un indicador y NO renderiza nada más.
-    // Esto es CRUCIAL para esperar la validación.
+    console.log("PrivateRoute: AuthProvider está cargando...");
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f0f2f5' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f0f2f5', color: '#333' }}>
             <span>Verificando autenticación...</span>
-            {/* Podrías usar un Spinner de Antd aquí: */}
-            {/* <Spin size="large" /> */}
         </div>
     );
   }
 
-  // 3. Si la carga terminó y NO hay token...
-  if (!token) {
-    // ...redirige al usuario a la página de login.
-    console.log("PrivateRoute: No hay token después de cargar. Redirigiendo a /");
-    return <Navigate to="/" replace />; // 'replace' es importante
+  // Si no está autenticado, redirige a la página de login (o donde desees)
+  if (!isAuthenticated) {
+    console.log("PrivateRoute: No autenticado después de cargar. Redirigiendo a /");
+    return <Navigate to="/login" replace />;
   }
 
-  // 4. Si la carga terminó y SÍ hay token...
-  // ...permite el acceso y renderiza la ruta hija correspondiente.
-  console.log("PrivateRoute: Token válido después de cargar. Permitiendo acceso.");
-  return <Outlet />;
+  // Si está autenticado, permite el acceso a la ruta protegida
+  console.log("PrivateRoute: Autenticado. Permitiendo acceso a la ruta.");
+  return <Outlet />; // Renderiza el componente hijo de la ruta protegida
 };
 
 export default PrivateRoute;

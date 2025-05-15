@@ -1,0 +1,71 @@
+/* base.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --font-family-sans: 'Inter', sans-serif;
+
+  /* Paleta Principal (Inspirada en la nueva referencia financiera) */
+  --bg-app-finance: #F3F4F6; 
+  --bg-header-finance: #FFFFFF;
+  --bg-card-finance: #FFFFFF;
+  
+  --text-primary-finance: #111827; 
+  --text-secondary-finance: #6B7280; 
+  --text-tertiary-finance: #9CA3AF; 
+
+  /* Colores de Acento para Gráficos y Elementos */
+  --accent-green-finance: #34D399; 
+  --accent-purple-finance: #A78BFA; 
+  --accent-blue-finance: #60A5FA; 
+  --accent-orange-finance: #FDBA74; 
+  --accent-pink-finance: #F472B6; 
+  --accent-teal-finance: #2DD4BF; 
+  --accent-yellow-finance: #FACC15; 
+  --accent-red-finance: #F87171; 
+
+  --border-color-finance: #E5E7EB; 
+  --button-bg-finance: #F9FAFB; 
+  --button-text-finance: var(--text-secondary-finance);
+  --button-border-finance: var(--border-color-finance);
+
+  --card-border-radius-finance: 0.75rem;
+  --header-height-finance: 65px; 
+  --content-padding-finance: 1.25rem;
+  --element-padding-finance: 0.75rem;
+
+  --shadow-card-finance: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-header-finance: 0 2px 4px rgba(0,0,0,0.03);
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family-sans);
+  background-color: var(--bg-app-finance);
+  color: var(--text-primary-finance);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.dashboard-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Animación (global) */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Footer (Opcional, global) */
+.app-footer {
+  text-align: center;
+  padding: 1.5rem;
+  font-size: 0.8rem;
+  color: var(--text-tertiary-finance);
+  margin-top: auto;
+}
