@@ -166,6 +166,14 @@ const MenuList = ({ collapsed }) => {
         // console.log("MenuList useMemo for menuItems: Regenerating with filteredRoutes:", filteredRoutes);
         return generateMenuItems(filteredRoutes);
     }, [filteredRoutes, generateMenuItems]);
+        // Submenú (con hijos visibles)
+        return (
+            // El componente 'item.icon' viene de pages.routes.js
+            <Menu.SubMenu key={currentPath} icon={item.icon} title={item.label} /* style={{ color: textColor }} */>
+                {item.children.map(child => renderMenuItem(child, currentPath))}
+            </Menu.SubMenu>
+        );
+    };
 
     // Renderizado condicional
     if (!user) { // Si no hay usuario, no mostrar menú

@@ -50,23 +50,33 @@ const registerPurchaseService = {
              throw error; // Re-throw the error to be caught by the component
          }
      },
-
-
-    getRegisterPurchaseById: async (id) => {
+     getMeatCategoryProviders: async () => {
         try {
-           // This looks reasonable, assuming the backend supports these includes for a single record
-           const response = await axios.get(`${API_URL}/${id}`, {
-                 params: {
-                    include: 'provider,purchaseDetails.insumo' // Match include params with the list view if possible
-                }
-            });
-           console.log(`API Response (getRegisterPurchaseById ${id}):`, response.data); // Add logging
-           return response.data;
-       } catch (error) {
-           console.error(`Error fetching purchase ${id}:`, error.response?.data || error.message);
-           throw error;
-       }
-   },
+            const response = await axios.get(`${API_URL}/providers/meat`);
+            // La respuesta ya debería ser un array de objetos Provider [{ idProvider, providerName }, ...]
+            return Array.isArray(response.data) ? response.data : [];
+        } catch (error) {
+            console.error('Error al obtener proveedores de categoría carne:', error);
+            throw error;
+        }
+    },
+
+
+        getRegisterPurchaseById: async (id) => {
+            try {
+            // This looks reasonable, assuming the backend supports these includes for a single record
+            const response = await axios.get(`${API_URL}/${id}`, {
+                    params: {
+                        include: 'provider,purchaseDetails.insumo' // Match include params with the list view if possible
+                    }
+                });
+            console.log(`API Response (getRegisterPurchaseById ${id}):`, response.data); // Add logging
+            return response.data;
+        } catch (error) {
+            console.error(`Error fetching purchase ${id}:`, error.response?.data || error.message);
+            throw error;
+        }
+    },
 
    createRegisterPurchase: async (purchaseData) => {
     try {

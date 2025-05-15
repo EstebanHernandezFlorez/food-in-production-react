@@ -27,6 +27,8 @@ import RegistroCompra from "./views/module/Compras/RegistroComprasPage";
 import FichaTecnica from "./views/module/ProductoInsumo/FichaTecnica";
 import Insumos from "./views/module/Insumo/Insumo";
 import Dashboard from "./views/module/Dashboard/dashboard"
+import ListaFichasTecnicas from "./views/module/ProductoInsumo/ListaFichasTecnicas";
+
 // import NotFound from "./views/NotFound"; // opcional
 
 // Función recursiva para generar rutas del menú (si la usas)
@@ -88,6 +90,10 @@ export default function App() {
               <Route path="insumos" element={<Insumos />} />
             </Route>
           </Route>
+              <Route path="producto/:idProduct/fichas" element={<ListaFichasTecnicas />} />
+              <Route path="fichas-tecnicas/:idProduct" element={<ListaFichasTecnicas />} />
+              <Route path="ficha-tecnica/editar/:idSpecsheet" element={<FichaTecnica />} />
+
 
           {/* Opcional: Ruta catch-all para 404 */}
           {/* <Route path="*" element={<Navigate to="/login" replace />} /> */}
