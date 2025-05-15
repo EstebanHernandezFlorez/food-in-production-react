@@ -166,14 +166,6 @@ const MenuList = ({ collapsed }) => {
         // console.log("MenuList useMemo for menuItems: Regenerating with filteredRoutes:", filteredRoutes);
         return generateMenuItems(filteredRoutes);
     }, [filteredRoutes, generateMenuItems]);
-        // Submenú (con hijos visibles)
-        return (
-            // El componente 'item.icon' viene de pages.routes.js
-            <Menu.SubMenu key={currentPath} icon={item.icon} title={item.label} /* style={{ color: textColor }} */>
-                {item.children.map(child => renderMenuItem(child, currentPath))}
-            </Menu.SubMenu>
-        );
-    };
 
     // Renderizado condicional
     if (!user) { // Si no hay usuario, no mostrar menú
@@ -181,11 +173,12 @@ const MenuList = ({ collapsed }) => {
         return null;
     }
     // Si hay usuario pero no hay permisos cargados (estado intermedio) O no hay items de menú
-    if ((!effectivePermissions || Object.keys(effectivePermissions).length === 0) && menuItems.length === 0 && !user.isAdmin) { // isAdmin es un ejemplo, puedes tener otra lógica para roles sin permisos explícitos
+    // isAdmin es un ejemplo, puedes tener otra lógica para roles sin permisos explícitos
+    if ((!effectivePermissions || Object.keys(effectivePermissions).length === 0) && menuItems.length === 0 && !user.isAdmin) { 
         // console.log("MenuList Render: User exists, but no permissions or no menu items. Rendering null.", { effectivePermissions, menuItems });
         // Podrías mostrar un mensaje o un menú mínimo si es necesario
         // return <small>Cargando permisos o sin acceso a módulos...</small>;
-        // return null; // Para no mostrar nada
+        return null; // Para no mostrar nada
     }
     if (menuItems.length === 0) {
         // console.log("MenuList Render: No menu items to display, rendering null.");
@@ -209,6 +202,6 @@ const MenuList = ({ collapsed }) => {
             items={menuItems}
         />
     );
-};
+}; // Este es el cierre correcto de la función del componente MenuList
 
 export default MenuList;

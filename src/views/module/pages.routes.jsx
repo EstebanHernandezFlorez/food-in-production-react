@@ -87,7 +87,7 @@ const routes = [
         path: "producto_insumo",
         label: "Producto Insumo",
         icon: <BoxIcon size={SUB_ICON_SIZE} />,
-        element: <Productos />,
+        element: <ProductosInsumo />,
         requiredPermission: "producto-insumo", // <-- String literal
       },
       {
@@ -95,7 +95,15 @@ const routes = [
         label: "Orden de producción",
         icon: <FactoryIcon size={SUB_ICON_SIZE} />,
          // 🚨 REVISAR COMPONENTE: ¿Es <Produccion /> o debería ser <OrdenProduccion />?
-        element: <Produccion />,
+        element: <OrdenProduccion />,
+        requiredPermission: "orden-produccion", // <-- String literal
+      },
+      {
+        path: "Historial",
+        label: "Historail",
+        icon: <FactoryIcon size={SUB_ICON_SIZE} />,
+         // 🚨 REVISAR COMPONENTE: ¿Es <Produccion /> o debería ser <OrdenProduccion />?
+        element: <Historial />,
         requiredPermission: "orden-produccion", // <-- String literal
       },
       {
