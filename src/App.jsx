@@ -86,13 +86,15 @@ export default function App() {
               <Route path="conceptos-gasto" element={<TablaGastos />} />
               <Route path="rendimiento-empleado" element={<RendimientoEmpleado />} />
               <Route path="registrar-compra" element={<RegistroCompra />} />
-              <Route path="ficha-tecnica" element={<FichaTecnica />} />
+              <Route path="ficha-tecnica/crear" element={<FichaTecnica />} />
               <Route path="insumos" element={<Insumos />} />
-            </Route>
-          </Route>
               <Route path="producto/:idProduct/fichas" element={<ListaFichasTecnicas />} />
               <Route path="fichas-tecnicas/:idProduct" element={<ListaFichasTecnicas />} />
               <Route path="ficha-tecnica/editar/:idSpecsheet" element={<FichaTecnica />} />
+            </Route>
+          </Route>
+          
+             
 
 
           {/* Opcional: Ruta catch-all para 404 */}
