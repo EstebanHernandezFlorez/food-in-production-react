@@ -21,6 +21,7 @@ import React, {
   // fichaTecnicaService ya no se usa aquí si la lista de fichas se maneja en otra página
   // import fichaTecnicaService from "../../services/fichaTecnicaService";
   import CustomPagination from "../../General/CustomPagination";
+ 
 
   // --- Confirmation Modal Component (sin cambios) ---
   const ConfirmationModal = ({
@@ -430,7 +431,7 @@ import React, {
             <Button color="success" size="sm" onClick={openAddModal} className="me-2 button-add">
               <Plus size={18} className="me-1" /> Agregar Producto/Insumo
             </Button>
-            <Button color="primary" size="sm" onClick={() => navigate("/home/ficha-tecnica")} className="button-add-ficha">
+            <Button color="primary" size="sm" onClick={() => navigate("/home/ficha-tecnica/crear")} className="button-add-ficha">
               <FileText size={18} className="me-1" /> Crear Ficha Técnica
             </Button>
           </Col>

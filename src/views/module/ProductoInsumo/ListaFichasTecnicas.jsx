@@ -232,10 +232,6 @@ const ListaFichasTecnicas = () => {
         navigate(`/home/ficha-tecnica/editar/${idSpecsheet}`);
     };
 
-    // Ejemplo de cómo podrías usar el icono Plus (no se usa actualmente en esta lista)
-    // const handleNavigateToCreate = () => {
-    //     navigate(`/home/ficha-tecnica/crear/${idProduct}`);
-    // };
 
     return (
         <Container fluid className="p-4 main-content">
