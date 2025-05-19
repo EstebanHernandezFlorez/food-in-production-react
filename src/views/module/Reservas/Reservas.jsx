@@ -1,6 +1,5 @@
-"use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import {
   Container,
   Button,
@@ -22,23 +21,67 @@ import {
 } from "reactstrap"
 import FullCalendar from "@fullcalendar/react"
 import dayGridPlugin from "@fullcalendar/daygrid"
+import timeGridPlugin from "@fullcalendar/timegrid"
 import interactionPlugin from "@fullcalendar/interaction"
-// >>> Importación CSS eliminada <<<
-// import './Calendario.css';
 import { utils, writeFile } from "xlsx"
-import Swal from "sweetalert2"
 import "sweetalert2/dist/sweetalert2.min.css"
 import { FaFileExcel, FaTrashAlt, FaList } from "react-icons/fa"
 import Select from "react-select"
+import { AlertTriangle, CheckCircle, XCircle, Plus, Edit } from "lucide-react"
+import toast, { Toaster } from "react-hot-toast"
 
 // --- IMPORTAR SERVICIOS REALES ---
 import reservasService from "../../services/reservasService"
 import clientesService from "../../services/clientesService"
 import serviciosService from "../../services/serviciosService"
 
+// --- Componente de Modal de Confirmación (copiado del componente de clientes) ---
+const ConfirmationModal = ({
+  isOpen,
+  toggle,
+  title,
+  children,
+  onConfirm,
+  confirmText = "Confirmar",
+  confirmColor = "primary",
+  isConfirming = false,
+}) => (
+  <Modal
+    isOpen={isOpen}
+    toggle={!isConfirming ? toggle : undefined}
+    centered
+    backdrop="static"
+    keyboard={!isConfirming}
+  >
+    <ModalHeader toggle={!isConfirming ? toggle : undefined}>
+      <div className="d-flex align-items-center">
+        <AlertTriangle
+          size={24}
+          className={`text-${confirmColor === "danger" ? "danger" : confirmColor === "warning" ? "warning" : "primary"} me-2`}
+        />
+        <span className="fw-bold">{title}</span>
+      </div>
+    </ModalHeader>
+    <ModalBody>{children}</ModalBody>
+    <ModalFooter>
+      <Button color="secondary" outline onClick={toggle} disabled={isConfirming}>
+        Cancelar
+      </Button>
+      <Button color={confirmColor} onClick={onConfirm} disabled={isConfirming}>
+        {isConfirming ? (
+          <>
+            <Spinner size="sm" className="me-1" /> Procesando...
+          </>
+        ) : (
+          confirmText
+        )}
+      </Button>
+    </ModalFooter>
+  </Modal>
+)
+
 // --- ESTADO INICIAL DEL FORMULARIO ---
 const emptyForm = {
-  // ... (sin cambios)
   id: null,
   idCustomers: "",
   fullName: "",
@@ -60,450 +103,195 @@ const emptyForm = {
   status: "pendiente",
 }
 
-// --- CONTENIDO CSS COMO STRING (anteriormente en Calendario.css) ---
-const calendarStyles = `
-  /* Calendario.css - Estilos inspirados en Untitled UI */
+// Modificar el mapeo de colores para usar colores pastel más suaves
+// ESTE colorMap ES PARA LA LISTA, NO PARA EL CALENDARIO DIRECTAMENTE
+const colorMap = {
+  terminada: "rgba(76, 175, 80, 0.7)", // Verde más vivo
+  anulada: "rgba(244, 67, 54, 0.7)", // Rojo más vivo
+  pendiente: "rgba(255, 152, 0, 0.7)", // Naranja más vivo
+  en_proceso: "rgba(255, 235, 59, 0.7)", // Amarillo más vivo
+  confirmada: "rgba(33, 150, 243, 0.7)", // Azul más vivo
+  default: "rgba(158, 158, 158, 0.7)", // Gris más vivo
+}
 
-  /* --- Fuentes (Asegúrate de importar 'Inter' o tu fuente preferida globalmente) --- */
-  .calendar-container {
-    font-family: 'Inter', sans-serif; /* Asegúrate que la fuente esté disponible */
-    background-color: #f9fafb; /* Fondo general ligeramente gris */
-    padding: 20px !important; /* Añade padding al contenedor general */
-    border-radius: 8px; /* Bordes redondeados para el contenedor principal */
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03); /* Sombra sutil */
-  }
-
-  /* --- Estilos Globales para Inputs y Botones (Override Reactstrap/Bootstrap) --- */
-  .calendar-container .form-control,
-  .calendar-container .form-select,
-  .calendar-container .Select__control { /* Estilo para React Select */
-    font-size: 0.875rem;
-    border-radius: 6px !important;
-    border-color: #d1d5db; /* Gris claro */
-    box-shadow: none !important;
-  }
-  .calendar-container .form-control:focus,
-  .calendar-container .form-select:focus,
-  .calendar-container .Select__control--is-focused {
-    border-color: #3b82f6; /* Azul al enfocar */
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3) !important;
-  }
-
-  .calendar-container .btn {
-    font-size: 0.875rem;
-    border-radius: 6px;
-    padding: 0.4rem 0.8rem;
-    font-weight: 500;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
-  }
-
-  .calendar-container .btn-primary {
-    background-color: #3b82f6; /* Azul primario */
-    border-color: #3b82f6;
-    color: white;
-  }
-  .calendar-container .btn-primary:hover {
-    background-color: #2563eb;
-    border-color: #2563eb;
-  }
-
-  .calendar-container .btn-secondary {
-    background-color: #ffffff;
-    border-color: #d1d5db; /* Borde gris */
-    color: #374151; /* Texto oscuro */
-  }
-  .calendar-container .btn-secondary:hover {
-    background-color: #f9fafb; /* Gris muy claro hover */
-    border-color: #adb5bd;
-  }
-   .calendar-container .btn-secondary:focus {
-     box-shadow: 0 0 0 2px rgba(209, 213, 219, 0.5) !important;
-   }
-
-  .calendar-container .btn-outline-primary {
-    color: #3b82f6;
-    border-color: #3b82f6;
-  }
-  .calendar-container .btn-outline-primary:hover {
-    background-color: #eff6ff; /* Azul muy claro */
-  }
-
-   .calendar-container .btn-danger {
-      background-color: #EF4444;
-      border-color: #EF4444;
-      color: white;
-  }
-  .calendar-container .btn-danger:hover {
-      background-color: #DC2626;
-      border-color: #DC2626;
-  }
-  .calendar-container .btn-outline-danger {
-      color: #EF4444;
-      border-color: #EF4444;
-  }
-  .calendar-container .btn-outline-danger:hover {
-      background-color: #FEE2E2; /* Rojo muy claro */
-      color: #DC2626;
-  }
-
-
-  /* --- Encabezado del Calendario --- */
-  .calendar-header {
-    margin-bottom: 1.5rem !important;
-  }
-  .calendar-header h2 {
-    font-size: 1.5rem; /* Tamaño título principal */
-    font-weight: 600;
-    color: #111827; /* Casi negro */
-  }
-  .calendar-search-input {
-    background-color: white;
-    font-size: 0.875rem; /* Ajustar tamaño si es necesario */
-  }
-
-  /* --- FullCalendar Wrapper --- */
-  .fullcalendar-wrapper {
-    background-color: #fff; /* Fondo blanco para el calendario */
-    border: 1px solid #e5e7eb; /* Borde gris muy claro */
+// Modificar los estilos CSS personalizados para el calendario
+const customCalendarStyles = `
+  /* Estilos generales para el calendario */
+  .fc {
+    --fc-border-color: #e5e7eb;
+    --fc-page-bg-color: #fff;
+    --fc-neutral-bg-color: #f9fafb;
+    --fc-event-selected-box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    height: 100% !important; /* Asegura que FC tome toda la altura de su contenedor directo */
+    width: 100% !important;
+    background-color: #fff;
     border-radius: 8px;
-    padding: 15px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.02);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   }
-
-  /* --- FullCalendar Toolbar --- */
+  
+  /* Estilos para la barra de herramientas */
   .fc .fc-toolbar {
-    margin-bottom: 1.5em !important;
-    padding: 0 !important;
+    margin-bottom: 1rem !important;
+    padding: 0.5rem 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
   }
+  
   .fc .fc-toolbar-title {
-    font-size: 1.125rem !important; /* 18px */
+    font-size: 1.25rem !important;
     font-weight: 600;
     color: #111827;
   }
+  
+  /* Estilos para los botones */
   .fc .fc-button {
-    background-color: #fff !important;
-    border: 1px solid #d1d5db !important;
-    color: #374151 !important;
+    padding: 0.375rem 0.75rem !important;
     font-size: 0.875rem !important;
-    padding: 0.3rem 0.7rem !important;
-    box-shadow: none !important;
     border-radius: 6px !important;
-    text-transform: none !important;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
-  }
-  .fc .fc-button:hover {
-    background-color: #f9fafb !important;
-  }
-  .fc .fc-button-primary:not(:disabled):active,
-  .fc .fc-button-primary:not(:disabled).fc-button-active {
-    background-color: #eff6ff !important; /* Azul muy claro activo */
-    border-color: #93c5fd !important;
-    color: #2563eb !important;
-  }
-   .fc .fc-button .fc-icon { /* Ajustar tamaño iconos si es necesario */
-      font-size: 1em;
-   }
-
-  /* --- FullCalendar Grid y Celdas --- */
-  .fc .fc-col-header-cell { /* Encabezado días (Lun, Mar...) */
-    background-color: #f9fafb;
-    border-color: #e5e7eb !important;
-    font-weight: 500;
-    font-size: 0.75rem; /* Más pequeño */
-    color: #6b7280; /* Gris */
-    padding: 0.5rem 0;
-    text-transform: uppercase;
-  }
-  .fc .fc-daygrid-day { /* Celdas de día */
-    border-color: #e5e7eb !important; /* Borde gris muy claro */
-  }
-  .fc .fc-daygrid-day-number { /* Número del día */
-    padding: 0.5em 0.5em 0 0 !important;
-    font-size: 0.8rem;
+    background-color: #fff;
+    border: 1px solid #e5e7eb;
     color: #374151;
     font-weight: 500;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: all 0.15s ease;
   }
-  .fc .fc-day-today { /* Celda del día actual */
-    background-color: #f3f4f6 !important; /* Gris un poco más oscuro */
+  
+  .fc .fc-button:hover {
+    background-color: #f9fafb;
+    border-color: #d1d5db;
   }
-
-  /* --- Estilo de Eventos (FullCalendar) --- */
-  .fc .fc-daygrid-event { /* Contenedor del evento */
-    border-radius: 12px !important; /* Más redondeado (píldora) */
-    padding: 2px 6px !important;
-    margin-bottom: 3px !important;
-    font-size: 0.75rem; /* Texto evento más pequeño */
-    font-weight: 500;
-    border: none !important; /* Quitamos borde por defecto */
-    background-color: transparent !important; /* Hacemos transparente el contenedor */
-    cursor: pointer;
+  
+  .fc .fc-button-primary:not(:disabled).fc-button-active,
+  .fc .fc-button-primary:not(:disabled):active {
+    background-color: #f3f4f6;
+    border-color: #d1d5db;
+    color: #111827;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
   }
-   .fc .fc-event-main {
-      padding: 0 !important; /* Quitamos padding interno por defecto */
-  }
-
-  /* Estructura personalizada dentro del evento (dot + title + time) */
-  .fc-event-main-custom {
-    display: flex;
-    align-items: center;
-    gap: 5px; /* Espacio entre punto y texto */
-    padding: 3px 6px; /* Padding interno del contenido */
-    border-radius: 10px; /* Redondeo interno */
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-
-  .event-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0; /* Evita que el punto se encoja */
-  }
-
-  .event-title {
-    flex-grow: 1; /* Ocupa el espacio restante */
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    color: inherit; /* Hereda color del contenedor (definido abajo) */
-  }
-   .event-time {
-      color: inherit;
-      opacity: 0.8; /* Hora un poco más tenue */
-      margin-left: auto; /* Empuja la hora a la derecha */
-      padding-left: 5px;
-  }
-
-  /* Colores específicos por estado del evento */
-  .fc-event-main-custom.event-status-pendiente { background-color: #FEF3C7; color: #92400E; } /* Amarillo claro fondo, texto oscuro */
-  .fc-event-main-custom.event-status-confirmada { background-color: #DBEAFE; color: #1E40AF; } /* Azul claro fondo, texto oscuro */
-  .fc-event-main-custom.event-status-terminada { background-color: #D1FAE5; color: #065F46; } /* Verde claro fondo, texto oscuro */
-  .fc-event-main-custom.event-status-anulada { background-color: #FEE2E2; color: #991B1B; } /* Rojo claro fondo, texto oscuro */
-  .fc-event-main-custom.event-status-en_proceso { background-color: #FEF9C3; color: #854D0E; } /* Naranja claro */
-  .fc-event-main-custom.event-status-default { background-color: #E5E7EB; color: #374151; } /* Gris claro */
-
-  /* Hover sobre eventos */
-  .fc-daygrid-event:hover .fc-event-main-custom {
-    opacity: 0.85;
-  }
-
-  /* Indicador "+ more" */
-  .fc .fc-daygrid-more-link {
-      color: #3b82f6; /* Azul */
-      font-size: 0.7rem;
-      font-weight: 500;
-  }
-
-  /* --- Estilos para Modales --- */
-  .calendar-modal .modal-content {
-    border-radius: 8px;
-    border: none;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  }
-  .calendar-modal .modal-header {
-    background-color: #f9fafb; /* Fondo cabecera gris claro */
+  
+  /* Estilos para los encabezados de día */
+  .fc .fc-col-header-cell {
+    padding: 0.5rem 0;
+    background-color: #fff;
     border-bottom: 1px solid #e5e7eb;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-    padding: 1rem 1.5rem;
   }
-  .calendar-modal .modal-header .modal-title {
-      font-size: 1.125rem;
-      font-weight: 600;
-      color: #111827;
-  }
-  .calendar-modal .modal-header .btn-close { /* Botón cerrar */
-      filter: grayscale(1) opacity(0.5);
-  }
-  .calendar-modal .modal-body {
-    padding: 1.5rem;
-    font-size: 0.875rem;
-  }
-  .calendar-modal .modal-footer {
-    background-color: #f9fafb; /* Fondo pie gris claro */
-    border-top: 1px solid #e5e7eb;
-    border-bottom-left-radius: 8px;
-    border-bottom-right-radius: 8px;
-    padding: 1rem 1.5rem;
-  }
-
-  /* Estilo para los fieldsets dentro del modal */
-  .calendar-modal .modal-fieldset {
-      border: 1px solid #e5e7eb;
-      border-radius: 6px;
-      padding: 1rem 1.5rem 1.5rem 1.5rem;
-      margin-bottom: 1.5rem !important;
-  }
-  .calendar-modal .modal-legend {
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: #111827;
-      padding: 0 0.5rem;
-      width: auto; /* Necesario para que el fondo no lo tape */
-      margin-left: 0.5rem; /* Ajusta para que no pegue al borde */
-      float: none; /* Evita problemas de float */
-  }
-  .calendar-modal .modal-body label {
-      font-weight: 500;
-      color: #374151;
-      margin-bottom: 0.3rem;
-      display: block; /* Asegura espaciado correcto */
-  }
-  /* Ajustes específicos para React Select dentro del modal */
-  .calendar-modal .Select__control {
-      min-height: 38px; /* Altura consistente */
-  }
-  .calendar-modal .Select__placeholder {
-      color: #9ca3af; /* Placeholder más claro */
-  }
-
-
-  /* --- Estilos para la Tabla de Lista en Modal --- */
-  .list-modal .reservations-table {
-      margin-bottom: 1rem; /* Espacio antes de paginación */
-      border-collapse: separate; /* Permite bordes redondeados */
-      border-spacing: 0;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      overflow: hidden; /* Clave para que el radius funcione en la tabla */
-  }
-  .list-modal .reservations-table th {
-      background-color: #f9fafb;
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: #4b5563;
-      text-transform: uppercase;
-      border-bottom: 1px solid #e5e7eb !important;
-      border-top: none !important;
-      border-left: none !important;
-      border-right: none !important;
-      white-space: nowrap;
-      padding: 0.75rem 1rem;
-  }
-   .list-modal .reservations-table th:first-child {
-     border-top-left-radius: 8px;
-   }
-    .list-modal .reservations-table th:last-child {
-     border-top-right-radius: 8px;
-   }
-
-  .list-modal .reservations-table td {
-      font-size: 0.875rem;
-      vertical-align: middle;
-      border-top: 1px solid #e5e7eb !important; /* Borde superior para separar filas */
-      border-bottom: none !important;
-      border-left: none !important;
-      border-right: none !important;
-      padding: 0.75rem 1rem;
-      background-color: #fff; /* Fondo blanco para celdas */
-  }
-   /* Quitar borde superior de la primera fila */
-  .list-modal .reservations-table tbody tr:first-child td {
-      border-top: none !important;
-  }
-
-   /* Alternar color de filas (opcional, si no usas 'striped') */
-   /* .list-modal .reservations-table tbody tr:nth-child(odd) td {
-      background-color: #f9fafb;
-   } */
-
-
-  .list-modal .badge.event-status-badge {
-      font-size: 0.7rem;
-      padding: 0.3em 0.6em;
-      border-radius: 12px;
-      font-weight: 500;
-      /* Los colores ya vienen del style inline, pero podemos ajustar texto */
-      color: white; /* Texto blanco por defecto */
-  }
-  /* Ajustar color de texto para estados con fondo claro */
-  .list-modal .badge.event-status-badge.event-status-pendiente,
-  .list-modal .badge.event-status-badge.event-status-en_proceso {
-      color: #422006; /* Texto oscuro para fondos claros */
-  }
-
-  /* --- Paginación en Modal --- */
-  .calendar-modal .pagination .page-link {
-      font-size: 0.875rem;
-      color: #3b82f6; /* Azul */
-      border-color: #e5e7eb;
-      margin: 0 2px;
-      border-radius: 6px !important;
-      background-color: #fff;
-  }
-  .calendar-modal .pagination .page-link:hover {
-      background-color: #eff6ff;
-      border-color: #d1d5db;
-  }
-  .calendar-modal .pagination .page-item.active .page-link {
-      background-color: #3b82f6;
-      border-color: #3b82f6;
-      color: white;
-      z-index: 1; /* Asegura que esté por encima */
-  }
-  .calendar-modal .pagination .page-item.disabled .page-link {
-      color: #9ca3af; /* Gris para deshabilitado */
-      background-color: #f9fafb;
-      border-color: #e5e7eb;
-  }
-
-  /* --- Overlay de Carga --- */
-  .loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.8); /* Fondo blanco semi-transparente */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1060; /* Encima de modales (Bootstrap z-index) */
-    color: #1f2937; /* Texto oscuro */
+  
+  .fc .fc-col-header-cell-cushion {
+    padding: 0.5rem;
     font-weight: 500;
+    color: #6b7280;
+    font-size: 0.875rem;
+    text-decoration: none !important;
   }
-
-  /* --- Lista de búsqueda de clientes --- */
-    .client-search-results {
-        position: absolute;
-        z-index: 1050; /* Encima del contenido normal, debajo de modales */
-        width: 100%;
-        max-height: 200px;
-        overflow-y: auto;
-        border: 1px solid #d1d5db; /* Borde gris */
-        background-color: white;
-        border-radius: 0 0 6px 6px; /* Redondeo inferior */
-        margin-top: -1px; /* Solapar ligeramente con el input */
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  
+  /* Estilos para las celdas de día */
+  .fc .fc-daygrid-day {
+    min-height: 6rem; /* Ajustar si es necesario, pero la altura general la controla flex */
+  }
+  
+  .fc .fc-daygrid-day-frame {
+    padding: 0.25rem;
+  }
+  
+  .fc .fc-daygrid-day-top {
+    justify-content: flex-start;
+    padding: 0.25rem;
+  }
+  
+  .fc .fc-daygrid-day-number {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    text-decoration: none !important;
+    margin: 0.25rem;
+  }
+  
+  /* Estilos para eventos - FullCalendar manejará el fondo con eventContent */
+  .fc-event {
+    border: none !important;
+    background: transparent !important; /* Dejar que eventContent maneje el fondo */
+    margin: 2px 0 !important;
+  }
+  
+  .fc-event-main {
+    padding: 0 !important;
+  }
+  
+  /* Estilo para el día actual */
+  .fc .fc-day-today {
+    background-color: rgba(239, 246, 255, 0.6) !important;
+  }
+  
+  /* Estilos para días de otros meses */
+  .fc .fc-day-other .fc-daygrid-day-top {
+    opacity: 0.5;
+  }
+  
+  /* Estilos para el contenedor de eventos */
+  .fc .fc-daygrid-day-events {
+    margin-top: 2px;
+    padding: 0 2px;
+  }
+    
+  /* Estilos para eventos personalizados - NUEVO ESTILO */
+  .custom-event-container {
+    display: block;
+    margin: 2px 0;
+    padding: 6px 10px;
+    border-radius: 12px; /* Más redondeado para un look moderno */
+    font-size: 0.8rem;
+    line-height: 1.2;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0,0,0,0.05); /* Sombra más pronunciada */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+    border: 1px solid rgba(0,0,0,0.05); /* Borde sutil */
+  }
+  
+  .custom-event-container:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0,0,0,0.08);
+    transform: translateY(-1px); /* Ligero efecto de elevación */
+  }
+  
+  .custom-event-title {
+    font-weight: 600; /* Más grueso para destacar */
+    /* El color se hereda del contenedor */
+  }
+  
+  .custom-event-time {
+    font-weight: 500; /* Un poco menos grueso que el título */
+    margin-left: 6px; /* Más espacio */
+    opacity: 0.9;
+    /* El color se hereda del contenedor */
+  }
+  
+  /* Ajustes para vista móvil */
+  @media (max-width: 768px) {
+    .fc .fc-toolbar {
+      flex-direction: column;
+      align-items: flex-start;
     }
-    .client-search-results .list-group-item {
-        font-size: 0.875rem;
-        padding: 0.5rem 0.75rem;
-        border: none; /* Quitamos bordes internos */
-        border-bottom: 1px solid #f3f4f6; /* Separador muy sutil */
-        cursor: pointer;
+    
+    .fc .fc-toolbar-chunk {
+      margin-bottom: 0.5rem;
     }
-     .client-search-results .list-group-item:last-child {
-        border-bottom: none;
-     }
-    .client-search-results .list-group-item:hover {
-        background-color: #f3f4f6; /* Gris muy claro hover */
+    
+    .fc .fc-daygrid-day {
+      min-height: 4rem;
     }
-    .client-search-results .list-group-item.no-results {
-        color: #6b7280; /* Texto gris para mensajes */
-        cursor: default;
-        background-color: white !important; /* Sin hover */
+    .custom-event-container {
+      padding: 4px 8px;
+      font-size: 0.75rem;
     }
-
-    /* Ocultar el input de búsqueda original de react-select si es necesario */
-    /* .calendar-modal .Select__input { display: none; } */
-
+  }
 `
 
 // --- COMPONENTE PRINCIPAL ---
-export default function Calendario() {
+const Calendario = () => {
   // --- Estados del Componente ---
   const [data, setData] = useState([])
   const [availableServices, setAvailableServices] = useState([])
@@ -521,51 +309,112 @@ export default function Calendario() {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 6
 
+  // --- Estados para el modal de confirmación ---
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false)
+  const [confirmModalProps, setConfirmModalProps] = useState({
+    title: "",
+    message: null,
+    confirmText: "Confirmar",
+    confirmColor: "primary",
+    itemDetails: null,
+  })
+  const [isConfirmActionLoading, setIsConfirmActionLoading] = useState(false)
+  const confirmActionRef = useRef(null)
+
+  // --- NUEVO: Estado para el nombre del campo de monto adicional ---
+  const [additionalAmountLabel, setAdditionalAmountLabel] = useState("Monto Decoración")
+
   // --- NUEVA FUNCIÓN: Convertir formato de tiempo a número ---
   const convertTimeFormatToNumber = (timeStr) => {
-    if (!timeStr) return "";
-    
+    if (!timeStr) return ""
+
     // Si ya es un número, devolverlo directamente
-    if (!isNaN(Number(timeStr))) return timeStr;
-    
+    if (!isNaN(Number(timeStr))) return timeStr
+
     try {
       // Intentar extraer los segundos del formato "00:00:02"
-      const parts = timeStr.split(':');
+      const parts = timeStr.split(":")
       if (parts.length === 3) {
         // Convertir a segundos totales
-        const hours = parseInt(parts[0], 10) || 0;
-        const minutes = parseInt(parts[1], 10) || 0;
-        const seconds = parseInt(parts[2], 10) || 0;
-        
-        // Devolver solo los segundos si es lo que necesitas, o el total en segundos
-        return seconds.toString();
-      }
-      return timeStr; // Si no se puede parsear, devolver el original
-    } catch (error) {
-      console.error("Error al convertir formato de tiempo:", error);
-      return timeStr;
-    }
-  };
+        const hours = Number.parseInt(parts[0], 10) || 0
+        const minutes = Number.parseInt(parts[1], 10) || 0
+        const seconds = Number.parseInt(parts[2], 10) || 0
 
-  // --- Mapeo de colores (ajustado a la UI) ---
-  const colorMap = {
-    terminada: "#10B981", // Verde
-    anulada: "#F04438", // Rojo
-    pendiente: "#F79009", // Naranja/Amarillo
-    en_proceso: "#F59E0B", // Naranja más claro
-    confirmada: "#3B82F6", // Azul
-    default: "#6B7280", // Gris por defecto
+        // Devolver solo los segundos si es lo que necesitas, o el total en segundos
+        return seconds.toString()
+      }
+      return timeStr // Si no se puede parsear, devolver el original
+    } catch (error) {
+      console.error("Error al convertir formato de tiempo:", error)
+      return timeStr
+    }
+  }
+
+  // --- NUEVA FUNCIÓN: Calcular monto de decoración según número de personas ---
+  const calculateDecorationAmount = (numPeople) => {
+    if (!numPeople || isNaN(Number(numPeople))) return ""
+
+    const people = Number(numPeople)
+
+    if (people >= 2 && people <= 15) {
+      return "70000" // 70.000 para 2-15 personas
+    } else if (people >= 16 && people <= 40) {
+      return "90000" // 90.000 para 16-40 personas
+    } else if (people > 40) {
+      return "90000" // Mantener 90.000 para más de 40 personas
+    } else {
+      return "" // Para menos de 2 personas o valores inválidos
+    }
   }
 
   // --- Opciones formateadas para react-select ---
   const serviceOptions = availableServices.map((service) => ({
     value: service.id,
     label: service.Nombre || service.name || service.Name || `Servicio ${service.id}`,
+    price: service.price || service.Price || service.precio || 0, // Añadimos el precio del servicio
   }))
+
+  // --- Funciones para el modal de confirmación ---
+  const toggleConfirmModal = useCallback(() => {
+    if (isConfirmActionLoading) return // No permitir cerrar si está procesando
+    setConfirmModalOpen((prev) => !prev)
+  }, [isConfirmActionLoading])
+
+  // Efecto para resetear el estado del modal de confirmación cuando se cierra
+  useEffect(() => {
+    if (!confirmModalOpen && !isConfirmActionLoading) {
+      setConfirmModalProps({
+        title: "",
+        message: null,
+        confirmText: "Confirmar",
+        confirmColor: "primary",
+        itemDetails: null,
+      })
+      confirmActionRef.current = null
+    }
+  }, [confirmModalOpen, isConfirmActionLoading])
+
+  // Función para preparar la confirmación
+  const prepareConfirmation = useCallback(
+    (actionFn, props) => {
+      const detailsToPass = props.itemDetails
+      confirmActionRef.current = () => {
+        if (actionFn) {
+          actionFn(detailsToPass)
+        } else {
+          console.error("[CONFIRM ACTION] actionFn is null or undefined in ref execution.")
+          toast.error("Error interno al intentar ejecutar la acción confirmada.")
+          toggleConfirmModal()
+        }
+      }
+      setConfirmModalProps(props)
+      setConfirmModalOpen(true)
+    },
+    [toggleConfirmModal],
+  )
 
   // --- Carga de Datos ---
   const loadInitialData = useCallback(async () => {
-    // ... (sin cambios)
     setLoading(true)
     try {
       const [fetchedReservations, fetchedServices] = await Promise.all([
@@ -575,16 +424,13 @@ export default function Calendario() {
       const normalizedServices = (fetchedServices || []).map((service) => ({
         ...service,
         Nombre: service.Nombre || service.name || service.Name || `Servicio ${service.id}`,
+        price: service.price || service.Price || service.precio || 0, // Normalizar el precio
       }))
       setData(fetchedReservations || [])
       setAvailableServices(normalizedServices)
     } catch (error) {
       console.error("Error fetching initial data:", error)
-      Swal.fire(
-        "Error Carga Inicial",
-        `No se pudieron cargar los datos: ${error?.message || "Error desconocido"}`,
-        "error",
-      )
+      toast.error(`No se pudieron cargar los datos: ${error?.message || "Error desconocido"}`)
       setData([])
       setAvailableServices([])
     } finally {
@@ -604,14 +450,90 @@ export default function Calendario() {
     extendedProps: {
       // Pasamos datos extra al evento
       status: reserva.status || "default",
+      evenType: reserva.evenType || "",
+      numberPeople: reserva.numberPeople || "",
     },
   }))
 
+  // --- NUEVA FUNCIÓN: Verificar si ya existe una reserva para el mismo cliente en la misma fecha ---
+  const checkDuplicateReservation = useCallback(
+    (clientId, dateTime, reservationId = null) => {
+      if (!clientId || !dateTime) return false
+
+      const reservationDate = new Date(dateTime)
+      const reservationDateString = reservationDate.toISOString().split("T")[0] // Solo la fecha YYYY-MM-DD
+
+      // Verificar si hay alguna reserva del mismo cliente en la misma fecha
+      return data.some((reserva) => {
+        // Excluir la reserva actual si estamos editando
+        if (reservationId && (reserva.idReservations === reservationId || reserva.id === reservationId)) {
+          return false
+        }
+
+        // Verificar si es el mismo cliente
+        const sameClient = reserva.idCustomers === clientId
+        if (!sameClient) return false
+
+        // Verificar si es la misma fecha
+        const reservaDate = new Date(reserva.dateTime)
+        const reservaDateString = reservaDate.toISOString().split("T")[0]
+
+        return reservaDateString === reservationDateString
+      })
+    },
+    [data],
+  )
+
+  // --- NUEVA FUNCIÓN: Verificar si ya existe una reserva en la misma hora ---
+  const checkTimeConflict = useCallback(
+    (dateTime, reservationId = null) => {
+      if (!dateTime) return false
+
+      const reservationDateTime = new Date(dateTime)
+
+      // Verificar si hay alguna reserva en la misma hora
+      return data.some((reserva) => {
+        // Excluir la reserva actual si estamos editando
+        if (reservationId && (reserva.idReservations === reservationId || reserva.id === reservationId)) {
+          return false
+        }
+
+        // Verificar si es la misma hora
+        const reservaDateTime = new Date(reserva.dateTime)
+
+        // Comparar año, mes, día, hora y minutos
+        return (
+          reservationDateTime.getFullYear() === reservaDateTime.getFullYear() &&
+          reservationDateTime.getMonth() === reservaDateTime.getMonth() &&
+          reservationDateTime.getDate() === reservaDateTime.getDate() &&
+          reservationDateTime.getHours() === reservaDateTime.getHours() &&
+          reservationDateTime.getMinutes() === reservaDateTime.getMinutes()
+        )
+      })
+    },
+    [data],
+  )
+
+  // --- NUEVA FUNCIÓN: Calcular precio basado en número de personas ---
+  const calculateServicePrice = (numPeople, selectedServices) => {
+    if (!numPeople || !selectedServices || selectedServices.length === 0) return 0
+
+    // Convertir a número
+    const people = Number.parseInt(numPeople, 10)
+    if (isNaN(people) || people <= 0) return 0
+
+    // Calcular precio base por persona para los servicios seleccionados
+    let totalPrice = 0
+    selectedServices.forEach((service) => {
+      if (service && service.price) {
+        totalPrice += Number.parseFloat(service.price) * people
+      }
+    })
+
+    return totalPrice
+  }
+
   // --- Resto de Funciones (handleDateClick, handleEventClick, handleEventDrop, etc.) ---
-  // --- Deben permanecer igual que en la versión anterior con archivo CSS separado ---
-  // --- ... (incluye handleClientSearch, selectClient, handleAbonoChange, addAbono, removeAbono, updateRestante, handleMultiServiceChange, validaciones, handleSaveReserva, handleCancel, handleDownloadExcel, formatCurrency, toggleListModal, handlePageChange) ...
-  // --- ¡Asegúrate de tener TODAS las funciones aquí! ---
-  // (Funciones omitidas por brevedad, deben estar aquí como en la respuesta anterior)
   const handleDateClick = (arg) => {
     const now = new Date()
     const clickedDateTime = new Date(arg.dateStr)
@@ -620,7 +542,7 @@ export default function Calendario() {
 
     if (clickedUTC.getTime() < nowUTC.getTime() && arg.dateStr !== now.toISOString().split("T")[0]) {
       // Permitir click en hoy
-      Swal.fire("Fecha Inválida", "No se pueden crear reservas en fechas pasadas.", "warning")
+      toast.error("No se pueden crear reservas en fechas pasadas.")
       return
     }
 
@@ -633,10 +555,13 @@ export default function Calendario() {
       initialDateTime = now.toISOString().slice(0, 16)
     }
 
+    // Resetear el label del monto adicional
+    setAdditionalAmountLabel("Monto Decoración")
+
     setForm({
       ...emptyForm,
       dateTime: initialDateTime,
-      pass: [{ fecha: new Date().toISOString().split("T")[0], cantidad: "" }],
+      pass: [{ fecha: new Date().toISOString().split("T")[0], cantidad: "50000" }], // Inicializar pass con 50,000
     }) // Inicializar pass con fecha hoy
     setErrors({})
     setClientSearchText("")
@@ -649,14 +574,13 @@ export default function Calendario() {
     const idReservations = Number.parseInt(info.event.id, 10)
     if (isNaN(idReservations)) {
       console.error("ID de reserva inválido:", info.event.id)
-      Swal.fire("Error", "ID de reserva inválido.", "error")
+      toast.error("ID de reserva inválido.")
       return
     }
     setLoading(true)
     reservasService
       .getReservationById(idReservations)
       .then((detailedReservation) => {
-        // ... (lógica igual que antes)
         if (detailedReservation && !detailedReservation.error) {
           setSelectedReserva(detailedReservation)
           const selectedServiceValues = (
@@ -664,7 +588,16 @@ export default function Calendario() {
           ).map((service) => ({
             value: service.idAditionalServices,
             label: service.name || `Servicio ${service.idAditionalServices}`,
+            price: service.price || service.Price || service.precio || 0,
           }))
+
+          // Actualizar el label del monto adicional basado en el primer servicio seleccionado
+          if (selectedServiceValues.length > 0) {
+            setAdditionalAmountLabel(`Monto ${selectedServiceValues[0].label}`)
+          } else {
+            setAdditionalAmountLabel("Monto Decoración")
+          }
+
           let formattedPass = []
           if (Array.isArray(detailedReservation.pass)) {
             formattedPass = detailedReservation.pass.map((abono) => ({
@@ -679,9 +612,9 @@ export default function Calendario() {
           // Asegurarse de que la duración se establece correctamente
           const duration = detailedReservation.timeDurationR || detailedReservation.duration || ""
           console.log("Duración cargada del evento:", duration, "tipo:", typeof duration)
-          
+
           // Convertir el formato de tiempo a número
-          const durationAsNumber = convertTimeFormatToNumber(duration);
+          const durationAsNumber = convertTimeFormatToNumber(duration)
 
           // Asegurarse de que el estado se establece correctamente
           let statusToUse = detailedReservation.status
@@ -715,7 +648,7 @@ export default function Calendario() {
               (detailedReservation.Customer ? detailedReservation.Customer.distintive : ""),
             customerCategory:
               detailedReservation.customerCategory ||
-              (detailedReservation.Customer ? detailedReservation.Customer.customerCategory : ""),
+              (detailedReservation.Customer ? detailedReservation.customerCategory : ""),
             email:
               detailedReservation.email || (detailedReservation.Customer ? detailedReservation.Customer.email : ""),
             cellphone:
@@ -728,7 +661,7 @@ export default function Calendario() {
             pass:
               formattedPass.length > 0
                 ? formattedPass
-                : [{ fecha: new Date().toISOString().split("T")[0], cantidad: "" }], // Asegurar al menos un abono con fecha
+                : [{ fecha: new Date().toISOString().split("T")[0], cantidad: "50000" }], // Asegurar al menos un abono con fecha y monto mínimo
             timeDurationR: durationAsNumber, // Usar el valor convertido
             status: statusToUse,
           })
@@ -751,16 +684,12 @@ export default function Calendario() {
             "Respuesta:",
             detailedReservation,
           )
-          Swal.fire(
-            "Error",
-            detailedReservation?.errorMessage || "No se pudo encontrar la reserva seleccionada.",
-            "error",
-          )
+          toast.error(detailedReservation?.errorMessage || "No se pudo encontrar la reserva seleccionada.")
         }
       })
       .catch((error) => {
         console.error("Error fetching reservation details:", error)
-        Swal.fire("Error", `No se pudo cargar los detalles de la reserva: ${error.message}`, "error")
+        toast.error(`No se pudo cargar los detalles de la reserva: ${error.message}`)
       })
       .finally(() => {
         setLoading(false)
@@ -768,14 +697,13 @@ export default function Calendario() {
   }
 
   const handleEventDrop = async (info) => {
-    // ... (lógica igual que antes)
     const { event } = info
     const idReservations = Number.parseInt(event.id, 10)
     const reservaOriginal = data.find((res) => res.idReservations === idReservations)
 
     if (!reservaOriginal) {
       console.error("Error: No se encontró reserva original para reprogramar. ID:", idReservations)
-      Swal.fire("Error Interno", "No se pudo encontrar la reserva.", "error")
+      toast.error("No se pudo encontrar la reserva.")
       info.revert()
       return
     }
@@ -783,13 +711,30 @@ export default function Calendario() {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     if (newStartDate < today) {
-      Swal.fire("Error", "No se pueden reprogramar a fechas pasadas.", "error")
+      toast.error("No se pueden reprogramar a fechas pasadas.")
       info.revert()
       return
     }
+
+    // Verificar si hay conflicto de hora
+    if (checkTimeConflict(event.start.toISOString(), idReservations)) {
+      toast.error("Ya existe una reserva en esta hora. Por favor, seleccione otra hora.")
+      info.revert()
+      return
+    }
+
+    // Verificar si el cliente ya tiene una reserva en esta fecha
+    if (checkDuplicateReservation(reservaOriginal.idCustomers, event.start.toISOString(), idReservations)) {
+      toast.error(
+        "Este cliente ya tiene una reserva en esta fecha. No se permiten múltiples reservas para el mismo cliente en un día.",
+      )
+      info.revert()
+      return
+    }
+
     const fullReservaData = await reservasService.getReservationById(idReservations)
     if (!fullReservaData || fullReservaData.error) {
-      Swal.fire("Error", "No se pudieron obtener los detalles completos para reprogramar.", "error")
+      toast.error("No se pudieron obtener los detalles completos para reprogramar.")
       info.revert()
       return
     }
@@ -825,11 +770,11 @@ export default function Calendario() {
           res.idReservations === idReservations ? { ...res, dateTime: updatedReservaData.dateTime } : res,
         ),
       )
-      Swal.fire("Reserva reprogramada", "La fecha de la reserva se actualizó.", "success")
+      toast.success("La fecha de la reserva se actualizó.")
     } catch (error) {
       console.error("Error updating reservation on drop:", error)
       const errorMessage = error.response?.data?.message || error.message || "No se pudo reprogramar la reserva."
-      Swal.fire("Error", errorMessage, "error")
+      toast.error(errorMessage)
       info.revert()
     } finally {
       setLoading(false)
@@ -839,10 +784,8 @@ export default function Calendario() {
   const handleSearchChange = (e) => {
     setSearchText(e.target.value)
   }
-  const filteredEvents = events.filter((event) => event.title.toLowerCase().includes(searchText.toLowerCase()))
 
   const handleClientSearch = async (searchValue) => {
-    // ... (lógica igual que antes)
     setClientSearchText(searchValue)
     if (searchValue.length < 2) {
       setClientSearchResults([])
@@ -881,7 +824,6 @@ export default function Calendario() {
   }
 
   const selectClient = (cliente) => {
-    // ... (lógica igual que antes)
     if (!cliente || (!cliente.idCustomers && cliente.idCustomers !== 0)) {
       setErrors((prev) => ({ ...prev, idCustomers: "Cliente seleccionado inválido" }))
       return
@@ -891,6 +833,16 @@ export default function Calendario() {
       setErrors((prev) => ({ ...prev, idCustomers: "ID de cliente inválido" }))
       return
     }
+
+    // Verificar si el cliente ya tiene una reserva en la fecha seleccionada
+    if (form.dateTime && checkDuplicateReservation(idCustomersNum, form.dateTime, selectedReserva?.idReservations)) {
+      toast.error(
+        "Este cliente ya tiene una reserva en esta fecha. No se permiten múltiples reservas para el mismo cliente en un día.",
+      )
+      setErrors((prev) => ({ ...prev, idCustomers: "Cliente ya tiene reserva en esta fecha" }))
+      return
+    }
+
     setForm((prevForm) => ({
       ...prevForm,
       idCustomers: idCustomersNum,
@@ -914,6 +866,17 @@ export default function Calendario() {
   }
 
   const handleAbonoChange = (index, field, value) => {
+    // Validar monto mínimo para abonos
+    if (field === "cantidad") {
+      const numValue = Number.parseFloat(value)
+      if (!isNaN(numValue) && numValue < 50000) {
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          [`pass-${index}-${field}`]: "El monto mínimo debe ser de $50.000",
+        }))
+      }
+    }
+
     const updatedAbonos = form.pass.map((abono, i) => (i === index ? { ...abono, [field]: value } : abono))
     setForm((prevForm) => ({ ...prevForm, pass: updatedAbonos }))
     if (field === "cantidad") {
@@ -923,9 +886,9 @@ export default function Calendario() {
   }
 
   const addAbono = () => {
-    // Añadir abono con fecha actual por defecto
+    // Añadir abono con fecha actual por defecto y monto mínimo
     const todayStr = new Date().toISOString().split("T")[0]
-    setForm((prevForm) => ({ ...prevForm, pass: [...(prevForm.pass || []), { fecha: todayStr, cantidad: "" }] }))
+    setForm((prevForm) => ({ ...prevForm, pass: [...(prevForm.pass || []), { fecha: todayStr, cantidad: "50000" }] }))
     setErrors((prevErrors) => ({ ...prevErrors, pass: "" }))
   }
 
@@ -952,61 +915,103 @@ export default function Calendario() {
   const handleMultiServiceChange = (selectedOptions) => {
     setForm((prevForm) => ({ ...prevForm, servicios: selectedOptions || [] }))
     setErrors((prevErrors) => ({ ...prevErrors, servicios: validateField("servicios", selectedOptions || []) }))
+
+    // Actualizar el label del monto adicional basado en el primer servicio seleccionado
+    if (selectedOptions && selectedOptions.length > 0) {
+      setAdditionalAmountLabel(`Monto ${selectedOptions[0].label}`)
+    } else {
+      setAdditionalAmountLabel("Monto Decoración")
+    }
+
+    // Calcular y actualizar el monto total si hay número de personas
+    if (form.numberPeople) {
+      const calculatedPrice = calculateServicePrice(form.numberPeople, selectedOptions)
+      if (calculatedPrice > 0) {
+        setForm((prevForm) => ({
+          ...prevForm,
+          totalPay: calculatedPrice.toString(),
+        }))
+        // Actualizar el restante también
+        updateRestante(calculatedPrice.toString(), form.pass)
+      }
+    }
   }
 
-  const validateAbonoField = (fieldName, value) => {
+  const validateAbonoField = useCallback((fieldName, value) => {
     if (fieldName === "fecha" && !value) return "Fecha requerida."
     if (fieldName === "cantidad") {
       if (value === "" || value === null) return "Cantidad requerida."
       const numValue = Number.parseFloat(value)
       if (isNaN(numValue) || numValue <= 0) return "Cantidad debe ser > 0."
+      if (numValue < 50000) return "El monto mínimo debe ser de $50.000."
     }
     return ""
-  }
+  }, [])
 
-  const validateField = (name, value) => {
-    if (name === "idCustomers") {
-      if (value === null || value === undefined || value === "" || value <= 0 || isNaN(Number(value))) {
-        return "Debe buscar y seleccionar un cliente válido."
-      }
-      return ""
-    }
-    if (name === "servicios" && (!Array.isArray(value) || value.length === 0)) {
-      return "Seleccione al menos un servicio."
-    }
-    switch (name) {
-      case "fullName":
-        return value?.trim() ? "" : "Nombre de cliente requerido (seleccione un cliente)."
-      case "dateTime":
-        if (!value) return "Fecha y hora requeridas."
-        const selectedDate = new Date(value)
-        const now = new Date()
-        // Permite seleccionar el día actual, pero no horas pasadas en el día actual
-        return selectedDate >= now ? "" : "Fecha/hora no puede ser pasada."
-      case "timeDurationR":
-        return value ? "" : "Duración requerida."
-      case "evenType":
-        return value ? "" : "Tipo de Evento requerido."
-      case "numberPeople":
-        const numPeople = Number.parseInt(value)
-        return !isNaN(numPeople) && numPeople > 0 ? "" : "Nro. Personas debe ser > 0."
-      case "decorationAmount":
-        const decorAmount = Number.parseFloat(value)
-        return !isNaN(decorAmount) && decorAmount >= 0 ? "" : "Monto Decoración debe ser >= 0."
-      case "totalPay":
-        const totalP = Number.parseFloat(value)
-        return !isNaN(totalP) && totalP > 0 ? "" : "Total a Pagar debe ser > 0."
-      case "cellphone":
-        return !value || /^\d{7,15}$/.test(value) ? "" : "Celular inválido (7-15 dígitos)."
-      case "email":
-        return !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? "" : "Correo inválido."
-      default:
+  const validateField = useCallback(
+    (name, value) => {
+      if (name === "idCustomers") {
+        if (value === null || value === undefined || value === "" || value <= 0 || isNaN(Number(value))) {
+          return "Debe buscar y seleccionar un cliente válido."
+        }
         return ""
-    }
-  }
+      }
+      if (name === "servicios" && (!Array.isArray(value) || value.length === 0)) {
+        return "Seleccione al menos un servicio."
+      }
+      switch (name) {
+        case "fullName":
+          return value?.trim() ? "" : "Nombre de cliente requerido (seleccione un cliente)."
+        case "dateTime":
+          if (!value) return "Fecha y hora requeridas."
+          const selectedDate = new Date(value)
+          const now = new Date()
 
-  const validateForm = () => {
-    // ... (lógica igual que antes)
+          // Verificar si la fecha/hora es pasada
+          if (selectedDate < now) return "Fecha/hora no puede ser pasada."
+
+          // Verificar si hay conflicto de hora
+          if (checkTimeConflict(value, selectedReserva?.idReservations)) {
+            return "Ya existe una reserva en esta hora. Por favor, seleccione otra hora."
+          }
+
+          // Verificar si el cliente ya tiene una reserva en esta fecha
+          if (form.idCustomers && checkDuplicateReservation(form.idCustomers, value, selectedReserva?.idReservations)) {
+            return "Este cliente ya tiene una reserva en esta fecha. No se permiten múltiples reservas para el mismo cliente en un día."
+          }
+
+          return ""
+        case "timeDurationR":
+          return value ? "" : "Duración requerida."
+        case "evenType":
+          return value ? "" : "Tipo de Evento requerido."
+        case "numberPeople":
+          const numPeople = Number.parseInt(value)
+          return !isNaN(numPeople) && numPeople > 0 ? "" : "Nro. Personas debe ser > 0."
+        case "decorationAmount":
+          const decorAmount = Number.parseFloat(value)
+          return !isNaN(decorAmount) && decorAmount >= 0 ? "" : `${additionalAmountLabel} debe ser >= 0.`
+        case "totalPay":
+          const totalP = Number.parseFloat(value)
+          return !isNaN(totalP) && totalP > 0 ? "" : "Total a Pagar debe ser > 0."
+        case "cellphone":
+          return !value || /^\d{7,15}$/.test(value) ? "" : "Celular inválido (7-15 dígitos)."
+        case "email":
+          return !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? "" : "Correo inválido."
+        default:
+          return ""
+      }
+    },
+    [
+      checkDuplicateReservation,
+      checkTimeConflict,
+      additionalAmountLabel,
+      form.idCustomers,
+      selectedReserva?.idReservations,
+    ],
+  )
+
+  const validateForm = useCallback(() => {
     const newErrors = {}
     let isValid = true
     const fieldsToValidate = [
@@ -1055,12 +1060,65 @@ export default function Calendario() {
     }
     setErrors(newErrors)
     return isValid
-  }
+  }, [form, validateAbonoField, validateField])
 
   const handleChange = (e) => {
-    // ... (lógica igual que antes)
     const { name, value } = e.target
     console.log(`Cambiando ${name} a: ${value}`) // Log para depuración
+
+    // Si cambia la fecha/hora, verificar conflictos
+    if (name === "dateTime") {
+      // Verificar si hay conflicto de hora
+      if (checkTimeConflict(value, selectedReserva?.idReservations)) {
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          [name]: "Ya existe una reserva en esta hora. Por favor, seleccione otra hora.",
+        }))
+      }
+
+      // Verificar si el cliente ya tiene una reserva en esta fecha
+      if (form.idCustomers && checkDuplicateReservation(form.idCustomers, value, selectedReserva?.idReservations)) {
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          [name]:
+            "Este cliente ya tiene una reserva en esta fecha. No se permiten múltiples reservas para el mismo cliente en un día.",
+        }))
+      }
+    }
+
+    // Lógica especial para el campo numberPeople
+    if (name === "numberPeople" && value) {
+      const numPeople = Number.parseInt(value, 10)
+      if (!isNaN(numPeople) && numPeople > 0) {
+        // Calcular el monto de decoración basado en el número de personas
+        const decorationAmount = calculateDecorationAmount(numPeople)
+
+        // Actualizar el formulario con el nuevo valor calculado
+        const updatedForm = {
+          ...form,
+          [name]: value,
+          decorationAmount: decorationAmount,
+        }
+
+        // Si hay servicios seleccionados, calcular también el precio total
+        if (form.servicios && form.servicios.length > 0) {
+          const calculatedPrice = calculateServicePrice(numPeople, form.servicios)
+          if (calculatedPrice > 0) {
+            updatedForm.totalPay = calculatedPrice.toString()
+          }
+        }
+
+        setForm(updatedForm)
+        updateRestante(updatedForm.totalPay, updatedForm.pass)
+
+        // Validar el campo
+        const error = validateField(name, value)
+        setErrors((prevErrors) => ({ ...prevErrors, [name]: error }))
+        return
+      }
+    }
+
+    // Comportamiento normal para otros campos
     const updatedForm = { ...form, [name]: value }
     setForm(updatedForm)
     if (name === "totalPay") {
@@ -1079,7 +1137,7 @@ export default function Calendario() {
   }
 
   // NUEVO: Función para actualizar solo la duración
-  const updateDurationOnly = async (id, duration) => {
+  const updateDurationOnly = useCallback(async (id, duration) => {
     try {
       setLoading(true)
       await reservasService.updateDuration(id, duration)
@@ -1093,10 +1151,10 @@ export default function Calendario() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   // NUEVO: Función para actualizar solo el estado
-  const updateStatusOnly = async (id, status) => {
+  const updateStatusOnly = useCallback(async (id, status) => {
     try {
       setLoading(true)
       await reservasService.updateStatus(id, status)
@@ -1108,29 +1166,46 @@ export default function Calendario() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const handleSaveReserva = async () => {
-    // ... (lógica igual que antes)
+  // Función para solicitar confirmación de guardar
+  const requestSaveConfirmation = useCallback(() => {
     updateRestante(form.totalPay, form.pass)
-    await new Promise((resolve) => setTimeout(resolve, 0)) // Delay for state update
+
     if (!validateForm()) {
-      Swal.fire("Error Validación", "Corrija los errores indicados.", "warning")
+      toast.error("Por favor, corrija los errores indicados antes de continuar.")
       return
     }
+
     const isEditing = selectedReserva !== null
-    const title = isEditing ? "¿Guardar Cambios?" : "¿Crear Reserva?"
-    const result = await Swal.fire({
-      title,
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Sí",
-      cancelButtonText: "No",
+
+    prepareConfirmation(executeSaveReserva, {
+      title: isEditing ? "¿Guardar Cambios?" : "¿Crear Reserva?",
+      message: (
+        <p>
+          ¿Está seguro que desea {isEditing ? "guardar los cambios de" : "crear"} la reserva para{" "}
+          <strong>{form.fullName}</strong>?
+        </p>
+      ),
+      confirmText: (
+        <>
+          {isEditing ? <Edit size={16} className="me-1" /> : <Plus size={16} className="me-1" />}
+          {isEditing ? "Guardar Cambios" : "Crear Reserva"}
+        </>
+      ),
+      confirmColor: "primary",
+      itemDetails: { isEditing },
     })
-    if (result.isConfirmed) {
-      setLoading(true)
+  }, [form, selectedReserva, prepareConfirmation, updateRestante, validateForm])
+
+  // Función para ejecutar el guardado
+  const executeSaveReserva = useCallback(
+    async (details) => {
+      const isEditing = details?.isEditing || false
+
+      setIsConfirmActionLoading(true)
+      const toastId = toast.loading(isEditing ? "Actualizando reserva..." : "Creando reserva...")
+
       try {
         const idAditionalServices = (form.servicios || []).map((option) => option.value)
         const abonosToSend = (form.pass || []).map((ab) => ({
@@ -1173,7 +1248,11 @@ export default function Calendario() {
                   : r,
               ),
             )
-            Swal.fire("Actualizado", "Reserva actualizada.", "success")
+            toast.success("Reserva actualizada correctamente.", {
+              id: toastId,
+              icon: <CheckCircle className="text-success" />,
+            })
+            toggleConfirmModal()
             setModalOpen(false)
             return
           }
@@ -1217,7 +1296,10 @@ export default function Calendario() {
                 : r,
             ),
           )
-          Swal.fire("Actualizado", "Reserva actualizada.", "success")
+          toast.success("Reserva actualizada correctamente.", {
+            id: toastId,
+            icon: <CheckCircle className="text-success" />,
+          })
         } else {
           const newReservationResponse = await reservasService.createReservation(dataToSend)
           const newReservationForState = {
@@ -1227,61 +1309,115 @@ export default function Calendario() {
             remaining: dataToSend.remaining,
           }
           setData((prevData) => [...prevData, newReservationForState])
-          Swal.fire("Creada", "Reserva creada.", "success")
+          toast.success("Reserva creada correctamente.", {
+            id: toastId,
+            icon: <CheckCircle className="text-success" />,
+          })
         }
+        toggleConfirmModal()
         setModalOpen(false)
       } catch (error) {
         console.error("Error saving reservation:", error)
         const errorMessage = error.response?.data?.message || error.message || "No se pudo guardar la reserva."
-        Swal.fire("Error", errorMessage, "error")
+        toast.error(`Error: ${errorMessage}`, {
+          id: toastId,
+          icon: <XCircle className="text-danger" />,
+          duration: 5000,
+        })
+        toggleConfirmModal()
       } finally {
-        setLoading(false)
+        setIsConfirmActionLoading(false)
       }
-    }
-  }
+    },
+    [form, selectedReserva, toggleConfirmModal, updateDurationOnly, updateStatusOnly],
+  )
 
-  const handleCancel = async (id) => {
-    // ... (lógica igual que antes)
-    if (!id) {
-      Swal.fire("Error", "No se proporcionó ID para eliminar.", "error")
-      return
-    }
-    const result = await Swal.fire({
-      title: "¿ELIMINAR Reserva?",
-      text: "¡Esta acción no se puede deshacer!",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Sí, eliminar",
-      cancelButtonText: "No",
-    })
-    if (result.isConfirmed) {
-      setLoading(true)
+  // Función para solicitar confirmación de eliminación (esta función aún existe, aunque el botón del modal se oculte)
+  const requestDeleteConfirmation = useCallback(
+    (id) => {
+      if (!id) {
+        toast.error("No se proporcionó ID para eliminar.")
+        return
+      }
+
+      const reservaToDelete = data.find((r) => r.idReservations === id || r.id === id)
+      if (!reservaToDelete) {
+        toast.error("No se encontró la reserva a eliminar.")
+        return
+      }
+
+      prepareConfirmation(executeDelete, {
+        title: "¿ELIMINAR Reserva?",
+        message: (
+          <>
+            <p>
+              ¿Está seguro que desea eliminar permanentemente la reserva de{" "}
+              <strong>{reservaToDelete.fullName || "cliente seleccionado"}</strong>?
+            </p>
+            <p>
+              <strong className="text-danger">Esta acción no se puede deshacer.</strong>
+            </p>
+          </>
+        ),
+        confirmText: "Eliminar Definitivamente",
+        confirmColor: "danger",
+        itemDetails: { id },
+      })
+    },
+    [data, prepareConfirmation],
+  )
+
+  // Función para ejecutar la eliminación (esta función aún existe, aunque el botón del modal se oculte)
+  const executeDelete = useCallback(
+    async (details) => {
+      if (!details || !details.id) {
+        toast.error("Error interno: Datos para eliminar no encontrados.")
+        toggleConfirmModal()
+        return
+      }
+
+      const id = details.id
+      setIsConfirmActionLoading(true)
+      const toastId = toast.loading("Eliminando reserva...")
+
       try {
         const response = await reservasService.deleteReservation(id)
         if (response && response.success !== false) {
           setData((prevData) => prevData.filter((reserva) => reserva.idReservations !== id))
+          toast.success(response.message || "Reserva eliminada correctamente.", {
+            id: toastId,
+            icon: <CheckCircle className="text-success" />,
+          })
+          toggleConfirmModal()
           setModalOpen(false)
           setListModalOpen(false)
-          Swal.fire("Eliminada", response.message || "Reserva eliminada.", "success")
         } else {
-          Swal.fire("Error", response?.message || "No se pudo eliminar la reserva.", "error")
+          toast.error(response?.message || "No se pudo eliminar la reserva.", {
+            id: toastId,
+            icon: <XCircle className="text-danger" />,
+            duration: 5000,
+          })
+          toggleConfirmModal()
         }
       } catch (error) {
         console.error("Error deleting reservation:", error)
         const errorMessage = error.response?.data?.message || error.message || "Error al eliminar."
-        Swal.fire("Error", errorMessage, "error")
+        toast.error(`Error: ${errorMessage}`, {
+          id: toastId,
+          icon: <XCircle className="text-danger" />,
+          duration: 5000,
+        })
+        toggleConfirmModal()
       } finally {
-        setLoading(false)
+        setIsConfirmActionLoading(false)
       }
-    }
-  }
+    },
+    [toggleConfirmModal],
+  )
 
   const handleDownloadExcel = () => {
-    // ... (lógica igual que antes)
     if (data.length === 0) {
-      Swal.fire("Vacío", "No hay datos de reservas para exportar.", "info")
+      toast.error("No hay datos de reservas para exportar.")
       return
     }
     const dataToExport = data.map((r) => ({
@@ -1312,10 +1448,10 @@ export default function Calendario() {
     const wb = utils.book_new()
     utils.book_append_sheet(wb, ws, "Reservas")
     writeFile(wb, "Lista_Reservas.xlsx")
+    toast.success("Archivo Excel generado correctamente.")
   }
 
   const formatCurrency = (value) => {
-    // ... (lógica igual que antes)
     const n = Number.parseFloat(value)
     return isNaN(n)
       ? "$0"
@@ -1323,7 +1459,6 @@ export default function Calendario() {
   }
 
   const toggleListModal = () => {
-    // ... (lógica igual que antes)
     if (!listModalOpen) {
       setCurrentPage(1)
     }
@@ -1341,34 +1476,265 @@ export default function Calendario() {
   const sortedData = [...data].sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime))
   const currentItems = sortedData.slice(startIndex, endIndex)
 
+  // Estilos modernos para el componente
+  const styles = {
+    calendarContainer: {
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+      backgroundColor: "#fff",
+      padding: "0", // Quitamos padding para que el contenedor ocupe todo
+      borderRadius: "8px",
+      boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)",
+      height: "calc(100vh - 60px)", // Ajustar 60px si tienes una barra de navegación fija arriba, sino '100vh'
+      display: "flex",
+      flexDirection: "column",
+      width: "100%",
+      margin: "0",
+      overflow: "hidden", // Prevenir scroll en el contenedor principal
+    },
+    calendarHeader: {
+      marginBottom: "0", // Quitar margen para que no reste espacio vertical
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      flexWrap: "wrap",
+      gap: "0.75rem",
+      padding: "1rem", // Padding para el contenido del header
+      borderBottom: "1px solid #f3f4f6",
+      flexShrink: 0, // Para que el header no se encoja
+    },
+    headerTitle: {
+      fontSize: "1.5rem",
+      fontWeight: "600",
+      color: "#111827",
+      margin: "0",
+    },
+    searchInput: {
+      backgroundColor: "white",
+      fontSize: "0.875rem",
+      border: "1px solid #e5e7eb",
+      borderRadius: "6px",
+      width: "100%",
+      padding: "0.5rem 0.75rem",
+      boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+    },
+    actionButton: {
+      width: "auto",
+      height: "36px",
+      padding: "0 0.75rem",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: "6px",
+      transition: "all 0.15s ease",
+      backgroundColor: "#fff",
+      borderColor: "#e5e7eb",
+      color: "#374151",
+      fontWeight: "500",
+      boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+    },
+    calendarWrapper: {
+      backgroundColor: "#fff",
+      // border: "1px solid #e5e7eb", // Se puede quitar si el .fc ya tiene borde
+      borderRadius: "8px",
+      padding: "1rem", // Padding interno para el calendario
+      // boxShadow: "0 1px 3px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.02)", // Opcional
+      position: "relative",
+      flex: "1 1 auto", // Permite que crezca y se encoja, tomando el espacio disponible
+      overflow: "hidden", // Esencial para que FullCalendar no cause scroll en este wrapper
+      display: "flex", // Para que FullCalendar (su hijo) pueda usar height: 100%
+      flexDirection: "column", // Para que FullCalendar (su hijo) pueda usar height: 100%
+      margin: "0 1rem 1rem 1rem", // Margen alrededor del calendario
+    },
+    modalHeader: {
+      backgroundColor: "#9e3535",
+      color: "white",
+      fontWeight: "bold",
+    },
+    modalFieldset: {
+      border: "1px solid #e5e7eb",
+      borderRadius: "6px",
+      padding: "1rem 1.5rem 1.5rem 1.5rem",
+      marginBottom: "1.5rem",
+    },
+    modalLegend: {
+      fontSize: "0.875rem",
+      fontWeight: 600,
+      color: "#111827",
+      padding: "0 0.5rem",
+      width: "auto",
+      marginLeft: "0.5rem",
+      float: "none",
+    },
+    clientDisplay: {
+      backgroundColor: "#e9ecef",
+      border: "none",
+    },
+    loadingOverlay: {
+      position: "fixed",
+      top: 0,
+      left: 0,
+      width: "100%",
+      height: "100%",
+      backgroundColor: "rgba(255, 255, 255, 0.8)",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 1060,
+      color: "#1f2937",
+      fontWeight: 500,
+    },
+    clientSearchResults: {
+      position: "absolute",
+      zIndex: 1050,
+      width: "100%",
+      maxHeight: "200px",
+      overflowY: "auto",
+      border: "1px solid #d1d5db",
+      backgroundColor: "white",
+      borderRadius: "0 0 6px 6px",
+      marginTop: "-1px",
+      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04)",
+    },
+    reservationsTable: {
+      marginBottom: "1rem",
+      borderCollapse: "separate",
+      borderSpacing: 0,
+      border: "1px solid #e5e7eb",
+      borderRadius: "8px",
+      overflow: "hidden",
+    },
+    tableHeader: {
+      backgroundColor: "#f9fafb",
+      fontSize: "0.75rem",
+      fontWeight: 600,
+      color: "#4b5563",
+      textTransform: "uppercase",
+      borderBottom: "1px solid #e5e7eb",
+      borderTop: "none",
+      borderLeft: "none",
+      borderRight: "none",
+      whiteSpace: "nowrap",
+      padding: "0.75rem 1rem",
+    },
+    tableCell: {
+      fontSize: "0.875rem",
+      verticalAlign: "middle",
+      borderTop: "1px solid #e5e7eb",
+      borderBottom: "none",
+      borderLeft: "none",
+      borderRight: "none",
+      padding: "0.75rem 1rem",
+      backgroundColor: "#fff",
+    },
+    statusBadge: (status) => {
+        // Usar los colores del colorMap (que ahora son más vivos y transparentes)
+        const baseColor = colorMap[status] || colorMap["default"];
+        // Determinar el color del texto para buen contraste
+        let textColor = "#ffffff"; // Default blanco para la mayoría
+        if (status === "en_proceso" || status === "pendiente") { // Amarillo o Naranja
+            const rgb = baseColor.match(/\d+/g);
+            if (rgb && rgb.length >=3) {
+                // Fórmula simple de luminancia para decidir el color del texto
+                const luminance = 0.299 * parseInt(rgb[0]) + 0.587 * parseInt(rgb[1]) + 0.114 * parseInt(rgb[2]);
+                if (luminance > 186) { // Si el fondo es claro
+                    textColor = "#333333"; // Texto oscuro
+                }
+            }
+        } else if (status === "terminada") {
+             textColor = "#1B5E20"; // Verde oscuro para fondo verde claro
+        } else if (status === "confirmada") {
+             textColor = "#0D47A1"; // Azul oscuro para fondo azul claro
+        } else if (status === "anulada") {
+             textColor = "#B71C1C"; // Rojo oscuro para fondo rojo claro
+        }
+
+
+        return {
+            fontSize: "0.7rem",
+            padding: "0.3em 0.6em",
+            borderRadius: "12px",
+            fontWeight: 500,
+            backgroundColor: baseColor,
+            color: textColor,
+            border: `1px solid ${textColor === "#ffffff" ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)'}` // Borde sutil
+        }
+    },
+    actionEdit: {
+      backgroundColor: "#EFF6FF",
+      borderColor: "#DBEAFE",
+      color: "#3B82F6",
+    },
+    actionDelete: {
+      backgroundColor: "#FEF2F2",
+      borderColor: "#FEE2E2",
+      color: "#EF4444",
+    },
+    addButton: {
+      backgroundColor: "#111827",
+      color: "white",
+      border: "none",
+      borderRadius: "6px",
+      padding: "0.5rem 1rem",
+      fontWeight: "500",
+      display: "flex",
+      alignItems: "center",
+      gap: "0.5rem",
+      boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+      transition: "all 0.15s ease",
+    },
+    tabButton: {
+      padding: "0.5rem 1rem",
+      borderRadius: "6px",
+      fontWeight: "500",
+      fontSize: "0.875rem",
+      backgroundColor: "transparent",
+      border: "none",
+      color: "#6b7280",
+      cursor: "pointer",
+      transition: "all 0.15s ease",
+    },
+    tabButtonActive: {
+      backgroundColor: "#f3f4f6",
+      color: "#111827",
+      fontWeight: "600",
+    },
+  }
+
   // --- RENDERIZADO DEL COMPONENTE ---
   return (
-    // Añadimos una clase contenedora para aplicar estilos globales específicos
-    <Container fluid className="p-0 calendar-container">
-      {/* --- ETIQUETA STYLE CON TODO EL CSS --- */}
-      <style>{calendarStyles}</style>
+    <Container fluid className="p-0" style={styles.calendarContainer}>
+      {/* Estilos CSS personalizados */}
+      <style>{customCalendarStyles}</style>
+
+      {/* Toaster para notificaciones */}
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          success: { duration: 3000 },
+          error: { duration: 5000 },
+          style: { background: "#363636", color: "#fff" },
+        }}
+      />
 
       {/* --- Indicador de Carga General --- */}
       {loading && (
-        <div className="loading-overlay">
-          {" "}
-          {/* Usa clase para styling */}
+        <div style={styles.loadingOverlay}>
           <Spinner color="primary" style={{ width: "3rem", height: "3rem" }} />
           <span className="ms-2">Cargando...</span>
         </div>
       )}
 
-      {/* --- Encabezado y Botones (se estilizarán via CSS) --- */}
-      <Row className="mb-3 align-items-center calendar-header">
+      {/* --- Encabezado y Botones --- */}
+      <Row className="align-items-center" style={styles.calendarHeader}>
         <Col>
-          <h2>Calendario</h2> {/* Título ajustado */}
+          <h2 style={styles.headerTitle}>Calendario</h2>
         </Col>
         {/* Input de búsqueda */}
         <Col md={4} lg={3}>
           <Input
-            bsSize="sm" // Tamaño más pequeño
+            bsSize="sm"
             type="text"
-            className="calendar-search-input" // Clase para estilo
+            style={styles.searchInput}
             placeholder="Buscar en calendario..."
             value={searchText}
             onChange={handleSearchChange}
@@ -1383,6 +1749,7 @@ export default function Calendario() {
             onClick={toggleListModal}
             disabled={loading || data.length === 0}
             title="Ver lista"
+            style={styles.actionButton}
           >
             <FaList className="me-1" /> Lista
           </Button>
@@ -1392,560 +1759,434 @@ export default function Calendario() {
             color="secondary"
             outline
             size="sm"
-            onClick={handleDownloadExcel}
-            disabled={data.length === 0 || loading}
+            disabled={loading}
             title="Descargar Excel"
+            onClick={handleDownloadExcel}
+            style={styles.actionButton}
           >
-            <FaFileExcel className="me-1" /> Exportar
+            <FaFileExcel className="me-1" /> Excel
           </Button>
         </Col>
       </Row>
 
-      {/* --- Contenedor del Calendario --- */}
-      <Row>
-        <Col>
-          {/* Aplicamos una clase al div contenedor de FullCalendar */}
-          <div className="fullcalendar-wrapper" style={{ height: "calc(100vh - 180px)", position: "relative" }}>
-            {data.length > 0 || !loading ? (
-              <FullCalendar
-                plugins={[dayGridPlugin, interactionPlugin]}
-                initialView="dayGridMonth"
-                headerToolbar={{
-                  left: "prev,next today",
-                  center: "title",
-                  right: "dayGridMonth,timeGridWeek", // Añadimos vista semanal
-                }}
-                buttonText={{
-                  today: "Hoy",
-                  month: "Mes",
-                  week: "Semana",
-                  day: "Día",
-                  list: "Lista",
-                }}
-                events={events}
-                dateClick={handleDateClick}
-                eventClick={handleEventClick}
-                editable={true}
-                eventDrop={handleEventDrop}
-                locale="es"
-                height="100%"
-                dayMaxEventRows={3}
-                // --- eventContent para personalizar el renderizado del evento ---
-                eventContent={(eventInfo) => {
-                  const status = eventInfo.event.extendedProps.status || "default"
-                  const dotColor = colorMap[status] || colorMap["default"]
-                  return (
-                    <div className={`fc-event-main-custom event-status-${status}`}>
-                      <span className="event-dot" style={{ backgroundColor: dotColor }}></span>
-                      <span className="event-title">{eventInfo.event.title}</span>
-                      {eventInfo.timeText && <span className="event-time">{eventInfo.timeText}</span>}
-                    </div>
-                  )
-                }}
-              />
-            ) : (
-              <p className="text-center mt-5">{loading ? "" : "No hay reservas para mostrar en el calendario."}</p>
-            )}
+      {/* --- Calendario --- */}
+      {/* Esta Row debe ser flexible para ocupar el espacio restante */}
+      <Row style={{ flex: "1 1 auto", margin: "0", width: "100%", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        {/* Esta Col debe ocupar toda la altura de la Row flexible */}
+        <Col style={{ height: "100%", padding: "0", display: "flex", flexDirection: "column" }}>
+          <div style={styles.calendarWrapper}>
+            <FullCalendar
+              plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+              initialView="dayGridMonth"
+              headerToolbar={{
+                left: "prev,next today",
+                center: "title",
+                right: "dayGridMonth,timeGridWeek,timeGridDay",
+              }}
+              locale="es"
+              events={events.filter(event => { // Filtrar eventos basado en searchText
+                  if (!searchText) return true;
+                  const lowerSearchText = searchText.toLowerCase();
+                  return event.title.toLowerCase().includes(lowerSearchText) ||
+                         (event.extendedProps?.evenType && event.extendedProps.evenType.toLowerCase().includes(lowerSearchText)) ||
+                         (event.extendedProps?.status && event.extendedProps.status.toLowerCase().includes(lowerSearchText));
+              })}
+              dateClick={handleDateClick}
+              eventClick={handleEventClick}
+              eventDrop={handleEventDrop}
+              editable={true}
+              height="100%"             // FullCalendar toma el 100% de la altura de calendarWrapper
+              contentHeight="auto"      // El contenido se ajusta automáticamente
+              // aspectRatio={2.5}      // Quitar aspectRatio para que height y contentHeight dominen
+              eventContent={(arg) => {
+                const event = arg.event
+                const status = event.extendedProps.status || "default"
+                const time = arg.timeText
+                const title = event.title
+                // const reservaId = event.id // No se usa aquí
+
+                // Determinar el color de fondo y texto según el estado
+                // COLORES MÁS VIVOS Y TRANSPARENCIA AL 70% (alpha 0.7)
+                let bgColor, textColor
+                switch (status) {
+                  case "terminada":
+                    bgColor = "rgba(76, 175, 80, 0.7)" // Verde más vivo
+                    textColor = "#1B5E20" // Verde oscuro para contraste
+                    break
+                  case "anulada":
+                    bgColor = "rgba(244, 67, 54, 0.7)" // Rojo más vivo
+                    textColor = "#FFFFFF" // Blanco para contraste
+                    break
+                  case "pendiente":
+                    bgColor = "rgba(255, 152, 0, 0.7)" // Naranja más vivo
+                    textColor = "#FFFFFF" // Blanco para contraste
+                    break
+                  case "en_proceso":
+                    bgColor = "rgba(255, 235, 59, 0.7)" // Amarillo más vivo
+                    textColor = "#5C460A" // Texto oscuro para contraste con amarillo
+                    break
+                  case "confirmada":
+                    bgColor = "rgba(33, 150, 243, 0.7)" // Azul más vivo
+                    textColor = "#FFFFFF" // Blanco para contraste
+                    break
+                  default:
+                    bgColor = "rgba(158, 158, 158, 0.7)" // Gris más vivo
+                    textColor = "#FFFFFF" // Blanco para contraste
+                }
+
+                return (
+                  <div
+                    className="custom-event-container"
+                    style={{
+                      backgroundColor: bgColor,
+                      color: textColor,
+                    }}
+                  >
+                    <span className="custom-event-title">{title}</span>
+                    {time && <span className="custom-event-time">{time}</span>}
+                  </div>
+                )
+              }}
+              dayCellContent={(arg) => <div style={{ padding: "4px" }}>{arg.dayNumberText}</div>}
+            />
           </div>
         </Col>
       </Row>
 
-      {/* --- MODAL PARA CREAR/EDITAR RESERVA --- */}
-      <Modal
-        isOpen={modalOpen}
-        toggle={() => !loading && setModalOpen(!modalOpen)}
-        size="lg"
-        backdrop="static"
-        scrollable
-        className="calendar-modal"
-      >
-        <ModalHeader
-          toggle={() => !loading && setModalOpen(!modalOpen)}
-          style={{ backgroundColor: "#9e3535", color: "white", fontWeight: "bold" }}
-        >
-          <span style={{ color: "white", fontWeight: "bold" }}>
-            {selectedReserva ? "Editar Reserva" : "Nueva Reserva"}
-          </span>
+      {/* --- Modal de Reserva --- */}
+      <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)} size="lg" centered backdrop="static">
+        <ModalHeader toggle={() => setModalOpen(!modalOpen)} style={styles.modalHeader}>
+          {selectedReserva ? "Editar Reserva" : "Nueva Reserva"}
         </ModalHeader>
         <ModalBody>
-          {/* --- Datos del Cliente --- */}
-          <FormGroup tag="fieldset" className="modal-fieldset">
-            <legend className="modal-legend">Datos del Cliente</legend>
-            <Row>
-              <Col md={7}>
-                <Label htmlFor="clienteBusqueda">
-                  <b>Buscar y Seleccionar Cliente*</b>
-                </Label>
-                <div style={{ position: "relative" }}>
-                  <Input
-                    id="clienteBusqueda"
-                    type="text"
-                    placeholder="Escriba nombre, ID o distintivo (mín 2 letras)"
-                    value={clientSearchText}
-                    onChange={(e) => handleClientSearch(e.target.value)}
-                    onFocus={() => setShowClientSearch(true)}
-                    onBlur={() => setTimeout(() => setShowClientSearch(false), 200)} // Ocultar con retardo
-                    disabled={loading}
-                    invalid={!!errors.idCustomers && !form.idCustomers}
-                    autoComplete="off"
-                  />
-                  {isClientSearchLoading && (
-                    <Spinner
-                      size="sm"
-                      color="primary"
-                      style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)" }}
-                    />
-                  )}
-                  {showClientSearch && (
-                    <div className="list-group client-search-results" onMouseDown={(e) => e.preventDefault()}>
-                      {clientSearchResults.length > 0 ? (
-                        clientSearchResults.map((cliente) => (
-                          <button
-                            type="button"
-                            key={cliente.idCustomers}
-                            className="list-group-item list-group-item-action"
-                            onClick={() => selectClient(cliente)}
-                          >
-                            {cliente.FullName} (ID: {cliente.idCustomers}, {cliente.Distintive})
-                          </button>
-                        ))
-                      ) : (
-                        <span className="list-group-item no-results">
-                          {clientSearchText.length < 2
-                            ? "Escriba al menos 2 letras"
-                            : isClientSearchLoading
-                              ? "Buscando..."
-                              : "No se encontraron clientes"}
-                        </span>
-                      )}
+          <FormGroup>
+            <Label for="clientSearch">Buscar Cliente</Label>
+            <Input
+              type="text"
+              id="clientSearch"
+              placeholder="Buscar por nombre, celular o correo..."
+              value={clientSearchText}
+              onChange={(e) => handleClientSearch(e.target.value)}
+              invalid={!!errors.idCustomers}
+            />
+            {errors.idCustomers && <FormFeedback>{errors.idCustomers}</FormFeedback>}
+            {showClientSearch && clientSearchResults.length > 0 && (
+              <div style={styles.clientSearchResults}>
+                {isClientSearchLoading ? (
+                  <div className="p-2 text-center">
+                    <Spinner size="sm" /> Buscando...
+                  </div>
+                ) : (
+                  clientSearchResults.map((cliente) => (
+                    <div
+                      key={cliente.idCustomers}
+                      className="p-2 border-bottom"
+                      style={{ cursor: "pointer" }}
+                      onClick={() => selectClient(cliente)}
+                    >
+                      {cliente.FullName} ({cliente.Cellphone})
                     </div>
-                  )}
-                </div>
-                {errors.idCustomers && !form.idCustomers && (
-                  <div className="text-danger mt-1 small">{errors.idCustomers}</div>
+                  ))
                 )}
-              </Col>
-              <Col md={5}>
-                <Label htmlFor="categoriaClienteDisplay">Categoría</Label>
-                <Input
-                  id="categoriaClienteDisplay"
-                  value={form.customerCategory || "-"}
-                  readOnly
-                  disabled
-                  bsSize="sm"
-                />
-              </Col>
-              {form.fullName && (
-                <Col md={12} className="mt-2">
-                  <Label>Cliente Seleccionado:</Label>
-                  <Input
-                    bsSize="sm"
-                    type="text"
-                    value={`${form.fullName} (Dist: ${form.distintive || "N/A"})`}
-                    readOnly
-                    disabled
-                    style={{ backgroundColor: "#e9ecef", border: "none" }}
-                  />
-                  {errors.fullName && <div className="text-danger small">{errors.fullName}</div>}
-                </Col>
-              )}
-            </Row>
+              </div>
+            )}
           </FormGroup>
-
-          {/* --- Detalles de la Reserva --- */}
-          <FormGroup tag="fieldset" className="modal-fieldset">
-            <legend className="modal-legend">Detalles de la Reserva</legend>
-            <Row>
-              <Col md={6}>
-                <Label htmlFor="dateTime">
-                  <b>Fecha y Hora*</b>
-                </Label>
+          <FormGroup>
+            <Label for="clientDisplay">Cliente Seleccionado</Label>
+            <Input
+              type="text"
+              id="clientDisplay"
+              style={styles.clientDisplay}
+              value={form.fullName || "N/A"}
+              readOnly
+            />
+          </FormGroup>
+          <Row>
+            <Col md={6}>
+              <FormGroup>
+                <Label for="dateTime">Fecha y Hora</Label>
                 <Input
-                  id="dateTime"
-                  name="dateTime"
                   type="datetime-local"
-                  value={form.dateTime}
+                  name="dateTime"
+                  id="dateTime"
+                  value={form.dateTime || ""}
                   onChange={handleChange}
                   invalid={!!errors.dateTime}
-                  disabled={loading}
                 />
                 {errors.dateTime && <FormFeedback>{errors.dateTime}</FormFeedback>}
-              </Col>
-              <Col md={6}>
-                <Label htmlFor="timeDurationR">
-                  <b>Duración*</b>
-                </Label>
+              </FormGroup>
+            </Col>
+            <Col md={6}>
+              <FormGroup>
+                <Label for="timeDurationR">Duración (segundos)</Label>
                 <Input
-                  id="timeDurationR"
-                  name="timeDurationR"
                   type="number"
-                  value={form.timeDurationR}
+                  name="timeDurationR"
+                  id="timeDurationR"
+                  value={form.timeDurationR || ""}
                   onChange={handleChange}
                   invalid={!!errors.timeDurationR}
-                  disabled={loading}
                 />
                 {errors.timeDurationR && <FormFeedback>{errors.timeDurationR}</FormFeedback>}
-              </Col>
-            </Row>
-            <Row className="mt-3">
-              <Col md={6}>
-                <Label htmlFor="evenType">
-                  <b>Tipo de Evento*</b>
-                </Label>
+              </FormGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col md={6}>
+              <FormGroup>
+                <Label for="evenType">Tipo de Evento</Label>
                 <Input
-                  id="evenType"
+                  type="text"
                   name="evenType"
-                  type="select"
-                  value={form.evenType}
+                  id="evenType"
+                  value={form.evenType || ""}
                   onChange={handleChange}
                   invalid={!!errors.evenType}
-                  disabled={loading}
-                >
-                  <option value="">Seleccione...</option>
-                  <option value="Empresarial">Empresarial</option>
-                  <option value="Cumpleaños">Cumpleaños</option>
-                  <option value="Grado">Grado</option>
-                  <option value="Aniversario">Aniversario</option>
-                  <option value="Bautizo">Bautizo</option>
-                  <option value="PrimeraComunion">Primera Comunión</option>
-                  <option value="Matrimonio">Matrimonio</option>
-                  <option value="Otro">Otro</option>
-                </Input>
+                />
                 {errors.evenType && <FormFeedback>{errors.evenType}</FormFeedback>}
-              </Col>
-              <Col md={6}>
-                <Label htmlFor="numberPeople">
-                  <b>Número de Personas*</b>
-                </Label>
+              </FormGroup>
+            </Col>
+            <Col md={6}>
+              <FormGroup>
+                <Label for="numberPeople">Número de Personas</Label>
                 <Input
-                  id="numberPeople"
-                  name="numberPeople"
                   type="number"
-                  value={form.numberPeople}
+                  name="numberPeople"
+                  id="numberPeople"
+                  value={form.numberPeople || ""}
                   onChange={handleChange}
                   invalid={!!errors.numberPeople}
-                  min="1"
-                  disabled={loading}
                 />
                 {errors.numberPeople && <FormFeedback>{errors.numberPeople}</FormFeedback>}
-              </Col>
-            </Row>
-            <Row className="mt-3">
-              <Col md={12}>
-                <Label htmlFor="matter">Observaciones</Label>
+              </FormGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col md={6}>
+              <FormGroup>
+                <Label for="decorationAmount">{additionalAmountLabel}</Label>
                 <Input
-                  id="matter"
-                  name="matter"
-                  type="textarea"
-                  value={form.matter}
-                  onChange={handleChange}
-                  rows="2"
-                  disabled={loading}
-                />
-              </Col>
-            </Row>
-          </FormGroup>
-
-          {/* --- Servicios Adicionales --- */}
-          <FormGroup tag="fieldset" className="modal-fieldset">
-            <legend className="modal-legend">Servicios Adicionales*</legend>
-            <Select
-              id="servicios"
-              name="servicios"
-              options={serviceOptions}
-              isMulti
-              onChange={handleMultiServiceChange}
-              value={form.servicios}
-              placeholder="Seleccione servicios..."
-              isLoading={loading && availableServices.length === 0}
-              isDisabled={loading || availableServices.length === 0}
-              closeMenuOnSelect={false}
-              styles={{ control: (base) => ({ ...base, borderColor: errors.servicios ? "#dc3545" : "#ced4da" }) }}
-              noOptionsMessage={() =>
-                availableServices.length === 0 ? "No hay servicios disponibles" : "No hay más opciones"
-              }
-            />
-            {errors.servicios && <div className="text-danger mt-1 small">{errors.servicios}</div>}
-          </FormGroup>
-
-          {/* --- Detalles de Pago y Abonos --- */}
-          <FormGroup tag="fieldset" className="modal-fieldset">
-            <legend className="modal-legend">Detalles de Pago</legend>
-            <Row>
-              <Col md={6}>
-                <Label htmlFor="decorationAmount">
-                  <b>Monto Decoración*</b> ($)
-                </Label>
-                <Input
-                  id="decorationAmount"
-                  name="decorationAmount"
                   type="number"
-                  placeholder="Ej: 50000"
-                  value={form.decorationAmount}
+                  name="decorationAmount"
+                  id="decorationAmount"
+                  value={form.decorationAmount || ""}
                   onChange={handleChange}
                   invalid={!!errors.decorationAmount}
-                  min="0"
-                  disabled={loading}
                 />
                 {errors.decorationAmount && <FormFeedback>{errors.decorationAmount}</FormFeedback>}
-              </Col>
-              <Col md={6}>
-                <Label htmlFor="totalPay">
-                  <b>Total a Pagar (Reserva)*</b> ($)
-                </Label>
+              </FormGroup>
+            </Col>
+            <Col md={6}>
+              <FormGroup>
+                <Label for="totalPay">Total a Pagar</Label>
                 <Input
-                  id="totalPay"
-                  name="totalPay"
                   type="number"
-                  placeholder="Ej: 300000"
-                  value={form.totalPay}
+                  name="totalPay"
+                  id="totalPay"
+                  value={form.totalPay || ""}
                   onChange={handleChange}
                   invalid={!!errors.totalPay}
-                  min="0"
-                  disabled={loading}
                 />
                 {errors.totalPay && <FormFeedback>{errors.totalPay}</FormFeedback>}
-              </Col>
-            </Row>
-            <Row className="mt-3">
-              <Col md={12}>
-                <Label>
-                  <b>Abonos*</b>
-                </Label>
-                {errors.pass && <div className="text-danger mb-2 small">{errors.pass}</div>}
-                {(form.pass || []).map((abono, index) => (
-                  <Row key={index} className="mb-2 align-items-center gx-2">
-                    <Col md={5} xs={5}>
-                      <Input
-                        type="date"
-                        bsSize="sm"
-                        value={abono.fecha}
-                        onChange={(e) => handleAbonoChange(index, "fecha", e.target.value)}
-                        invalid={!!errors[`pass-${index}-fecha`]}
-                        disabled={loading}
-                        max={new Date().toISOString().split("T")[0]}
-                      />
-                      {errors[`pass-${index}-fecha`] && <FormFeedback>{errors[`pass-${index}-fecha`]}</FormFeedback>}
-                    </Col>
-                    <Col md={5} xs={5}>
-                      <Input
-                        type="number"
-                        bsSize="sm"
-                        placeholder="Cantidad ($)"
-                        value={abono.cantidad}
-                        onChange={(e) => handleAbonoChange(index, "cantidad", e.target.value)}
-                        invalid={!!errors[`pass-${index}-cantidad`]}
-                        min="1"
-                        disabled={loading}
-                      />
-                      {errors[`pass-${index}-cantidad`] && (
-                        <FormFeedback>{errors[`pass-${index}-cantidad`]}</FormFeedback>
-                      )}
-                    </Col>
-                    <Col md={2} xs={2} className="text-end">
-                      <Button
-                        size="sm"
-                        color="danger"
-                        outline
-                        onClick={() => removeAbono(index)}
-                        disabled={loading || (form.pass || []).length <= 1}
-                        title="Eliminar abono"
-                      >
-                        {" "}
-                        <FaTrashAlt />{" "}
-                      </Button>
-                    </Col>
-                  </Row>
-                ))}
-                <Button color="primary" outline size="sm" onClick={addAbono} className="mt-1" disabled={loading}>
-                  {" "}
-                  + Agregar Abono{" "}
-                </Button>
-              </Col>
-            </Row>
-            <Row className="mt-3">
-              <Col md={6}>
-                <Label htmlFor="remaining">
-                  <b>Restante*</b>
-                </Label>
-                <Input
-                  id="remaining"
-                  name="remaining"
-                  type="text"
-                  value={formatCurrency(form.remaining)}
-                  readOnly
-                  invalid={!!errors.remaining}
-                  className={`fw-bold ${Number(form.remaining) < 0 ? "text-danger is-invalid" : ""}`}
-                />
-                {errors.remaining && <FormFeedback>{errors.remaining}</FormFeedback>}
-              </Col>
-            </Row>
+              </FormGroup>
+            </Col>
+          </Row>
+          <FormGroup>
+            <Label for="servicios">Servicios Adicionales</Label>
+            <Select
+              isMulti
+              options={serviceOptions}
+              value={form.servicios}
+              onChange={handleMultiServiceChange}
+              placeholder="Seleccione los servicios..."
+            />
+            {errors.servicios && <div className="text-danger small mt-1">{errors.servicios}</div>}
           </FormGroup>
-
-          {/* --- Estado Visual --- */}
-          <FormGroup tag="fieldset" className="modal-fieldset">
-            <legend className="modal-legend">Estado de la Reserva</legend>
-            <Row>
-              <Col md={12}>
-                <Label htmlFor="status">
-                  <b>Estado (Visual)*</b>
-                </Label>
-                <Input
-                  id="status"
-                  name="status"
-                  type="select"
-                  value={form.status}
-                  onChange={handleChange}
-                  disabled={loading}
-                >
-                  <option value="pendiente">Pendiente</option>
-                  <option value="confirmada">Confirmada</option>
-                  <option value="en_proceso">En Proceso</option>
-                  <option value="terminada">Terminada</option>
-                  <option value="anulada">Anulada</option>
-                </Input>
-              </Col>
-            </Row>
-          </FormGroup>
-        </ModalBody>
-        <ModalFooter>
-          <Button color="primary" onClick={handleSaveReserva} disabled={loading}>
-            {" "}
-            {loading ? <Spinner size="sm" /> : selectedReserva ? "Guardar Cambios" : "Crear Reserva"}{" "}
-          </Button>
-          {selectedReserva && (
-            <Button
-              color="danger"
-              outline
-              onClick={() => handleCancel(selectedReserva.idReservations)}
-              disabled={loading}
-            >
-              {" "}
-              {loading ? (
-                <Spinner size="sm" />
-              ) : (
-                <>
-                  <FaTrashAlt className="me-1" /> Eliminar
-                </>
-              )}{" "}
+          <fieldset style={styles.modalFieldset}>
+            <legend style={styles.modalLegend}>Abonos</legend>
+            {(form.pass || []).map((abono, index) => (
+              <Row key={index} className="mb-2">
+                <Col md={5}>
+                  <FormGroup>
+                    <Label for={`fecha-${index}`}>Fecha</Label>
+                    <Input
+                      type="date"
+                      id={`fecha-${index}`}
+                      value={abono.fecha || ""}
+                      onChange={(e) => handleAbonoChange(index, "fecha", e.target.value)}
+                      invalid={!!errors[`pass-${index}-fecha`]}
+                    />
+                    {errors[`pass-${index}-fecha`] && <FormFeedback>{errors[`pass-${index}-fecha`]}</FormFeedback>}
+                  </FormGroup>
+                </Col>
+                <Col md={5}>
+                  <FormGroup>
+                    <Label for={`cantidad-${index}`}>Cantidad</Label>
+                    <Input
+                      type="number"
+                      id={`cantidad-${index}`}
+                      value={abono.cantidad || ""}
+                      onChange={(e) => handleAbonoChange(index, "cantidad", e.target.value)}
+                      invalid={!!errors[`pass-${index}-cantidad`]}
+                    />
+                    {errors[`pass-${index}-cantidad`] && (
+                      <FormFeedback>{errors[`pass-${index}-cantidad`]}</FormFeedback>
+                    )}
+                  </FormGroup>
+                </Col>
+                <Col md={2} className="d-flex align-items-end">
+                  <Button color="danger" outline onClick={() => removeAbono(index)}>
+                    <FaTrashAlt />
+                  </Button>
+                </Col>
+              </Row>
+            ))}
+            <Button color="primary" outline onClick={addAbono}>
+              Agregar Abono
             </Button>
-          )}
-          <Button color="secondary" onClick={() => setModalOpen(false)} disabled={loading}>
-            {" "}
-            Cancelar{" "}
+            {errors.pass && <div className="text-danger small mt-1">{errors.pass}</div>}
+          </fieldset>
+          <FormGroup>
+            <Label for="remaining">Restante</Label>
+            <Input type="text" id="remaining" value={formatCurrency(form.remaining)} readOnly />
+            {errors.remaining && <div className="text-danger small mt-1">{errors.remaining}</div>}
+          </FormGroup>
+          <FormGroup>
+            <Label for="status">Estado</Label>
+            <Input type="select" name="status" id="status" value={form.status || "pendiente"} onChange={handleChange}>
+              <option value="pendiente">Pendiente</option>
+              <option value="confirmada">Confirmada</option>
+              <option value="en_proceso">En Proceso</option>
+              <option value="terminada">Terminada</option>
+              <option value="anulada">Anulada</option>
+            </Input>
+          </FormGroup>
+          <FormGroup>
+            <Label for="matter">Observaciones</Label>
+            <Input type="textarea" name="matter" id="matter" value={form.matter || ""} onChange={handleChange} />
+          </FormGroup>
+        </ModalBody>
+        <ModalFooter>
+          <Button color="secondary" outline onClick={() => setModalOpen(!modalOpen)}>
+            Cancelar
           </Button>
+          <Button color="primary" onClick={requestSaveConfirmation}>
+            {selectedReserva ? "Guardar Cambios" : "Crear Reserva"}
+          </Button>
+          {/* El botón de eliminar reserva ha sido removido de aquí */}
         </ModalFooter>
       </Modal>
 
-      {/* --- MODAL PARA MOSTRAR LA LISTA DE RESERVAS --- */}
-      <Modal
-        isOpen={listModalOpen}
-        toggle={toggleListModal}
-        size="xl"
-        backdrop="static"
-        scrollable
-        className="calendar-modal list-modal"
-      >
-        <ModalHeader toggle={toggleListModal}>
-          {" "}
-          Lista de Reservas (Página {currentPage} de {totalPages}){" "}
-        </ModalHeader>
+      {/* --- Modal de Lista de Reservas --- */}
+      <Modal isOpen={listModalOpen} toggle={toggleListModal} size="xl" centered backdrop="static"> {/* Cambiado a xl para más espacio */}
+        <ModalHeader toggle={toggleListModal}>Lista de Reservas</ModalHeader>
         <ModalBody>
-          {currentItems && currentItems.length > 0 ? (
-            <>
-              <Table hover responsive size="sm" className="reservations-table">
-                <thead>
-                  <tr>
-                    <th>#</th> <th>Cliente</th> <th>Fecha y Hora</th> <th>Tipo Evento</th>{" "}
-                    <th className="text-center">Personas</th>
-                    <th className="text-end">Total</th> <th className="text-end">Restante</th>{" "}
-                    <th className="text-center">Estado</th> <th className="text-center">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentItems.map((reserva, index) => (
-                    <tr key={reserva.idReservations || reserva.id}>
-                      <td>{startIndex + index + 1}</td>
-                      <td>{reserva.fullName || "N/A"}</td>
-                      <td>
-                        {reserva.dateTime
-                          ? new Date(reserva.dateTime).toLocaleString("es-CO", {
-                              dateStyle: "medium",
-                              timeStyle: "short",
-                            })
-                          : "N/A"}
-                      </td>
-                      <td>{reserva.evenType || "N/A"}</td>
-                      <td className="text-center">{reserva.numberPeople || "N/A"}</td>
-                      <td className="text-end">{formatCurrency(reserva.totalPay)}</td>
-                      <td className="text-end">{formatCurrency(reserva.remaining)}</td>
-                      <td className="text-center">
-                        <span
-                          className={`badge text-uppercase event-status-badge event-status-${reserva.status || "default"}`}
-                          style={{ backgroundColor: colorMap[reserva.status] || colorMap["default"] }}
-                        >
-                          {reserva.status ? reserva.status.replace("_", " ") : "N/A"}
-                        </span>
-                      </td>
-                      <td className="text-center">
+          <Table responsive striped borderless style={styles.reservationsTable}>
+            <thead>
+              <tr>
+                <th style={styles.tableHeader}>ID</th>
+                <th style={styles.tableHeader}>Cliente</th>
+                <th style={styles.tableHeader}>Fecha y Hora</th>
+                <th style={styles.tableHeader}>Tipo Evento</th>
+                <th style={styles.tableHeader}>Personas</th>
+                <th style={styles.tableHeader}>Total Pago</th>
+                <th style={styles.tableHeader}>Restante</th>
+                <th style={styles.tableHeader}>Estado</th>
+                <th style={styles.tableHeader}>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {currentItems // Ya no filtramos aquí, el filtrado general del calendario se aplica a 'events'
+                .map((item) => (
+                  <tr key={item.idReservations}>
+                    <td style={styles.tableCell}>{item.idReservations}</td>
+                    <td style={styles.tableCell}>{item.fullName}</td>
+                    <td style={styles.tableCell}>
+                      {new Date(item.dateTime).toLocaleString("es-CO", {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      })}
+                    </td>
+                    <td style={styles.tableCell}>{item.evenType}</td>
+                    <td style={styles.tableCell}>{item.numberPeople}</td>
+                    <td style={styles.tableCell}>{formatCurrency(item.totalPay)}</td>
+                    <td style={styles.tableCell}>{formatCurrency(item.remaining)}</td>
+                    <td style={styles.tableCell}>
+                      <span style={styles.statusBadge(item.status)}>{item.status?.replace("_", " ")}</span>
+                    </td>
+                    <td style={styles.tableCell}>
+                      <div className="d-flex gap-1">
                         <Button
+                          color="link"
                           size="sm"
-                          color="primary"
-                          outline
+                          style={{ ...styles.actionButton, ...styles.actionEdit }}
                           onClick={() => {
-                            handleEventClick({ event: { id: (reserva.idReservations || reserva.id).toString() } })
-                            toggleListModal()
+                            const eventInfo = {
+                              event: {
+                                id: String(item.idReservations), // Asegurar que ID es string
+                              },
+                            }
+                            handleEventClick(eventInfo)
+                            setListModalOpen(false)
                           }}
-                          title="Ver/Editar Reserva"
                         >
-                          {" "}
-                          Ver/Editar{" "}
+                          <Edit size={16} />
                         </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-              {totalPages > 1 && (
-                <Pagination aria-label="Navegación de reservas" className="mt-3 justify-content-center">
-                  <PaginationItem disabled={currentPage <= 1}>
-                    {" "}
-                    <PaginationLink first onClick={() => handlePageChange(1)} />{" "}
-                  </PaginationItem>
-                  <PaginationItem disabled={currentPage <= 1}>
-                    {" "}
-                    <PaginationLink previous onClick={() => handlePageChange(currentPage - 1)} />{" "}
-                  </PaginationItem>
-                  {[...Array(totalPages).keys()].map((page) => (
-                    <PaginationItem active={page + 1 === currentPage} key={page + 1}>
-                      {" "}
-                      <PaginationLink onClick={() => handlePageChange(page + 1)}> {page + 1} </PaginationLink>{" "}
-                    </PaginationItem>
-                  ))}
-                  <PaginationItem disabled={currentPage >= totalPages}>
-                    {" "}
-                    <PaginationLink next onClick={() => handlePageChange(currentPage + 1)} />{" "}
-                  </PaginationItem>
-                  <PaginationItem disabled={currentPage >= totalPages}>
-                    {" "}
-                    <PaginationLink last onClick={() => handlePageChange(totalPages)} />{" "}
-                  </PaginationItem>
-                </Pagination>
-              )}
-            </>
-          ) : (
-            <p className="text-center">No hay reservas para mostrar.</p>
+                        <Button
+                          color="link"
+                          size="sm"
+                          style={{ ...styles.actionButton, ...styles.actionDelete }}
+                          onClick={() => requestDeleteConfirmation(item.idReservations)}
+                        >
+                          <FaTrashAlt size={16} />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </Table>
+          {totalPages > 1 && (
+            <Pagination aria-label="Page navigation" className="d-flex justify-content-center">
+                <PaginationItem disabled={currentPage === 1}>
+                <PaginationLink previous onClick={() => handlePageChange(currentPage - 1)} />
+                </PaginationItem>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <PaginationItem key={page} active={page === currentPage}>
+                    <PaginationLink onClick={() => handlePageChange(page)}>{page}</PaginationLink>
+                </PaginationItem>
+                ))}
+                <PaginationItem disabled={currentPage === totalPages}>
+                <PaginationLink next onClick={() => handlePageChange(currentPage + 1)} />
+                </PaginationItem>
+            </Pagination>
           )}
         </ModalBody>
-        <ModalFooter>
-          {" "}
-          <Button color="secondary" onClick={toggleListModal}>
-            {" "}
-            Cerrar{" "}
-          </Button>{" "}
-        </ModalFooter>
       </Modal>
+
+      {/* --- Modal de Confirmación --- */}
+      <ConfirmationModal
+        isOpen={confirmModalOpen}
+        toggle={toggleConfirmModal}
+        title={confirmModalProps.title}
+        onConfirm={() => {
+          if (confirmActionRef.current) {
+            setIsConfirmActionLoading(true)
+            confirmActionRef.current()
+          } else {
+            console.error("[CONFIRM ACTION] No action to confirm.")
+            toast.error("Error interno al confirmar la acción.")
+            toggleConfirmModal()
+          }
+        }}
+        confirmText={confirmModalProps.confirmText}
+        confirmColor={confirmModalProps.confirmColor}
+        isConfirming={isConfirmActionLoading}
+      >
+        {confirmModalProps.message}
+      </ConfirmationModal>
     </Container>
   )
 }
 
+export default Calendario
