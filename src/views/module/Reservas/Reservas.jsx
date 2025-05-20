@@ -910,7 +910,7 @@ const Calendario = () => {
         }))
       }
     }
-
+//hola
     const updatedAbonos = form.pass.map((abono, i) => (i === index ? { ...abono, [field]: value } : abono))
     setForm((prevForm) => ({ ...prevForm, pass: updatedAbonos }))
     if (field === "cantidad") {
