@@ -4,7 +4,6 @@ import {
   Layout,
   Button as AntButton,
   Dropdown,
-  // Menu, // Menu component might not be needed directly here anymore
   Avatar,
   Space,
 } from "antd";
@@ -15,7 +14,7 @@ import {
   LogOut as LogOutIconLucide,
   AlertTriangle,
 } from "lucide-react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, Routes, Route, Navigate } from "react-router-dom"; // Importa Routes, Route, Navigate
 import {
   Modal,
   ModalHeader,
@@ -26,19 +25,28 @@ import {
 } from "reactstrap";
 import { useAuth } from "../../views/hooks/AuthProvider";
 import Logo from "./Logo";
-import MenuList from "./MenuList"; // Your updated MenuList
+import MenuList from "./MenuList";
 import "../../assets/css/layout.css";
+
+// Importa la configuración de rutas y la función para generarlas
+import pagesRoutesConfig from "../../views/module/pages.routes"; // TU configuración de rutas
+import UserProfile from "../../views/module/Auth/UserProfile"; // Importa las vistas adicionales aquí si solo se usan en AppLayout
+import TablaGastos from "../../views/module/ManoDeObra/TablaGastos";
+import RendimientoEmpleado from "../../views/module/ManoDeObra/RendimientoEmpleado";
+import RegistroCompra from "../../views/module/Compras/RegistroComprasPage";
+import FichaTecnica from "../../views/module/ProductoInsumo/FichaTecnica";
+import ListaFichasTecnicas from "../../views/module/ProductoInsumo/ListaFichasTecnicas";
+
 
 const { Header, Sider, Content } = Layout;
 
-// --- Constantes de estilo (sin cambios) ---
-// ... (keep your style constants) ...
+// --- Constantes de estilo ---
 const SIDER_WIDTH_EXPANDED = 260;
 const SIDER_WIDTH_COLLAPSED = 80;
 const HEADER_HEIGHT = 64;
 const PRIMARY_SIDER_BACKGROUND = "#d0b88e";
 const ACCENT_COLOR = "#9e3535";
-const TEXT_ON_ACCENT_BG = "#FFFFFF";
+// const TEXT_ON_ACCENT_BG = "#FFFFFF"; // No parece usarse activamente
 const BORDER_COLOR_DARKER_BEIGE_SIDER = "#b8a078";
 const CONTENT_BACKGROUND_LIGHT = "#F5F1E6";
 const HEADER_TEXT_COLOR = "#4A3B2A";
@@ -46,6 +54,30 @@ const SIDER_DEFINED_SHADOW = `2px 0px 6px -1px rgba(74, 59, 42, 0.22)`;
 const SIDER_TOP_HIGHLIGHT_BORDER_COLOR = `rgba(255, 255, 255, 0.35)`;
 const NEW_HEADER_WHITE_BACKGROUND = "#FFFFFF";
 // --- Fin Constantes de estilo ---
+
+// Función para generar rutas anidadas (movida o importada aquí si es específica de AppLayout)
+const generateAppRoutes = (routesArray) => {
+  if (!Array.isArray(routesArray)) return null;
+  return routesArray.map((routeConfig) => {
+    if (!routeConfig.path) {
+      console.warn("[AppLayout generateAppRoutes] Route config is missing a path:", routeConfig);
+      return null;
+    }
+    const elementToRender = routeConfig.element || (routeConfig.children && routeConfig.children.length > 0 ? <Outlet /> : <div>Elemento no definido para {routeConfig.path}</div>);
+
+    if (routeConfig.children && routeConfig.children.length > 0) {
+      return (
+        <Route key={routeConfig.path} path={routeConfig.path} element={elementToRender}>
+          {routeConfig.indexElement && <Route index element={routeConfig.indexElement} />}
+          {generateAppRoutes(routeConfig.children)}
+        </Route>
+      );
+    }
+    return (
+      <Route key={routeConfig.path} path={routeConfig.path} element={elementToRender} />
+    );
+  }).filter(route => route !== null);
+};
 
 
 const AppLayout = () => {
@@ -56,10 +88,9 @@ const AppLayout = () => {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // --- MODIFIED: Define the handler directly ---
   const handleMenuClick = ({ key }) => {
     if (key === "profile") {
-      navigate("/home/profile");
+      navigate("/home/profile"); // Navegación relativa a /home
     } else if (key === "logout") {
       setIsLogoutModalOpen(true);
     }
@@ -69,6 +100,7 @@ const AppLayout = () => {
     setIsLoggingOut(true);
     try {
       await logOut();
+      // Navegación a /login es manejada por AuthProvider o PrivateRoute
     } catch (err) {
       console.error("Error al cerrar sesión:", err);
     } finally {
@@ -77,250 +109,99 @@ const AppLayout = () => {
     }
   };
 
-  // --- MODIFIED: Define the items array directly ---
   const userMenuDropdownItems = [
-    {
-      key: "profile",
-      icon: <UserIconLucide size={16} /* style={{ color: TEXT_ON_ACCENT_BG }} */ />, // Style might be applied by Dropdown/Menu theme now
-      label: <span /* style={{ color: TEXT_ON_ACCENT_BG }} */ >Mi Perfil</span>,
-    },
-    {
-      key: "logout",
-      icon: <LogOutIconLucide size={16} /* style={{ color: TEXT_ON_ACCENT_BG }} */ />,
-      label: (
-        <span /* style={{ color: TEXT_ON_ACCENT_BG }} */ >Cerrar Sesión</span>
-      ),
-      danger: true,
-    },
+    { key: "profile", icon: <UserIconLucide size={16} />, label: <span>Mi Perfil</span> },
+    { key: "logout", icon: <LogOutIconLucide size={16} />, label: <span>Cerrar Sesión</span>, danger: true },
   ];
 
-  // --- REMOVED: The old userMenu variable is no longer needed ---
-  // const userMenu = (
-  //   <Menu
-  //     onClick={handleMenuClick}
-  //     items={userMenuDropdownItems}
-  //     style={{
-  //       backgroundColor: ACCENT_COLOR,
-  //       border: `1px solid ${ACCENT_COLOR}`,
-  //     }}
-  //     className="user-dropdown-menu-custom" // You might need to style the dropdown differently now
-  //   />
-  // );
-
-  const currentSiderWidth = collapsed
-    ? SIDER_WIDTH_COLLAPSED
-    : SIDER_WIDTH_EXPANDED;
+  const currentSiderWidth = collapsed ? SIDER_WIDTH_COLLAPSED : SIDER_WIDTH_EXPANDED;
 
   return (
     <>
-      {/* --- Modal (sin cambios) --- */}
-      <Modal
-        isOpen={isLogoutModalOpen}
-        toggle={() => setIsLogoutModalOpen(false)}
-        centered
-        backdrop="static"
-        keyboard={!isLoggingOut}
-      >
-         {/* ... Modal content ... */}
-         <ModalHeader toggle={!isLoggingOut ? () => setIsLogoutModalOpen(false) : undefined}>
+      <Modal isOpen={isLogoutModalOpen} toggle={() => setIsLogoutModalOpen(false)} centered backdrop="static" keyboard={!isLoggingOut}>
+        <ModalHeader toggle={!isLoggingOut ? () => setIsLogoutModalOpen(false) : undefined}>
           <div className="d-flex align-items-center">
             <AlertTriangle size={24} className="text-danger me-2" />
             <span className="fw-bold">Confirmar cierre de sesión</span>
           </div>
         </ModalHeader>
-        <ModalBody>
-          ¿Estás seguro de que deseas cerrar sesión?
-        </ModalBody>
+        <ModalBody>¿Estás seguro de que deseas cerrar sesión?</ModalBody>
         <ModalFooter>
-          <Button
-            color="secondary"
-            outline
-            onClick={() => setIsLogoutModalOpen(false)}
-            disabled={isLoggingOut}
-          >
-            Cancelar
-          </Button>
+          <Button color="secondary" outline onClick={() => setIsLogoutModalOpen(false)} disabled={isLoggingOut}>Cancelar</Button>
           <Button color="danger" onClick={confirmLogout} disabled={isLoggingOut}>
-            {isLoggingOut ? (
-              <>
-                <Spinner size="sm" /> Cerrando sesión...
-              </>
-            ) : (
-              "Cerrar sesión"
-            )}
+            {isLoggingOut ? (<><Spinner size="sm" /> Cerrando...</>) : ("Cerrar sesión")}
           </Button>
         </ModalFooter>
       </Modal>
 
-      {/* --- Layout Principal --- */}
       <Layout style={{ minHeight: "100vh" }}>
-        {/* --- Sider (sin cambios - using your updated MenuList) --- */}
         <Sider
-          collapsible
-          trigger={null}
-          collapsed={collapsed}
-          width={SIDER_WIDTH_EXPANDED}
-          collapsedWidth={SIDER_WIDTH_COLLAPSED}
+          collapsible trigger={null} collapsed={collapsed}
+          width={SIDER_WIDTH_EXPANDED} collapsedWidth={SIDER_WIDTH_COLLAPSED}
           theme="light"
           style={{
-             // ... Sider styles ...
-             overflow: "auto",
-             height: "100vh",
-             position: "fixed",
-             left: 0,
-             top: 0,
-             bottom: 0,
-             background: PRIMARY_SIDER_BACKGROUND,
-             borderTop: `1px solid ${SIDER_TOP_HIGHLIGHT_BORDER_COLOR}`,
-             borderRight: `1px solid ${BORDER_COLOR_DARKER_BEIGE_SIDER}`,
-             boxShadow: SIDER_DEFINED_SHADOW,
-             zIndex: 20,
+            overflow: "auto", height: "100vh", position: "fixed", left: 0, top: 0, bottom: 0,
+            background: PRIMARY_SIDER_BACKGROUND,
+            borderTop: `1px solid ${SIDER_TOP_HIGHLIGHT_BORDER_COLOR}`,
+            borderRight: `1px solid ${BORDER_COLOR_DARKER_BEIGE_SIDER}`,
+            boxShadow: SIDER_DEFINED_SHADOW, zIndex: 20,
           }}
         >
           <Logo collapsed={collapsed} backgroundColor={PRIMARY_SIDER_BACKGROUND} />
-          {/* Uses the updated MenuList */}
           <MenuList collapsed={collapsed} />
         </Sider>
 
-        <Layout className="site-layout" style={{ minHeight: "100vh" }}>
-           {/* --- Header --- */}
+        <Layout className="site-layout" style={{ minHeight: "100vh", marginLeft: currentSiderWidth, transition: "margin-left 0.2s" }}>
           <Header
             style={{
-                // ... Header styles ...
-                padding: 0,
-                backgroundColor: NEW_HEADER_WHITE_BACKGROUND,
-                borderBottom: `2px solid ${ACCENT_COLOR}`,
-                height: `${HEADER_HEIGHT}px`,
-                lineHeight: `${HEADER_HEIGHT}px`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                position: "fixed",
-                top: 0,
-                left: 0,
-                width: "100%",
-                zIndex: 10,
+              padding: 0, backgroundColor: NEW_HEADER_WHITE_BACKGROUND,
+              borderBottom: `2px solid ${ACCENT_COLOR}`, height: `${HEADER_HEIGHT}px`,
+              lineHeight: `${HEADER_HEIGHT}px`, display: "flex", alignItems: "center",
+              justifyContent: "space-between", position: "fixed", top: 0,
+              // Ajuste: el header no debe solapar el Sider, empieza después de él
+              left: currentSiderWidth, // Posición inicial del header
+              width: `calc(100% - ${currentSiderWidth}px)`, // Ancho dinámico
+              zIndex: 10, transition: "left 0.2s, width 0.2s",
             }}
           >
-            {/* Botón Colapsar/Expandir (sin cambios) */}
-            <div
-              style={{
-                  // ... styles ...
-                  display: "flex",
-                  alignItems: "center",
-                  height: "100%",
-                  paddingLeft: currentSiderWidth + 16 + "px",
-                  transition: "padding-left 0.2s",
-              }}
-            >
+            <div style={{ display: "flex", alignItems: "center", height: "100%", paddingLeft: "16px" }}>
               <AntButton
                 type="text"
-                icon={ collapsed ? <PanelRightClose size={18} /> : <PanelLeftClose size={18} />}
+                icon={collapsed ? <PanelRightClose size={18} /> : <PanelLeftClose size={18} />}
                 onClick={() => setCollapsed(!collapsed)}
                 style={{
-                    // ... button styles ...
-                    padding: "0",
-                    width: "48px",
-                    height: "100%",
-                    color: HEADER_TEXT_COLOR,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    border: "none",
-                    borderRadius: 0,
-                    fontSize: "18px",
+                  padding: "0", width: "48px", height: "100%", color: HEADER_TEXT_COLOR,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  border: "none", borderRadius: 0, fontSize: "18px",
                 }}
                 aria-label={collapsed ? "Expandir menú" : "Colapsar menú"}
               />
             </div>
-
-            {/* Menú de Usuario (Dropdown MODIFICADO) */}
-            <div
-              style={{
-                  // ... styles ...
-                  display: "flex",
-                  alignItems: "center",
-                  paddingRight: "24px",
-                  height: "100%",
-              }}
-            >
+            <div style={{ display: "flex", alignItems: "center", paddingRight: "24px", height: "100%" }}>
               {!loading && user ? (
-                // --- MODIFIED: Use 'menu' prop instead of 'overlay' ---
-                <Dropdown
-                   menu={{ // Pass configuration object
-                       items: userMenuDropdownItems, // The array of items
-                       onClick: handleMenuClick, // The click handler
-                       // Add other Menu props here if needed (like style, className)
-                       // style: { backgroundColor: ACCENT_COLOR /* ... */ }, // Example
-                       // className: 'user-dropdown-menu-custom' // Example
-                   }}
-                   trigger={["click"]}
-                   // --- Optional: Add dropdownRender prop for more complex customization if needed ---
-                   // dropdownRender={(menu) => (
-                   //   <div style={{ backgroundColor: ACCENT_COLOR, boxShadow: '...', borderRadius: '...' }}>
-                   //     {React.cloneElement(menu, { style: { color: TEXT_ON_ACCENT_BG }})}
-                   //   </div>
-                   // )}
-                >
-                  {/* The trigger element remains the same */}
-                  <a
-                    onClick={(e) => e.preventDefault()}
-                    style={{
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      height: "100%",
-                    }}
-                  >
+                <Dropdown menu={{ items: userMenuDropdownItems, onClick: handleMenuClick }} trigger={["click"]}>
+                  <a onClick={(e) => e.preventDefault()} style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", height: "100%" }}>
                     <Space size="small">
-                      <Avatar
-                        size={32}
-                        icon={<UserIconLucide size={18} />}
-                        style={{ backgroundColor: ACCENT_COLOR, flexShrink: 0 }}
-                      />
-                      <span
-                        style={{
-                            // ... span styles ...
-                            color: HEADER_TEXT_COLOR,
-                            fontWeight: 500,
-                            display: "inline-block",
-                            maxWidth: "150px",
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            verticalAlign: "middle",
-                        }}
-                      >
+                      <Avatar size={32} icon={<UserIconLucide size={18} />} style={{ backgroundColor: ACCENT_COLOR, flexShrink: 0 }} />
+                      <span style={{ color: HEADER_TEXT_COLOR, fontWeight: 500, display: "inline-block", maxWidth: "150px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", verticalAlign: "middle" }}>
                         {user.full_name || "Usuario"}
                       </span>
                     </Space>
                   </a>
                 </Dropdown>
-              ) : (
-                // Placeholder (sin cambios)
-                <Space>
-                  <Avatar
-                    size={32}
-                    icon={<UserIconLucide size={18} />}
-                    style={{ backgroundColor: '#ccc' }}
-                  />
-                </Space>
-              )}
+              ) : (<Space><Avatar size={32} icon={<UserIconLucide size={18} />} style={{ backgroundColor: '#ccc' }} /></Space>)}
             </div>
           </Header>
 
-          {/* --- Content (sin cambios) --- */}
           <Content
             style={{
-                // ... Content styles ...
-                padding: 24,
-                minHeight: 280,
-                backgroundColor: CONTENT_BACKGROUND_LIGHT,
-                marginTop: `${HEADER_HEIGHT}px`,
-                marginLeft: currentSiderWidth,
-                transition: "margin-left 0.2s ease-in-out",
+              padding: 24, minHeight: 280, backgroundColor: CONTENT_BACKGROUND_LIGHT,
+              marginTop: `${HEADER_HEIGHT}px`, // marginLeft ya está en el Layout padre
+              // marginLeft: currentSiderWidth, // No es necesario aquí si el Layout padre lo maneja
+              // transition: "margin-left 0.2s ease-in-out", // Ya en el Layout padre
             }}
           >
+            {/* El <Outlet /> aquí es donde se renderizarán las rutas hijas definidas en App.jsx para /home/* */}
             <Outlet />
           </Content>
         </Layout>

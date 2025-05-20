@@ -9,7 +9,7 @@ import {
     BarChart, Bar, LineChart, Line, PieChart, Pie, ResponsiveContainer,
     XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell
 } from 'recharts';
-import MonthlyOverallExpenseService from '../../services/gastosGeneralesService';
+import MonthlyOverallExpenseService from '../../services/MonthlyOverallExpenseService';
 
 // Colors for charts
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
