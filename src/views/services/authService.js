@@ -1,36 +1,46 @@
-// src/services/authService.js
-import axiosInstance from './axiosConfig'; // Asume que axiosConfig.js está en la misma carpeta (src/services/)
+// src/services/authService.js (FRONTEND)
+import axiosInstance from './axiosConfig';
 
-// 1. Definir y exportar AUTH_STORAGE_KEYS
-// Asegúrate de que estas claves coincidan con cómo quieres que se almacenen en localStorage
-// y cómo AuthProvider las espera.
 export const AUTH_STORAGE_KEYS = {
-  token: 'token', // La clave que ya estás usando para el token
-  user: 'authUser', // Clave para la información del usuario
-  permissions: 'effectivePermissions' // Clave para los permisos
+  token: 'token', // O 'authToken' si prefieres ser más explícito
+  user: 'authUser',
+  permissions: 'effectivePermissions'
 };
 
-const LOGIN_ENDPOINT = '/auth/login';
-const LOGOUT_ENDPOINT = '/auth/logout';
+const LOGIN_ENDPOINT = '/auth/login'; // Ajusta si tu endpoint es diferente, ej. /api/auth/login
+const LOGOUT_ENDPOINT = '/auth/logout'; // Ajusta si es diferente
 
 export const authService = {
   login: async ({ email, password }) => {
     try {
+      console.log("[Frontend authService] Attempting login with:", email);
+      // Esperamos que la respuesta del backend sea { token, user, effectivePermissions }
       const response = await axiosInstance.post(LOGIN_ENDPOINT, { email, password });
 
-      if (!response.data || !response.data.token) {
-        const errorMessage = response.data?.message || "Respuesta inválida del servidor o falta token.";
+      if (!response.data || !response.data.token || !response.data.user || typeof response.data.effectivePermissions === 'undefined') {
+        const errorMessage = response.data?.message || "Respuesta inválida del servidor o faltan datos (token, user, o permissions).";
+        console.error("[Frontend authService] Login failed due to incomplete server response:", response.data);
         throw new Error(errorMessage);
       }
 
-      // Guarda el token usando la clave de AUTH_STORAGE_KEYS
-      authService.setToken(response.data.token);
-      // AuthProvider se encargará de guardar response.data.user en localStorage
-      // usando AUTH_STORAGE_KEYS.user
-      return response.data; // Debería devolver { user, token }
+      const { token, user, effectivePermissions } = response.data;
+
+      // Guardar todo en localStorage
+      localStorage.setItem(AUTH_STORAGE_KEYS.token, token);
+      localStorage.setItem(AUTH_STORAGE_KEYS.user, JSON.stringify(user));
+      localStorage.setItem(AUTH_STORAGE_KEYS.permissions, JSON.stringify(effectivePermissions));
+
+      // Configurar el token en la instancia de Axios para futuras peticiones
+      axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      console.log("[Frontend authService] Login successful. Token, user, and permissions stored.");
+      return { token, user, effectivePermissions }; // Devolver el objeto completo
+
     } catch (error) {
       console.error("Error during login (authService):", error.response?.data?.message || error.message);
-      throw error;
+      // Limpiar cualquier dato parcial que se haya podido guardar antes del error.
+      authService.clearClientSession(); // Asegura que no queden restos de una sesión fallida
+      throw error; // Re-lanzar para que el componente que llama (AuthProvider) pueda manejarlo
     }
   },
 
@@ -39,45 +49,27 @@ export const authService = {
       await axiosInstance.post(LOGOUT_ENDPOINT);
       console.log("authService: Petición de logout al backend enviada.");
     } catch (error) {
-      console.error("authService: Error en la petición de logout al backend:", error.response?.data?.message || error.message);
-      // No bloquear, AuthProvider limpiará localmente de todas formas
+      console.error("authService: Error en la petición de logout al backend (ignorado, limpieza local procederá):", error.response?.data?.message || error.message);
     }
   },
 
-  setToken: (accessToken) => {
-    if (accessToken) {
-      // Usar la clave de AUTH_STORAGE_KEYS
-      localStorage.setItem(AUTH_STORAGE_KEYS.token, accessToken);
-    } else {
-      // Usar la clave de AUTH_STORAGE_KEYS
-      localStorage.removeItem(AUTH_STORAGE_KEYS.token);
-    }
-  },
+  // setToken ya no es necesaria externamente si login y clearClientSession manejan el token
+  // pero la mantenemos por si se usa en otro lado o para claridad interna.
+  // _setTokenInternal: (accessToken) => { ... } // Podría ser interna
 
   getAccessToken: () => {
-    // Usar la clave de AUTH_STORAGE_KEYS
     return localStorage.getItem(AUTH_STORAGE_KEYS.token);
   },
 
-  // Función que tu AuthProvider usa para verificar la existencia del token
   isAuthenticatedFromToken: () => {
-    // Usar la clave de AUTH_STORAGE_KEYS
     return !!localStorage.getItem(AUTH_STORAGE_KEYS.token);
   },
 
   clearClientSession: () => {
     console.log("authService: Limpiando sesión del cliente (token, authUser, effectivePermissions).");
-    // Usar las claves de AUTH_STORAGE_KEYS
     localStorage.removeItem(AUTH_STORAGE_KEYS.token);
     localStorage.removeItem(AUTH_STORAGE_KEYS.user);
     localStorage.removeItem(AUTH_STORAGE_KEYS.permissions);
-    // Opcional: limpiar cabeceras de axiosInstance si no se maneja bien por interceptores al borrar token
-    // delete axiosInstance.defaults.headers.common['Authorization'];
+    delete axiosInstance.defaults.headers.common['Authorization']; // Muy importante
   }
 };
-
-// Nota: Si authService fuera un objeto muy grande o tuviera funciones que no necesitan
-// estar dentro del objeto principal, podrías exportarlas individualmente.
-// Pero para este caso, exportar el objeto authService y AUTH_STORAGE_KEYS es lo correcto
-// basado en cómo lo importas en AuthProvider.jsx:
-// import { authService, AUTH_STORAGE_KEYS } from '../services/authService';

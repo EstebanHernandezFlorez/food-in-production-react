@@ -1,230 +1,162 @@
-/* src/assets/css/dashboard-flup-content-style.css */
+/* src/assets/css/dashboard-flup-content-style.css (REVISADO) */
 
-/* --- VARIABLES DE COLOR (Ejemplo - ¡Ajusta estos colores!) --- */
+/* --- VARIABLES DE COLOR (Tus variables existentes) --- */
 :root {
-  --flup-bg-main: #f7f8fa; /* Fondo principal del contenido */
+  --flup-bg-main: #f7f8fa; /* Fondo del área principal del dashboard */
   --flup-bg-card: #ffffff;
   --flup-text-primary: #1a202c;
   --flup-text-secondary: #5c677d;
-  --flup-text-accent: #00bfa5; /* Verde acento principal (similar al ejemplo) */
-  --flup-border-color: #e9edf2; /* Borde más suave */
+  --flup-text-accent: #00bfa5; /* Verde menta principal */
+  --flup-border-color: #e9edf2;
   --flup-shadow-card: 0 4px 12px rgba(0, 0, 0, 0.05);
-  --flup-header-height: 70px; /* Altura del header superior */
-  --flup-content-padding: 2rem; /* Padding general para el área de contenido */
+  --flup-header-height-internal: 60px; /* Altura del header INTERNO del dashboard */
+  --flup-content-padding-internal: 1.5rem; /* Padding INTERNO del contenido del dashboard */
+  --flup-border-radius: 8px;
+  --flup-border-radius-sm: 6px;
+  --flup-text-accent-rgb: 0, 191, 165;
 }
 
 /* --- ESTILOS GENERALES DEL ÁREA DE CONTENIDO DEL DASHBOARD --- */
-/* Este contenedor sería el <main> o el div principal a la derecha de tu sidebar */
 .flup-dashboard-content-area {
-  flex-grow: 1;
   display: flex;
   flex-direction: column;
   background-color: var(--flup-bg-main);
-  height: 100vh; /* Ocupa toda la altura del viewport */
-  overflow: hidden; /* Evita doble scrollbar, el scroll estará en el wrapper */
+  height: 100%; /* << IMPORTANTE: Ocupa el 100% de la altura de su contenedor padre (el <Content> de AppLayout) */
+  overflow: hidden; /* Evita que este contenedor tenga scroll, el scroll estará en el wrapper interno */
 }
 
-/* --- HEADER SUPERIOR DEL CONTENIDO --- */
+/* --- HEADER SUPERIOR DEL CONTENIDO (Header INTERNO del Dashboard) --- */
 .flup-content-header {
-  height: var(--flup-header-height);
-  background-color: var(--flup-bg-card); /* Fondo blanco como en la imagen */
+  min-height: var(--flup-header-height-internal);
+  background-color: var(--flup-bg-card);
   border-bottom: 1px solid var(--flup-border-color);
-  padding: 0 var(--flup-content-padding);
+  padding: 0.75rem var(--flup-content-padding-internal);
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0; /* Para que no se encoja */
-  position: sticky; /* Header fijo si el .flup-dashboard-content-area tiene scroll */
+  /* position: sticky; // No necesita ser sticky si flup-content-wrapper tiene el scroll
   top: 0;
-  z-index: 900;
+  z-index: 900; */
+  gap: 1.5rem;
 }
 
 .flup-content-header .header-title-section {
     display: flex;
     align-items: center;
+    gap: 0.75rem;
 }
-
+.flup-content-header .header-section-icon {
+    /* Estilos para el icono de la sección aquí si son necesarios,
+       o directamente en el JSX como lo tienes */
+}
 .flup-content-header .header-title {
-  font-size: 1.625rem; /* 26px, más prominente */
+  font-size: 1.5rem;
   font-weight: 600;
   color: var(--flup-text-primary);
-}
-/* Si quieres añadir el "breadcrumb" < Dashboard */
-.flup-content-header .breadcrumb-back {
-  color: var(--flup-text-secondary);
-  margin-right: 1rem;
-  font-size: 1.25rem;
-  cursor: pointer; /* Si es un botón de "atrás" real */
+  margin: 0;
 }
 
-
-.flup-content-header .header-actions {
+.flup-content-header .header-controls {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
+.flup-content-header .dashboard-section-select,
 .flup-content-header .date-filters select {
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
+  padding: 0.6rem 0.85rem;
   border: 1px solid var(--flup-border-color);
-  background-color: var(--flup-bg-card);
-  color: var(--flup-text-secondary);
+  border-radius: var(--flup-border-radius-sm);
+  background-color: var(--flup-bg-card); /* Para que combine con el header */
+  color: var(--flup-text-primary);
+  font-weight: 500;
+  cursor: pointer;
   font-size: 0.875rem;
-  margin-left: 0.5rem; /* Espacio entre selectores */
+  outline: none; /* Quitar outline por defecto */
 }
+.flup-content-header .dashboard-section-select {
+  min-width: 200px;
+}
+.flup-content-header .date-filters {
+  display: flex;
+  gap: 0.5rem;
+}
+.flup-content-header .dashboard-section-select:disabled,
+.flup-content-header .date-filters select:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+.flup-content-header .dashboard-section-select:focus,
 .flup-content-header .date-filters select:focus {
-  outline: none;
   border-color: var(--flup-text-accent);
-  box-shadow: 0 0 0 2px rgba(var(--flup-text-accent-rgb, 0, 191, 165), 0.2); /* Necesitas --flup-text-accent-rgb */
+  box-shadow: 0 0 0 2px rgba(var(--flup-text-accent-rgb), 0.2);
 }
-
-.flup-content-header .add-data-btn {
-  padding: 0.6rem 1rem;
-  background-color: var(--flup-text-accent);
-  color: #ffffff;
-  border: 1px solid var(--flup-text-accent); /* Borde del mismo color */
-  border-radius: 6px;
-  font-weight: 500;
-  font-size: 0.875rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: background-color 0.2s, border-color 0.2s;
-}
-.flup-content-header .add-data-btn:hover {
-  background-color: #00a086; /* Un poco más oscuro */
-  border-color: #00a086;
-}
-/* Para el botón "Add data" con borde punteado (opcional si el de arriba no te gusta) */
-.flup-content-header .add-data-btn-outlined {
-  padding: 0.6rem 1rem;
-  background-color: transparent;
-  color: var(--flup-text-accent);
-  border: 2px dashed var(--flup-text-accent);
-  border-radius: 6px;
-  font-weight: 500;
-  font-size: 0.875rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: background-color 0.2s, color 0.2s;
-}
-.flup-content-header .add-data-btn-outlined:hover {
-  background-color: rgba(var(--flup-text-accent-rgb, 0, 191, 165), 0.05);
-}
-
 
 /* --- CONTENEDOR DEL CONTENIDO PRINCIPAL (SCROLLABLE) --- */
 .flup-content-wrapper {
-  padding: var(--flup-content-padding);
-  overflow-y: auto; /* Permite scroll solo en esta área */
-  flex-grow: 1; /* Ocupa el espacio restante verticalmente */
+  padding: var(--flup-content-padding-internal);
+  overflow-y: auto; /* << IMPORTANTE: Este es el que tendrá el scroll para el contenido del dashboard */
+  flex-grow: 1; /* Ocupa el espacio restante verticalmente después del header interno */
 }
 
-/* --- SALUDO Y DESCRIPCIÓN (SI LO TIENES) --- */
-.flup-welcome-header {
-  margin-bottom: 1.5rem;
-}
-.flup-welcome-header h1 {
-  font-size: 1.375rem; /* 22px */
-  font-weight: 600;
-  color: var(--flup-text-primary);
-  margin: 0 0 0.25rem 0;
-}
-.flup-welcome-header p {
-  font-size: 0.9rem;
-  color: var(--flup-text-secondary);
-  margin:0;
-}
-
-/* --- TARJETAS DE ESTADÍSTICAS (KPIs / Bonus) --- */
+/* --- TARJETAS DE ESTADÍSTICAS (KPIs) --- */
 .flup-kpi-grid {
   display: grid;
-  /* La imagen muestra 4 tarjetas, ajustamos para que se vean bien */
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
-  gap: 1.5rem; /* Espacio entre tarjetas */
-  margin-bottom: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 1.5rem;
+  margin-bottom: var(--flup-content-padding-internal); /* Usa la variable de padding */
 }
 
-/* Estilos para StatCardFinance adaptados a este diseño */
 .flup-stat-card {
   background-color: var(--flup-bg-card);
-  border-radius: 8px; /* Menos redondeado que en el ejemplo anterior para coincidir con la imagen */
-  padding: 1rem 1.25rem; /* Padding ajustado */
+  border-radius: var(--flup-border-radius);
+  padding: 1rem;
   box-shadow: var(--flup-shadow-card);
   border: 1px solid var(--flup-border-color);
   display: flex;
   flex-direction: column;
-}
-
-.flup-stat-card .card-header { /* Contenedor para título e icono */
-  display: flex;
   justify-content: space-between;
-  align-items: center; /* Centrar icono con título */
-  margin-bottom: 0.25rem; /* Menos espacio */
+  min-height: 140px; /* Altura mínima para forma más cuadrada */
 }
+.flup-stat-card.is-loading { /* Para el estado de carga de las tarjetas */
+    opacity: 0.7;
+    /* background-image: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loadingShimmer 1.5s infinite linear; */
+}
+/* @keyframes loadingShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; }} */
+.animate-spin-slow { /* Animación de carga más sutil para iconos */
+    animation: spin 2s linear infinite;
+}
+/* (El resto de tus estilos para .flup-stat-card .card-header, .card-title, .card-value, .card-change se mantienen) */
+.flup-stat-card .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; }
+.flup-stat-card .card-title { font-size: 0.875rem; color: var(--flup-text-secondary); font-weight: 500; margin: 0; line-height: 1.3; }
+.flup-stat-card .card-icon { color: var(--flup-text-secondary); opacity: 0.7; }
+.flup-stat-card .card-value { font-size: 1.625rem; font-weight: 600; color: var(--flup-text-primary); margin: 0.25rem 0 0.5rem 0; line-height: 1.2; }
+.flup-stat-card .card-change { display: flex; align-items: center; font-size: 0.8rem; font-weight: 500; }
+.flup-stat-card .card-change svg { margin-right: 0.35rem; width: 15px; height: 15px; }
+.flup-stat-card .card-change.positive { color: var(--accent-green-finance, #10b981); } /* Usa tus variables de base.css si existen */
+.flup-stat-card .card-change.negative { color: var(--accent-red-finance, #ef4444); }
+.flup-stat-card .card-change.neutral { color: var(--flup-text-secondary); }
+.flup-stat-card .card-content { margin-top: auto; padding-top: 0.5rem; }
 
-.flup-stat-card .card-title {
-  font-size: 0.8rem; /* 13px, más pequeño */
-  color: var(--flup-text-secondary);
-  font-weight: 500;
-  margin: 0;
-}
-
-.flup-stat-card .card-icon { /* Icono opcional de la tarjeta (ej. DollarSign) */
-  color: var(--flup-text-secondary);
-  opacity: 0.6;
-}
-
-.flup-stat-card .card-value {
-  font-size: 1.5rem; /* 24px, un poco más pequeño */
-  font-weight: 600; /* Un poco menos bold que 700 */
-  color: var(--flup-text-primary);
-  margin: 0.125rem 0 0.375rem 0; /* Ajuste de margen */
-  line-height: 1.2;
-}
-
-.flup-stat-card .card-change {
-  display: flex;
-  align-items: center;
-  font-size: 0.75rem; /* 12px, más pequeño */
-  font-weight: 500;
-}
-.flup-stat-card .card-change svg { /* Iconos TrendingUp/Down */
-  margin-right: 0.25rem;
-  width: 14px; /* Ajustar tamaño de iconos de tendencia */
-  height: 14px;
-}
-.flup-stat-card .card-change.positive {
-  color: #10b981; /* Verde (Tailwind green-500) */
-}
-.flup-stat-card .card-change.negative {
-  color: #ef4444; /* Rojo (Tailwind red-500) */
-}
-.flup-stat-card .card-change.neutral {
-  color: var(--flup-text-secondary);
-}
-
-.flup-stat-card .card-content { /* Para ProgressBar u otro contenido */
-  margin-top: 0.5rem;
-}
 
 /* --- CONTENEDORES DE GRÁFICOS --- */
 .flup-charts-section {
   display: grid;
-  gap: 1.5rem;
+  gap: 1.5rem; /* Espacio entre el contenedor de ventas de producto y la grilla inferior */
+  /* Si quieres que el primer gráfico ocupe más columnas: */
+  /* grid-template-columns: 2fr 1fr; // Por ejemplo, si solo hay dos secciones lado a lado */
 }
 
 .flup-chart-container {
   background-color: var(--flup-bg-card);
-  border-radius: 8px;
+  border-radius: var(--flup-border-radius);
   padding: 1.5rem;
   box-shadow: var(--flup-shadow-card);
   border: 1px solid var(--flup-border-color);
-  min-height: 300px; /* Para dar espacio al gráfico */
+  min-height: 300px;
   display: flex;
   flex-direction: column;
 }
@@ -234,68 +166,31 @@
     align-items: center;
     margin-bottom: 1.5rem;
 }
-
 .flup-chart-container .chart-title {
-  font-size: 1.125rem; /* 18px */
+  font-size: 1.125rem;
   font-weight: 600;
   color: var(--flup-text-primary);
   margin: 0;
 }
-.flup-chart-container .chart-legend {
-    display: flex;
-    gap: 1rem;
-    font-size: 0.8rem;
-    color: var(--flup-text-secondary);
-}
-.flup-chart-container .legend-item {
-    display: flex;
-    align-items: center;
-}
-.flup-chart-container .legend-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-right: 0.375rem;
-    display: inline-block;
-}
+/* (El resto de tus estilos para .flup-chart-container .chart-legend, .legend-item, .legend-dot se mantienen) */
+.flup-chart-container .chart-legend { display: flex; gap: 1rem; font-size: 0.8rem; color: var(--flup-text-secondary); flex-wrap: wrap; margin-top: 1rem;}
+.flup-chart-container .legend-item { display: flex; align-items: center; }
+.flup-chart-container .legend-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 0.375rem; display: inline-block; }
 
-/* Layout para los gráficos inferiores (ej. Pastel y Mapa) */
-.flup-bottom-charts-grid {
+
+.flup-bottom-charts-grid { /* Grid para los dos gráficos inferiores */
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr)); /* Flexibles */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); /* Que cada uno ocupe espacio, mínimo 320px */
   gap: 1.5rem;
 }
 
+/* (Estilos de .chart-placeholder-finance, .progress-bar-track, .progress-bar-fill se mantienen) */
+.chart-placeholder-finance { display: flex; align-items: center; justify-content: center; flex-grow: 1; min-height: 250px; border: 1px dashed var(--flup-border-color); border-radius: var(--flup-border-radius-sm); color: var(--flup-text-secondary); font-size: 0.9rem; background-color: var(--flup-bg-main); padding: 1rem; text-align: center; }
+.progress-bar-track { background-color: #e2e8f0; border-radius: 9999px; height: 6px; overflow: hidden; margin-top: 0.25rem; }
+.progress-bar-fill { background-color: var(--flup-text-accent); height: 100%; border-radius: 9999px; transition: width 0.5s ease-out; }
 
-/* Placeholder para gráficos */
-.chart-placeholder-finance {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-grow: 1; /* Para que ocupe el espacio disponible en el contenedor */
-  min-height: 250px;
-  border: 1px dashed var(--flup-border-color); /* Más sutil */
-  border-radius: 6px;
-  color: var(--flup-text-secondary);
-  font-size: 0.9rem;
-  background-color: var(--flup-bg-main); /* Fondo igual al principal */
-}
 
-/* ProgressBar (estilos básicos) */
-.progress-bar-track {
-  background-color: #e2e8f0; /* Gris claro (Tailwind gray-200) */
-  border-radius: 9999px;
-  height: 6px; /* Más delgado */
-  overflow: hidden;
-  margin-top: 0.25rem;
-}
-.progress-bar-fill {
-  background-color: var(--flup-text-accent);
-  height: 100%;
-  border-radius: 9999px;
-}
-
-/* --- ESTADOS DE CARGA Y ERROR GENERALES PARA EL CONTENIDO --- */
+/* --- ESTADOS DE CARGA Y ERROR --- */
 .flup-content-loading-state, .flup-content-error-state {
   display: flex;
   flex-direction: column;
@@ -303,40 +198,41 @@
   justify-content: center;
   padding: 3rem;
   text-align: center;
-  min-height: 300px; /* Ocupa algo de espacio */
+  min-height: 300px;
   color: var(--flup-text-secondary);
+  flex-grow: 1; /* Para que ocupe espacio si es el único contenido */
 }
-.flup-content-loading-state svg { /* Para el spinner de Lucide */
-  color: var(--flup-text-accent);
-  margin-bottom: 1rem;
-}
-.flup-content-error-state {
-  color: #ef4444; /* Rojo */
-  background-color: rgba(239, 68, 68, 0.05);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  border-radius: 8px;
-}
+.flup-content-loading-state svg { color: var(--flup-text-accent); margin-bottom: 1rem; }
+.flup-content-error-state { color: var(--accent-red-finance, #ef4444); background-color: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: var(--flup-border-radius); }
 
-/* Responsividad (Básica) */
+/* --- RESPONSIVIDAD (Tus media queries se mantienen, pero asegúrate que los selectores internos sean consistentes) --- */
+@media (max-width: 992px) {
+    .flup-content-header {
+        flex-direction: column;
+        align-items: flex-start;
+        height: auto;
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+    .flup-content-header .header-title-section { margin-bottom: 0.75rem; }
+    .flup-content-header .header-controls { width: 100%; justify-content: space-between; }
+    .flup-content-header .dashboard-section-select { flex-grow: 1; min-width: 160px; }
+}
 @media (max-width: 768px) {
-  :root {
-    --flup-content-padding: 1rem;
-    --flup-header-height: 60px;
-  }
-  .flup-content-header .header-title {
-    font-size: 1.25rem;
-  }
-  .flup-content-header .date-filters {
-    display: none; /* Ocultar filtros en móvil o hacerlos más compactos */
-  }
-  .flup-kpi-grid {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
-    gap: 1rem;
-  }
-  .flup-stat-card .card-value {
-    font-size: 1.25rem;
-  }
-  .flup-bottom-charts-grid {
-    grid-template-columns: 1fr; /* Gráficos inferiores en una sola columna */
-  }
+  .flup-content-header .header-title { font-size: 1.375rem; }
+  .flup-kpi-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 1rem; } /* Ajuste para más de 2 tarjetas */
+  .flup-stat-card { min-height: 120px; padding: 0.75rem; }
+  .flup-stat-card .card-value { font-size: 1.375rem; }
+  .flup-stat-card .card-title { font-size: 0.8rem; }
+  .flup-stat-card .card-change { font-size: 0.75rem; }
+  .flup-stat-card .card-change svg { width: 13px; height: 13px; }
+  .flup-bottom-charts-grid { grid-template-columns: 1fr; }
+  .flup-charts-section { grid-template-columns: 1fr; } /* Todos los gráficos en una columna en móvil */
+}
+@media (max-width: 480px) {
+    .flup-content-header .header-controls { flex-direction: column; align-items: stretch; gap: 0.75rem; }
+    .flup-content-header .dashboard-section-select,
+    .flup-content-header .date-filters select { width: 100%; }
+    .flup-content-header .date-filters { flex-direction: column; align-items: stretch; gap: 0.75rem; }
+    .flup-kpi-grid { grid-template-columns: 1fr; } /* Una KPI card por fila en móviles muy pequeños */
 }

@@ -28,6 +28,7 @@ import FichaTecnica from "./views/module/ProductoInsumo/FichaTecnica";
 import Insumos from "./views/module/Insumo/Insumo";
 import Dashboard from "./views/module/Dashboard/dashboard"
 import ListaFichasTecnicas from "./views/module/ProductoInsumo/ListaFichasTecnicas";
+import SpecificConceptManagement from './views/module/ManoDeObra/SpecificConceptManagement';
 
 // import NotFound from "./views/NotFound"; // opcional
 
@@ -91,6 +92,7 @@ export default function App() {
               <Route path="producto/:idProduct/fichas" element={<ListaFichasTecnicas />} />
               <Route path="fichas-tecnicas/:idProduct" element={<ListaFichasTecnicas />} />
               <Route path="ficha-tecnica/editar/:idSpecsheet" element={<FichaTecnica />} />
+              <Route path="/home/gestion-conceptos-especificos" element={<SpecificConceptManagement />} />
             </Route>
           </Route>
           

@@ -1,26 +1,28 @@
 // src/services/roleService.js (FRONTEND)
-import axiosInstance from './axiosConfig';
+import axiosInstance from './axiosConfig'; // Tu instancia de Axios
 
-const API_URL = '/role'; // Ruta base para el API de roles en el backend
+// La ruta base para el API de roles en el backend es '/roles' según tu roleRoutes.js
+const API_BASE_URL = '/role';
 
 const roleService = {
-    /** GET /role */
+    /** GET /roles */
     getAllRoles: async () => {
+        const endpoint = API_BASE_URL;
         try {
-            console.log(`[Frontend roleService] GET ${API_URL}`);
-            const response = await axiosInstance.get(API_URL);
-            console.log(`[Frontend roleService] GET ${API_URL} response status:`, response.status);
+            console.log(`[Frontend roleService] GET ${endpoint}`);
+            const response = await axiosInstance.get(endpoint);
+            console.log(`[Frontend roleService] GET ${endpoint} response status:`, response.status);
             return response.data;
         } catch (error) {
             const errorData = error.response?.data || { message: error.message || "Error desconocido al obtener roles." };
-            console.error(`[Frontend roleService] GET ${API_URL} error:`, errorData);
-            throw new Error(errorData.message); // Lanzar un objeto Error
+            console.error(`[Frontend roleService] GET ${endpoint} error:`, errorData);
+            throw new Error(errorData.message);
         }
     },
 
-    /** GET /role/:idRole */
+    /** GET /roles/:idRole */
     getRoleById: async (idRole) => {
-        const endpoint = `${API_URL}/${idRole}`;
+        const endpoint = `${API_BASE_URL}/${idRole}`;
         try {
             console.log(`[Frontend roleService] GET ${endpoint}`);
             const response = await axiosInstance.get(endpoint);
@@ -33,27 +35,26 @@ const roleService = {
         }
     },
 
-    /** POST /role - Crea rol Y sus asignaciones */
+    /** POST /roles - Crea rol Y sus asignaciones */
     createRole: async (roleData) => {
+        const endpoint = API_BASE_URL;
         try {
-            console.log('[Frontend roleService] EXACT DATA BEING SENT TO POST /role:', JSON.stringify(roleData, null, 2));
-            const response = await axiosInstance.post(API_URL, roleData);
-            console.log(`[Frontend roleService] POST ${API_URL} response status:`, response.status, "Data:", response.data);
-            return response.data; // Devolver los datos de la respuesta (ej. el rol creado o mensaje de éxito)
+            console.log(`[Frontend roleService] POST ${endpoint} con datos:`, JSON.stringify(roleData, null, 2));
+            const response = await axiosInstance.post(endpoint, roleData);
+            console.log(`[Frontend roleService] POST ${endpoint} response status:`, response.status, "Data:", response.data);
+            return response.data;
         } catch (error) {
-            // error.response.data debería contener { message: "Error al crear el rol: Cannot read properties of undefined (reading 'uuid')" }
             const errorData = error.response?.data || { message: error.message || "Error desconocido al crear el rol." };
-            console.error(`[Frontend roleService] POST ${API_URL} error:`, errorData);
-            // Asegúrate de que siempre se lance un objeto Error con un .message
+            console.error(`[Frontend roleService] POST ${endpoint} error:`, errorData);
             throw new Error(errorData.message);
         }
     },
 
-    /** PUT /role/:idRole - Actualiza solo nombre/estado (NO privilegios) */
+    /** PUT /roles/:idRole - Actualiza solo nombre/estado (NO privilegios) */
     updateRole: async (idRole, roleData) => {
-        const endpoint = `${API_URL}/${idRole}`;
+        const endpoint = `${API_BASE_URL}/${idRole}`;
         try {
-            console.log(`[Frontend roleService] PUT ${endpoint} with data:`, roleData);
+            console.log(`[Frontend roleService] PUT ${endpoint} con datos:`, roleData);
             const response = await axiosInstance.put(endpoint, roleData);
             console.log(`[Frontend roleService] PUT ${endpoint} response status:`, response.status);
             return response.data;
@@ -64,14 +65,13 @@ const roleService = {
         }
     },
 
-    /** DELETE /role/:idRole */
+    /** DELETE /roles/:idRole */
     deleteRole: async (idRole) => {
-        const endpoint = `${API_URL}/${idRole}`;
+        const endpoint = `${API_BASE_URL}/${idRole}`;
         try {
             console.log(`[Frontend roleService] DELETE ${endpoint}`);
             const response = await axiosInstance.delete(endpoint);
             console.log(`[Frontend roleService] DELETE ${endpoint} response status:`, response.status);
-            // DELETE exitoso puede no tener body, o tener un mensaje
             return response.data || { message: "Rol eliminado correctamente." };
         } catch (error) {
             const errorData = error.response?.data || { message: error.message || `Error desconocido al eliminar el rol ID ${idRole}.` };
@@ -80,11 +80,11 @@ const roleService = {
         }
     },
 
-    /** PATCH /role/:idRole/state - Cambia estado */
+    /** PATCH /roles/:idRole/state - Cambia estado */
     changeRoleState: async (idRole, status) => {
-        const endpoint = `${API_URL}/${idRole}/state`;
+        const endpoint = `${API_BASE_URL}/${idRole}/state`; // Esta ruta parece correcta según tu backend
         try {
-            console.log(`[Frontend roleService] PATCH ${endpoint} with status: ${status}`);
+            console.log(`[Frontend roleService] PATCH ${endpoint} con status: ${status}`);
             const response = await axiosInstance.patch(endpoint, { status });
             console.log(`[Frontend roleService] PATCH ${endpoint} response status:`, response.status);
             return response.data || { message: "Estado del rol actualizado correctamente." };
@@ -97,11 +97,11 @@ const roleService = {
 
     // --- Métodos para Privilegios del Rol ---
 
-    /** GET /role/:idRole/privileges - Obtiene asignaciones existentes (solo IDs {idPermission, idPrivilege}) */
-    getRolePrivilegesByIds: async (idRole) => {
-        const endpoint = `${API_URL}/${idRole}/privileges`;
+    /** GET /roles/:idRole/privileges - Obtiene asignaciones existentes (formato para FormPermissions.jsx) */
+    getRolePrivilegeAssignments: async (idRole) => { // Cambié el nombre para mayor claridad
+        const endpoint = `${API_BASE_URL}/${idRole}/privileges`; // Esta ruta parece correcta
         if (!idRole || (typeof idRole !== 'number' && typeof idRole !== 'string')) {
-            const msg = `ID de rol inválido para obtener privilegios: ${idRole}`;
+            const msg = `ID de rol inválido para obtener asignaciones de privilegios: ${idRole}`;
             console.error(`[Frontend roleService] GET ${endpoint} - ${msg}`);
             throw new Error(msg);
         }
@@ -111,27 +111,27 @@ const roleService = {
             console.log(`[Frontend roleService] GET ${endpoint} response status:`, response.status);
             if (!Array.isArray(response.data)) {
                 console.warn(`[Frontend roleService] GET ${endpoint} - Respuesta inesperada, se esperaba un array. Data:`, response.data);
-                return [];
+                return []; // Devolver array vacío si no es el formato esperado
             }
             return response.data;
         } catch (error) {
             const status = error.response?.status;
-            const errorData = error.response?.data || { message: error.message || `Error desconocido al obtener privilegios del rol ID ${idRole}.` };
+            const errorData = error.response?.data || { message: error.message || `Error desconocido al obtener asignaciones de privilegios del rol ID ${idRole}.` };
             if (status === 404) {
-                console.warn(`[Frontend roleService] GET ${endpoint} - No se encontraron privilegios para el rol (404).`);
-                return [];
+                console.warn(`[Frontend roleService] GET ${endpoint} - No se encontraron asignaciones para el rol (404).`);
+                return []; // Es válido que un rol no tenga asignaciones
             }
             console.error(`[Frontend roleService] GET ${endpoint} error:`, errorData);
             throw new Error(errorData.message);
         }
     },
 
-    /** PUT /role/:idRole/privileges - Reemplaza TODAS las asignaciones */
-    assignRolePrivileges: async (idRole, rolePrivilegesData) => {
-        const endpoint = `${API_URL}/${idRole}/privileges`;
+    /** PUT /roles/:idRole/privileges - Reemplaza TODAS las asignaciones */
+    assignRolePrivileges: async (idRole, privilegeAssignmentsData) => { // Cambié el nombre del segundo parámetro
+        const endpoint = `${API_BASE_URL}/${idRole}/privileges`; // Esta ruta parece correcta
         try {
-            console.log(`[Frontend roleService] PUT ${endpoint} with data:`, JSON.stringify(rolePrivilegesData, null, 2));
-            const response = await axiosInstance.put(endpoint, rolePrivilegesData);
+            console.log(`[Frontend roleService] PUT ${endpoint} con datos:`, JSON.stringify(privilegeAssignmentsData, null, 2));
+            const response = await axiosInstance.put(endpoint, privilegeAssignmentsData);
             console.log(`[Frontend roleService] PUT ${endpoint} response status:`, response.status);
             return response.data;
         } catch (error) {
@@ -141,9 +141,9 @@ const roleService = {
         }
     },
 
-    /** GET /role/:idRole/effective-permissions */
+    /** GET /roles/:idRole/effective-permissions - Obtiene permisos en formato para AuthProvider */
     getRoleEffectivePermissions: async (idRole) => {
-        const endpoint = `${API_URL}/${idRole}/effective-permissions`;
+        const endpoint = `${API_BASE_URL}/${idRole}/effective-permissions`; // Esta ruta es la clave y parece correcta
         if (!idRole || (typeof idRole !== 'number' && typeof idRole !== 'string')) {
             const msg = `ID de rol inválido para permisos efectivos: ${idRole}`;
             console.error(`[Frontend roleService] GET ${endpoint} - ${msg}`);
@@ -152,11 +152,17 @@ const roleService = {
         try {
             console.log(`[Frontend roleService] GET ${endpoint}`);
             const response = await axiosInstance.get(endpoint);
-            console.log(`[Frontend roleService] GET ${endpoint} response status:`, response.status);
-            return response.data;
+            console.log(`[Frontend roleService] GET ${endpoint} response status: ${response.status}, data:`, JSON.stringify(response.data));
+            return response.data; // Esto DEBERÍA ser {"permissionKey": ["privilegeKey", ...]}
         } catch (error) {
             const errorData = error.response?.data || { message: error.message || `Error desconocido al obtener permisos efectivos del rol ID ${idRole}.` };
             console.error(`[Frontend roleService] GET ${endpoint} error:`, errorData);
+            // Podrías querer devolver un objeto vacío o algo específico si es un 404
+            // para que AuthProvider no falle completamente si un rol legítimamente no tiene permisos.
+            if (error.response?.status === 404) {
+                console.warn(`[Frontend roleService] GET ${endpoint} - No se encontraron permisos efectivos para el rol (404), devolviendo objeto vacío.`);
+                return {};
+            }
             throw new Error(errorData.message);
         }
     }
