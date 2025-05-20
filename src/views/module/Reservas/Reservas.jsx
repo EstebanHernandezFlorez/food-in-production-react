@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback, useRef } from "react"
 import {
   Container,
@@ -132,24 +131,24 @@ const customCalendarStyles = `
   
   /* Estilos para la barra de herramientas */
   .fc .fc-toolbar {
-    margin-bottom: 1rem !important;
-    padding: 0.5rem 1rem;
+    margin-bottom: 0.25rem !important; /* Reducido */
+    padding: 0.25rem 0.5rem; /* Reducido */
     flex-wrap: wrap;
     gap: 0.5rem;
     align-items: center;
   }
   
   .fc .fc-toolbar-title {
-    font-size: 1.25rem !important;
+    font-size: 1rem !important; /* Reducido */
     font-weight: 600;
     color: #111827;
   }
   
   /* Estilos para los botones */
   .fc .fc-button {
-    padding: 0.375rem 0.75rem !important;
-    font-size: 0.875rem !important;
-    border-radius: 6px !important;
+    padding: 0.2rem 0.5rem !important; /* Reducido */
+    font-size: 0.75rem !important; /* Reducido */
+    border-radius: 4px !important; /* Reducido */
     background-color: #fff;
     border: 1px solid #e5e7eb;
     color: #374151;
@@ -173,46 +172,52 @@ const customCalendarStyles = `
   
   /* Estilos para los encabezados de día */
   .fc .fc-col-header-cell {
-    padding: 0.5rem 0;
+    padding: 0.2rem 0; /* Reducido */
     background-color: #fff;
     border-bottom: 1px solid #e5e7eb;
   }
   
   .fc .fc-col-header-cell-cushion {
-    padding: 0.5rem;
+    padding: 0.2rem; /* Reducido */
     font-weight: 500;
     color: #6b7280;
-    font-size: 0.875rem;
+    font-size: 0.7rem; /* Reducido */
     text-decoration: none !important;
   }
   
   /* Estilos para las celdas de día */
   .fc .fc-daygrid-day {
-    min-height: 6rem; /* Ajustar si es necesario, pero la altura general la controla flex */
+    min-height: 3.5rem; /* Reducido significativamente para filas más cortas */
+    /* Alternativa: min-height: unset; si se quiere que la altura sea completamente flexible */
   }
   
   .fc .fc-daygrid-day-frame {
-    padding: 0.25rem;
+    padding: 2px; /* Reducido */
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Para que el contenido se distribuya en la celda */
   }
   
   .fc .fc-daygrid-day-top {
     justify-content: flex-start;
-    padding: 0.25rem;
+    padding: 2px; /* Reducido */
+    flex-shrink: 0; /* Para que el número del día no se encoja demasiado */
   }
   
   .fc .fc-daygrid-day-number {
-    font-size: 0.875rem;
+    font-size: 0.7rem; /* Reducido */
     font-weight: 500;
     color: #374151;
     text-decoration: none !important;
-    margin: 0.25rem;
+    margin: 2px; /* Reducido */
+    padding: 1px 2px; /* Ajustado */
   }
   
   /* Estilos para eventos - FullCalendar manejará el fondo con eventContent */
   .fc-event {
     border: none !important;
     background: transparent !important; /* Dejar que eventContent maneje el fondo */
-    margin: 2px 0 !important;
+    margin: 1px 0 !important; /* Reducido */
   }
   
   .fc-event-main {
@@ -231,45 +236,47 @@ const customCalendarStyles = `
   
   /* Estilos para el contenedor de eventos */
   .fc .fc-daygrid-day-events {
-    margin-top: 2px;
-    padding: 0 2px;
+    margin-top: 1px; /* Reducido */
+    padding: 0 1px; /* Reducido */
+    flex-grow: 1; /* Permite que el contenedor de eventos ocupe espacio disponible */
+    overflow: hidden; /* Para manejar el desbordamiento de eventos */
+    min-height: 1.5em; /* Un mínimo para que se vea algo si hay muchos eventos */
   }
     
   /* Estilos para eventos personalizados - NUEVO ESTILO */
   .custom-event-container {
     display: block;
-    margin: 2px 0;
-    padding: 6px 10px;
-    border-radius: 12px; /* Más redondeado para un look moderno */
-    font-size: 0.8rem;
-    line-height: 1.2;
+    margin: 1px 0; /* Coincide con .fc-event margin */
+    padding: 1px 3px; /* Reducido */
+    border-radius: 4px; /* Reducido */
+    font-size: 0.65rem; /* Reducido */
+    line-height: 1.2; 
     cursor: pointer;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0,0,0,0.05); /* Sombra más pronunciada */
+    box-shadow: 0 1px 1px rgba(0,0,0,0.08); /* Sombra más sutil */
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     transition: all 0.15s ease;
-    border: 1px solid rgba(0,0,0,0.05); /* Borde sutil */
+    border: 1px solid rgba(0,0,0,0.05); 
   }
   
   .custom-event-container:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0,0,0,0.08);
-    transform: translateY(-1px); /* Ligero efecto de elevación */
+    box-shadow: 0 2px 3px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
   }
   
   .custom-event-title {
-    font-weight: 600; /* Más grueso para destacar */
-    /* El color se hereda del contenedor */
+    font-weight: 500; /* Reducido */
   }
   
   .custom-event-time {
-    font-weight: 500; /* Un poco menos grueso que el título */
-    margin-left: 6px; /* Más espacio */
+    font-weight: 400; 
+    margin-left: 4px; 
     opacity: 0.9;
-    /* El color se hereda del contenedor */
+    font-size: 0.6rem; /* Ligeramente más pequeño si es necesario */
   }
   
-  /* Ajustes para vista móvil */
+  /* Ajustes para vista móvil (ya presentes, podrían necesitar revisión si la vista es muy pequeña) */
   @media (max-width: 768px) {
     .fc .fc-toolbar {
       flex-direction: column;
@@ -281,11 +288,11 @@ const customCalendarStyles = `
     }
     
     .fc .fc-daygrid-day {
-      min-height: 4rem;
+      min-height: 3rem; /* Ajustar si es necesario para móviles */
     }
     .custom-event-container {
-      padding: 4px 8px;
-      font-size: 0.75rem;
+      padding: 2px 5px; /* Ajustar para móviles */
+      font-size: 0.6rem; /* Ajustar para móviles */
     }
   }
 `
@@ -323,6 +330,8 @@ const Calendario = () => {
 
   // --- NUEVO: Estado para el nombre del campo de monto adicional ---
   const [additionalAmountLabel, setAdditionalAmountLabel] = useState("Monto Decoración")
+  // --- NUEVO: Estado para controlar la visibilidad del input Monto Decoración ---
+  const [showDecorationAmountInput, setShowDecorationAmountInput] = useState(false)
 
   // --- NUEVA FUNCIÓN: Convertir formato de tiempo a número ---
   const convertTimeFormatToNumber = (timeStr) => {
@@ -423,7 +432,8 @@ const Calendario = () => {
       ])
       const normalizedServices = (fetchedServices || []).map((service) => ({
         ...service,
-        Nombre: service.Nombre || service.name || service.Name || `Servicio ${service.id}`,
+        id: service.idAditionalServices || service.id, // Normalizar ID
+        Nombre: service.Nombre || service.name || service.Name || `Servicio ${service.idAditionalServices || service.id}`,
         price: service.price || service.Price || service.precio || 0, // Normalizar el precio
       }))
       setData(fetchedReservations || [])
@@ -555,8 +565,9 @@ const Calendario = () => {
       initialDateTime = now.toISOString().slice(0, 16)
     }
 
-    // Resetear el label del monto adicional
+    // Resetear el label y la visibilidad del monto adicional
     setAdditionalAmountLabel("Monto Decoración")
+    setShowDecorationAmountInput(false)
 
     setForm({
       ...emptyForm,
@@ -591,12 +602,34 @@ const Calendario = () => {
             price: service.price || service.Price || service.precio || 0,
           }))
 
-          // Actualizar el label del monto adicional basado en el primer servicio seleccionado
-          if (selectedServiceValues.length > 0) {
-            setAdditionalAmountLabel(`Monto ${selectedServiceValues[0].label}`)
+          // --- LÓGICA MODIFICADA PARA MONTO DECORACIÓN ---
+          const tieneDecoracion = selectedServiceValues.some(
+            (s) => s.label && s.label.toLowerCase().includes("decoracion") // Asume que el nombre del servicio de decoración contiene "decoracion"
+          );
+          const esCumpleanos = detailedReservation.evenType && detailedReservation.evenType.toLowerCase().includes("cumpleaños");
+
+          let currentDecorationAmount = detailedReservation.decorationAmount || "0";
+
+          if (tieneDecoracion) {
+            setAdditionalAmountLabel("Monto Decoración");
+            if (esCumpleanos) {
+              setShowDecorationAmountInput(false);
+              currentDecorationAmount = "0"; 
+            } else {
+              setShowDecorationAmountInput(true);
+              // Si no es cumpleaños y tiene decoración, el monto se mantiene o se calcula si es necesario
+              // Aquí, simplemente usamos el valor que ya tiene la reserva, 
+              // o el calculado si no tiene y hay número de personas
+              if (!currentDecorationAmount && detailedReservation.numberPeople) {
+                  currentDecorationAmount = calculateDecorationAmount(detailedReservation.numberPeople);
+              }
+            }
           } else {
-            setAdditionalAmountLabel("Monto Decoración")
+            setShowDecorationAmountInput(false);
+            currentDecorationAmount = "0"; 
           }
+          // --- FIN LÓGICA MODIFICADA ---
+
 
           let formattedPass = []
           if (Array.isArray(detailedReservation.pass)) {
@@ -664,6 +697,7 @@ const Calendario = () => {
                 : [{ fecha: new Date().toISOString().split("T")[0], cantidad: "50000" }], // Asegurar al menos un abono con fecha y monto mínimo
             timeDurationR: durationAsNumber, // Usar el valor convertido
             status: statusToUse,
+            decorationAmount: currentDecorationAmount, // Asegurarse de que se usa el monto de decoración actualizado
           })
           console.log(
             "Duración cargada:",
@@ -876,7 +910,7 @@ const Calendario = () => {
         }))
       }
     }
-
+//hola
     const updatedAbonos = form.pass.map((abono, i) => (i === index ? { ...abono, [field]: value } : abono))
     setForm((prevForm) => ({ ...prevForm, pass: updatedAbonos }))
     if (field === "cantidad") {
@@ -913,28 +947,42 @@ const Calendario = () => {
   }, [])
 
   const handleMultiServiceChange = (selectedOptions) => {
-    setForm((prevForm) => ({ ...prevForm, servicios: selectedOptions || [] }))
-    setErrors((prevErrors) => ({ ...prevErrors, servicios: validateField("servicios", selectedOptions || []) }))
+    const currentServices = selectedOptions || []
+    let updatedForm = { ...form, servicios: currentServices }
+    
+    // --- LÓGICA MODIFICADA PARA MONTO DECORACIÓN ---
+    const tieneDecoracion = currentServices.some(
+      (s) => s.label && s.label.toLowerCase().includes("decoracion")
+    );
+    const esCumpleanos = form.evenType && form.evenType.toLowerCase().includes("cumpleaños");
 
-    // Actualizar el label del monto adicional basado en el primer servicio seleccionado
-    if (selectedOptions && selectedOptions.length > 0) {
-      setAdditionalAmountLabel(`Monto ${selectedOptions[0].label}`)
+    if (tieneDecoracion) {
+      setAdditionalAmountLabel("Monto Decoración");
+      if (esCumpleanos) {
+        setShowDecorationAmountInput(false);
+        updatedForm.decorationAmount = "0"; 
+      } else {
+        setShowDecorationAmountInput(true);
+        const numPeople = updatedForm.numberPeople || form.numberPeople; // Usar nro personas del form
+        updatedForm.decorationAmount = numPeople ? calculateDecorationAmount(numPeople) : updatedForm.decorationAmount || "";
+      }
     } else {
-      setAdditionalAmountLabel("Monto Decoración")
+      setShowDecorationAmountInput(false);
+      updatedForm.decorationAmount = "0"; 
     }
+    // --- FIN LÓGICA MODIFICADA ---
 
     // Calcular y actualizar el monto total si hay número de personas
-    if (form.numberPeople) {
-      const calculatedPrice = calculateServicePrice(form.numberPeople, selectedOptions)
-      if (calculatedPrice > 0) {
-        setForm((prevForm) => ({
-          ...prevForm,
-          totalPay: calculatedPrice.toString(),
-        }))
-        // Actualizar el restante también
-        updateRestante(calculatedPrice.toString(), form.pass)
+    if (updatedForm.numberPeople) {
+      const calculatedPrice = calculateServicePrice(updatedForm.numberPeople, currentServices)
+      if (calculatedPrice >= 0) { // Permitir precio 0 si es el caso
+        updatedForm.totalPay = calculatedPrice.toString()
       }
     }
+    
+    setForm(updatedForm);
+    setErrors((prevErrors) => ({ ...prevErrors, servicios: validateField("servicios", currentServices) }));
+    updateRestante(updatedForm.totalPay, updatedForm.pass); // Actualizar restante con el nuevo totalPay
   }
 
   const validateAbonoField = useCallback((fieldName, value) => {
@@ -989,11 +1037,15 @@ const Calendario = () => {
           const numPeople = Number.parseInt(value)
           return !isNaN(numPeople) && numPeople > 0 ? "" : "Nro. Personas debe ser > 0."
         case "decorationAmount":
-          const decorAmount = Number.parseFloat(value)
-          return !isNaN(decorAmount) && decorAmount >= 0 ? "" : `${additionalAmountLabel} debe ser >= 0.`
+          // La validación de decorationAmount ahora depende de si se muestra el input
+          if (showDecorationAmountInput) {
+            const decorAmount = Number.parseFloat(value)
+            return !isNaN(decorAmount) && decorAmount >= 0 ? "" : `${additionalAmountLabel} debe ser >= 0.`
+          }
+          return "" // Si no se muestra el input, no hay error
         case "totalPay":
           const totalP = Number.parseFloat(value)
-          return !isNaN(totalP) && totalP > 0 ? "" : "Total a Pagar debe ser > 0."
+          return !isNaN(totalP) && totalP >= 0 ? "" : "Total a Pagar debe ser >= 0." // Permitir 0
         case "cellphone":
           return !value || /^\d{7,15}$/.test(value) ? "" : "Celular inválido (7-15 dígitos)."
         case "email":
@@ -1008,6 +1060,7 @@ const Calendario = () => {
       additionalAmountLabel,
       form.idCustomers,
       selectedReserva?.idReservations,
+      showDecorationAmountInput, // Añadido para la validación condicional
     ],
   )
 
@@ -1020,10 +1073,15 @@ const Calendario = () => {
       "timeDurationR",
       "evenType",
       "numberPeople",
-      "decorationAmount",
+      // "decorationAmount", // La validación de decorationAmount se maneja dentro de validateField
       "totalPay",
       "servicios",
     ]
+     // Validar decorationAmount solo si se muestra el input
+    if (showDecorationAmountInput) {
+      fieldsToValidate.push("decorationAmount");
+    }
+
     fieldsToValidate.forEach((key) => {
       const error = validateField(key, form[key])
       if (error) {
@@ -1060,11 +1118,13 @@ const Calendario = () => {
     }
     setErrors(newErrors)
     return isValid
-  }, [form, validateAbonoField, validateField])
+  }, [form, validateAbonoField, validateField, showDecorationAmountInput])
 
   const handleChange = (e) => {
     const { name, value } = e.target
     console.log(`Cambiando ${name} a: ${value}`) // Log para depuración
+
+    let updatedForm = { ...form, [name]: value }
 
     // Si cambia la fecha/hora, verificar conflictos
     if (name === "dateTime") {
@@ -1086,46 +1146,48 @@ const Calendario = () => {
       }
     }
 
-    // Lógica especial para el campo numberPeople
-    if (name === "numberPeople" && value) {
-      const numPeople = Number.parseInt(value, 10)
-      if (!isNaN(numPeople) && numPeople > 0) {
-        // Calcular el monto de decoración basado en el número de personas
-        const decorationAmount = calculateDecorationAmount(numPeople)
 
-        // Actualizar el formulario con el nuevo valor calculado
-        const updatedForm = {
-          ...form,
-          [name]: value,
-          decorationAmount: decorationAmount,
+    // Lógica especial para el campo numberPeople y evenType (que afectan a decorationAmount y totalPay)
+    if (name === "numberPeople" || name === "evenType") {
+        const numPeople = name === "numberPeople" ? value : updatedForm.numberPeople;
+        const currentEvenType = name === "evenType" ? value : updatedForm.evenType;
+        const currentServices = updatedForm.servicios;
+
+        if (numPeople && currentServices && currentServices.length > 0) {
+            const calculatedPrice = calculateServicePrice(numPeople, currentServices);
+            if (calculatedPrice >= 0) {
+                updatedForm.totalPay = calculatedPrice.toString();
+            }
         }
+        
+        const tieneDecoracion = currentServices.some(
+            (s) => s.label && s.label.toLowerCase().includes("decoracion")
+        );
+        const esCumpleanos = currentEvenType && currentEvenType.toLowerCase().includes("cumpleaños");
 
-        // Si hay servicios seleccionados, calcular también el precio total
-        if (form.servicios && form.servicios.length > 0) {
-          const calculatedPrice = calculateServicePrice(numPeople, form.servicios)
-          if (calculatedPrice > 0) {
-            updatedForm.totalPay = calculatedPrice.toString()
-          }
+        if (tieneDecoracion) {
+            setAdditionalAmountLabel("Monto Decoración");
+            if (esCumpleanos) {
+                setShowDecorationAmountInput(false);
+                updatedForm.decorationAmount = "0"; 
+            } else {
+                setShowDecorationAmountInput(true);
+                updatedForm.decorationAmount = numPeople ? calculateDecorationAmount(numPeople) : updatedForm.decorationAmount || "";
+            }
+        } else {
+            setShowDecorationAmountInput(false);
+            updatedForm.decorationAmount = "0"; 
         }
-
-        setForm(updatedForm)
-        updateRestante(updatedForm.totalPay, updatedForm.pass)
-
-        // Validar el campo
-        const error = validateField(name, value)
-        setErrors((prevErrors) => ({ ...prevErrors, [name]: error }))
-        return
-      }
     }
 
-    // Comportamiento normal para otros campos
-    const updatedForm = { ...form, [name]: value }
     setForm(updatedForm)
-    if (name === "totalPay") {
-      updateRestante(value, updatedForm.pass)
+
+    if (name === "totalPay" || name === "numberPeople" || name === "evenType") { 
+      updateRestante(updatedForm.totalPay, updatedForm.pass);
     }
+
     if (name !== "idCustomers") {
-      const error = validateField(name, value)
+      const error = validateField(name, updatedForm[name]) 
       setErrors((prevErrors) => ({ ...prevErrors, [name]: error }))
     } else {
       setErrors((prevErrors) => {
@@ -1135,6 +1197,7 @@ const Calendario = () => {
       })
     }
   }
+
 
   // NUEVO: Función para actualizar solo la duración
   const updateDurationOnly = useCallback(async (id, duration) => {
@@ -1170,21 +1233,84 @@ const Calendario = () => {
 
   // Función para solicitar confirmación de guardar
   const requestSaveConfirmation = useCallback(() => {
-    updateRestante(form.totalPay, form.pass)
+    // Recalcular monto de decoración antes de validar, por si acaso.
+    const tieneDecoracion = form.servicios.some(s => s.label && s.label.toLowerCase().includes("decoracion"));
+    const esCumpleanos = form.evenType && form.evenType.toLowerCase().includes("cumpleaños");
+    let finalDecorationAmount = form.decorationAmount;
 
-    if (!validateForm()) {
+    if (tieneDecoracion && esCumpleanos) {
+        finalDecorationAmount = "0";
+    } else if (tieneDecoracion) { // No es cumpleaños pero tiene decoración
+        finalDecorationAmount = form.numberPeople ? calculateDecorationAmount(form.numberPeople) : form.decorationAmount || "0";
+    } else { // No tiene decoración
+        finalDecorationAmount = "0";
+    }
+    
+    const formToValidate = { ...form, decorationAmount: finalDecorationAmount };
+    
+    // Actualizar restante con el formulario que se va a validar
+    updateRestante(formToValidate.totalPay, formToValidate.pass);
+    const tempFormForValidation = { ...formToValidate, remaining: form.remaining }; // Usar el 'remaining' del estado 'form' que acaba de ser actualizado por updateRestante
+
+    // Crear una función de validación temporal que use el formulario actualizado
+    const tempValidateForm = () => {
+        const newErrors = {}
+        let isValid = true
+        const fieldsToValidate = [
+          "idCustomers", "dateTime", "timeDurationR", "evenType", "numberPeople",
+          "totalPay", "servicios",
+        ];
+        // Validar decorationAmount solo si debe mostrarse o si es decoración no gratuita
+        if (showDecorationAmountInput || (tieneDecoracion && !esCumpleanos)) { 
+            fieldsToValidate.push("decorationAmount");
+        }
+
+        fieldsToValidate.forEach((key) => {
+          const error = validateField(key, tempFormForValidation[key]) // Usar tempFormForValidation
+          if (error) {
+            newErrors[key] = error
+            isValid = false
+          }
+        })
+        if (!tempFormForValidation.fullName?.trim()) {
+          newErrors.idCustomers = newErrors.idCustomers || "Seleccione un cliente válido."
+          isValid = false
+        }
+        if (!tempFormForValidation.pass || tempFormForValidation.pass.length === 0) {
+          newErrors.pass = "Debe agregar al menos un abono."
+          isValid = false
+        } else {
+          tempFormForValidation.pass.forEach((abono, i) => {
+            const fe = validateAbonoField("fecha", abono.fecha)
+            const ce = validateAbonoField("cantidad", abono.cantidad)
+            if (fe) newErrors[`pass-${i}-fecha`] = fe; isValid = false;
+            if (ce) newErrors[`pass-${i}-cantidad`] = ce; isValid = false;
+          })
+        }
+        const totalPagoNum = Number.parseFloat(tempFormForValidation.totalPay || 0)
+        const totalAbonosNum = (tempFormForValidation.pass || []).reduce((sum, abono) => sum + Number.parseFloat(abono.cantidad || 0), 0)
+        if (!isNaN(totalPagoNum) && !isNaN(totalAbonosNum) && totalPagoNum < totalAbonosNum) {
+          newErrors.remaining = "El total de abonos no puede superar el Total a Pagar."
+          isValid = false
+        }
+        setErrors(newErrors) // Actualizar errores en el estado global
+        return isValid
+    };
+
+
+    if (!tempValidateForm()) {
       toast.error("Por favor, corrija los errores indicados antes de continuar.")
       return
     }
 
+    // Usar el formulario actualizado (tempFormForValidation) para la confirmación
     const isEditing = selectedReserva !== null
-
-    prepareConfirmation(executeSaveReserva, {
+    prepareConfirmation(() => executeSaveReserva({ isEditing, formData: tempFormForValidation }), { // Pasar formData
       title: isEditing ? "¿Guardar Cambios?" : "¿Crear Reserva?",
       message: (
         <p>
           ¿Está seguro que desea {isEditing ? "guardar los cambios de" : "crear"} la reserva para{" "}
-          <strong>{form.fullName}</strong>?
+          <strong>{tempFormForValidation.fullName}</strong>?
         </p>
       ),
       confirmText: (
@@ -1194,87 +1320,47 @@ const Calendario = () => {
         </>
       ),
       confirmColor: "primary",
-      itemDetails: { isEditing },
+      itemDetails: { isEditing, formData: tempFormForValidation }, // Pasar formData aquí también si es necesario
     })
-  }, [form, selectedReserva, prepareConfirmation, updateRestante, validateForm])
+  }, [form, selectedReserva, prepareConfirmation, updateRestante, validateField, validateAbonoField, showDecorationAmountInput])
 
   // Función para ejecutar el guardado
   const executeSaveReserva = useCallback(
     async (details) => {
-      const isEditing = details?.isEditing || false
+      const isEditing = details?.isEditing || false;
+      const formDataToSave = details?.formData || form; // Usar formData si se pasó
 
       setIsConfirmActionLoading(true)
       const toastId = toast.loading(isEditing ? "Actualizando reserva..." : "Creando reserva...")
 
       try {
-        const idAditionalServices = (form.servicios || []).map((option) => option.value)
-        const abonosToSend = (form.pass || []).map((ab) => ({
+        const idAditionalServices = (formDataToSave.servicios || []).map((option) => option.value)
+        const abonosToSend = (formDataToSave.pass || []).map((ab) => ({
           fecha: ab.fecha,
           cantidad: Number.parseFloat(ab.cantidad || 0),
         }))
-        const idCustomersNum = Number(form.idCustomers)
+        const idCustomersNum = Number(formDataToSave.idCustomers)
         if (isNaN(idCustomersNum)) throw new Error("ID de cliente inválido al guardar.")
 
-        // NUEVO: Intentar actualizar duración y estado por separado primero si estamos editando
         if (isEditing) {
-          const reservationId = selectedReserva.idReservations || form.id
+          const reservationId = selectedReserva.idReservations || formDataToSave.id
           if (!reservationId) throw new Error("No se pudo identificar la reserva a actualizar.")
-
-          // Actualizar duración primero
-          const durationSuccess = await updateDurationOnly(reservationId, form.timeDurationR)
-          if (!durationSuccess) {
-            console.warn("No se pudo actualizar la duración por separado, intentando actualización completa")
-          }
-
-          // Actualizar estado después
-          const statusSuccess = await updateStatusOnly(reservationId, form.status)
-          if (!statusSuccess) {
-            console.warn("No se pudo actualizar el estado por separado, intentando actualización completa")
-          }
-
-          // Si ambas actualizaciones tuvieron éxito, no necesitamos hacer la actualización completa
-          if (durationSuccess && statusSuccess) {
-            // Actualizar datos locales
-            setData((prevData) =>
-              prevData.map((r) =>
-                r.idReservations === reservationId
-                  ? {
-                      ...form,
-                      idReservations: reservationId,
-                      remaining: Number(form.remaining),
-                      timeDurationR: Number(form.timeDurationR),
-                      status: form.status,
-                    }
-                  : r,
-              ),
-            )
-            toast.success("Reserva actualizada correctamente.", {
-              id: toastId,
-              icon: <CheckCircle className="text-success" />,
-            })
-            toggleConfirmModal()
-            setModalOpen(false)
-            return
-          }
         }
 
-        // Si las actualizaciones separadas fallaron o estamos creando, procedemos con la actualización/creación completa
         const dataToSend = {
-          ...form,
+          ...formDataToSave, // Usar formDataToSave
           idCustomers: idCustomersNum,
           idAditionalServices: idAditionalServices,
           pass: abonosToSend,
-          numberPeople: Number.parseInt(form.numberPeople || 0),
-          decorationAmount: Number.parseFloat(form.decorationAmount || 0),
-          totalPay: Number.parseFloat(form.totalPay || 0),
-          remaining: Number.parseFloat(form.remaining || 0),
-          status: form.status, // Asegurarse de que el estado se incluye correctamente
+          numberPeople: Number.parseInt(formDataToSave.numberPeople || 0),
+          decorationAmount: Number.parseFloat(formDataToSave.decorationAmount || 0),
+          totalPay: Number.parseFloat(formDataToSave.totalPay || 0),
+          remaining: Number.parseFloat(formDataToSave.remaining || 0),
+          status: formDataToSave.status, 
         }
-        // Asegurarse de que la duración se envía correctamente
-        dataToSend.timeDurationR = Number(form.timeDurationR) || 0
-        dataToSend.duration = dataToSend.timeDurationR // Campo alternativo por si la API espera otro nombre
-        console.log("Duración a guardar:", dataToSend.timeDurationR, "tipo:", typeof dataToSend.timeDurationR)
-
+        dataToSend.timeDurationR = Number(formDataToSave.timeDurationR) || 0
+        dataToSend.duration = dataToSend.timeDurationR 
+        
         delete dataToSend.servicios
         delete dataToSend.fullName
         delete dataToSend.distintive
@@ -1282,17 +1368,15 @@ const Calendario = () => {
         delete dataToSend.email
         delete dataToSend.cellphone
         delete dataToSend.address
-        console.log("Datos enviados:", dataToSend)
-        console.log("Duración a guardar:", form.timeDurationR, "tipo:", typeof form.timeDurationR)
-
+        
         if (isEditing) {
-          const reservationId = selectedReserva.idReservations || form.id
+          const reservationId = selectedReserva.idReservations || formDataToSave.id
           if (!reservationId) throw new Error("No se pudo identificar la reserva a actualizar.")
           await reservasService.updateReservation(reservationId, dataToSend)
           setData((prevData) =>
             prevData.map((r) =>
               r.idReservations === reservationId
-                ? { ...form, idReservations: reservationId, remaining: dataToSend.remaining }
+                ? { ...formDataToSave, idReservations: reservationId, remaining: dataToSend.remaining } 
                 : r,
             ),
           )
@@ -1303,7 +1387,7 @@ const Calendario = () => {
         } else {
           const newReservationResponse = await reservasService.createReservation(dataToSend)
           const newReservationForState = {
-            ...form,
+            ...formDataToSave, 
             ...newReservationResponse,
             idReservations: newReservationResponse.idReservations || newReservationResponse.id,
             remaining: dataToSend.remaining,
@@ -1329,7 +1413,7 @@ const Calendario = () => {
         setIsConfirmActionLoading(false)
       }
     },
-    [form, selectedReserva, toggleConfirmModal, updateDurationOnly, updateStatusOnly],
+    [form, selectedReserva, toggleConfirmModal], // Removido updateDurationOnly, updateStatusOnly ya que la lógica de guardado completo se mantiene
   )
 
   // Función para solicitar confirmación de eliminación (esta función aún existe, aunque el botón del modal se oculte)
@@ -1481,26 +1565,26 @@ const Calendario = () => {
     calendarContainer: {
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
       backgroundColor: "#fff",
-      padding: "0", // Quitamos padding para que el contenedor ocupe todo
+      padding: "0", 
       borderRadius: "8px",
       boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)",
-      height: "calc(100vh - 60px)", // Ajustar 60px si tienes una barra de navegación fija arriba, sino '100vh'
+      height: "100vh", 
       display: "flex",
       flexDirection: "column",
       width: "100%",
       margin: "0",
-      overflow: "hidden", // Prevenir scroll en el contenedor principal
+      overflow: "hidden", 
     },
     calendarHeader: {
-      marginBottom: "0", // Quitar margen para que no reste espacio vertical
+      marginBottom: "0.5rem", // Reducido
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
       flexWrap: "wrap",
       gap: "0.75rem",
-      padding: "1rem", // Padding para el contenido del header
+      padding: "0.5rem 1rem", // Vertical padding reducido
       borderBottom: "1px solid #f3f4f6",
-      flexShrink: 0, // Para que el header no se encoja
+      flexShrink: 0, 
     },
     headerTitle: {
       fontSize: "1.5rem",
@@ -1534,16 +1618,14 @@ const Calendario = () => {
     },
     calendarWrapper: {
       backgroundColor: "#fff",
-      // border: "1px solid #e5e7eb", // Se puede quitar si el .fc ya tiene borde
       borderRadius: "8px",
-      padding: "1rem", // Padding interno para el calendario
-      // boxShadow: "0 1px 3px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.02)", // Opcional
+      padding: "0.5rem", // Reducido
       position: "relative",
-      flex: "1 1 auto", // Permite que crezca y se encoja, tomando el espacio disponible
-      overflow: "hidden", // Esencial para que FullCalendar no cause scroll en este wrapper
-      display: "flex", // Para que FullCalendar (su hijo) pueda usar height: 100%
-      flexDirection: "column", // Para que FullCalendar (su hijo) pueda usar height: 100%
-      margin: "0 1rem 1rem 1rem", // Margen alrededor del calendario
+      flex: "1 1 auto", 
+      overflow: "hidden", 
+      display: "flex", 
+      flexDirection: "column", 
+      margin: "0 0.5rem 0.5rem 0.5rem", // Reducido
     },
     modalHeader: {
       backgroundColor: "#9e3535",
@@ -1553,8 +1635,8 @@ const Calendario = () => {
     modalFieldset: {
       border: "1px solid #e5e7eb",
       borderRadius: "6px",
-      padding: "1rem 1.5rem 1.5rem 1.5rem",
-      marginBottom: "1.5rem",
+      padding: "0.75rem 1rem 1rem 1rem", // Reducido
+      marginBottom: "0.75rem", // Reducido
     },
     modalLegend: {
       fontSize: "0.875rem",
@@ -1563,7 +1645,8 @@ const Calendario = () => {
       padding: "0 0.5rem",
       width: "auto",
       marginLeft: "0.5rem",
-      float: "none",
+      float: "none", 
+      marginBottom: "0.25rem", // Reducido
     },
     clientDisplay: {
       backgroundColor: "#e9ecef",
@@ -1770,9 +1853,7 @@ const Calendario = () => {
       </Row>
 
       {/* --- Calendario --- */}
-      {/* Esta Row debe ser flexible para ocupar el espacio restante */}
       <Row style={{ flex: "1 1 auto", margin: "0", width: "100%", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-        {/* Esta Col debe ocupar toda la altura de la Row flexible */}
         <Col style={{ height: "100%", padding: "0", display: "flex", flexDirection: "column" }}>
           <div style={styles.calendarWrapper}>
             <FullCalendar
@@ -1784,7 +1865,7 @@ const Calendario = () => {
                 right: "dayGridMonth,timeGridWeek,timeGridDay",
               }}
               locale="es"
-              events={events.filter(event => { // Filtrar eventos basado en searchText
+              events={events.filter(event => { 
                   if (!searchText) return true;
                   const lowerSearchText = searchText.toLowerCase();
                   return event.title.toLowerCase().includes(lowerSearchText) ||
@@ -1795,59 +1876,30 @@ const Calendario = () => {
               eventClick={handleEventClick}
               eventDrop={handleEventDrop}
               editable={true}
-              height="100%"             // FullCalendar toma el 100% de la altura de calendarWrapper
-              contentHeight="auto"      // El contenido se ajusta automáticamente
-              // aspectRatio={2.5}      // Quitar aspectRatio para que height y contentHeight dominen
+              height="100%"            
+              contentHeight="auto"      
               eventContent={(arg) => {
                 const event = arg.event
                 const status = event.extendedProps.status || "default"
                 const time = arg.timeText
                 const title = event.title
-                // const reservaId = event.id // No se usa aquí
-
-                // Determinar el color de fondo y texto según el estado
-                // COLORES MÁS VIVOS Y TRANSPARENCIA AL 70% (alpha 0.7)
                 let bgColor, textColor
                 switch (status) {
-                  case "terminada":
-                    bgColor = "rgba(76, 175, 80, 0.7)" // Verde más vivo
-                    textColor = "#1B5E20" // Verde oscuro para contraste
-                    break
-                  case "anulada":
-                    bgColor = "rgba(244, 67, 54, 0.7)" // Rojo más vivo
-                    textColor = "#FFFFFF" // Blanco para contraste
-                    break
-                  case "pendiente":
-                    bgColor = "rgba(255, 152, 0, 0.7)" // Naranja más vivo
-                    textColor = "#FFFFFF" // Blanco para contraste
-                    break
-                  case "en_proceso":
-                    bgColor = "rgba(255, 235, 59, 0.7)" // Amarillo más vivo
-                    textColor = "#5C460A" // Texto oscuro para contraste con amarillo
-                    break
-                  case "confirmada":
-                    bgColor = "rgba(33, 150, 243, 0.7)" // Azul más vivo
-                    textColor = "#FFFFFF" // Blanco para contraste
-                    break
-                  default:
-                    bgColor = "rgba(158, 158, 158, 0.7)" // Gris más vivo
-                    textColor = "#FFFFFF" // Blanco para contraste
+                  case "terminada": bgColor = "rgba(76, 175, 80, 0.7)"; textColor = "#1B5E20"; break;
+                  case "anulada": bgColor = "rgba(244, 67, 54, 0.7)"; textColor = "#FFFFFF"; break;
+                  case "pendiente": bgColor = "rgba(255, 152, 0, 0.7)"; textColor = "#FFFFFF"; break;
+                  case "en_proceso": bgColor = "rgba(255, 235, 59, 0.7)"; textColor = "#5C460A"; break;
+                  case "confirmada": bgColor = "rgba(33, 150, 243, 0.7)"; textColor = "#FFFFFF"; break;
+                  default: bgColor = "rgba(158, 158, 158, 0.7)"; textColor = "#FFFFFF";
                 }
-
                 return (
-                  <div
-                    className="custom-event-container"
-                    style={{
-                      backgroundColor: bgColor,
-                      color: textColor,
-                    }}
-                  >
+                  <div className="custom-event-container" style={{ backgroundColor: bgColor, color: textColor }}>
                     <span className="custom-event-title">{title}</span>
                     {time && <span className="custom-event-time">{time}</span>}
                   </div>
                 )
               }}
-              dayCellContent={(arg) => <div style={{ padding: "4px" }}>{arg.dayNumberText}</div>}
+              dayCellContent={(arg) => <div style={{ padding: "2px" }}>{arg.dayNumberText}</div>}
             />
           </div>
         </Col>
@@ -1859,212 +1911,163 @@ const Calendario = () => {
           {selectedReserva ? "Editar Reserva" : "Nueva Reserva"}
         </ModalHeader>
         <ModalBody>
-          <FormGroup>
-            <Label for="clientSearch">Buscar Cliente</Label>
-            <Input
-              type="text"
-              id="clientSearch"
-              placeholder="Buscar por nombre, celular o correo..."
-              value={clientSearchText}
-              onChange={(e) => handleClientSearch(e.target.value)}
-              invalid={!!errors.idCustomers}
-            />
-            {errors.idCustomers && <FormFeedback>{errors.idCustomers}</FormFeedback>}
-            {showClientSearch && clientSearchResults.length > 0 && (
-              <div style={styles.clientSearchResults}>
-                {isClientSearchLoading ? (
-                  <div className="p-2 text-center">
-                    <Spinner size="sm" /> Buscando...
-                  </div>
-                ) : (
-                  clientSearchResults.map((cliente) => (
-                    <div
-                      key={cliente.idCustomers}
-                      className="p-2 border-bottom"
-                      style={{ cursor: "pointer" }}
-                      onClick={() => selectClient(cliente)}
-                    >
-                      {cliente.FullName} ({cliente.Cellphone})
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </FormGroup>
-          <FormGroup>
-            <Label for="clientDisplay">Cliente Seleccionado</Label>
-            <Input
-              type="text"
-              id="clientDisplay"
-              style={styles.clientDisplay}
-              value={form.fullName || "N/A"}
-              readOnly
-            />
-          </FormGroup>
-          <Row>
-            <Col md={6}>
-              <FormGroup>
-                <Label for="dateTime">Fecha y Hora</Label>
-                <Input
-                  type="datetime-local"
-                  name="dateTime"
-                  id="dateTime"
-                  value={form.dateTime || ""}
-                  onChange={handleChange}
-                  invalid={!!errors.dateTime}
-                />
-                {errors.dateTime && <FormFeedback>{errors.dateTime}</FormFeedback>}
-              </FormGroup>
-            </Col>
-            <Col md={6}>
-              <FormGroup>
-                <Label for="timeDurationR">Duración (segundos)</Label>
-                <Input
-                  type="number"
-                  name="timeDurationR"
-                  id="timeDurationR"
-                  value={form.timeDurationR || ""}
-                  onChange={handleChange}
-                  invalid={!!errors.timeDurationR}
-                />
-                {errors.timeDurationR && <FormFeedback>{errors.timeDurationR}</FormFeedback>}
-              </FormGroup>
-            </Col>
-          </Row>
-          <Row>
-            <Col md={6}>
-              <FormGroup>
-                <Label for="evenType">Tipo de Evento</Label>
-                <Input
-                  type="text"
-                  name="evenType"
-                  id="evenType"
-                  value={form.evenType || ""}
-                  onChange={handleChange}
-                  invalid={!!errors.evenType}
-                />
-                {errors.evenType && <FormFeedback>{errors.evenType}</FormFeedback>}
-              </FormGroup>
-            </Col>
-            <Col md={6}>
-              <FormGroup>
-                <Label for="numberPeople">Número de Personas</Label>
-                <Input
-                  type="number"
-                  name="numberPeople"
-                  id="numberPeople"
-                  value={form.numberPeople || ""}
-                  onChange={handleChange}
-                  invalid={!!errors.numberPeople}
-                />
-                {errors.numberPeople && <FormFeedback>{errors.numberPeople}</FormFeedback>}
-              </FormGroup>
-            </Col>
-          </Row>
-          <Row>
-            <Col md={6}>
-              <FormGroup>
-                <Label for="decorationAmount">{additionalAmountLabel}</Label>
-                <Input
-                  type="number"
-                  name="decorationAmount"
-                  id="decorationAmount"
-                  value={form.decorationAmount || ""}
-                  onChange={handleChange}
-                  invalid={!!errors.decorationAmount}
-                />
-                {errors.decorationAmount && <FormFeedback>{errors.decorationAmount}</FormFeedback>}
-              </FormGroup>
-            </Col>
-            <Col md={6}>
-              <FormGroup>
-                <Label for="totalPay">Total a Pagar</Label>
-                <Input
-                  type="number"
-                  name="totalPay"
-                  id="totalPay"
-                  value={form.totalPay || ""}
-                  onChange={handleChange}
-                  invalid={!!errors.totalPay}
-                />
-                {errors.totalPay && <FormFeedback>{errors.totalPay}</FormFeedback>}
-              </FormGroup>
-            </Col>
-          </Row>
-          <FormGroup>
-            <Label for="servicios">Servicios Adicionales</Label>
-            <Select
-              isMulti
-              options={serviceOptions}
-              value={form.servicios}
-              onChange={handleMultiServiceChange}
-              placeholder="Seleccione los servicios..."
-            />
-            {errors.servicios && <div className="text-danger small mt-1">{errors.servicios}</div>}
-          </FormGroup>
+          {/* --- Sección Datos del Cliente --- */}
+          <fieldset style={styles.modalFieldset}> {/* Margen inferior ya reducido en styles */}
+            <legend style={styles.modalLegend}>Datos del Cliente</legend>
+            <FormGroup>
+              <Label for="clientSearch">Buscar Cliente</Label>
+              <Input
+                type="text"
+                id="clientSearch"
+                placeholder="Buscar por nombre, celular o correo..."
+                value={clientSearchText}
+                onChange={(e) => handleClientSearch(e.target.value)}
+                invalid={!!errors.idCustomers}
+              />
+              {errors.idCustomers && <FormFeedback>{errors.idCustomers}</FormFeedback>}
+              {showClientSearch && clientSearchResults.length > 0 && (
+                <div style={styles.clientSearchResults}>
+                  {isClientSearchLoading ? (
+                    <div className="p-2 text-center"><Spinner size="sm" /> Buscando...</div>
+                  ) : (
+                    clientSearchResults.map((cliente) => (
+                      <div key={cliente.idCustomers} className="p-2 border-bottom" style={{ cursor: "pointer" }} onClick={() => selectClient(cliente)}>
+                        {cliente.FullName} ({cliente.Cellphone})
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </FormGroup>
+            <FormGroup>
+              <Label for="clientDisplay">Cliente Seleccionado</Label>
+              <Input type="text" id="clientDisplay" style={styles.clientDisplay} value={form.fullName || "N/A"} readOnly />
+            </FormGroup>
+          </fieldset>
+
+          {/* --- Sección Datos de la Reserva --- */}
           <fieldset style={styles.modalFieldset}>
-            <legend style={styles.modalLegend}>Abonos</legend>
-            {(form.pass || []).map((abono, index) => (
-              <Row key={index} className="mb-2">
-                <Col md={5}>
+            <legend style={styles.modalLegend}>Detalles de la Reserva</legend>
+            <Row>
+              <Col md={6}>
+                <FormGroup>
+                  <Label for="numberPeople">Número de Personas</Label>
+                  <Input type="number" name="numberPeople" id="numberPeople" value={form.numberPeople || ""} onChange={handleChange} invalid={!!errors.numberPeople} />
+                  {errors.numberPeople && <FormFeedback>{errors.numberPeople}</FormFeedback>}
+                </FormGroup>
+              </Col>
+              <Col md={6}>
+                <FormGroup>
+                  <Label for="evenType">Tipo de Evento</Label>
+                  <Input type="text" name="evenType" id="evenType" value={form.evenType || ""} onChange={handleChange} invalid={!!errors.evenType} />
+                  {errors.evenType && <FormFeedback>{errors.evenType}</FormFeedback>}
+                </FormGroup>
+              </Col>
+            </Row>
+            <FormGroup>
+              <Label for="servicios">Servicios Adicionales</Label>
+              <Select isMulti options={serviceOptions} value={form.servicios} onChange={handleMultiServiceChange} placeholder="Seleccione los servicios..." />
+              {errors.servicios && <div className="text-danger small mt-1">{errors.servicios}</div>}
+            </FormGroup>
+            {showDecorationAmountInput && (
+              <Row>
+                <Col md={6}>
                   <FormGroup>
-                    <Label for={`fecha-${index}`}>Fecha</Label>
-                    <Input
-                      type="date"
-                      id={`fecha-${index}`}
-                      value={abono.fecha || ""}
-                      onChange={(e) => handleAbonoChange(index, "fecha", e.target.value)}
-                      invalid={!!errors[`pass-${index}-fecha`]}
-                    />
-                    {errors[`pass-${index}-fecha`] && <FormFeedback>{errors[`pass-${index}-fecha`]}</FormFeedback>}
+                    <Label for="decorationAmount">{additionalAmountLabel}</Label>
+                    <Input type="number" name="decorationAmount" id="decorationAmount" value={form.decorationAmount || ""} onChange={handleChange} invalid={!!errors.decorationAmount} />
+                    {errors.decorationAmount && <FormFeedback>{errors.decorationAmount}</FormFeedback>}
                   </FormGroup>
-                </Col>
-                <Col md={5}>
-                  <FormGroup>
-                    <Label for={`cantidad-${index}`}>Cantidad</Label>
-                    <Input
-                      type="number"
-                      id={`cantidad-${index}`}
-                      value={abono.cantidad || ""}
-                      onChange={(e) => handleAbonoChange(index, "cantidad", e.target.value)}
-                      invalid={!!errors[`pass-${index}-cantidad`]}
-                    />
-                    {errors[`pass-${index}-cantidad`] && (
-                      <FormFeedback>{errors[`pass-${index}-cantidad`]}</FormFeedback>
-                    )}
-                  </FormGroup>
-                </Col>
-                <Col md={2} className="d-flex align-items-end">
-                  <Button color="danger" outline onClick={() => removeAbono(index)}>
-                    <FaTrashAlt />
-                  </Button>
                 </Col>
               </Row>
-            ))}
-            <Button color="primary" outline onClick={addAbono}>
-              Agregar Abono
-            </Button>
-            {errors.pass && <div className="text-danger small mt-1">{errors.pass}</div>}
+            )}
+            <Row>
+              <Col md={6}>
+                <FormGroup>
+                  <Label for="dateTime">Fecha y Hora</Label>
+                  <Input type="datetime-local" name="dateTime" id="dateTime" value={form.dateTime || ""} onChange={handleChange} invalid={!!errors.dateTime} />
+                  {errors.dateTime && <FormFeedback>{errors.dateTime}</FormFeedback>}
+                </FormGroup>
+              </Col>
+              <Col md={6}>
+                <FormGroup>
+                  <Label for="timeDurationR">Duración (Horas)</Label>
+                  <Input type="number" name="timeDurationR" id="timeDurationR" value={form.timeDurationR || ""} onChange={handleChange} invalid={!!errors.timeDurationR} />
+                  {errors.timeDurationR && <FormFeedback>{errors.timeDurationR}</FormFeedback>}
+                </FormGroup>
+              </Col>
+            </Row>
           </fieldset>
-          <FormGroup>
-            <Label for="remaining">Restante</Label>
-            <Input type="text" id="remaining" value={formatCurrency(form.remaining)} readOnly />
-            {errors.remaining && <div className="text-danger small mt-1">{errors.remaining}</div>}
-          </FormGroup>
-          <FormGroup>
-            <Label for="status">Estado</Label>
-            <Input type="select" name="status" id="status" value={form.status || "pendiente"} onChange={handleChange}>
-              <option value="pendiente">Pendiente</option>
-              <option value="confirmada">Confirmada</option>
-              <option value="en_proceso">En Proceso</option>
-              <option value="terminada">Terminada</option>
-              <option value="anulada">Anulada</option>
-            </Input>
-          </FormGroup>
-          <FormGroup>
-            <Label for="matter">Observaciones</Label>
-            <Input type="textarea" name="matter" id="matter" value={form.matter || ""} onChange={handleChange} />
-          </FormGroup>
+
+          {/* --- Sección Pago y Estado de la Reserva --- */}
+          <fieldset style={styles.modalFieldset}>
+            <legend style={styles.modalLegend}>Pago y Estado</legend>
+            <Row>
+              <Col md={6}>
+                <FormGroup>
+                  <Label for="totalPay">Total a Pagar</Label>
+                  <Input type="number" name="totalPay" id="totalPay" value={form.totalPay || ""} onChange={handleChange} invalid={!!errors.totalPay} />
+                  {errors.totalPay && <FormFeedback>{errors.totalPay}</FormFeedback>}
+                </FormGroup>
+              </Col>
+              <Col md={6}>
+                <FormGroup>
+                  <Label for="remaining">Restante</Label>
+                  <Input type="text" id="remaining" value={formatCurrency(form.remaining)} readOnly />
+                  {errors.remaining && <div className="text-danger small mt-1">{errors.remaining}</div>}
+                </FormGroup>
+              </Col>
+            </Row>
+            <fieldset style={{ ...styles.modalFieldset, marginTop: '1rem' }}> {/* Sub-fieldset para Abonos */}
+              <legend style={styles.modalLegend}>Abonos</legend>
+              {(form.pass || []).map((abono, index) => (
+                <Row key={index} className="mb-2 align-items-end">
+                  <Col md={5}>
+                    <FormGroup className="mb-0"> 
+                      <Label for={`fecha-${index}`} className="mb-1">Fecha</Label> 
+                      <Input type="date" id={`fecha-${index}`} value={abono.fecha || ""} onChange={(e) => handleAbonoChange(index, "fecha", e.target.value)} invalid={!!errors[`pass-${index}-fecha`]} />
+                      {errors[`pass-${index}-fecha`] && <FormFeedback>{errors[`pass-${index}-fecha`]}</FormFeedback>}
+                    </FormGroup>
+                  </Col>
+                  <Col md={5}>
+                    <FormGroup className="mb-0">
+                      <Label for={`cantidad-${index}`} className="mb-1">Cantidad</Label>
+                      <Input type="number" id={`cantidad-${index}`} value={abono.cantidad || ""} onChange={(e) => handleAbonoChange(index, "cantidad", e.target.value)} invalid={!!errors[`pass-${index}-cantidad`]} />
+                      {errors[`pass-${index}-cantidad`] && <FormFeedback>{errors[`pass-${index}-cantidad`]}</FormFeedback>}
+                    </FormGroup>
+                  </Col>
+                  <Col md={2} className="d-flex"> 
+                    <Button color="danger" outline onClick={() => removeAbono(index)} className="w-100">
+                      <FaTrashAlt />
+                    </Button>
+                  </Col>
+                </Row>
+              ))}
+              <Button color="primary" outline onClick={addAbono} className="mt-2"> 
+                Agregar Abono
+              </Button>
+              {errors.pass && <div className="text-danger small mt-1">{errors.pass}</div>}
+            </fieldset>
+            <Row>
+                <Col md={6}>
+                    <FormGroup>
+                        <Label for="status">Estado</Label>
+                        <Input type="select" name="status" id="status" value={form.status || "pendiente"} onChange={handleChange}>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="confirmada">Confirmada</option>
+                        <option value="en_proceso">En Proceso</option>
+                        <option value="terminada">Terminada</option>
+                        <option value="anulada">Anulada</option>
+                        </Input>
+                    </FormGroup>
+                </Col>
+                <Col md={6}>
+                    <FormGroup>
+                        <Label for="matter">Observaciones</Label>
+                        <Input type="textarea" name="matter" id="matter" value={form.matter || ""} onChange={handleChange} rows="1" /> 
+                    </FormGroup>
+                </Col>
+            </Row>
+          </fieldset>
         </ModalBody>
         <ModalFooter>
           <Button color="secondary" outline onClick={() => setModalOpen(!modalOpen)}>
@@ -2073,12 +2076,11 @@ const Calendario = () => {
           <Button color="primary" onClick={requestSaveConfirmation}>
             {selectedReserva ? "Guardar Cambios" : "Crear Reserva"}
           </Button>
-          {/* El botón de eliminar reserva ha sido removido de aquí */}
         </ModalFooter>
       </Modal>
 
       {/* --- Modal de Lista de Reservas --- */}
-      <Modal isOpen={listModalOpen} toggle={toggleListModal} size="xl" centered backdrop="static"> {/* Cambiado a xl para más espacio */}
+      <Modal isOpen={listModalOpen} toggle={toggleListModal} size="xl" centered backdrop="static"> 
         <ModalHeader toggle={toggleListModal}>Lista de Reservas</ModalHeader>
         <ModalBody>
           <Table responsive striped borderless style={styles.reservationsTable}>
@@ -2096,7 +2098,7 @@ const Calendario = () => {
               </tr>
             </thead>
             <tbody>
-              {currentItems // Ya no filtramos aquí, el filtrado general del calendario se aplica a 'events'
+              {currentItems 
                 .map((item) => (
                   <tr key={item.idReservations}>
                     <td style={styles.tableCell}>{item.idReservations}</td>
@@ -2123,7 +2125,7 @@ const Calendario = () => {
                           onClick={() => {
                             const eventInfo = {
                               event: {
-                                id: String(item.idReservations), // Asegurar que ID es string
+                                id: String(item.idReservations), 
                               },
                             }
                             handleEventClick(eventInfo)
