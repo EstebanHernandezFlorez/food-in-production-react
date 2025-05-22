@@ -142,12 +142,13 @@ const FichaTecnica = () => {
                             quantity: dataBackend.quantity?.toString() || '',
                         });
 
-                        setIngredientes(dataBackend.ingredients?.map(ingBackend => ({
-                            idSupplier: ingBackend.supplier?.idSupplier || '',
+                        setIngredientes(dataBackend.ingredients?.map(ingBackend => ({ // ingBackend es ProductSheet
+                            idSupplier: ingBackend.supplier?.idSupplier || '', // o ingBackend.idSupplier si lo seleccionaste
                             supplierNameDisplay: ingBackend.supplier?.supplierName || 'Insumo Desconocido',
-                            quantity: ingBackend.quantity?.toString() || '',
-                            measurementUnit: ingBackend.measurementUnit || ''
-                        })) || [{ ...INITIAL_INGREDIENTE_FORM_STATE }]);
+                            quantity: ingBackend.quantity?.toString() || '',         // De ProductSheet
+                            measurementUnit: ingBackend.measurementUnit || ''      // De ProductSheet
+                        })) || []);
+                        
 
                         setProcesos(dataBackend.processes?.map((procBackend, index) => ({
                             processOrder: procBackend.processOrder || index + 1,
@@ -581,7 +582,7 @@ const FichaTecnica = () => {
                         outline 
                         onClick={() => {
                             const basePath = '/home';
-                            const productoInsumoListPath = `${basePath}/gestion-inventario/producto-insumo`; // Ajusta
+                            const productoInsumoListPath = `${basePath}/produccion/producto_insumo`; // Ajusta
                             navigate(
                                 isEditing && form.idProduct 
                                     ? `${basePath}/producto/${form.idProduct}/fichas`
