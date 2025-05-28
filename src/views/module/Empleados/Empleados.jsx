@@ -182,7 +182,7 @@ const Empleados = () => { // *** AJUSTADO: Nombre del componente ***
 
         // Convertir a string y hacer trim de forma segura donde aplique
         const fullName = String(form.fullName ?? '').trim();
-        const document = String(form.document ?? '').trim();
+        const document = String(form.document ?? '').trim();                                
         const cellPhone = String(form.cellPhone ?? '').trim();
         const email = String(form.email ?? '').trim();
         const emergencyContact = String(form.emergencyContact ?? '').trim();
