@@ -212,35 +212,35 @@ const Insumos = () => {
     // --- CRUD Operations ---
 
     // SUBMIT (Agregar/Editar)
-    const handleSubmit = useCallback(async () => {
-        // *** LLAMA A LA VALIDACIÓN ***
-        if (!validateForm()) return;
+        const handleSubmit = useCallback(async () => {
+            // *** LLAMA A LA VALIDACIÓN ***
+            if (!validateForm()) return;
 
-        setIsSavingForm(true);
-        const actionText = isEditing ? 'Actualizando' : 'Agregando';
-        const toastId = toast.loading(`${actionText} insumo...`);
-        try {
-            const url = isEditing ? `${API_BASE_URL}/supplier/${form.idSupplier}` : `${API_BASE_URL}/supplier`;
-            const method = isEditing ? 'put' : 'post';
-            const dataToSend = {
-                supplierName: form.supplierName.trim(),
-                measurementUnit: form.measurementUnit,
-            };
-            if (!isEditing) { dataToSend.status = true; }
-            else if (!form.idSupplier) { throw new Error("ID no encontrado para actualizar."); }
+            setIsSavingForm(true);
+            const actionText = isEditing ? 'Actualizando' : 'Agregando';
+            const toastId = toast.loading(`${actionText} insumo...`);
+            try {
+                const url = isEditing ? `${API_BASE_URL}/supplier/${form.idSupplier}` : `${API_BASE_URL}/supplier`;
+                const method = isEditing ? 'put' : 'post';
+                const dataToSend = {
+                    supplierName: form.supplierName.trim(),
+                    measurementUnit: form.measurementUnit,
+                };
+                if (!isEditing) { dataToSend.status = true; }
+                else if (!form.idSupplier) { throw new Error("ID no encontrado para actualizar."); }
 
-            await axios({ method, url, data: dataToSend });
-            toast.success(`Insumo ${isEditing ? 'actualizado' : 'agregado'}!`, { id: toastId });
-            toggleMainModal();
-            await fetchData(false); // Refresca datos sin spinner principal
-            setCurrentPage(1);
-        } catch (error) {
-            const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
-            setFormErrors(prev => ({ ...prev, general: `Error: ${errorMsg}` })); // Muestra error general en alert
-            toast.error(`Error al ${actionText.toLowerCase()}: ${errorMsg}`, { id: toastId, duration: 5000 });
-        } finally { setIsSavingForm(false); }
-    // Asegúrate de incluir todas las dependencias necesarias
-    }, [form, isEditing, validateForm, toggleMainModal, fetchData]);
+                await axios({ method, url, data: dataToSend });
+                toast.success(`Insumo ${isEditing ? 'actualizado' : 'agregado'}!`, { id: toastId });
+                toggleMainModal();
+                await fetchData(false); // Refresca datos sin spinner principal
+                setCurrentPage(1);
+            } catch (error) {
+                const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
+                setFormErrors(prev => ({ ...prev, general: `Error: ${errorMsg}` })); // Muestra error general en alert
+                toast.error(`Error al ${actionText.toLowerCase()}: ${errorMsg}`, { id: toastId, duration: 5000 });
+            } finally { setIsSavingForm(false); }
+        // Asegúrate de incluir todas las dependencias necesarias
+        }, [form, isEditing, validateForm, toggleMainModal, fetchData]);
 
     // CAMBIAR ESTADO (Solicitud)
     const requestChangeStatusConfirmation = useCallback((insumo) => {

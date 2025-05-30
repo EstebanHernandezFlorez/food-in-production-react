@@ -191,44 +191,44 @@ import React, {
         setConfirmModalOpen(true);
     }, [toggleConfirmModal]); // toggleConfirmModal aquí es para el modal de confirmación
 
-    const handleSubmit = useCallback(async () => {
-      if (!validateForm()) {
-        toast.error(formErrors.general || "Revise los campos marcados.");
-        return;
-      }
-      setIsSavingForm(true);
-      const actionText = isEditing ? "Actualizando" : "Agregando";
-      const toastId = toast.loading(`${actionText} producto/insumo...`);
-      const dataToSend = { ...form, productName: form.productName.trim() };
-      if (!isEditing) {
-        delete dataToSend.idProduct;
-      }
-      try {
-        if (isEditing) {
-          if (!form.idProduct) throw new Error("ID no válido para actualizar.");
-          await productService.updateProduct(form.idProduct, dataToSend);
-        } else {
-          await productService.createProduct(dataToSend);
+      const handleSubmit = useCallback(async () => {
+        if (!validateForm()) {
+          toast.error(formErrors.general || "Revise los campos marcados.");
+          return;
         }
-        toast.success(
-          `Producto/Insumo ${isEditing ? "actualizado" : "agregado"}!`,
-          { id: toastId }
-        );
-        toggleMainModal();
-        await fetchData(false);
-        setCurrentPage(1);
-      } catch (error) {
-        const errorMsg =
-          error.response?.data?.message || error.message || "Error desconocido";
-        setFormErrors((prev) => ({ ...prev, general: `Error: ${errorMsg}` }));
-        toast.error(`Error al ${actionText.toLowerCase()}: ${errorMsg}`, {
-          id: toastId,
-          duration: 5000,
-        });
-      } finally {
-        setIsSavingForm(false);
-      }
-    }, [form, isEditing, validateForm, toggleMainModal, fetchData, formErrors.general]);
+        setIsSavingForm(true);
+        const actionText = isEditing ? "Actualizando" : "Agregando";
+        const toastId = toast.loading(`${actionText} producto/insumo...`);
+        const dataToSend = { ...form, productName: form.productName.trim() };
+        if (!isEditing) {
+          delete dataToSend.idProduct;
+        }
+        try {
+          if (isEditing) {
+            if (!form.idProduct) throw new Error("ID no válido para actualizar.");
+            await productService.updateProduct(form.idProduct, dataToSend);
+          } else {
+            await productService.createProduct(dataToSend);
+          }
+          toast.success(
+            `Producto/Insumo ${isEditing ? "actualizado" : "agregado"}!`,
+            { id: toastId }
+          );
+          toggleMainModal();
+          await fetchData(false);
+          setCurrentPage(1);
+        } catch (error) {
+          const errorMsg =
+            error.response?.data?.message || error.message || "Error desconocido";
+          setFormErrors((prev) => ({ ...prev, general: `Error: ${errorMsg}` }));
+          toast.error(`Error al ${actionText.toLowerCase()}: ${errorMsg}`, {
+            id: toastId,
+            duration: 5000,
+          });
+        } finally {
+          setIsSavingForm(false);
+        }
+      }, [form, isEditing, validateForm, toggleMainModal, fetchData, formErrors.general]);
 
     const requestChangeStatusConfirmation = useCallback((product) => {
       if (!product || !product.idProduct) return;
