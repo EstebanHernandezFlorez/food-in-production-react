@@ -1,18 +1,17 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
-import axios from "axios";
+// src/views/module/OrdenProduccion/Historial.jsx (o ProductionOrderList.jsx)
+import React, { useState, useEffect, useCallback, useMemo, useContext } from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import "../../../assets/css/App.css";
+import "../../../assets/css/App.css"; // Ajusta la ruta
 import {
-    Table, Button, Container, Row, Col, Input, Spinner
+    Table, Button, Container, Row, Col, Input, Spinner, Card, CardHeader, CardBody, Alert, Badge
 } from 'reactstrap';
-// Importamos los iconos necesarios de lucide-react
-import { Eye, Edit } from 'lucide-react'; // Iconos para Ver y Editar
+import { Eye, Edit, PlusCircle, Search } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+import CustomPagination from '../../General/CustomPagination'; // Ajusta la ruta
+import { ActiveOrdersContext } from './ActiveOrdersContext'; // Correcto si está en la misma carpeta
+import productionOrderService from '../../services/productionOrderService'; // Servicio para cargar órdenes
 
-import CustomPagination from '../../General/CustomPagination';
-
-const API_BASE_URL_ORDERS = 'http://localhost:3000/production-orders'; // ***** CAMBIA ESTA URL *****
-const LOG_PREFIX_ORDERS = "[ProductionOrders]";
 const ITEMS_PER_PAGE = 10;
 
 const ProductionOrderList = () => {
@@ -20,14 +19,18 @@ const ProductionOrderList = () => {
     const [tableSearchText, setTableSearchText] = useState("");
     const [isLoading, setIsLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
+    const navigate = useNavigate();
+    const { activeOrders, addOrFocusOrder } = useContext(ActiveOrdersContext); // Usar addOrFocusOrder
 
     const fetchOrdersData = useCallback(async (showLoadingSpinner = true) => {
         if (showLoadingSpinner) setIsLoading(true);
         try {
-            const response = await axios.get(API_BASE_URL_ORDERS);
-            setOrdersData(Array.isArray(response.data) ? response.data : []);
+            const response = await productionOrderService.getAllProductionOrders(); // Usar el servicio
+            // El backend devuelve objetos con idProductionOrder, dateTimeCreation, Product (objeto), status
+            setOrdersData(Array.isArray(response) ? response : []);
         } catch (error) {
             toast.error("Error al cargar las órdenes de producción.");
+            console.error("Error fetching orders:", error.response?.data || error);
             setOrdersData([]);
         } finally {
             if (showLoadingSpinner) setIsLoading(false);
@@ -46,10 +49,9 @@ const ProductionOrderList = () => {
     const filteredOrdersData = useMemo(() => {
         if (!tableSearchText) return ordersData;
         return ordersData.filter(order =>
-            (String(order?.id ?? '').toLowerCase()).includes(tableSearchText) ||
-            (order?.Producto?.toLowerCase() ?? '').includes(tableSearchText) ||
-            (order?.Estado?.toLowerCase() ?? '').includes(tableSearchText)
-            // Los campos ocultos no se incluyen en la búsqueda general de la tabla
+            (order.idProductionOrder?.toString().toLowerCase() ?? '').includes(tableSearchText) ||
+            (order.Product?.productName?.toLowerCase() ?? '').includes(tableSearchText) ||
+            (order.status?.toLowerCase() ?? '').includes(tableSearchText)
         );
     }, [ordersData, tableSearchText]);
 
@@ -57,7 +59,7 @@ const ProductionOrderList = () => {
     const totalPages = useMemo(() => Math.ceil(totalItems / ITEMS_PER_PAGE), [totalItems]);
     const validCurrentPage = useMemo(() => Math.max(1, Math.min(currentPage, totalPages || 1)), [currentPage, totalPages]);
 
-    const currentOrders = useMemo(() => {
+    const currentOrdersOnPage = useMemo(() => { // Renombrado para claridad
         const startIndex = (validCurrentPage - 1) * ITEMS_PER_PAGE;
         const endIndex = startIndex + ITEMS_PER_PAGE;
         return filteredOrdersData.slice(startIndex, endIndex);
@@ -70,131 +72,129 @@ const ProductionOrderList = () => {
     }, [totalPages, currentPage]);
 
     const handlePageChange = useCallback((pageNumber) => {
-        const newPage = Math.max(1, Math.min(pageNumber, totalPages || 1));
-        setCurrentPage(newPage);
-    }, [totalPages]);
+        setCurrentPage(pageNumber);
+    }, []);
 
     const formatDateTime = (dateTimeString) => {
         if (!dateTimeString) return '-';
         try {
-            const date = new Date(dateTimeString);
-            return date.toLocaleString('es-ES', {
+            return new Date(dateTimeString).toLocaleString('es-ES', {
                 day: '2-digit', month: '2-digit', year: 'numeric',
                 hour: '2-digit', minute: '2-digit',
             });
         } catch (e) { return dateTimeString; }
     };
 
-    // --- Funciones para los botones de acción (implementa su lógica) ---
-    const handleViewOrder = (orderId) => {
-        // Lógica para ver los detalles de la orden (ej: abrir un modal, navegar a otra página)
-        console.log("Ver detalles de la orden ID:", orderId);
-        // Ejemplo: navigate(`/production-orders/details/${orderId}`);
-        // O: setSelectedOrder(order); setViewModalOpen(true);
-        toast.info(`FUNCIONALIDAD VER: Orden ID ${orderId} (implementar)`);
+    const handleViewOrEditOrder = (orderId) => {
+        addOrFocusOrder(orderId.toString(), false); // Asegurar que orderId sea string y no sea nueva
+        navigate(`/home/produccion/ordenes/${orderId}`); // Navegar a la vista de detalle/edición
     };
 
-    const handleEditOrder = (orderId) => {
-        // Lógica para editar la orden (ej: abrir un modal con el formulario de edición, navegar a otra página)
-        console.log("Editar orden ID:", orderId);
-        // Ejemplo: navigate(`/production-orders/edit/${orderId}`);
-        // O: setSelectedOrder(order); setEditModalOpen(true);
-        toast.info(`FUNCIONALIDAD EDITAR: Orden ID ${orderId} (implementar)`);
+    const handleCreateNewOrder = () => {
+        addOrFocusOrder(null, true); // Indica que es una nueva orden
+        navigate('/home/produccion/ordenes/crear'); // Navegar a la ruta de creación
+    };
+
+    const getOrderStatusBadgeInfo = (statusBackend) => {
+        // Mapeo de estados del backend a colores y texto para la UI
+        switch (statusBackend?.toUpperCase()) {
+            case 'PENDING': return { text: 'Pendiente', color: 'secondary' };
+            case 'SETUP_COMPLETED': return { text: 'Lista p/ Iniciar', color: 'info' };
+            case 'IN_PROGRESS': return { text: 'En Proceso', color: 'warning' };
+            case 'ALL_STEPS_COMPLETED': return { text: 'Pasos Completos', color: 'primary' };
+            case 'COMPLETED': return { text: 'Completada', color: 'success' };
+            case 'CANCELLED': return { text: 'Cancelada', color: 'danger' };
+            default: return { text: statusBackend || 'N/A', color: 'light' };
+        }
     };
 
     return (
-        <Container fluid className="p-4 main-content">
+        <Container fluid className="p-lg-4 p-md-3 p-2 main-content">
             <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
-            <h2 className="mb-4">Listado de Órdenes de Producción</h2>
+            <Card className="shadow-sm">
+                <CardHeader className="d-flex justify-content-between align-items-center bg-light py-2">
+                    <h4 className="mb-0 h5 text-primary">Listado de Órdenes de Producción</h4>
+                    <Button color="success" size="sm" onClick={handleCreateNewOrder}>
+                        <PlusCircle size={16} className="me-1" /> Nueva Orden
+                    </Button>
+                </CardHeader>
+                <CardBody>
+                    <Row className="mb-3">
+                        <Col md={6} lg={4}>
+                            <div className="input-group input-group-sm">
+                                <span className="input-group-text"><Search size={16} /></span>
+                                <Input
+                                    type="text"
+                                    placeholder="Buscar por ID, Producto, Estado..."
+                                    value={tableSearchText} onChange={handleTableSearch}
+                                    aria-label="Buscar órdenes de producción"
+                                />
+                            </div>
+                        </Col>
+                    </Row>
 
-            <Row className="mb-3 align-items-center">
-                <Col md={6} lg={4}>
-                    <Input
-                        type="text" bsSize="sm"
-                        placeholder="Buscar por ID, Producto, Estado..."
-                        value={tableSearchText} onChange={handleTableSearch}
-                        style={{ borderRadius: '0.25rem' }}
-                        aria-label="Buscar órdenes de producción"
-                    />
-                </Col>
-            </Row>
-
-            <div className="table-responsive shadow-sm custom-table-container mb-3">
-                <Table hover size="sm" className="mb-0 custom-table" aria-live="polite">
-                    <thead>
-                        <tr>
-                            {/* ***** CABECERAS ACTUALIZADAS ***** */}
-                            <th scope="col" className="text-center" style={{ width: '10%' }}>ID</th>
-                            <th scope="col" style={{ width: '25%' }}>Fecha y Hora Inicio</th>
-                            <th scope="col" style={{ width: '25%' }}>Producto</th>
-                            <th scope="col" style={{ width: '15%' }}>Proceso</th>
-                            <th scope="col" className="text-center" style={{ width: '20%' }}>Estado</th>
-                            <th scope="col" className="text-center" style={{ width: '15%' }}>Acciones</th> {/* Antes Observaciones */}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {isLoading ? (
-                            <tr><td colSpan="5" className="text-center p-5"><Spinner color="primary" /> Cargando...</td></tr>
-                            // Ajustar colSpan al nuevo número de columnas visibles (5)
-                        ) : currentOrders.length > 0 ? (
-                            currentOrders.map((order) => (
-                                <tr key={order.id} style={{ verticalAlign: 'middle' }}>
-                                    {/* ***** CELDAS DE DATOS ACTUALIZADAS ***** */}
-                                    <th scope="row" className="text-center">{order.id || '-'}</th>
-                                    <td>{formatDateTime(order.HorayFechaInicial) || '-'}</td>
-                                    <td>{order.Producto || '-'}</td>
-                                    {/* Campos CantidadInicial, CantidadFinal, PesoInicial, PesoFinal, Observaciones eliminados de la visualización directa */}
-                                    <td className="text-center">
-                                        <span className={`badge ${
-                                            order.Estado === 'Completada' ? 'bg-success' :
-                                            order.Estado === 'Cancelada' ? 'bg-danger' :
-                                            'bg-secondary'
-                                        }`}>
-                                            {order.Estado || 'N/A'}
-                                        </span>
-                                    </td>
-                                    <td className="text-center">
-                                        {/* ***** ACCIONES CON ICONOS ***** */}
-                                        <div className="d-inline-flex gap-1 action-cell-content" role="group">
-                                            <Button
-                                                size="sm"
-                                                color="info" // O el color que prefieras para "Ver"
-                                                outline
-                                                onClick={() => handleViewOrder(order.id)} // Llama a la función de ver
-                                                title="Ver Detalles de la Orden"
-                                                className="action-button"
-                                                aria-label={`Ver detalles de la orden ${order.id}`}
-                                            >
-                                                <Eye size={18} />
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                color="secondary" // O el color que prefieras para "Editar"
-                                                outline
-                                                onClick={() => handleEditOrder(order.id)} // Llama a la función de editar
-                                                title="Editar Orden"
-                                                className="action-button"
-                                                aria-label={`Editar la orden ${order.id}`}
-                                            >
-                                                <Edit size={18} />
-                                            </Button>
-                                        </div>
-                                    </td>
+                    <div className="table-responsive mb-0">
+                        <Table hover striped size="sm" className="mb-0">
+                            <thead className="table-light">
+                                <tr>
+                                    <th scope="col" className="text-center" style={{ width: '10%' }}>ID Orden</th>
+                                    <th scope="col" style={{ width: '20%' }}>Fecha Creación</th>
+                                    <th scope="col" style={{ width: '25%' }}>Producto</th>
+                                    <th scope="col" className="text-center" style={{ width: '15%' }}>Cantidad</th>
+                                    <th scope="col" className="text-center" style={{ width: '15%' }}>Estado</th>
+                                    <th scope="col" className="text-center" style={{ width: '15%' }}>Acciones</th>
                                 </tr>
-                            ))
-                        ) : (
-                            <tr><td colSpan="5" className="text-center fst-italic p-4">
-                                {tableSearchText ? "No se encontraron órdenes de producción." : "No hay órdenes de producción."}
-                            </td></tr>
-                             // Ajustar colSpan al nuevo número de columnas visibles (5)
-                        )}
-                    </tbody>
-                </Table>
-            </div>
+                            </thead>
+                            <tbody>
+                                {isLoading ? (
+                                    <tr><td colSpan="6" className="text-center p-5"><Spinner color="primary" /> <span className="ms-2">Cargando órdenes...</span></td></tr>
+                                ) : currentOrdersOnPage.length > 0 ? (
+                                    currentOrdersOnPage.map((order) => {
+                                        const statusInfo = getOrderStatusBadgeInfo(order.status);
+                                        const isOrderActiveInContext = !!activeOrders[order.idProductionOrder?.toString()];
+                                        return (
+                                            <tr key={order.idProductionOrder} className={isOrderActiveInContext ? 'table-info fw-bold' : ''} style={{ verticalAlign: 'middle' }}>
+                                                <th scope="row" className="text-center">{order.idProductionOrder || '-'}</th>
+                                                <td>{formatDateTime(order.dateTimeCreation) || '-'}</td>
+                                                <td>{order.Product?.productName || 'N/A'}</td>
+                                                <td className="text-center">{order.initialAmount || '-'}</td>
+                                                <td className="text-center">
+                                                    <Badge color={statusInfo.color} pill>
+                                                        {statusInfo.text}
+                                                    </Badge>
+                                                </td>
+                                                <td className="text-center">
+                                                    <Button
+                                                        size="sm"
+                                                        color="primary"
+                                                        outline
+                                                        onClick={() => handleViewOrEditOrder(order.idProductionOrder)}
+                                                        title="Ver / Gestionar Orden"
+                                                        className="me-1"
+                                                    >
+                                                        <Eye size={16} />
+                                                    </Button>
+                                                    {/* Podrías añadir un botón de "Editar Rápido" o "Cancelar Orden" aquí si fuera necesario */}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                ) : (
+                                    <tr><td colSpan="6" className="text-center fst-italic p-4">
+                                        {tableSearchText ? "No se encontraron órdenes con los criterios de búsqueda." : "No hay órdenes de producción registradas."}
+                                    </td></tr>
+                                )}
+                            </tbody>
+                        </Table>
+                    </div>
 
-            { totalPages > 1 && !isLoading && (
-                <CustomPagination currentPage={validCurrentPage} totalPages={totalPages} onPageChange={handlePageChange} />
-            )}
+                    { !isLoading && totalItems > 0 && totalPages > 1 && (
+                        <div className="mt-3">
+                            <CustomPagination currentPage={validCurrentPage} totalPages={totalPages} onPageChange={handlePageChange} />
+                        </div>
+                    )}
+                </CardBody>
+            </Card>
         </Container>
     );
 };

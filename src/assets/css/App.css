@@ -270,3 +270,30 @@
   border-width: 1.5px;
 }
 */
+
+.employee-performance-dashboard .react-datepicker-wrapper,
+.employee-performance-dashboard .react-datepicker__input-container,
+.employee-performance-dashboard .react-datepicker__input-container input {
+    width: 100%; /* Hace que DatePicker ocupe el ancho de su columna */
+}
+
+.employee-performance-dashboard .performance-table th,
+.employee-performance-dashboard .performance-table td {
+    vertical-align: middle;
+}
+
+.employee-performance-dashboard .expanded-row td {
+    padding: 0 !important; /* Quitar padding de la celda que contiene la card */
+    border-top: none !important; /* Ocultar el borde superior para mejor integración */
+    background-color: #f8f9fa; /* Un fondo ligeramente diferente para la fila expandida */
+}
+
+.employee-performance-dashboard .expanded-row .card {
+    border-radius: 0; /* Opcional: quitar bordes redondeados de la card interna */
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+}
+.employee-performance-dashboard .shadow-inner { /* Clase para la card interna */
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+}

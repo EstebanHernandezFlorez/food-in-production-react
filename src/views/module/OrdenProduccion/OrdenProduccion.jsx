@@ -1,751 +1,965 @@
-// src/components/Produccion/OrdenProduccionConPasosForm.jsx
-import React, { useState, useEffect, useRef } from 'react';
+// src/views/module/OrdenProduccion/OrdenProduccionForm.jsx
+import React, { useState, useEffect, useRef, useContext, useCallback } from 'react';
 import {
-    Row, Col, FormGroup, Label, Input, FormFeedback, Spinner, Button, Form, Container, Card, CardBody, CardHeader, Alert,
-    Modal, ModalHeader, ModalBody, ModalFooter, Badge, ListGroup, ListGroupItem
+    Row, Col, Spinner, Button, Form, Container, Alert,
+    Modal, ModalHeader, ModalBody, ModalFooter, ListGroup, ListGroupItem, CardFooter,
+    Collapse, Card, CardHeader, CardBody
 } from 'reactstrap';
-import productService from '../../services/productoInsumoService';
-import fichaTecnicaService from '../../services/fichaTecnicaService';
-import employeeService from '../../services/empleadoService';
-import productionOrderService from '../../services/ordenProduccionService';
+import { useParams } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
-import { useNavigate, useParams } from 'react-router-dom';
-import registroCompraService from '../../services/registroCompraService';
-import { Save, XCircle, AlertTriangle, Eye, PlayCircle, Calendar, Info, ChevronRight, FileText, Edit, ChevronsRight } from 'lucide-react';
+import {
+    Save, XCircle, AlertTriangle, Eye, PlayCircle, CheckCircle, ChefHat, FileText, Info,
+    Package, PauseCircle, RotateCcw, ChevronDown, ChevronRight, ArrowRightCircle
+} from 'lucide-react';
 
-// --- Confirmation Modal Component (sin cambios) ---
+// Servicios
+import productService from '../../services/productService';
+import specSheetService from '../../services/specSheetService';
+import employeeService from '../../services/empleadoService';
+import productionOrderService from '../../services/productionOrderService';
+import registroCompraService from '../../services/registroCompraService';
+
+// Estilos
+import '../../../assets/css/produccion/ProduccionStyles.css'; 
+
+// Contexto
+import { ActiveOrdersContext } from './ActiveOrdersContext';
+
+// Componentes Hijos
+import OrderBaseFormSection from './components/OrderBaseFormSection';
+import EstimatedSuppliesSection from './components/EstimatedSuppliesSection';
+import ProcessManagementSection from './components/ProcessManagementSection';
+import OrderFinalizationSection from './components/OrderFinalizationSection';
+import CancelOrderModal from './components/CancelOrderModal';
+
+// --- Componentes Auxiliares ---
 const ConfirmationModal = ({ isOpen, toggle, title, children, onConfirm, confirmText, confirmColor, isConfirming = false }) => (
-    <Modal isOpen={isOpen} toggle={() => toggle(false)} centered backdrop="static" keyboard={false}>
-        <ModalHeader toggle={() => toggle(false)}>
+    <Modal isOpen={isOpen} toggle={() => !isConfirming && toggle(false)} centered backdrop="static" keyboard={!isConfirming}>
+        <ModalHeader toggle={() => !isConfirming && toggle(false)} className="py-2 px-3">
             <div className="d-flex align-items-center">
-                <AlertTriangle size={24} className={`text-${confirmColor || 'primary'} me-2`} />
-                <span className="fw-bold">{title}</span>
+                <AlertTriangle size={20} className={`text-${confirmColor || 'primary'} me-2`} />
+                <span className="fw-bold small">{title}</span>
             </div>
         </ModalHeader>
-        <ModalBody>{children}</ModalBody>
-        <ModalFooter>
-            <Button color="secondary" outline onClick={() => toggle(false)} disabled={isConfirming}>Cancelar</Button>
-            <Button color={confirmColor || 'primary'} onClick={onConfirm} disabled={isConfirming}>{isConfirming ? <Spinner size="sm"/> : (confirmText || 'Confirmar')}</Button>
+        <ModalBody className="py-3 px-3 small">{children}</ModalBody>
+        <ModalFooter className="py-2 px-3">
+            <Button size="sm" color="secondary" outline onClick={() => toggle(false)} disabled={isConfirming}>Cancelar</Button>
+            <Button size="sm" color={confirmColor || 'primary'} onClick={onConfirm} disabled={isConfirming}>
+                {isConfirming ? <Spinner size="sm"/> : (confirmText || 'Confirmar')}
+            </Button>
         </ModalFooter>
     </Modal>
 );
 
-// --- Modal para Ver Ficha Técnica (sin cambios) ---
 const ViewSpecSheetModal = ({ isOpen, toggle, specSheetData, isLoading }) => {
-    if (!specSheetData && !isLoading) return null;
+    if (!isOpen) return null;
+    const sheetId = specSheetData?.idSpecSheet || specSheetData?.id || 'N/A';
     return (
         <Modal isOpen={isOpen} toggle={toggle} size="lg" centered scrollable>
-            <ModalHeader toggle={toggle}>
-                <FileText size={20} className="me-2"/>
-                Detalles de la Ficha Técnica (ID: {specSheetData?.idSpecsheet || 'N/A'})
-            </ModalHeader>
+            <ModalHeader toggle={toggle}><FileText size={20} className="me-2"/>Detalles de Ficha Técnica (ID: {sheetId})</ModalHeader>
             <ModalBody>
-                {isLoading && <div className="text-center"><Spinner /> Cargando ficha...</div>}
+                {isLoading && <div className="text-center p-4"><Spinner /> Cargando detalles de la ficha...</div>}
                 {!isLoading && specSheetData && (
                     <>
                         <h5>Datos Generales</h5>
-                        <p><strong>Producto:</strong> {specSheetData.Product?.productName || 'N/A'}</p>
-                        <p><strong>Fecha Creación Ficha:</strong> {new Date(specSheetData.startDate).toLocaleDateString()}</p>
-                        <p><strong>Peso Base:</strong> {specSheetData.quantity} {specSheetData.measurementUnit}</p>
-                        <hr />
-                        <h5>Ingredientes</h5>
-                        {specSheetData.ingredients && specSheetData.ingredients.length > 0 ? (
-                            <ListGroup flush>
-                                {specSheetData.ingredients.map((ing, idx) => (
-                                    <ListGroupItem key={idx} className="px-0 py-1">
-                                        {ing.supplier?.supplierName || ing.insumoName || 'Insumo Desconocido'}: {ing.quantity} {ing.measurementUnit}
-                                    </ListGroupItem>
-                                ))}
-                            </ListGroup>
-                        ) : <p>No hay ingredientes definidos.</p>}
-                        <hr />
-                        <h5>Procesos Definidos</h5>
-                        {specSheetData.processes && specSheetData.processes.length > 0 ? (
-                            specSheetData.processes.map((proc, idx) => (
-                                <div key={proc.idProcess || idx} className="mb-2">
-                                    <strong>Paso {proc.processOrder}: {proc.processName}</strong>
-                                    <p className="small text-muted mb-0">{proc.processDescription}</p>
-                                </div>
-                            ))
-                        ) : <p>No hay procesos definidos.</p>}
+                        <Row><Col md={6}><p className="mb-1"><strong>Producto:</strong> {specSheetData.product?.productName || specSheetData.productNameSnapshot || 'N/A'}</p></Col><Col md={6}><p className="mb-1"><strong>Versión:</strong> {specSheetData.versionName || '(Sin versión)'}</p></Col><Col md={6}><p className="mb-1"><strong>Fecha Efectiva:</strong> {specSheetData.dateEffective ? new Date(specSheetData.dateEffective).toLocaleDateString() : 'N/A'}</p></Col><Col md={6}><p className="mb-1"><strong>Cant. Base:</strong> {specSheetData.quantityBase || 1} {specSheetData.unitOfMeasureBase || specSheetData.unitOfMeasure || 'unidad(es)'}</p></Col></Row>
+                        {specSheetData.description && <p className="mb-2"><strong>Descripción:</strong> {specSheetData.description}</p>}
+                        <hr /><h5>Insumos</h5>
+                        {specSheetData.specSheetSupplies?.length > 0 ? (<ListGroup flush>{specSheetData.specSheetSupplies.map((ing, idx) => (<ListGroupItem key={idx} className="px-0 py-1 small d-flex justify-content-between"><span>{ing.supply?.supplyName || ing.supplyNameSnapshot || 'Insumo Desconocido'}</span><span>{ing.quantity} {ing.unitOfMeasure}</span></ListGroupItem>))}</ListGroup>) : <p className="text-muted small">No hay insumos.</p>}
+                        <hr /><h5>Procesos</h5>
+                        {specSheetData.specSheetProcesses?.length > 0 ? (specSheetData.specSheetProcesses.sort((a,b) => (a.processOrder || 0) - (b.processOrder || 0)).map((proc, idx) => (<div key={idx} className="mb-2 p-2 border rounded bg-light"><strong className="d-block">Paso {proc.processOrder}: {proc.processNameOverride || proc.process?.processName || proc.masterProcessData?.processName || 'Proceso Desconocido'}</strong><p className="small text-muted mb-0">{proc.processDescriptionOverride || proc.process?.description || proc.masterProcessData?.description || 'Sin descripción.'}</p>{proc.estimatedTimeMinutes && <small className="d-block text-info">Tiempo Estimado: {proc.estimatedTimeMinutes} min.</small>}</div>))) : <p className="text-muted small">No hay procesos.</p>}
                     </>
                 )}
-                {!isLoading && !specSheetData && <p>No se pudo cargar la ficha técnica.</p>}
+                {!isLoading && !specSheetData && <p className="text-danger text-center p-3">No se pudo cargar la ficha.</p>}
             </ModalBody>
-            <ModalFooter>
-                <Button color="secondary" onClick={toggle}>Cerrar</Button>
-            </ModalFooter>
+            <ModalFooter><Button color="secondary" onClick={toggle}>Cerrar</Button></ModalFooter>
         </Modal>
     );
 };
 
+const SpinnerL = ({children}) => (<div className="d-flex flex-column align-items-center justify-content-center p-3" style={{minHeight: '200px'}}><Spinner style={{ width: '3rem', height: '3rem' }} color="primary" className="mb-2"/><p className="text-muted mb-0">{children}</p></div>);
+const InfoS = ({children}) => (<div className="d-flex flex-column align-items-center justify-content-center p-3" style={{minHeight: '200px'}}><Info size={30} className="text-info mb-2"/><p className="text-muted mb-0">{children}</p></div>);
+// --- FIN Componentes Auxiliares ---
 
-const OrdenProduccionConPasosForm = () => {
+const OrdenProduccionForm = () => {
     const { orderIdParam } = useParams();
-    const navigate = useNavigate();
-    const [isEditing, setIsEditing] = useState(!!orderIdParam);
-    const [currentOrderId, setCurrentOrderId] = useState(orderIdParam ? parseInt(orderIdParam, 10) : null);
+    const context = useContext(ActiveOrdersContext);
 
-    const [formOrder, setFormOrder] = useState({
-        idProduct: '', 
-        idSpecSheet: '', 
-        idProvider: '',
-        idEmployeeOrder: '',
-        initialAmount: '', 
-        observations: '', // Se mantendrá en el estado por si se usa más adelante, pero se comenta en el Form
-    });
-    const [processSteps, setProcessSteps] = useState([]);
-    const [activeStepIndex, setActiveStepIndex] = useState(null);
-
-    const [formErrors, setFormErrors] = useState({});
-    const [providersList, setProvidersList] = useState([]);
-    const [isLoadingProviders, setIsLoadingProviders] = useState(true);
     const [productos, setProductos] = useState([]);
     const [isLoadingProductos, setIsLoadingProductos] = useState(true);
-    const [isLoadingFichas, setIsLoadingFichas] = useState(false);
-    const [selectedSpecSheetData, setSelectedSpecSheetData] = useState(null);
-    const [isLoadingSelectedFichaView, setIsLoadingSelectedFichaView] = useState(false);
     const [empleadosList, setEmpleadosList] = useState([]);
     const [isLoadingEmpleados, setIsLoadingEmpleados] = useState(true);
-    const [isSaving, setIsSaving] = useState(false);
-    const [isLoadingOrderData, setIsLoadingOrderData] = useState(false);
+    const [providersList, setProvidersList] = useState([]);
+    const [isLoadingProviders, setIsLoadingProviders] = useState(true);
+    const [masterDataFullyLoaded, setMasterDataFullyLoaded] = useState(false);
 
+    const [isLoadingFichas, setIsLoadingFichas] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isProcessingAction, setIsProcessingAction] = useState(false);
     const [confirmEmployeeModalOpen, setConfirmEmployeeModalOpen] = useState(false);
-    const [confirmEmployeeData, setConfirmEmployeeData] = useState({
-        stepIndex: null, newEmployeeId: null, employeeName: '', currentEmployeeIdInStep: '', processName: '',
-    });
     const selectedEmployeeTemp = useRef({});
     const [viewSpecSheetModalOpen, setViewSpecSheetModalOpen] = useState(false);
+    const [showFinalizationFields, setShowFinalizationFields] = useState(false);
+    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+    const [orderToCancelInfo, setOrderToCancelInfo] = useState(null);
+    const [isSuppliesOpen, setIsSuppliesOpen] = useState(false);
 
-    // Cargar datos iniciales (productos, empleados, proveedores)
-    useEffect(() => {
-        const loadInitialData = async () => {
-            setIsLoadingProductos(true); setIsLoadingEmpleados(true); setIsLoadingProviders(true);
+    // --- Contexto y Datos Base de la Orden ---
+    if (!context) {
+        return <Container fluid className="p-4 text-center"><Alert color="danger">Error Crítico: Contexto de Órdenes no disponible.</Alert></Container>;
+    }
+    const {
+        activeOrders, currentViewedOrderId, isLoadingOrderContext,
+        addOrFocusOrder, updateOrderState, removeOrder, transformFetchedOrderToContextFormat
+    } = context;
+
+    const currentOrderData = currentViewedOrderId ? activeOrders[currentViewedOrderId] : null;
+
+    // --- Guardas Tempranas ---
+     if (!masterDataFullyLoaded) {
+        console.log("DEBUG: Atascado en !masterDataFullyLoaded");
+        return <SpinnerL>Cargando datos esenciales...</SpinnerL>;
+    }
+    if (isLoadingOrderContext && !String(currentViewedOrderId).startsWith('NEW_')) { 
+        console.log("DEBUG: Atascado en isLoadingOrderContext");
+        return <SpinnerL>{currentViewedOrderId ? `Cargando orden ${currentViewedOrderId}...` : "Cargando..."}</SpinnerL>;
+    }
+    if (!currentViewedOrderId) {
+        // Esta guarda no debería causar carga infinita, sino mostrar InfoS
+        return <InfoS>{orderIdParam && orderIdParam !== 'crear' ? `Orden ${orderIdParam} no encontrada.` : "Seleccione o cree una orden."}</InfoS>;
+    }
+    if (!currentOrderData) {
+        if (String(currentViewedOrderId).startsWith('NEW_')) {
+            console.log("DEBUG: Atascado en !currentOrderData para NEW_ID");
+            return <SpinnerL>Inicializando nueva orden...</SpinnerL>; 
+        }
+        // Esta es una alerta de error, no un spinner de carga.
+        return <Alert color="danger" className="m-3">Error crítico: Datos de orden no disponibles para ID: {currentViewedOrderId}.</Alert>;
+    }
+
+    // --- Desestructuración de Propiedades de currentOrderData ---
+    // Estas variables ahora están disponibles para el resto del componente.
+    const { 
+        localOrderStatus, 
+        selectedSpecSheetData, 
+        processSteps, 
+        isNewForForm,
+        formOrder, // Contiene los campos del formulario de la orden
+        activeStepIndex, // El índice del paso actualmente activo según el contexto/backend
+        id: orderId // El ID real de la orden (después de guardar borrador) o el temporal 'NEW_...'
+    } = currentOrderData;
+
+    const isOrderViewOnly = ['COMPLETED','CANCELLED'].includes(localOrderStatus);
+    const currentActiveStepFromContext = activeStepIndex !== null && processSteps?.[activeStepIndex];
+    
+    const showLowerSections = !(isNewForForm && localOrderStatus === 'PENDING');
+    const isSimplifiedBaseView = !isNewForForm && (localOrderStatus === 'PENDING' || localOrderStatus === 'SETUP');
+    const toggleSupplies = () => setIsSuppliesOpen(!isSuppliesOpen);
+
+    // --- useEffects y Callbacks ---
+    // src/views/module/OrdenProduccion/OrdenProduccionForm.jsx
+
+useEffect(() => {
+    let isMounted = true;
+    console.log("DEBUG_MASTER: useEffect para datos maestros ejecutado. masterDataFullyLoaded:", masterDataFullyLoaded);
+
+    if (!masterDataFullyLoaded) {
+        console.log("DEBUG_MASTER: masterDataFullyLoaded es false, procediendo a cargar datos maestros.");
+        setIsLoadingProductos(true); 
+        setIsLoadingEmpleados(true); 
+        setIsLoadingProviders(true);
+        console.log("DEBUG_MASTER: Estados de carga individuales (productos, empleados, providers) puestos en true.");
+
+        const loadAllMasterData = async () => {
+            console.log("DEBUG_MASTER: loadAllMasterData - INICIO");
             try {
-                const [productsRes, employeesRes, meatProvidersRes] = await Promise.all([
-                    productService.getAllProducts(),
-                    employeeService.getAllEmpleados(),
+                console.log("DEBUG_MASTER: loadAllMasterData - Llamando a Promise.all...");
+                const [productsRes, employeesRes, providersRes] = await Promise.all([
+                    productService.getAllProducts({ status: true, includeSpecSheetCount: true }),
+                    employeeService.getAllEmpleados({ status: true }),
                     registroCompraService.getMeatCategoryProviders()
                 ]);
-                setProductos((Array.isArray(productsRes) ? productsRes : (productsRes?.data || [])).filter(p => p.status === true));
-                setProvidersList((Array.isArray(meatProvidersRes) ? meatProvidersRes : (meatProvidersRes?.data || [])).filter(p => p.status === true));
-                setEmpleadosList((Array.isArray(employeesRes) ? employeesRes : (employeesRes?.data || [])).filter(emp => emp.status === true));
-            } catch (error) {
-                toast.error("Error al cargar datos iniciales."); console.error("Error loading initial data:", error);
-            } finally {
-                setIsLoadingProductos(false); setIsLoadingEmpleados(false); setIsLoadingProviders(false);
+                
+                if (isMounted) {
+                    console.log("DEBUG_MASTER: loadAllMasterData - Promise.all RESUELTO. isMounted:", isMounted);
+                    console.log("DEBUG_MASTER: productsRes:", productsRes);
+                    console.log("DEBUG_MASTER: employeesRes:", employeesRes);
+                    console.log("DEBUG_MASTER: providersRes:", providersRes);
+
+                    // Validar que las respuestas son arrays o tienen una propiedad data que es un array
+                    const finalProducts = Array.isArray(productsRes) ? productsRes.filter(p => p.status) : (productsRes?.data && Array.isArray(productsRes.data) ? productsRes.data.filter(p => p.status) : []);
+                    const finalEmployees = Array.isArray(employeesRes) ? employeesRes.filter(e => e.status && e.Role?.idRole !== 1) : (employeesRes?.data && Array.isArray(employeesRes.data) ? employeesRes.data.filter(e => e.status && e.Role?.idRole !== 1) : []);
+                    const finalProviders = Array.isArray(providersRes) ? providersRes.filter(p => p.status) : (providersRes?.data && Array.isArray(providersRes.data) ? providersRes.data.filter(p => p.status) : []);
+
+                    setProductos(finalProducts);
+                    setEmpleadosList(finalEmployees);
+                    setProvidersList(finalProviders);
+                    console.log("DEBUG_MASTER: loadAllMasterData - Estados de listas (productos, empleados, providers) actualizados.");
+
+                    setMasterDataFullyLoaded(true); // <--- PUNTO CRÍTICO
+                    console.log("DEBUG_MASTER: loadAllMasterData - !!! masterDataFullyLoaded establecido en true !!!");
+                } else {
+                    console.log("DEBUG_MASTER: loadAllMasterData - Promise.all RESUELTO pero el componente ya NO ESTÁ MONTADO.");
+                }
+            } catch (error) { 
+                if (isMounted) {
+                    toast.error("Error crítico cargando datos maestros esenciales.");
+                    console.error("DEBUG_MASTER: loadAllMasterData - CATCH ERROR:", error);
+                    // Considerar si aquí se debe hacer algo más, como reintentar o mostrar un error persistente.
+                    // Por ahora, masterDataFullyLoaded se queda en false, lo que causa el spinner infinito,
+                    // lo cual es un indicador de que la app no puede continuar.
+                } else {
+                    console.error("DEBUG_MASTER: loadAllMasterData - CATCH ERROR pero el componente ya NO ESTÁ MONTADO:", error);
+                }
+            } finally { 
+                if (isMounted) {    
+                    setIsLoadingProductos(false); 
+                    setIsLoadingEmpleados(false); 
+                    setIsLoadingProviders(false); 
+                    console.log("DEBUG_MASTER: loadAllMasterData - FINALLY. Estados de carga individuales puestos en false.");
+                } else {
+                    console.log("DEBUG_MASTER: loadAllMasterData - FINALLY pero el componente ya NO ESTÁ MONTADO.");
+                }
             }
         };
-        loadInitialData();
-    }, []);
-    
-    // Cargar datos de la orden si se está editando
-    useEffect(() => {
-        if (isEditing && orderIdParam) {
-            const fetchOrderData = async () => {
-                setIsLoadingOrderData(true);
-                setCurrentOrderId(parseInt(orderIdParam,10));
-                try {
-                    const orderData = await productionOrderService.getOrderById(orderIdParam);
-                    setFormOrder({
-                        idProduct: orderData.idProduct?.toString() || '',
-                        idProvider: orderData.idProvider?.toString() || '',
-                        idSpecSheet: orderData.idSpecSheet?.toString() || '',
-                        idEmployeeOrder: orderData.idEmployee?.toString() || orderData.idEmployeeOrder?.toString() || '',
-                        initialAmount: orderData.initialAmount?.toString() || '',
-                        observations: orderData.observations || '', // Cargar observaciones si existen
-                    });
-                } catch (error) {
-                    toast.error("Error al cargar datos de la orden para editar.");
-                    console.error("Error fetching order for edit:", error);
-                } finally {
-                    setIsLoadingOrderData(false);
-                }
-            };
-            fetchOrderData();
-        } else {
-            setCurrentOrderId(null);
-            setFormOrder({ idProduct: '', idSpecSheet: '', idEmployeeOrder: '', initialAmount: '', observations: '', idProvider: '' });
-            setProcessSteps([]);
-            setActiveStepIndex(null);
-        }
-    }, [isEditing, orderIdParam]);
 
-    // Auto-seleccionar Ficha Técnica cuando cambia el producto
-    useEffect(() => {
-        const autoSelectSpecSheet = async () => {
-            if (!formOrder.idProduct) {
-                setFormOrder(prev => ({ ...prev, idSpecSheet: '' }));
-                return;
+        loadAllMasterData();
+    } else {
+        console.log("DEBUG_MASTER: masterDataFullyLoaded ya es true, no se cargan datos maestros.");
+        // Si masterDataFullyLoaded es true, los loaders individuales deberían estar en false.
+        // Esto es para cubrir el caso donde se entra al efecto, masterDataFullyLoaded es true, pero los loaders no se resetearon.
+        // Normalmente el finally del primer load se encarga, pero por si acaso:
+        if (isLoadingProductos) setIsLoadingProductos(false);
+        if (isLoadingEmpleados) setIsLoadingEmpleados(false);
+        if (isLoadingProviders) setIsLoadingProviders(false);
+    }
+
+    return () => { 
+        isMounted = false; 
+        console.log("DEBUG_MASTER: useEffect para datos maestros - Cleanup (componente desmontado o antes de re-ejecutar).");
+    };
+}, [masterDataFullyLoaded, isLoadingProductos, isLoadingEmpleados, isLoadingProviders]); // Añadir los loaders individuales a las dependencias por si se quiere resetearlos si masterDataFullyLoaded ya es true
+
+    const updateSpecSheetAndProcesses = useCallback(async (productIdParam, specSheetIdFromFormParams) => { // Renombrar params para evitar shadowing
+        if (!currentViewedOrderId || !activeOrders[currentViewedOrderId]) { return; } // Usar currentViewedOrderId del contexto
+        
+        const orderForUpdate = activeOrders[currentViewedOrderId]; // Usar el estado actual de la orden del contexto
+        setIsLoadingFichas(true);
+        let specSheetToUse = null;
+        try {
+            let errorMsg = null;
+            if (specSheetIdFromFormParams) {
+                specSheetToUse = await specSheetService.getSpecSheetById(specSheetIdFromFormParams);
+                if (!specSheetToUse) errorMsg = "Ficha técnica no encontrada.";
+            } else if (productIdParam) {
+                const sheets = await specSheetService.getSpecSheetsByProductId(productIdParam);
+                if (sheets?.length) specSheetToUse = sheets.find(s => s.status || s.active) || sheets[0];
+                if (!specSheetToUse) errorMsg = "Producto sin ficha técnica activa asignada.";
             }
-            // Solo auto-seleccionar si es un formulario nuevo, o si en edición el producto cambia Y NO es la carga inicial de datos de la orden
-            if (!isEditing || (isEditing && formOrder.idProduct !== selectedSpecSheetData?.Product?.idProduct?.toString() && !isLoadingOrderData) ) {
-                setIsLoadingFichas(true);
-                try {
-                    const response = await fichaTecnicaService.getSpecSheetsByProduct(formOrder.idProduct);
-                    const activeFichas = (Array.isArray(response) ? response : (response?.data || [])).filter(ft => ft.status === true);
-                    let assignedSpecSheetId = '';
-                    if (activeFichas.length === 1) {
-                        assignedSpecSheetId = activeFichas[0].idSpecsheet.toString();
-                    } else if (activeFichas.length > 1) {
-                        toast("Producto con múltiples fichas activas. Selección manual necesaria (no implementado).", { icon: 'ℹ️' });
-                    } else {
-                        // No es un error si no hay ficha, puede ser opcional
-                    }
-                    setFormOrder(prev => ({ ...prev, idSpecSheet: assignedSpecSheetId }));
-                } catch (error) {
-                    toast.error("Error al buscar Fichas Técnicas.");
-                    setFormOrder(prev => ({ ...prev, idSpecSheet: '' }));
-                } finally {
-                    setIsLoadingFichas(false);
+            
+            const newStepsArray = specSheetToUse?.specSheetProcesses?.length 
+                ? specSheetToUse.specSheetProcesses
+                    .sort((a,b)=>(a.processOrder||0)-(b.processOrder||0))
+                    .map(p=>({
+                        idProductionOrderDetail:null,
+                        idProcess:String(p.process?.idProcess||p.idProcess||p.idProcessSnapshot||p.masterProcessData?.idProcess||''),
+                        processOrder:p.processOrder,
+                        processName:p.processNameOverride||p.process?.processName||p.masterProcessData?.processName||'Proceso Desconocido',
+                        processDescription:p.processDescriptionOverride||p.process?.description||p.masterProcessData?.description||'Sin descripción detallada.',
+                        idEmployee:'',
+                        startDate:'',
+                        endDate:'',
+                        status:'PENDING',
+                        statusDisplay:'Pendiente',
+                        observations:'',
+                        estimatedTimeMinutes:p.estimatedTimeMinutes||p.process?.estimatedTimeMinutes||p.masterProcessData?.estimatedTimeMinutes||null,
+                        isNewStep:true 
+                    })) 
+                : [];
+
+            updateOrderState(currentViewedOrderId, { // Usar currentViewedOrderId del contexto
+                formOrder:{...orderForUpdate.formOrder, idProduct:productIdParam||orderForUpdate.formOrder.idProduct, idSpecSheet:specSheetToUse?.idSpecSheet?.toString()||''},
+                selectedSpecSheetData:specSheetToUse,
+                processSteps:newStepsArray,
+                activeStepIndex: newStepsArray.length > 0 ? 0 : null,
+                formErrors:{...(orderForUpdate.formErrors||{}),idSpecSheet:errorMsg}
+            });
+
+            if (errorMsg && productIdParam) toast.info(errorMsg, {icon:"ℹ️"});
+            else if (specSheetToUse && !errorMsg) toast.success("Ficha técnica cargada.", {icon:"📄"});
+
+        } catch (err) { 
+            toast.error("Error al cargar la ficha técnica."); 
+            updateOrderState(currentViewedOrderId,{selectedSpecSheetData:null,processSteps:[],formOrder:{...orderForUpdate.formOrder,idSpecSheet:''},formErrors:{...(orderForUpdate.formErrors||{}),idSpecSheet:"Error al cargar ficha."}});
+        } finally { 
+            setIsLoadingFichas(false); 
+        }
+    }, [currentViewedOrderId, activeOrders, updateOrderState]); // Dependencias actualizadas
+
+    useEffect(() => {
+        // Usar las variables desestructuradas formOrder, selectedSpecSheetData
+        if (!formOrder || isLoadingFichas || !masterDataFullyLoaded) return;
+        const { idProduct: currentIdProduct, idSpecSheet: currentIdSpecSheet } = formOrder; // Renombrar para claridad
+        const specSheetIdInState = selectedSpecSheetData?.idSpecSheet || selectedSpecSheetData?.id;
+        
+        if (currentIdProduct && (!currentIdSpecSheet || String(selectedSpecSheetData?.product?.idProduct) !== String(currentIdProduct))) {
+            if (String(specSheetIdInState) !== String(currentIdSpecSheet) || !selectedSpecSheetData || String(selectedSpecSheetData?.product?.idProduct) !== String(currentIdProduct) ) {
+                 updateSpecSheetAndProcesses(currentIdProduct, null);
+            }
+        } else if (currentIdSpecSheet && String(specSheetIdInState) !== String(currentIdSpecSheet)) {
+            updateSpecSheetAndProcesses(currentIdProduct, currentIdSpecSheet);
+        } else if (!currentIdProduct && selectedSpecSheetData) {
+            updateOrderState(currentViewedOrderId, {selectedSpecSheetData:null,processSteps:[],formOrder:{...formOrder,idSpecSheet:''}});
+        }
+    }, [currentViewedOrderId, formOrder, selectedSpecSheetData, isLoadingFichas, masterDataFullyLoaded, updateSpecSheetAndProcesses, updateOrderState]); // Dependencias actualizadas
+
+    const handleChangeOrderForm = useCallback((e) => {
+        if (isSaving || !currentViewedOrderId) return; // formOrder ya está en el scope
+        const { name, value, type, checked } = e.target;
+        const val = type === 'checkbox' ? checked : value;
+        let newFormOrderState = { ...formOrder, [name]: val }; // Usar formOrder desestructurado
+        
+        if (name === 'inputInitialWeight' && val && !newFormOrderState.inputInitialWeightUnit) {
+            newFormOrderState.inputInitialWeightUnit = 'kg'; 
+        }
+
+        if (name === 'idProduct') {
+            const prod = productos.find(p => String(p.idProduct) === String(val));
+            newFormOrderState.productNameSnapshot = prod ? prod.productName : '';
+            newFormOrderState.idSpecSheet = '';
+            updateOrderState(currentViewedOrderId, {
+                formOrder:newFormOrderState,
+                selectedSpecSheetData:null, 
+                processSteps:[], 
+                formErrors:{...(currentOrderData.formErrors||{}),idProduct:null,idSpecSheet:null} // currentOrderData.formErrors es OK aquí para tomar el estado anterior
+            });
+            return;
+        }
+        updateOrderState(currentViewedOrderId, { formOrder: newFormOrderState, formErrors:{...(currentOrderData.formErrors||{}), [name]:null}});
+    }, [formOrder, isSaving, productos, updateOrderState, currentViewedOrderId, currentOrderData?.formErrors]); // Dependencias actualizadas
+
+    const validateFormForSave = useCallback((validationType = 'FULL_SETUP') => {
+        if (!currentViewedOrderId) return false; // formOrder, selectedSpecSheetData, processSteps ya están en scope
+        let errors = {};
+        
+        if (!formOrder.idProduct) errors.idProduct = "Producto es obligatorio.";
+        if (!formOrder.idEmployeeRegistered) errors.idEmployeeRegistered = "Quién registra es obligatorio.";
+        if (!formOrder.initialAmount || parseFloat(formOrder.initialAmount) <= 0) errors.initialAmount = "Cantidad a producir debe ser > 0.";
+        if (!formOrder.orderDate) errors.orderDate = "Fecha de pedido es obligatoria.";
+        if (!formOrder.inputInitialWeight || parseFloat(formOrder.inputInitialWeight) <= 0) errors.inputInitialWeight = "Peso bruto inicial (> 0) es obligatorio.";
+        if (!formOrder.inputInitialWeightUnit) errors.inputInitialWeightUnit = "Unidad para peso bruto es obligatoria.";
+
+        if (validationType === 'SETUP_COMPLETED' || validationType === 'PRODUCTION') {
+            const productDetails = productos.find(p => String(p.idProduct) === String(formOrder.idProduct));
+            const productRequiresSheet = productDetails?.specSheetCount > 0 || productDetails?.hasSpecSheets;
+            if (productRequiresSheet && (!formOrder.idSpecSheet || !selectedSpecSheetData)) {
+                errors.idSpecSheet = "Este producto requiere una ficha técnica válida.";
+            }
+            if (productRequiresSheet && processSteps && processSteps.length > 0) {
+                const unassignedStep = processSteps.find(step => !step.idEmployee);
+                if (unassignedStep) {
+                    errors.processStepsValidation = `El paso "${unassignedStep.processName}" requiere un empleado asignado para validar la configuración.`;
                 }
             }
+        }
+        
+        updateOrderState(currentViewedOrderId, { formErrors: { ...(currentOrderData.formErrors || {}), ...errors } });
+        if (Object.keys(errors).length > 0) { 
+            toast.error(Object.values(errors)[0] || "Corrija los errores del formulario.", { duration: 4000 }); 
+            return false; 
+        }
+        return true;
+    }, [formOrder, selectedSpecSheetData, processSteps, productos, updateOrderState, currentViewedOrderId, currentOrderData?.formErrors]); // Dependencias actualizadas
+
+    const handleSaveNewDraft = useCallback(async () => {
+        // isNewForForm, localOrderStatus, formOrder, orderId (ID temporal) ya están en scope
+        if (!isNewForForm || localOrderStatus !== 'PENDING' || (isSaving || isProcessingAction) || !currentViewedOrderId) return false;
+        
+        if (!validateFormForSave('DRAFT_NEW')) return false; 
+        
+        setIsSaving(true); const toastId = toast.loading("Guardando Borrador...");
+        const productName = formOrder.productNameSnapshot || (productos.find(p=>String(p.idProduct)===String(formOrder.idProduct))?.productName);
+        
+        const payload = {
+            idProduct:formOrder.idProduct||null, 
+            idSpecSheet: null,
+            initialAmount:parseFloat(formOrder.initialAmount)||0,
+            orderDate:formOrder.orderDate||null, 
+            idEmployeeRegistered:formOrder.idEmployeeRegistered||null,
+            idProvider:formOrder.idProvider||null, 
+            observations:formOrder.observations||null,
+            status: 'PENDING', 
+            productNameSnapshot: productName,
+            inputInitialWeight: formOrder.inputInitialWeight ? parseFloat(formOrder.inputInitialWeight) : null, 
+            inputInitialWeightUnit: formOrder.inputInitialWeightUnit || null,
         };
         
-        if (formOrder.idProduct && !(isEditing && isLoadingOrderData)) { // Asegurar que no se ejecute durante la carga inicial de edición si el producto ya está seteado
-           autoSelectSpecSheet();
-        } else if (!formOrder.idProduct) { // Si se deselecciona el producto
-             setFormOrder(prev => ({ ...prev, idSpecSheet: '' }));
+        Object.keys(payload).forEach(k=>{if(payload[k]==='')payload[k]=null;});
+        
+        try {
+            const res = await productionOrderService.createProductionOrder(payload);
+            const transformed = transformFetchedOrderToContextFormat(res);
+            if(transformed){ 
+                updateOrderState(orderId, transformed, transformed.id); // Usar orderId (temporal) y reemplazar con el real de transformed.id
+                toast.success("Borrador guardado. Configure los procesos si es necesario y luego valide para iniciar.", {id:toastId, duration: 5000}); 
+                return true; 
+            }
+            else throw new Error("Respuesta inválida del servidor al crear borrador.");
+        } catch (err) { 
+            toast.error(err.response?.data?.message||err.message||"Error guardando el borrador.",{id:toastId}); 
+            if(err.response?.data?.errors){const errs=err.response.data.errors.reduce((a,e)=>({...a,[e.path||e.field||'general']:e.msg}),{});updateOrderState(currentViewedOrderId,{formErrors:{...(currentOrderData.formErrors||{}),...errs}});} 
+            return false; 
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [formOrder.idProduct, isEditing, isLoadingOrderData]); // No incluir selectedSpecSheetData para evitar bucles infinitos
+        finally { setIsSaving(false); }
+    }, [isNewForForm, localOrderStatus, formOrder, orderId, isSaving, isProcessingAction, productos, validateFormForSave, transformFetchedOrderToContextFormat, updateOrderState, currentViewedOrderId, currentOrderData?.formErrors]); // Dependencias actualizadas
 
-    // Cargar detalles completos de la Ficha Técnica seleccionada Y sus procesos
-    useEffect(() => {
-        const fetchFullSpecSheetAndProcessSteps = async () => {
-            if (!formOrder.idSpecSheet) {
-                setSelectedSpecSheetData(null);
-                setProcessSteps([]);
-                setActiveStepIndex(null);
-                return;
-            }
-            setIsLoadingFichas(true); 
-            setIsLoadingSelectedFichaView(true);
-            
-            try {
-                const specSheetFullData = await fichaTecnicaService.getSpecSheetById(formOrder.idSpecSheet);
-                setSelectedSpecSheetData(specSheetFullData);
+    const handleUpdateExistingOrder = useCallback(async (intendedFinalStatus = null) => {
+        // isNewForForm, localOrderStatus, formOrder, orderId, selectedSpecSheetData, processSteps (como frontendProcessSteps) ya en scope
+        if (isNewForForm || (isSaving || isProcessingAction) || !currentViewedOrderId) return false;
+        
+        let targetStatusForSave = intendedFinalStatus || localOrderStatus;
+        let validationProfile = (targetStatusForSave === 'SETUP_COMPLETED' || localOrderStatus === 'SETUP_COMPLETED') ? 'SETUP_COMPLETED' : 'FULL_SETUP';
+        if (targetStatusForSave === 'IN_PROGRESS') validationProfile = 'PRODUCTION';
 
-                let baseSteps = [];
-                if (specSheetFullData && specSheetFullData.processes && specSheetFullData.processes.length > 0) {
-                    baseSteps = specSheetFullData.processes.map((proc, index) => ({
-                        idProductionOrderDetail: null,
-                        idProcess: proc.idProcess || proc.processId,
-                        processOrder: proc.processOrder || index + 1,
-                        processName: proc.processName,
-                        processDescription: proc.processDescription,
-                        idEmployee: '', 
-                        startDate: '', 
-                        endDate: '', 
-                        status: 'PENDING',
-                        observations: '',
-                    })).sort((a, b) => a.processOrder - b.processOrder);
-                }
-
-                if (isEditing && orderIdParam && !isLoadingOrderData) {
-                    const orderDataFromService = await productionOrderService.getOrderById(orderIdParam);
-                    if (orderDataFromService.productionOrderDetails && orderDataFromService.productionOrderDetails.length > 0) {
-                        const detailsMap = new Map(orderDataFromService.productionOrderDetails.map(detail => [detail.idProcess, detail]));
-                        baseSteps = baseSteps.map(step => {
-                            const savedDetail = detailsMap.get(step.idProcess);
-                            if (savedDetail) {
-                                return {
-                                    ...step,
-                                    idProductionOrderDetail: savedDetail.idProductionOrderDetail,
-                                    idEmployee: savedDetail.idEmployee?.toString() || '',
-                                    startDate: savedDetail.startDate ? new Date(savedDetail.startDate).toISOString().slice(0, 16) : '',
-                                    endDate: savedDetail.endDate ? new Date(savedDetail.endDate).toISOString().slice(0, 16) : '',
-                                    status: savedDetail.status || 'PENDING',
-                                    observations: savedDetail.observations || '',
-                                };
-                            }
-                            return step;
-                        });
-                    }
-                }
-                setProcessSteps(baseSteps);
-                setActiveStepIndex(baseSteps.length > 0 ? 0 : null);
-
-            } catch (error) {
-                toast.error("Error al cargar Ficha Técnica o sus procesos.");
-                setSelectedSpecSheetData(null);
-                setProcessSteps([]);
-                setActiveStepIndex(null);
-            } finally {
-                setIsLoadingFichas(false);
-                setIsLoadingSelectedFichaView(false);
-            }
+        if (!validateFormForSave(validationProfile)) return false;
+        
+        setIsSaving(true); const toastId = toast.loading( intendedFinalStatus === 'SETUP_COMPLETED' ? "Validando configuración..." : "Guardando cambios...");
+        const payload = {
+            idProduct:formOrder.idProduct||null, 
+            idSpecSheet:selectedSpecSheetData?.idSpecSheet?.toString()||formOrder.idSpecSheet||null,
+            initialAmount:parseFloat(formOrder.initialAmount)||0, 
+            inputInitialWeight:formOrder.inputInitialWeight?parseFloat(formOrder.inputInitialWeight):null,
+            inputInitialWeightUnit:formOrder.inputInitialWeightUnit||null, 
+            orderDate:formOrder.orderDate||null,
+            idEmployeeRegistered:formOrder.idEmployeeRegistered||null, 
+            idProvider:formOrder.idProvider||null,
+            observations:formOrder.observations||null, 
+            status:targetStatusForSave,
+            productNameSnapshot: formOrder.productNameSnapshot || (productos.find(p=>String(p.idProduct)===String(formOrder.idProduct))?.productName),
         };
 
-        if (formOrder.idSpecSheet) { // Ejecutar si hay un idSpecSheet
-            fetchFullSpecSheetAndProcessSteps();
-        } else { // Limpiar si no hay idSpecSheet
-            setSelectedSpecSheetData(null);
-            setProcessSteps([]);
-            setActiveStepIndex(null);
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [formOrder.idSpecSheet, isEditing, orderIdParam, isLoadingOrderData]);
-
-    const handleChangeOrderForm = (e) => {
-        const { name, value } = e.target;
-        setFormOrder(prev => ({ ...prev, [name]: value }));
-        if (formErrors[name]) setFormErrors(prev => ({ ...prev, [name]: null }));
-    };
-
-    const handleEmployeeSelectionForStep = (stepIndex, newEmployeeId) => {
-        const step = processSteps[stepIndex];
-        const selectedEmp = empleadosList.find(emp => emp.idEmployee.toString() === newEmployeeId);
-        selectedEmployeeTemp.current = { stepIndex, newEmployeeId, oldEmployeeId: step.idEmployee };
-        setConfirmEmployeeData({
-            stepIndex, newEmployeeId,
-            employeeName: selectedEmp ? (selectedEmp.fullName || `${selectedEmp.employeeName} ${selectedEmp.employeeLastName || ''}`) : 'N/A',
-            currentEmployeeIdInStep: step.idEmployee || '',
-            processName: step.processName,
-        });
-        setProcessSteps(prevSteps => prevSteps.map((s, idx) => idx === stepIndex ? { ...s, idEmployee: newEmployeeId } : s));
-        setConfirmEmployeeModalOpen(true);
-    };
-    
-    const confirmEmployeeAssignment = () => {
-        const { newEmployeeId } = confirmEmployeeData;
-        if (newEmployeeId) {
-             toast.success(`Empleado asignado a: ${confirmEmployeeData.processName}.`);
-        } else {
-             toast.info(`Empleado desasignado de: ${confirmEmployeeData.processName}.`);
-        }
-    };
-    
-    const toggleConfirmEmployeeModal = (confirmedAction = false) => {
-        if (!confirmedAction && selectedEmployeeTemp.current.stepIndex !== null && confirmEmployeeModalOpen) {
-            const {stepIndex, oldEmployeeId} = selectedEmployeeTemp.current;
-            const currentStep = processSteps[stepIndex];
-            if (currentStep && currentStep.idEmployee !== oldEmployeeId) {
-                setProcessSteps(prevSteps =>
-                    prevSteps.map((step, idx) =>
-                        idx === stepIndex ? { ...step, idEmployee: oldEmployeeId } : step
-                    )
+        if ( targetStatusForSave === 'SETUP_COMPLETED' && selectedSpecSheetData?.specSheetProcesses?.length > 0 ) {
+            const stepsFromSheet = selectedSpecSheetData.specSheetProcesses.sort((a,b)=>(a.processOrder||0)-(b.processOrder||0));
+            payload.productionOrderDetails = stepsFromSheet.map(sheetStep => {
+                const matchingFrontendStep = processSteps?.find( // processSteps es el del scope (frontendProcessSteps)
+                    fs => (fs.idProcess && String(fs.idProcess) === String(sheetStep.process?.idProcess || sheetStep.idProcess || sheetStep.idProcessSnapshot || sheetStep.masterProcessData?.idProcess)) || 
+                          (fs.processOrder === sheetStep.processOrder && fs.isNewStep)
                 );
-                toast.info("Asignación de empleado cancelada.");
-            }
+                return {
+                    idProductionOrderDetail: matchingFrontendStep?.idProductionOrderDetail || null, 
+                    idProcess: String(sheetStep.process?.idProcess||sheetStep.idProcess||sheetStep.idProcessSnapshot||sheetStep.masterProcessData?.idProcess||''),
+                    processOrder: sheetStep.processOrder,
+                    processNameSnapshot: sheetStep.processNameOverride||sheetStep.process?.processName||sheetStep.masterProcessData?.processName||'Proceso Desconocido',
+                    processDescriptionSnapshot: sheetStep.processDescriptionOverride||sheetStep.process?.description||sheetStep.masterProcessData?.description||'Sin descripción.',
+                    idEmployeeAssigned: matchingFrontendStep?.idEmployee || null, 
+                    observations: matchingFrontendStep?.observations || '',
+                    status: matchingFrontendStep?.status || 'PENDING',
+                };
+            });
         }
-        setConfirmEmployeeModalOpen(false);
-        setConfirmEmployeeData({ stepIndex: null, newEmployeeId: null, employeeName: '', currentEmployeeIdInStep: '', processName: '' });
-        selectedEmployeeTemp.current = {};
-    };
-
-    const handleStepFieldChange = (stepIndex, fieldName, value) => {
-        setProcessSteps(prevSteps =>
-            prevSteps.map((step, idx) => {
-                if (idx === stepIndex) {
-                    const updatedStep = { ...step, [fieldName]: value };
-                    if (fieldName === 'status') {
-                        if (value === 'IN_PROGRESS' && !updatedStep.startDate) {
-                            updatedStep.startDate = new Date().toISOString().slice(0, 16);
-                        } else if (value === 'COMPLETED' && !updatedStep.endDate) {
-                            updatedStep.endDate = new Date().toISOString().slice(0, 16);
-                            if (!updatedStep.startDate) updatedStep.startDate = new Date().toISOString().slice(0, 16);
-                        } else if (value !== 'COMPLETED') {
-                            updatedStep.endDate = '';
-                        }
+        Object.keys(payload).forEach(k=>{if(payload[k]==='')payload[k]=null;});
+        
+        try {
+            const res = await productionOrderService.updateProductionOrder(orderId, payload); // orderId es el ID actual de la orden
+            const transformed = transformFetchedOrderToContextFormat(res);
+            if(transformed){
+                updateOrderState(orderId, transformed, transformed.id); // Usar orderId y el nuevo transformed.id si cambia (no debería)
+                let msg = "Cambios guardados.";
+                if(transformed.localOrderStatus==='SETUP'){msg="Configuración guardada. Puede asignar empleados a los pasos y luego validar.";}
+                else if(transformed.localOrderStatus==='SETUP_COMPLETED'){
+                    msg="Configuración validada. Lista para iniciar producción."; 
+                    if(!transformed.processSteps?.length) {
+                        setShowFinalizationFields(true);
+                        toast.info("Orden sin procesos. Ingrese datos de finalización.", {icon:"✍️", duration: 4000});
                     }
-                    return updatedStep;
                 }
-                return step;
-            })
+                else if(transformed.localOrderStatus==='IN_PROGRESS'){msg="Progreso guardado. Producción en curso.";}
+                toast.success(msg,{id:toastId, duration: 4000}); return true;
+            } else throw new Error("Respuesta inválida del servidor al actualizar la orden.");
+        } catch (err) { 
+            toast.error(err.response?.data?.message||err.message||"Error guardando los cambios de la orden.",{id:toastId}); 
+            if(err.response?.data?.errors){const errs=err.response.data.errors.reduce((a,e)=>({...a,[e.path||e.field||'general']:e.msg}),{});updateOrderState(currentViewedOrderId,{formErrors:{...(currentOrderData.formErrors||{}),...errs}});} 
+            return false; 
+        }
+        finally { setIsSaving(false); }
+    }, [isNewForForm, localOrderStatus, formOrder, orderId, selectedSpecSheetData, processSteps, isSaving, isProcessingAction, productos, validateFormForSave, transformFetchedOrderToContextFormat, updateOrderState, currentViewedOrderId, setShowFinalizationFields, currentOrderData?.formErrors]); // Dependencias actualizadas
+        
+    const openCancelModal = useCallback(() => {
+        // currentOrderData ya está en scope
+        if (currentOrderData) { setOrderToCancelInfo({ id: orderId, displayName: currentOrderData.orderNumberDisplay || `ID ${orderId}` }); setIsCancelModalOpen(true); }
+    }, [currentOrderData, orderId]); // Dependencias actualizadas
+
+    const handleConfirmCancelOrder = useCallback(async (reason) => {
+        if (!orderToCancelInfo || !reason || !currentViewedOrderId) return;
+        setIsProcessingAction(true); const toastId = toast.loading("Cancelando orden...");
+        try {
+            if (String(orderToCancelInfo.id).startsWith('NEW_')) { removeOrder(orderToCancelInfo.id); toast.success("Borrador descartado.", { id: toastId }); }
+            else {
+                const updated = await productionOrderService.changeProductionOrderStatus(orderToCancelInfo.id, 'CANCELLED', { observations: reason });
+                const transformed = transformFetchedOrderToContextFormat(updated);
+                if (transformed) {
+                    if (currentViewedOrderId === orderToCancelInfo.id) { updateOrderState(orderToCancelInfo.id, transformed); addOrFocusOrder(null, false, { navigateIfNeeded: true }); }
+                    else updateOrderState(orderToCancelInfo.id, transformed);
+                    toast.success(`Orden ${orderToCancelInfo.displayName} cancelada.`, { id: toastId });
+                } else throw new Error("Respuesta inválida al cancelar la orden.");
+            }
+            setIsCancelModalOpen(false); setOrderToCancelInfo(null);
+        } catch (error) { toast.error(error.response?.data?.message || "Error al cancelar la orden.", { id: toastId }); }
+        finally { setIsProcessingAction(false); }
+    }, [orderToCancelInfo, currentViewedOrderId, removeOrder, addOrFocusOrder, updateOrderState, transformFetchedOrderToContextFormat]);
+
+    const handleSaveStep = useCallback(async (stepIndex, changesToSave) => {
+        // processSteps, isProcessingAction, currentViewedOrderId, isNewForForm, orderId ya en scope
+        if (!processSteps?.[stepIndex] || isProcessingAction || !currentViewedOrderId) { 
+            if (isNewForForm) toast.info("Guarde la orden principal primero para gestionar detalles de pasos."); 
+            return false; 
+        }
+        const step = processSteps[stepIndex];
+
+        if (!step.idProductionOrderDetail) { 
+            const newSteps = processSteps.map((s, i) => i === stepIndex ? { ...s, ...changesToSave } : s); 
+            updateOrderState(currentViewedOrderId, { processSteps: newSteps }); 
+            toast.info(`Cambios en "${step.processName}" (paso nuevo) se aplicaron localmente. Guarde la orden para persistir.`,{icon:"📝", duration: 4000}); 
+            return true; 
+        }
+
+        setIsProcessingAction(true); const tId = toast.loading(`Guardando cambios en "${step.processName}"...`);
+        try {
+            const payload = {
+                idEmployeeAssigned: changesToSave.idEmployeeAssigned !== undefined ? changesToSave.idEmployeeAssigned : step.idEmployee,
+                startDate: changesToSave.startDate !== undefined ? changesToSave.startDate : step.startDate,
+                endDate: changesToSave.endDate !== undefined ? changesToSave.endDate : step.endDate,
+                status: changesToSave.status !== undefined ? changesToSave.status : step.status,
+                observations: changesToSave.observations !== undefined ? changesToSave.observations : step.observations,
+            };
+            Object.keys(payload).forEach(k => {if(payload[k]==='')payload[k]=null;});
+
+            const res = await productionOrderService.updateProductionOrderStep(orderId, step.idProductionOrderDetail, payload);
+            const transformed = transformFetchedOrderToContextFormat(res.order || res); 
+            if(transformed){
+                updateOrderState(currentViewedOrderId,transformed);
+                toast.success(`Cambios en "${step.processName}" guardados.`,{id:tId});
+                return true;
+            }
+            else throw new Error("Respuesta inválida al guardar el detalle del paso.");
+        } catch (err) { 
+            toast.error(err.response?.data?.message||`Error guardando "${step.processName}".`,{id:tId}); 
+            return false; 
+        }
+        finally { setIsProcessingAction(false); }
+    }, [processSteps, isProcessingAction, currentViewedOrderId, isNewForForm, orderId, updateOrderState, transformFetchedOrderToContextFormat]); // Dependencias
+
+    const handleEmployeeSelectionForStep = useCallback((stepIndex, newEmployeeId) => {
+        // processSteps, isProcessingAction, currentViewedOrderId, isNewForForm, empleadosList ya en scope
+        if (!processSteps?.[stepIndex] || isProcessingAction || !currentViewedOrderId) return;
+        
+        const step = processSteps[stepIndex];
+        const emp = empleadosList.find(e => String(e.idEmployee) === String(newEmployeeId));
+        selectedEmployeeTemp.current = { stepIndex, newEmployeeId, oldEmployeeId: step.idEmployee, processName:step.processName, employeeName:emp?.fullName||'Desconocido'};
+        
+        const updatedSteps = processSteps.map((s, i) => 
+            i === stepIndex ? { ...s, idEmployee: newEmployeeId || '', isNewStep: s.isNewStep || !s.idProductionOrderDetail } : s
         );
-    };
+        updateOrderState(currentViewedOrderId, { processSteps: updatedSteps });
 
-    const validateMainForm = () => {
-        const newErrors = {};
-        if (!formOrder.idProduct) newErrors.idProduct = "Seleccione producto.";
-        if (!formOrder.idEmployeeOrder) newErrors.idEmployeeOrder = "Seleccione empleado responsable.";
-        // La ficha técnica puede ser opcional si el producto no la tiene por defecto.
-        // if (!formOrder.idSpecSheet && formOrder.idProduct) { 
-        //     newErrors.idSpecSheetValidation = "Ficha Técnica es requerida o no se pudo asignar.";
-        // }
-        if (!formOrder.initialAmount || !/^\d+$/.test(formOrder.initialAmount) || parseInt(formOrder.initialAmount, 10) < 1) {
-            newErrors.initialAmount = "Cantidad entera ≥ 1.";
-        }
-
-        if(processSteps.length > 0){
-            const allStepsHaveEmployee = processSteps.every(step => !!step.idEmployee);
-            if(!allStepsHaveEmployee){
-                newErrors.processStepsGeneral = "Asigne empleado a cada paso.";
-            }
-        } else if (formOrder.idSpecSheet && selectedSpecSheetData?.processes?.length > 0) {
-             newErrors.processStepsLoad = "Error al cargar pasos de la ficha. Verifique la Ficha Técnica.";
-        }
-        setFormErrors(newErrors);
-        const isValid = Object.keys(newErrors).length === 0;
-        if (!isValid) {
-            const firstErrorKey = Object.keys(newErrors)[0];
-            let firstErrorMessage = newErrors[firstErrorKey];
-            if (firstErrorKey === 'processStepsGeneral' && activeStepIndex !== null && processSteps[activeStepIndex] && !processSteps[activeStepIndex].idEmployee) {
-                 firstErrorMessage = `Asigne empleado al Paso ${processSteps[activeStepIndex].processOrder}.`;
-            }
-            toast.error(firstErrorMessage || "Corrija los errores.", { duration: 4000 });
-        }
-        return isValid;
-    };
-    
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!validateMainForm()) return;
-        setIsSaving(true);
-        const toastId = toast.loading(isEditing ? "Actualizando Orden..." : "Guardando Orden...");
-
-        const orderPayload = {
-            idProduct: parseInt(formOrder.idProduct, 10),
-            idSpecSheet: formOrder.idSpecSheet ? parseInt(formOrder.idSpecSheet, 10) : null,
-            idEmployee: parseInt(formOrder.idEmployeeOrder, 10),
-            idProvider: formOrder.idProvider ? parseInt(formOrder.idProvider, 10) : null,
-            initialAmount: parseInt(formOrder.initialAmount, 10),
-            observations: formOrder.observations.trim() || null, // Se envía aunque esté comentado en UI
-            dateTimeCreation: isEditing ? undefined : new Date().toISOString(),
-            status: isEditing ? undefined : 'PENDING', 
-            processDetails: processSteps.map(step => ({
-                idProductionOrderDetail: isEditing ? step.idProductionOrderDetail : null,
-                idProcess: step.idProcess,
-                idEmployee: step.idEmployee ? parseInt(step.idEmployee, 10) : null,
-                startDate: step.startDate || null,
-                endDate: step.endDate || null,
-                status: step.status || 'PENDING',
-                observations: step.observations || null,
-            }))
-        };
-
-        try {
-            let savedData;
-            if (isEditing) {
-                savedData = await productionOrderService.updateOrder(orderIdParam, orderPayload);
-                toast.success(`Orden Nº ${orderIdParam} actualizada.`, { id: toastId });
+        if(newEmployeeId){
+            if (!isNewForForm && step.idProductionOrderDetail) {
+                setConfirmEmployeeModalOpen(true);
             } else {
-                savedData = await productionOrderService.createOrderWithDetails(orderPayload);
-                setCurrentOrderId(savedData.idOrder);
-                toast.success(`Orden de Producción Nº ${savedData.idOrder} creada.`, { id: toastId });
+                toast.info(`${emp?.fullName||'Desconocido'} pre-asignado a "${step.processName}". Los cambios se guardarán con la orden.`, { icon: "ℹ️", duration: 4000 });
+                selectedEmployeeTemp.current = {};
             }
-        } catch (error) {
-            toast.error(error.response?.data?.message || "Error al guardar la orden.", { id: toastId });
-            console.error("Error submitting order:", error);
-        } finally {
-            setIsSaving(false);
+        } else { 
+            if (!isNewForForm && step.idProductionOrderDetail) {
+                handleSaveStep(stepIndex, { idEmployeeAssigned: null, status: 'PENDING' });
+            } else {
+                toast.info(`Empleado desasignado de "${step.processName}". Se guardará con la orden.`,{icon:"ℹ️", duration: 4000});
+            }
+            selectedEmployeeTemp.current={};
         }
-    };
+    }, [processSteps, isProcessingAction, currentViewedOrderId, isNewForForm, empleadosList, updateOrderState, handleSaveStep]); // Dependencias
 
-    const handleIniciarOrden = async () => {
-        const orderIdToStart = currentOrderId;
-        if (!orderIdToStart) {
-            toast.error("Guarde la orden primero o asegúrese que está en modo edición con una orden válida."); return;
+    const confirmEmployeeAssignment = useCallback(async () => {
+        // processSteps, isProcessingAction, currentViewedOrderId ya en scope
+        if (selectedEmployeeTemp.current.stepIndex === undefined || isProcessingAction || !currentViewedOrderId) return;
+        
+        const {stepIndex, newEmployeeId, employeeName, processName, oldEmployeeId } = selectedEmployeeTemp.current;
+        setConfirmEmployeeModalOpen(false);
+        
+        const success = await handleSaveStep(stepIndex, { 
+            idEmployeeAssigned: newEmployeeId, 
+            status: processSteps[stepIndex].status === 'COMPLETED' ? 'COMPLETED' : 'PENDING' 
+        });
+
+        if(success) toast.success(`${employeeName} asignado a "${processName}".`);
+        else {
+            const revertedSteps = processSteps.map((s, i) => 
+                i === stepIndex ? { ...s, idEmployee: oldEmployeeId } : s
+            );
+            updateOrderState(currentViewedOrderId, { processSteps: revertedSteps });
+            toast.error(`No se pudo asignar a ${employeeName} a "${processName}".`);
         }
-        if (processSteps.some(step => !step.idEmployee)) {
-            toast.error("Asigne empleados a todos los pasos antes de iniciar."); return;
-        }
-        const toastId = toast.loading(`Iniciando Orden Nº ${orderIdToStart}...`);
-        setIsSaving(true);
+        selectedEmployeeTemp.current = {};
+    }, [processSteps, isProcessingAction, currentViewedOrderId, updateOrderState, handleSaveStep]); // Dependencias
+
+    const handleSaveOrderStatusChange = useCallback(async (newStatus, reason = null) => {
+        // isProcessingAction, isNewForForm, currentViewedOrderId, orderId ya en scope
+        if (isProcessingAction||isNewForForm||!currentViewedOrderId) {if(isNewForForm)toast.error("Guarde la orden primero antes de cambiar su estado global.");return false;}
+        setIsProcessingAction(true); const tId=toast.loading(`Actualizando estado a ${newStatus}...`);
         try {
-            await productionOrderService.startOrder(orderIdToStart);
-            toast.success(`Orden Nº ${orderIdToStart} iniciada.`, { id: toastId });
-            if (isEditing) {
-                // const orderData = await productionOrderService.getOrderById(orderIdToStart);
-                // Podrías actualizar el estado global de la orden aquí si es necesario
-            }
-        } catch (error) {
-            toast.error(error.response?.data?.message || "Error al iniciar la orden.", { id: toastId });
-        } finally {
-            setIsSaving(false);
+            const payload = reason ? { observations: reason } : {};
+            const updated = await productionOrderService.changeProductionOrderStatus(orderId, newStatus, payload);
+            const transformed = transformFetchedOrderToContextFormat(updated);
+            if(transformed){updateOrderState(currentViewedOrderId,transformed);toast.success(`Estado de la orden actualizado a ${transformed.localOrderStatusDisplay||newStatus}.`,{id:tId});if(newStatus==='CANCELLED'||newStatus==='COMPLETED')setShowFinalizationFields(false);return true;}
+            else throw new Error("Respuesta inválida del servidor al cambiar estado de la orden.");
+        } catch(err){toast.error(err.response?.data?.message||"Error cambiando estado de la orden.",{id:tId});return false;}
+        finally{setIsProcessingAction(false);}
+    }, [isProcessingAction, isNewForForm, currentViewedOrderId, orderId, updateOrderState, transformFetchedOrderToContextFormat]); // Dependencias
+
+    const handleAttemptStartProduction = useCallback(async () => {
+        // isSaving, isProcessingAction, isNewForForm, localOrderStatus, processSteps ya en scope
+        if((isSaving||isProcessingAction) || isNewForForm || localOrderStatus !== 'SETUP_COMPLETED'){
+            if(isNewForForm) toast.error("Guarde el borrador primero.");
+            else if (localOrderStatus !== 'SETUP_COMPLETED') toast.error("La orden debe estar con la configuración validada para iniciar.");
+            return false;
         }
+        
+        if(!processSteps?.length){
+            toast.info("Orden sin procesos. Se marcará para finalización directa.",{icon:"ℹ️"});
+            const ok=await handleSaveOrderStatusChange('ALL_STEPS_COMPLETED');
+            if(ok)setShowFinalizationFields(true);
+            return ok;
+        }
+        
+        const ok=await handleSaveOrderStatusChange('IN_PROGRESS'); 
+        if(ok)toast.success("Producción iniciada.",{icon:"▶️"});
+        return ok;
+    }, [isSaving, isProcessingAction, isNewForForm, localOrderStatus, processSteps, handleSaveOrderStatusChange, setShowFinalizationFields]); // Dependencias
+
+    const handleStartCurrentStep = useCallback(async () => {
+        // currentActiveStepFromContext, isProcessingAction, isNewForForm, currentViewedOrderId, orderId ya en scope
+        if(!currentActiveStepFromContext||isProcessingAction||isNewForForm||!currentViewedOrderId)return;
+        const step = currentActiveStepFromContext;
+        if(!step.idEmployee){toast.error(`Debe asignar un empleado al paso "${step.processName}" para iniciarlo.`);return;}
+        if(step.status!=='PENDING'&&step.status!=='PAUSED'){toast.warn(`El paso "${step.processName}" no está pendiente o pausado.`);return;}
+        if(!step.idProductionOrderDetail){toast.error("Error: El detalle del proceso no tiene ID. Guarde la orden con la ficha técnica para generar los detalles de procesos.");return;}
+        
+        setIsProcessingAction(true); const tId=toast.loading(`Iniciando paso "${step.processName}"...`);
+        try{
+            const res=await productionOrderService.startProductionOrderStep(orderId,step.idProductionOrderDetail,{startDate:step.startDate||new Date().toISOString().slice(0,16)});
+            const transformed=transformFetchedOrderToContextFormat(res.order||res);
+            if(transformed){updateOrderState(currentViewedOrderId,transformed);toast.success(`Paso "${step.processName}" iniciado.`,{id:tId});}
+            else throw new Error("Respuesta inválida del servidor al iniciar el paso.");
+        }catch(err){toast.error(err.response?.data?.message||`Error al iniciar el paso "${step.processName}".`,{id:tId});}
+        finally{setIsProcessingAction(false);}
+    }, [currentActiveStepFromContext, isProcessingAction, isNewForForm, currentViewedOrderId, orderId, updateOrderState, transformFetchedOrderToContextFormat]); // Dependencias
+
+    const handleCompleteCurrentStep = useCallback(async () => {
+        // currentActiveStepFromContext, activeStepIndex (del currentOrderData), isProcessingAction, isNewForForm, currentViewedOrderId, orderId ya en scope
+        if(!currentActiveStepFromContext||isProcessingAction||isNewForForm||!currentViewedOrderId)return;
+        const step=currentActiveStepFromContext;
+        if(step.status!=='IN_PROGRESS'){toast.error(`El paso "${step.processName}" no está en progreso.`);return;}
+        if(!step.startDate){toast.error(`El paso "${step.processName}" no tiene fecha de inicio registrada.`);return;}
+        if(!step.idEmployee){toast.error(`El paso "${step.processName}" no tiene un empleado asignado.`);return;}
+        if(!step.idProductionOrderDetail){toast.error("Error: El detalle del proceso no tiene ID.");return;}
+        
+        let endDate=step.endDate?new Date(step.endDate):new Date(); 
+        if(new Date(endDate)<new Date(step.startDate))endDate=new Date();
+        
+        setIsProcessingAction(true);const tId=toast.loading(`Completando paso "${step.processName}"...`);
+        try{
+            const res=await productionOrderService.completeProductionOrderStep(orderId,step.idProductionOrderDetail,{endDate:endDate.toISOString().slice(0,16),observations:step.observations||null});
+            const transformed=transformFetchedOrderToContextFormat(res.order||res);
+            if(transformed){
+                updateOrderState(currentViewedOrderId,transformed);
+                if(transformed.localOrderStatus==='ALL_STEPS_COMPLETED'){
+                    toast.success("¡Todos los procesos han sido completados!",{id:tId,icon:"🎉"});
+                    setShowFinalizationFields(true);
+                } else if(transformed.activeStepIndex!==null && transformed.activeStepIndex !== activeStepIndex){
+                    toast.success(`Paso "${step.processName}" completado. Siguiente paso activo.`,{id:tId,icon:"👍"});
+                } else {
+                    toast.success(`Paso "${step.processName}" completado.`,{id:tId,icon:"✔️"});
+                }
+            }
+            else throw new Error("Respuesta inválida del servidor al completar el paso.");
+        }catch(err){toast.error(err.response?.data?.message||`Error completando el paso "${step.processName}".`,{id:tId});}
+        finally{setIsProcessingAction(false);}
+    }, [currentActiveStepFromContext, activeStepIndex, isProcessingAction, isNewForForm, currentViewedOrderId, orderId, updateOrderState, transformFetchedOrderToContextFormat, setShowFinalizationFields]); // Dependencias
+        
+    const handlePrepareFinalization = useCallback(() => {
+        // localOrderStatus, selectedSpecSheetData, processSteps, isProcessingAction ya en scope
+        if(isProcessingAction)return;
+        const baseDataValidated = !!selectedSpecSheetData;
+        const canFinalizeNow = (localOrderStatus==='ALL_STEPS_COMPLETED') || 
+                               (localOrderStatus==='SETUP_COMPLETED' && baseDataValidated && (!processSteps || processSteps.length === 0));
+        if(!canFinalizeNow){
+            // ... (mensajes de error)
+            return;
+        }
+        setShowFinalizationFields(true);
+        toast.info("Ingrese los datos de finalización de la orden.",{icon:"✍️"});
+    }, [localOrderStatus, selectedSpecSheetData, processSteps, isProcessingAction, setShowFinalizationFields]); // Dependencias
+
+    const handleFinalizeAndSaveOrder = useCallback(async () => {
+        // formOrder, isProcessingAction, showFinalizationFields, isNewForForm, currentViewedOrderId, orderId ya en scope
+        if(isProcessingAction||!showFinalizationFields||isNewForForm||!currentViewedOrderId) {if(isNewForForm)toast.error("Guarde la orden primero.");return;}
+        let errors={};
+        if(formOrder.finalQuantityProduct===undefined||formOrder.finalQuantityProduct===null||formOrder.finalQuantityProduct===''||parseFloat(formOrder.finalQuantityProduct)<=0)errors.finalQuantityProduct="Cantidad final del producto (>0) es requerida.";
+        updateOrderState(currentViewedOrderId,{formErrors:{...(currentOrderData.formErrors||{}),...errors}});
+        if(Object.keys(errors).length>0){toast.error(Object.values(errors)[0]);return;}
+
+        setIsProcessingAction(true);const tId=toast.loading("Finalizando orden de producción...");
+        const payload={
+            finalQuantityProduct:parseFloat(formOrder.finalQuantityProduct),
+            finishedProductWeight:formOrder.finishedProductWeight?parseFloat(formOrder.finishedProductWeight):null,
+            finishedProductWeightUnit:formOrder.finishedProductWeightUnit||null,
+            inputFinalWeightUnused:formOrder.inputFinalWeightUnused?parseFloat(formOrder.inputFinalWeightUnused):null,
+            inputFinalWeightUnusedUnit:formOrder.inputFinalWeightUnusedUnit||null,
+            observations:formOrder.observations||null
+        };
+        try{
+            const finalized=await productionOrderService.finalizeProductionOrder(orderId,payload);
+            const transformed=transformFetchedOrderToContextFormat(finalized);
+            if(transformed){
+                updateOrderState(currentViewedOrderId,transformed);
+                setShowFinalizationFields(false);
+                toast.success(`¡Orden ${transformed.orderNumberDisplay||transformed.id} finalizada exitosamente!`,{id:tId,icon:"🏆"});
+            }
+            else throw new Error("Respuesta inválida del servidor al finalizar la orden.");
+        }catch(err){toast.error(err.response?.data?.message||"Error al finalizar la orden de producción.",{id:tId});}
+        finally{setIsProcessingAction(false);}
+    }, [formOrder, isProcessingAction, showFinalizationFields, isNewForForm, currentViewedOrderId, orderId, updateOrderState, transformFetchedOrderToContextFormat, currentOrderData?.formErrors]); // Dependencias
+
+    const handleCancelFinalization = useCallback(() => setShowFinalizationFields(false), [setShowFinalizationFields]);
+    
+    const handleStepFieldChange = useCallback((stepIndex, fieldName, value) => {
+        // processSteps, isProcessingAction, currentViewedOrderId ya en scope
+        if (!processSteps?.[stepIndex] || isProcessingAction || !currentViewedOrderId) return;
+        const updatedSteps = processSteps.map((s, i) => 
+            i === stepIndex ? { ...s, [fieldName]: value, isNewStep: s.isNewStep || !s.idProductionOrderDetail } : s
+        );
+        updateOrderState(currentViewedOrderId, { processSteps: updatedSteps });
+        if (!processSteps[stepIndex].idProductionOrderDetail) {
+             toast.info(`Cambio en "${processSteps[stepIndex].processName}" se guardará con la orden.`, { icon: "ℹ️", duration: 3000 });
+        }
+    }, [processSteps, isProcessingAction, currentViewedOrderId, updateOrderState]); // Dependencias
+
+    const toggleConfirmEmployeeModal = useCallback((isCancelling = false) => {
+        // confirmEmployeeModalOpen, processSteps, currentViewedOrderId ya en scope
+        if (isCancelling && confirmEmployeeModalOpen && selectedEmployeeTemp.current.stepIndex !== undefined && currentViewedOrderId) {
+            const {stepIndex,oldEmployeeId}=selectedEmployeeTemp.current;
+            const revertedSteps = processSteps.map((s, i) => 
+                i === stepIndex ? { ...s, idEmployee: oldEmployeeId } : s
+            );
+            updateOrderState(currentViewedOrderId,{ processSteps: revertedSteps });
+            toast.info("Asignación de empleado cancelada.",{icon:"ℹ️"});
+        }
+        setConfirmEmployeeModalOpen(prev => !prev);
+        if (isCancelling || !confirmEmployeeModalOpen) selectedEmployeeTemp.current = {};
+    }, [confirmEmployeeModalOpen, processSteps, currentViewedOrderId, updateOrderState]); // Dependencias
+
+    const toggleViewSpecSheetModal = useCallback(() => {
+        // selectedSpecSheetData, formOrder, isLoadingFichas ya en scope
+        if (selectedSpecSheetData) setViewSpecSheetModalOpen(prev => !prev);
+        else if (formOrder?.idProduct && !isLoadingFichas) toast.info("El producto seleccionado no tiene una ficha técnica asignada o la ficha está vacía.",{icon:"ℹ️"});
+        else if (!formOrder?.idProduct) toast.info("Seleccione un producto para ver su ficha técnica.",{icon:"ℹ️"});
+    }, [selectedSpecSheetData, formOrder, isLoadingFichas]); // Dependencias
+
+    // --- Lógica para el Botón Principal Dinámico ---
+    let mainButtonConfig = {
+        action: null,
+        text: "",
+        icon: <Save size={16} className="me-1"/>,
+        color: "primary",
+        disabled: isSaving || isProcessingAction || isOrderViewOnly,
+        visible: false
     };
 
-    const toggleViewSpecSheetModal = () => {
-        // Permitir abrir incluso si no hay ficha, para que el modal muestre "cargando" o error.
-        // if (!formOrder.idSpecSheet && !isLoadingFichas) { 
-        //     toast.error("No hay Ficha Técnica asignada o seleccionada para ver."); return; 
-        // }
-        setViewSpecSheetModal(prev => !prev);
-    };
+    if (!isOrderViewOnly && !showFinalizationFields) { // usa variables desestructuradas
+        mainButtonConfig.visible = true;
+        
+        const productDetails = productos.find(p => String(p.idProduct) === String(formOrder.idProduct));
+        const productRequiresSheet = productDetails?.specSheetCount > 0 || productDetails?.hasSpecSheets;
+        const baseDataConsideredValidForButton = 
+            (productRequiresSheet ? !!selectedSpecSheetData : true) && 
+            formOrder.idProduct && 
+            parseFloat(formOrder.initialAmount) > 0 &&
+            parseFloat(formOrder.inputInitialWeight) > 0;
 
-    const ordenTitulo = currentOrderId ? `Orden de Producción Nº ${currentOrderId}` : "Nueva Orden de Producción";
-
-    const canSubmitForm = !isSaving && formOrder.idProduct && formOrder.idEmployeeOrder && formOrder.initialAmount &&
-        (processSteps.length > 0 ? processSteps.every(step => !!step.idEmployee) : true );
+        if (isNewForForm && localOrderStatus === 'PENDING') {
+            mainButtonConfig.visible = false; 
+        } else if (localOrderStatus === 'PENDING' || localOrderStatus === 'SETUP') {
+            mainButtonConfig.action = () => handleUpdateExistingOrder('SETUP_COMPLETED');
+            mainButtonConfig.text = "Validar e Iniciar Producción";
+            mainButtonConfig.icon = <PlayCircle size={16} className="me-1"/>;
+            mainButtonConfig.color = "info";
+        } else if (localOrderStatus === 'SETUP_COMPLETED' && baseDataConsideredValidForButton) {
+            if (!processSteps || processSteps.length === 0) {
+                mainButtonConfig.action = async () => { 
+                    const success = await handleSaveOrderStatusChange('ALL_STEPS_COMPLETED');
+                    if (success) handlePrepareFinalization();
+                };
+                mainButtonConfig.text = "Proceder a Finalizar (Sin Procesos)";
+                mainButtonConfig.icon = <ArrowRightCircle size={16} className="me-1"/>;
+            } else {
+                mainButtonConfig.action = handleAttemptStartProduction;
+                mainButtonConfig.text = "Iniciar Producción";
+                mainButtonConfig.icon = <PlayCircle size={16} className="me-1"/>;
+                mainButtonConfig.color = "success";
+            }
+        } else if (localOrderStatus === 'IN_PROGRESS' || localOrderStatus === 'PAUSED') {
+            mainButtonConfig.action = () => handleUpdateExistingOrder();
+            mainButtonConfig.text = "Guardar Progreso de Orden";
+            mainButtonConfig.icon = <Save size={16} className="me-1"/>;
+        } else if (localOrderStatus === 'ALL_STEPS_COMPLETED') {
+             mainButtonConfig.action = handlePrepareFinalization;
+             mainButtonConfig.text = "Ingresar Datos de Finalización";
+             mainButtonConfig.icon = <ChefHat size={16} className="me-1"/>;
+        } else {
+            mainButtonConfig.visible = false;
+        }
+    }
+    // --- Fin Lógica Botón Principal ---
     
-    const canStartOrder = !!currentOrderId && !isSaving && processSteps.length > 0 && processSteps.every(step => !!step.idEmployee);
+    const ordenTitulo = (isNewForForm && localOrderStatus === 'PENDING')
+        ? "Nuevo Borrador de Orden"
+        : (localOrderStatus === 'PENDING' || localOrderStatus === 'SETUP')
+            ? `Configurando Orden: ${formOrder?.productNameSnapshot || (formOrder?.idProduct ? 'Cargando...' : 'Producto no definido')}`
+            : `Orden: ${currentOrderData.orderNumberDisplay || `ID ${orderId}`}`; // Usar orderId (desestructurado)
     
-    const currentActiveStep = activeStepIndex !== null && processSteps[activeStepIndex] ? processSteps[activeStepIndex] : null;
-
     return (
-        <Container fluid className="p-md-4 p-2 main-content">
-            <Toaster position="top-center" />
-            <Form onSubmit={handleSubmit}>
-                <Card className="mb-4 shadow-sm">
-                    <CardHeader className="d-flex justify-content-between align-items-center">
-                        <h4 className="mb-0">{ordenTitulo}</h4>
-                        {currentOrderId && <Badge color="secondary">ID: {currentOrderId}</Badge>}
-                    </CardHeader>
-                    <CardBody>
-                        <Row className="mb-3 align-items-start">
-                            <Col md={3} className="mb-3 mb-md-0">
-                                <FormGroup>
-                                    <div className="d-flex justify-content-between align-items-center mb-1">
-                                        <Label for="idProduct" className="mb-0">Producto a Producir <span className="text-danger">*</span></Label>
-                                        {formOrder.idProduct && ( // El botón de ojo ahora se muestra si hay un producto seleccionado
-                                            <Button 
-                                                color="link" 
-                                                size="sm" 
-                                                className="p-0 ms-2"
-                                                onClick={toggleViewSpecSheetModal}
-                                                // Deshabilitar si se está cargando la ficha o si explícitamente no hay ficha (idSpecSheet es null o vacío y no está cargando)
-                                                disabled={isLoadingSelectedFichaView || isLoadingFichas || (!formOrder.idSpecSheet && !isLoadingFichas)}
-                                                title={!formOrder.idSpecSheet && !isLoadingFichas ? "No hay ficha para este producto" : "Ver Ficha Técnica"}
-                                            >
-                                                {(isLoadingSelectedFichaView || isLoadingFichas) ? <Spinner size="sm" /> : <Eye size={18} />}
-                                            </Button>
-                                        )}
-                                    </div>
-                                    <Input type="select" name="idProduct" id="idProduct" value={formOrder.idProduct}
-                                        onChange={handleChangeOrderForm} invalid={!!formErrors.idProduct} 
-                                        disabled={isSaving || (isEditing && !!currentOrderId) || isLoadingProductos}>
-                                        <option value="">Seleccione producto...</option>
-                                        {productos.map(p => <option key={p.idProduct} value={p.idProduct}>{p.productName}</option>)}
-                                    </Input>
-                                    {isLoadingProductos && <Spinner size="sm" className="mt-1"/>}
-                                    <FormFeedback>{formErrors.idProduct}</FormFeedback>
-                                </FormGroup>
-                                {formErrors.idSpecSheetValidation && <FormFeedback className="d-block text-danger small mt-1">{formErrors.idSpecSheetValidation}</FormFeedback>}
-                                {/* Mensaje si el producto tiene ficha asignada pero no se pudo cargar */}
-                                {formOrder.idProduct && formOrder.idSpecSheet && !selectedSpecSheetData && !isLoadingFichas && (
-                                     <Alert color="danger" className="mt-2 py-1 px-2 x-small">Error al cargar Ficha ID: {formOrder.idSpecSheet}.</Alert>
-                                )}
-                                {/* Mensaje si el producto NO tiene ficha asignada (y no está cargando) */}
-                                {formOrder.idProduct && !formOrder.idSpecSheet && !isLoadingFichas && (
-                                     <Alert color="info" className="mt-2 py-1 px-2 x-small">Este producto no tiene una ficha técnica asignada por defecto.</Alert>
-                                )}
-                            </Col>
-                            <Col md={3} className="mb-3 mb-md-0">
-                                <FormGroup>
-                                    <Label for="idEmployeeOrder">Empleado Responsable <span className="text-danger">*</span></Label>
-                                    <Input type="select" name="idEmployeeOrder" id="idEmployeeOrder"
-                                        value={formOrder.idEmployeeOrder} onChange={handleChangeOrderForm}
-                                        invalid={!!formErrors.idEmployeeOrder} disabled={isSaving || isLoadingEmpleados}>
-                                        <option value="">Seleccione...</option>
-                                        {empleadosList.map(emp => <option key={emp.idEmployee} value={emp.idEmployee}>{emp.fullName || `${emp.employeeName} ${emp.employeeLastName || ''}`}</option>)}
-                                    </Input>
-                                    {isLoadingEmpleados && <Spinner size="sm" className="mt-1"/>}
-                                    <FormFeedback>{formErrors.idEmployeeOrder}</FormFeedback>
-                                </FormGroup>
-                            </Col>
-                            <Col md={3} className="mb-3 mb-md-0">
-                                <FormGroup>
-                                    <Label for="idProvider">Proveedor (Carnes)</Label>
-                                    <Input type="select" name="idProvider" id="idProvider" value={formOrder.idProvider}
-                                        onChange={handleChangeOrderForm} invalid={!!formErrors.idProvider} 
-                                        disabled={isSaving || isLoadingProviders}>
-                                        <option value="">Opcional...</option>
-                                        {providersList.map(prov => <option key={prov.idProvider} value={prov.idProvider}>{prov.providerName}</option>)}
-                                    </Input>
-                                    {isLoadingProviders && <Spinner size="sm" className="mt-1"/>}
-                                    <FormFeedback>{formErrors.idProvider}</FormFeedback>
-                                </FormGroup>
-                            </Col>
-                            <Col md={3}>
-                                <FormGroup>
-                                    <Label for="initialAmount">Cantidad a Producir <span className="text-danger">*</span></Label>
-                                    <Input type="number" name="initialAmount" id="initialAmount" value={formOrder.initialAmount}
-                                        onChange={handleChangeOrderForm} min={1} step="1" invalid={!!formErrors.initialAmount}
-                                        disabled={isSaving} placeholder="Ej: 100" />
-                                    <FormFeedback>{formErrors.initialAmount}</FormFeedback>
-                                </FormGroup>
-                            </Col>
-                        </Row>
+        <Container fluid className="p-0 order-production-form-main-container production-module">
+            <Toaster position="top-center" toastOptions={{duration:3500,error:{duration:5000}}}/>
+            <Form onSubmit={(e)=>e.preventDefault()} className="production-order-form-content">
+                
+                <OrderBaseFormSection
+                    currentOrderData={currentOrderData} // Pasa el objeto completo, el hijo desestructurará lo que necesite
+                    handleChangeOrderForm={handleChangeOrderForm}
+                    toggleViewSpecSheetModal={toggleViewSpecSheetModal}
+                    productos={productos} 
+                    isLoadingProductos={isLoadingProductos}
+                    empleadosList={empleadosList} 
+                    isLoadingEmpleados={isLoadingEmpleados}
+                    providersList={providersList} 
+                    isLoadingProviders={isLoadingProviders}
+                    isSaving={isSaving||isProcessingAction} 
+                    isLoadingFichas={isLoadingFichas}
+                    isOrderViewOnly={isOrderViewOnly} 
+                    ordenTitulo={ordenTitulo} 
+                    employeeFieldLabel="Registrada por"
+                    isSimplifiedView={isSimplifiedBaseView}
+                />
+
+                {isNewForForm && localOrderStatus === 'PENDING' && (
+                    <CardFooter className="text-end py-2 px-3 bg-light border-top-0 mb-3">
+                        <Button color="success" onClick={handleSaveNewDraft} disabled={isSaving || isProcessingAction} size="sm"><Save size={16} className="me-1"/>Guardar Borrador</Button>
+                        <Button color="secondary" outline onClick={openCancelModal} disabled={isSaving || isProcessingAction} size="sm" className="ms-2"><XCircle size={16} className="me-1"/>Descartar</Button>
+                    </CardFooter>
+                )}
+                
+                {showLowerSections && (
+                    <div className="mt-3">
+                        <hr className="my-3"/>
+                        <Card className="mb-3 shadow-sm">
+                            <CardHeader 
+                                onClick={toggleSupplies} 
+                                style={{ cursor: 'pointer' }}
+                                className="d-flex justify-content-between align-items-center py-2 px-3"
+                            >
+                                <h6 className="mb-0 d-flex align-items-center">
+                                    <Package size={16} className="me-2"/> Insumos Estimados
+                                </h6>
+                                {isSuppliesOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                            </CardHeader>
+                            <Collapse isOpen={isSuppliesOpen}>
+                                <CardBody className="p-0">
+                                   <EstimatedSuppliesSection
+                                        isLoadingFichas={isLoadingFichas} 
+                                        selectedSpecSheetData={selectedSpecSheetData} // Usar variable desestructurada
+                                        initialAmount={formOrder.initialAmount} // Usar variable desestructurada
+                                    />
+                                </CardBody>
+                            </Collapse>
+                        </Card>
                         
-                        {/* 
-                        <Row className="mb-3">
-                             <Col md={12}>
-                                <FormGroup>
-                                    <Label for="observations">Observaciones Generales de la Orden</Label>
-                                    <Input type="textarea" name="observations" id="observations" bsSize="sm"
-                                        value={formOrder.observations} onChange={handleChangeOrderForm}
-                                        disabled={isSaving} rows={2} placeholder="Notas generales sobre esta orden de producción..." />
-                                </FormGroup>
-                            </Col>
-                        </Row>
-                        */}
-
-                        <Row className="mb-3">
-                            <Col md={4} className="mb-3 mb-md-0">
-                                <Card className="h-100">
-                                    <CardHeader className="py-2 px-3"><FileText size={16} className="me-1"/> Insumos Requeridos (Según Ficha Técnica)</CardHeader>
-                                    <CardBody style={{maxHeight: '400px', overflowY: 'auto'}}>
-                                        {(isLoadingFichas || isLoadingSelectedFichaView) && <div className="text-center"><Spinner size="sm"/> Cargando insumos...</div>}
-                                        {!(isLoadingFichas || isLoadingSelectedFichaView) && selectedSpecSheetData && selectedSpecSheetData.ingredients && selectedSpecSheetData.ingredients.length > 0 && (
-                                            <ListGroup flush>
-                                                {selectedSpecSheetData.ingredients.map((ing, idx) => (
-                                                    <ListGroupItem key={idx} className="px-0 py-1 small">
-                                                        {ing.supplier?.supplierName || ing.insumoName || 'Insumo Desconocido'}: <strong>{ing.quantity} {ing.measurementUnit}</strong>
-                                                    </ListGroupItem>
-                                                ))}
-                                            </ListGroup>
-                                        )}
-                                        {!(isLoadingFichas || isLoadingSelectedFichaView) && selectedSpecSheetData && (!selectedSpecSheetData.ingredients || selectedSpecSheetData.ingredients.length === 0) && (
-                                            <p className="text-muted small">La ficha técnica no tiene ingredientes definidos.</p>
-                                        )}
-                                        {!(isLoadingFichas || isLoadingSelectedFichaView) && !selectedSpecSheetData && formOrder.idSpecSheet && ( // Si hay ID de ficha pero no datos de ficha
-                                            <p className="text-muted small">No se pudieron cargar los detalles de la Ficha Técnica ID: {formOrder.idSpecSheet}.</p>
-                                        )}
-                                        {!formOrder.idSpecSheet && !(isLoadingFichas || isLoadingSelectedFichaView) && ( // Si no hay ID de ficha
-                                            <p className="text-muted small">Seleccione un producto con ficha técnica para ver insumos.</p>
-                                        )}
-                                    </CardBody>
-                                </Card>
-                            </Col>
-
-                            <Col md={8}>
-                                <Card className="h-100">
-                                    <CardHeader className="py-2 px-3"><Edit size={16} className="me-1"/> Gestión de Pasos del Proceso</CardHeader>
-                                    <CardBody>
-                                        {(isLoadingFichas || isLoadingSelectedFichaView) && <div className="text-center"><Spinner /> Cargando pasos...</div>}
-                                        {!(isLoadingFichas || isLoadingSelectedFichaView) && formErrors.processStepsLoad && <Alert color="danger" size="sm">{formErrors.processStepsLoad}</Alert>}
-                                        {!(isLoadingFichas || isLoadingSelectedFichaView) && formErrors.processStepsGeneral && <Alert color="danger" size="sm" className="mb-2">{formErrors.processStepsGeneral}</Alert>}
-
-                                        {!(isLoadingFichas || isLoadingSelectedFichaView) && processSteps.length > 0 && (
-                                            <>
-                                                <div className="d-flex flex-wrap mb-3 border-bottom pb-2">
-                                                    {processSteps.map((step, index) => (
-                                                        <Button
-                                                            key={step.idProcess || index}
-                                                            color={activeStepIndex === index ? "primary" : "outline-secondary"}
-                                                            size="sm" className="me-1 mb-1"
-                                                            onClick={() => setActiveStepIndex(index)}
-                                                            disabled={isSaving}
-                                                        >
-                                                            Paso {step.processOrder}
-                                                            {!step.idEmployee && <Badge color="warning" pill className="ms-1">!</Badge>}
-                                                        </Button>
-                                                    ))}
-                                                </div>
-
-                                                {currentActiveStep && (
-                                                    <div>
-                                                        <h5>Paso {currentActiveStep.processOrder}: {currentActiveStep.processName}</h5>
-                                                        <p className="small text-muted">{currentActiveStep.processDescription || "Sin descripción."}</p>
-                                                        <hr/>
-                                                        <Row className="g-3 align-items-end">
-                                                            <Col md={6}>
-                                                                <FormGroup>
-                                                                    <Label for={`employee-step-${activeStepIndex}`} className="small fw-bold">Empleado <span className="text-danger">*</span></Label>
-                                                                    <Input bsSize="sm" type="select" id={`employee-step-${activeStepIndex}`}
-                                                                        value={currentActiveStep.idEmployee}
-                                                                        onChange={(e) => handleEmployeeSelectionForStep(activeStepIndex, e.target.value)}
-                                                                        invalid={!!(formErrors.processStepsGeneral && !currentActiveStep.idEmployee)}
-                                                                        disabled={isSaving || isLoadingEmpleados } >
-                                                                        <option value="">Seleccione...</option>
-                                                                        {empleadosList.map(emp => <option key={emp.idEmployee} value={emp.idEmployee}>{emp.fullName || `${emp.employeeName} ${emp.employeeLastName || ''}`}</option>)}
-                                                                    </Input>
-                                                                </FormGroup>
-                                                            </Col>
-                                                            <Col md={6}>
-                                                                <FormGroup>
-                                                                    <Label for={`status-step-${activeStepIndex}`} className="small fw-bold">Estado</Label>
-                                                                    <Input bsSize="sm" type="select" id={`status-step-${activeStepIndex}`}
-                                                                        value={currentActiveStep.status}
-                                                                        onChange={e => handleStepFieldChange(activeStepIndex, 'status', e.target.value)}
-                                                                        disabled={isSaving || !currentActiveStep.idEmployee } >
-                                                                        <option value="PENDING">Pendiente</option>
-                                                                        <option value="IN_PROGRESS">En Progreso</option>
-                                                                        <option value="COMPLETED">Completado</option>
-                                                                        <option value="ON_HOLD">En Espera</option>
-                                                                        <option value="CANCELLED">Cancelado</option>
-                                                                    </Input>
-                                                                </FormGroup>
-                                                            </Col>
-                                                            <Col md={6}>
-                                                                <FormGroup>
-                                                                    <Label for={`startDate-step-${activeStepIndex}`} className="small fw-bold"><Calendar size={14} className="me-1"/>Inicio</Label>
-                                                                    <Input bsSize="sm" type="datetime-local" id={`startDate-step-${activeStepIndex}`}
-                                                                        value={currentActiveStep.startDate || ''}
-                                                                        onChange={e => handleStepFieldChange(activeStepIndex, 'startDate', e.target.value)}
-                                                                        disabled={isSaving || !currentActiveStep.idEmployee }
-                                                                    />
-                                                                </FormGroup>
-                                                            </Col>
-                                                            <Col md={6}>
-                                                                <FormGroup>
-                                                                    <Label for={`endDate-step-${activeStepIndex}`} className="small fw-bold"><Calendar size={14} className="me-1"/>Fin</Label>
-                                                                    <Input bsSize="sm" type="datetime-local" id={`endDate-step-${activeStepIndex}`}
-                                                                        value={currentActiveStep.endDate || ''}
-                                                                        onChange={e => handleStepFieldChange(activeStepIndex, 'endDate', e.target.value)}
-                                                                        disabled={isSaving || !currentActiveStep.idEmployee || currentActiveStep.status !== 'COMPLETED'}
-                                                                    />
-                                                                </FormGroup>
-                                                            </Col>
-                                                            <Col md={12}>
-                                                                <FormGroup>
-                                                                    <Label for={`observations-step-${activeStepIndex}`} className="small fw-bold">Observaciones del Paso</Label>
-                                                                    <Input bsSize="sm" type="textarea" rows="2" id={`observations-step-${activeStepIndex}`}
-                                                                        value={currentActiveStep.observations || ''}
-                                                                        onChange={e => handleStepFieldChange(activeStepIndex, 'observations', e.target.value)}
-                                                                        placeholder="Notas específicas para este paso..."
-                                                                        disabled={isSaving || !currentActiveStep.idEmployee}
-                                                                    />
-                                                                </FormGroup>
-                                                            </Col>
-                                                        </Row>
-                                                    </div>
-                                                )}
-                                            </>
-                                        )}
-                                        {!(isLoadingFichas || isLoadingSelectedFichaView) && processSteps.length === 0 && formOrder.idSpecSheet && (
-                                            <Alert color="info" className="mt-2">La ficha técnica seleccionada no tiene procesos definidos.</Alert>
-                                        )}
-                                        {!formOrder.idSpecSheet && !(isLoadingFichas || isLoadingSelectedFichaView) && (
-                                            <Alert color="secondary" className="text-center">Seleccione un producto que tenga una ficha técnica asociada para ver y gestionar los pasos del proceso.</Alert>
-                                        )}
-                                    </CardBody>
-                                </Card>
-                            </Col>
-                        </Row>
+                        <ProcessManagementSection
+                            currentOrderData={currentOrderData} // Pasa el objeto completo
+                            empleadosList={empleadosList} 
+                            isLoadingEmpleados={isLoadingEmpleados}
+                            handleEmployeeSelectionForStep={handleEmployeeSelectionForStep} 
+                            handleStepFieldChange={handleStepFieldChange}
+                            handleStartCurrentStep={handleStartCurrentStep} 
+                            handleCompleteCurrentStep={handleCompleteCurrentStep}
+                            isSaving={isSaving||isProcessingAction} 
+                            isOrderViewOnly={isOrderViewOnly} 
+                            isLoadingFichas={isLoadingFichas}
+                            processViewMode="sidebarWithFocus"
+                            />
                         
-                        <Row className="mt-4">
-                            <Col className="d-flex justify-content-between align-items-center">
-                                <Button color="primary" outline onClick={handleIniciarOrden} disabled={!canStartOrder}
-                                    title={!canStartOrder ? "Complete la orden y asigne empleados a todos los pasos" : "Iniciar ejecución de la orden"}>
-                                    <PlayCircle size={18} className="me-1"/> Iniciar Orden
-                                </Button>
-                                <Button type="submit" color={isEditing ? "warning" : "success"} disabled={!canSubmitForm || isSaving}>
-                                    {isSaving ? <Spinner size="sm" className="me-1" /> : (isEditing ? <Save size={18} className="me-1"/> : <ChevronsRight size={18} className="me-1"/>)}
-                                    {isEditing ? "Actualizar Orden" : "Guardar Orden"}
-                                </Button>
-                            </Col>
-                        </Row>
-                    </CardBody>
-                </Card>
+                        {!isNewForForm && !isOrderViewOnly && !showFinalizationFields && (
+                             <Row className="mt-3 g-2 justify-content-end">
+                                <Col xs="auto">
+                                    <Button color="danger" outline onClick={openCancelModal} disabled={isSaving || isProcessingAction || isOrderViewOnly} size="sm"><XCircle size={16} className="me-1"/> Cancelar Orden</Button>
+                                </Col>
+                                {mainButtonConfig.visible && mainButtonConfig.action && (
+                                    <Col xs="auto">
+                                        <Button 
+                                            color={mainButtonConfig.color} 
+                                            onClick={mainButtonConfig.action} 
+                                            disabled={mainButtonConfig.disabled} 
+                                            size="sm"
+                                        >
+                                            {mainButtonConfig.icon}
+                                            {mainButtonConfig.text}
+                                        </Button>
+                                    </Col>
+                                )}
+                            </Row>
+                        )}
+                    </div>
+                )}
+
+                {showFinalizationFields && !isOrderViewOnly && ( 
+                    <OrderFinalizationSection 
+                        formOrder={formOrder} // Usar variable desestructurada
+                        formErrors={currentOrderData.formErrors} // OK, para tomar el estado anterior de errores
+                        handleChangeOrderForm={handleChangeOrderForm} 
+                        isSaving={isSaving||isProcessingAction} 
+                        onCancelFinalization={handleCancelFinalization}
+                        onFinalizeAndSave={handleFinalizeAndSaveOrder}
+                    /> 
+                )}
+                
+                 {isOrderViewOnly && (
+                     <div className="mt-4 pt-3 border-top text-end">
+                        <Button color="secondary" outline onClick={() => addOrFocusOrder(null, false, { navigateIfNeeded: true })} size="sm"><XCircle size={16} className="me-1"/> Cerrar Vista</Button>
+                     </div>
+                )}
             </Form>
 
-            <ConfirmationModal
-                isOpen={confirmEmployeeModalOpen} 
-                toggle={() => toggleConfirmEmployeeModal(false)}
-                onConfirm={() => { 
-                    confirmEmployeeAssignment(); 
-                    setConfirmEmployeeModalOpen(false); 
-                    setConfirmEmployeeData({ stepIndex: null, newEmployeeId: null, employeeName: '', currentEmployeeIdInStep: '', processName: '' });
-                    selectedEmployeeTemp.current = {};
-                }}
-                title="Confirmar Asignación de Empleado"
-                confirmText="Sí, Asignar" confirmColor="success"
-                isConfirming={isSaving}
-                children={ confirmEmployeeData.stepIndex !== null && (
-                    <p>¿Desea asignar al empleado <strong>{confirmEmployeeData.employeeName || 'seleccionado'}</strong> al paso <strong>"{confirmEmployeeData.processName}"</strong>?</p>
+            <ConfirmationModal isOpen={confirmEmployeeModalOpen} toggle={() => toggleConfirmEmployeeModal(true)} onConfirm={confirmEmployeeAssignment} title="Confirmar Asignación de Empleado" confirmText="Sí, Asignar y Guardar" isConfirming={isProcessingAction}>
+                {selectedEmployeeTemp.current.stepIndex!==undefined && processSteps?.[selectedEmployeeTemp.current.stepIndex]&&( // Usar processSteps desestructurado
+                    <p>¿Asignar a 
+                        <strong>{selectedEmployeeTemp.current.employeeName||'?'}</strong> al proceso 
+                        <strong>"{processSteps[selectedEmployeeTemp.current.stepIndex].processName}"</strong>?
+                        Este cambio se guardará en la base de datos.
+                    </p>
                 )}
+            </ConfirmationModal>
+            <ViewSpecSheetModal 
+                isOpen={viewSpecSheetModalOpen} 
+                toggle={toggleViewSpecSheetModal} 
+                specSheetData={selectedSpecSheetData} // Usar variable desestructurada
+                isLoading={isLoadingFichas && !selectedSpecSheetData}
             />
-            <ViewSpecSheetModal
-                isOpen={viewSpecSheetModalOpen}
-                toggle={toggleViewSpecSheetModal}
-                specSheetData={selectedSpecSheetData}
-                isLoading={isLoadingSelectedFichaView || isLoadingFichas} // Combinar estados de carga
+            <CancelOrderModal 
+                isOpen={isCancelModalOpen} 
+                toggle={() => setIsCancelModalOpen(false)} 
+                onConfirmCancel={handleConfirmCancelOrder} 
+                orderDisplayName={orderToCancelInfo?.displayName} 
+                isCancelling={isProcessingAction}
             />
         </Container>
     );
 };
-
-export default OrdenProduccionConPasosForm;
+export default OrdenProduccionForm;

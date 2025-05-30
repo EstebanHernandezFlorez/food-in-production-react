@@ -1,6 +1,8 @@
 // srcs/module/pages.routes.jsx
 
 import React from "react";
+import { Outlet } from 'react-router-dom'; // <--- IMPORTANTE: Importar Outlet
+
 // --- COMPONENTES DE PÁGINA ---
 import Dashboard from "./Dashboard/dashboard";
 import Roles from "./roles/roles";
@@ -14,8 +16,9 @@ import Reservas from "./Reservas/Reservas";
 import Servicios from "./Servicios/Servicios";
 import ManoDeObra from "./ManoDeObra/ManoDeObra";
 import Insumos from "./Insumo/Insumo";
-import OrdenProduccion from "./OrdenProduccion/OrdenProduccion";
+// import OrdenProduccionForm from "./OrdenProduccion/OrdenProduccion"; // Parece que ProduccionPage es el usado
 import Historial from "./OrdenProduccion/Historial";
+import ProduccionPage from "./OrdenProduccion/ProduccionPage";
 
 // --- ICONOS ---
 import {
@@ -29,123 +32,124 @@ console.log("[pages.routes.jsx] Definición de rutas cargada.");
 
 const routes = [
   {
-    path: "dashboard", // URL: /home/dashboard
+    path: "dashboard",
     label: "Dashboard",
     icon: <Home size={ICON_SIZE} />,
     element: <Dashboard />,
-    requiredPermission: "dashboard", // CLAVE PARA PERMISOS
+    requiredPermission: "dashboard",
   },
   {
-    path: "roles", // URL: /home/roles
+    path: "roles",
     label: "Roles",
     icon: <Key size={ICON_SIZE} />,
     element: <Roles />,
-    requiredPermission: "roles", // CLAVE PARA PERMISOS
+    requiredPermission: "roles",
   },
   {
-    path: "usuarios", // URL: /home/usuarios
+    path: "usuarios",
     label: "Usuarios",
     icon: <UserIcon size={ICON_SIZE} />,
     element: <Usuarios />,
-    requiredPermission: "usuarios", // CLAVE PARA PERMISOS
+    requiredPermission: "usuarios",
   },
   {
-    // --- GRUPO: PRODUCCIÓN ---
-    path: "produccion", // URL: /home/produccion (actúa como agrupador)
+    path: "produccion",
     label: "Producción",
     icon: <PackageIcon size={ICON_SIZE} />,
-    // No 'requiredPermission' en el padre del grupo, se mostrará si algún hijo es visible.
-    // Si se quisiera controlar el grupo completo, se añadiría aquí, por ejemplo: requiredPermission: "produccion_module_access"
+    element: <Outlet />, // <--- AÑADIDO ELEMENT CON OUTLET
+    // No 'requiredPermission' en el padre del grupo aquí, se mostrará si algún hijo es visible.
+    // Si quieres controlar el grupo: requiredPermission: "produccion_module_access"
     children: [
       {
-        path: "proveedores", // URL: /home/produccion/proveedores
+        path: "proveedores",
         label: "Proveedores",
         icon: <FactoryIcon size={SUB_ICON_SIZE} />,
         element: <Proveedores />,
-        requiredPermission: "proveedores", // CLAVE PARA PERMISOS
+        requiredPermission: "proveedores",
       },
       {
-        path: "empleados", // URL: /home/produccion/empleados
+        path: "empleados",
         label: "Empleados",
         icon: <UserCog size={SUB_ICON_SIZE} />,
         element: <Empleados />,
-        requiredPermission: "empleados", // CLAVE PARA PERMISOS (Asegúrate que 'empleados' existe como permiso)
+        requiredPermission: "empleados",
       },
       {
-        path: "insumo", // URL: /home/produccion/insumo
+        path: "insumo",
         label: "Insumo",
         icon: <BoxIcon size={SUB_ICON_SIZE} />,
         element: <Insumos />,
-        requiredPermission: "insumo", // CLAVE PARA PERMISOS
+        requiredPermission: "insumo",
       },
       {
-        path: "producto-insumo", // URL: /home/produccion/producto-insumo (CORREGIDO A GUION MEDIO)
+        path: "producto-insumo",
         label: "Producto Insumo",
-        icon: <BoxIcon size={SUB_ICON_SIZE} />, // Podrías usar otro ícono para diferenciar
+        icon: <BoxIcon size={SUB_ICON_SIZE} />,
         element: <ProductosInsumo />,
-        requiredPermission: "producto-insumo", // CLAVE PARA PERMISOS (CORREGIDO A GUION MEDIO)
+        requiredPermission: "producto-insumo",
       },
       {
-        path: "orden-produccion", // URL: /home/produccion/orden-produccion
+        path: "orden-produccion", // Este path puede ser solo "orden-produccion" y ProduccionPage manejar internamente si es crear o editar basado en un param
         label: "Orden de producción",
         icon: <FactoryIcon size={SUB_ICON_SIZE} />,
-        element: <OrdenProduccion />,
-        requiredPermission: "orden-produccion", // CLAVE PARA PERMISOS
+        element: <ProduccionPage />, // ProduccionPage podría tener un Outlet si tiene sub-rutas, o manejar params
+        requiredPermission: "orden-produccion",
+        // Si ProduccionPage necesita manejar rutas como /home/produccion/orden-produccion/:orderIdParam?
+        // entonces este path debería ser "orden-produccion/:orderIdParam?"
+        // Si ProduccionPage es solo para "crear" y "editar" es otra ruta, entonces está bien así.
       },
       {
-        path: "historial", // URL: /home/produccion/historial (Path en minúsculas es común)
-        label: "Historial", // CORREGIDO
-        icon: <HistoryIcon size={SUB_ICON_SIZE} />, // Usando un ícono de historial
+        path: "historial",
+        label: "Historial",
+        icon: <HistoryIcon size={SUB_ICON_SIZE} />,
         element: <Historial />,
-        requiredPermission: "orden-produccion", // Reutilizando permiso de orden-produccion para ver su historial
-                                                // O podrías tener "orden-produccion-view-history" si es un privilegio separado.
-                                                // Tu MenuList.jsx usa "view" por defecto, así que can("orden-produccion", "view")
+        requiredPermission: "orden-produccion",
       },
       {
-        path: "gestion-de-compra", // URL: /home/produccion/gestion-de-compra
+        path: "gestion-de-compra",
         label: "Gestión de compras",
         icon: <ShoppingBagIcon size={SUB_ICON_SIZE} />,
         element: <GestionComprasPage />,
-        requiredPermission: "gestion-de-compra", // CLAVE PARA PERMISOS
+        requiredPermission: "gestion-de-compra",
       },
     ],
   },
   {
-    // --- GRUPO: RESERVAS ---
-    path: "reservas", // URL: /home/reservas
+    path: "reservas",
     label: "Reservas",
     icon: <CalendarIcon size={ICON_SIZE} />,
-    requiredPermission: "reservas", // CLAVE PARA PERMISOS (controla visibilidad del grupo entero)
+    element: <Outlet />, // <--- AÑADIDO ELEMENT CON OUTLET
+    requiredPermission: "reservas",
     children: [
       {
-        path: "clientes", // URL: /home/reservas/clientes
+        path: "clientes",
         label: "Clientes",
-        icon: <ClipboardIcon size={SUB_ICON_SIZE} />, // Icono podría ser UserIcon o similar
+        icon: <ClipboardIcon size={SUB_ICON_SIZE} />,
         element: <Clientes />,
-        requiredPermission: "clientes", // CLAVE PARA PERMISOS
+        requiredPermission: "clientes",
       },
       {
-        path: "lista", // URL: /home/reservas/lista
-        label: "Lista de Reservas", // Más descriptivo
+        path: "lista",
+        label: "Lista de Reservas",
         icon: <CheckCircle size={SUB_ICON_SIZE} />,
         element: <Reservas />,
-        requiredPermission: "reservas", // Reutilizando el permiso del padre para ver la lista
+        requiredPermission: "reservas",
       },
       {
-        path: "servicios", // URL: /home/reservas/servicios
-        label: "Servicios Adicionales", // Más descriptivo
-        icon: <Bell size={SUB_ICON_SIZE} />, // Icono podría ser Settings o similar
+        path: "servicios",
+        label: "Servicios Adicionales",
+        icon: <Bell size={SUB_ICON_SIZE} />,
         element: <Servicios />,
-        requiredPermission: "servicios", // CLAVE PARA PERMISOS
+        requiredPermission: "servicios",
       },
     ],
   },
   {
-    path: "mano-de-obra", // URL: /home/mano-de-obra
+    path: "mano-de-obra",
     label: "Mano de obra",
     icon: <Settings size={ICON_SIZE} />,
     element: <ManoDeObra />,
-    requiredPermission: "mano-de-obra", // CLAVE PARA PERMISOS
+    requiredPermission: "mano-de-obra",
   },
 ];
 

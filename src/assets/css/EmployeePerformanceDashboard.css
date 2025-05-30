@@ -1,0 +1,120 @@
+/* En tu archivo CSS (ej: index.css o EmployeePerformanceDashboard.css) */
+
+:root {
+  --dashboard-accent-color: #9e3535; /* Burgundy */
+  --dashboard-accent-text-color: #FFFFFF; /* White */
+  --dashboard-text-color: #5C4033; /* Dark Brown */
+  --dashboard-bg-light: #fdfaf2; /* Un beige muy claro para fondos de sección */
+  --dashboard-border-color: #e0dcd1; /* Un color de borde que combine con beige */
+}
+
+.employee-performance-dashboard .filters-section {
+  background-color: var(--dashboard-bg-light) !important;
+  border-color: var(--dashboard-border-color) !important;
+  border-width: 1px;
+  border-style: solid;
+}
+
+.employee-performance-dashboard .filters-section .form-label {
+  color: var(--dashboard-text-color);
+  margin-bottom: 0.3rem;
+}
+
+/* Estilo para react-select que coincida con form-control-sm */
+.employee-performance-dashboard .react-select-sm__control {
+  min-height: calc(1.5em + 0.5rem + 2px) !important;
+  height: calc(1.5em + 0.5rem + 2px) !important;
+  border-color: #ced4da; /* Borde estándar de Bootstrap */
+  font-size: 0.875rem !important;
+}
+.employee-performance-dashboard .react-select-sm__control--is-focused {
+  border-color: #86b7fe !important; /* Color de foco de Bootstrap */
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+}
+.employee-performance-dashboard .react-select-sm__placeholder,
+.employee-performance-dashboard .react-select-sm__single-value {
+  line-height: calc(1.5em + 0.5rem + 2px - 2px); /* (altura - 2*border) */
+  font-size: 0.875rem !important;
+}
+.employee-performance-dashboard .react-select-sm__indicator-separator {
+    display: none;
+}
+.employee-performance-dashboard .react-select-sm__dropdown-indicator {
+    padding: 4px;
+}
+
+
+.employee-performance-dashboard .btn-primary {
+  background-color: var(--dashboard-accent-color) !important;
+  border-color: var(--dashboard-accent-color) !important;
+  color: var(--dashboard-accent-text-color) !important;
+}
+.employee-performance-dashboard .btn-primary:hover,
+.employee-performance-dashboard .btn-primary:focus {
+  background-color: #8c2d2d !important; /* Un poco más oscuro */
+  border-color: #7a2626 !important;
+}
+
+.employee-performance-dashboard .btn-outline-secondary:hover {
+    background-color: #e9ecef; /* Un gris claro para el hover del botón secundario */
+    color: var(--dashboard-text-color);
+}
+
+
+.employee-performance-dashboard .card-header {
+  font-weight: 600;
+}
+
+.employee-performance-dashboard .card-header.bg-primary { /* Cabecera de la tabla de resultados */
+  background-color: var(--dashboard-accent-color) !important;
+  color: var(--dashboard-accent-text-color) !important;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.employee-performance-dashboard .performance-table thead.table-light th {
+  background-color: #f8f9fa; /* Bootstrap default light */
+  color: var(--dashboard-text-color);
+  border-bottom: 2px solid var(--dashboard-accent-color);
+  font-weight: 600;
+}
+
+.employee-performance-dashboard .performance-table tbody tr:hover {
+    background-color: rgba(158, 53, 53, 0.08) !important; /* Vino tinto transparente */
+}
+
+.employee-performance-dashboard .expanded-row td {
+    padding: 0 !important;
+    border-top: none !important;
+    background-color: var(--dashboard-bg-light, #f8f9fa);
+}
+
+.employee-performance-dashboard .expanded-row .card {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    border-top: 1px solid var(--dashboard-border-color, #dee2e6); /* Borde sutil para la sub-card */
+}
+.employee-performance-dashboard .expanded-row .card-header.bg-info {
+    background-color: #a44747 !important; /* Un tono de burgundy más claro para sub-cabecera */
+    color: var(--dashboard-accent-text-color) !important;
+}
+.employee-performance-dashboard .expanded-row .card-header h6 {
+    font-size: 0.9rem;
+}
+
+.employee-performance-dashboard .expanded-row .card-body strong {
+    color: var(--dashboard-text-color);
+}
+
+.employee-performance-dashboard .badge.bg-light.text-dark { /* Para el contador de registros */
+    color: var(--dashboard-text-color) !important;
+    background-color: rgba(255,255,255,0.8) !important;
+}
+
+/* Ajustes de DatePicker para que se vea más integrado y del mismo tamaño que otros inputs sm */
+.employee-performance-dashboard .react-datepicker-wrapper input.form-control-sm {
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  height: calc(1.5em + 0.5rem + 2px); /* Altura de form-control-sm */
+}
