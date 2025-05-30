@@ -275,87 +275,36 @@ const Insumos = () => {
         });
     }, [prepareConfirmation, executeChangeStatus]);
 
-    const requestDeleteConfirmation = useCallback((insumo) => {
-         if (!insumo || !insumo.idSupply) return;
-        prepareConfirmation(executeDelete, {
-            title: "Confirmar Eliminación",
-            message: (<><p>¿Eliminar <strong>{insumo.supplyName || 'este insumo'}</strong>?</p><p><strong className="text-danger">¡Acción irreversible!</strong></p></>), // Usar supplyName
-            confirmText: "Eliminar Definitivamente", confirmColor: "danger",
-            itemDetails: { ...insumo }
-        });
-    }, [prepareConfirmation, executeDelete]);
+    // SUBMIT (Agregar/Editar)
+        const handleSubmit = useCallback(async () => {
+            // *** LLAMA A LA VALIDACIÓN ***
+            if (!validateForm()) return;
 
-    // --- CRUD Operation: handleSubmit (para crear/editar) ---
-    const handleSubmit = useCallback(async () => {
-        if (!validateForm()) return; // Validación frontend primero
-        setIsSavingForm(true);
-        const actionText = isEditing ? 'Actualizando' : 'Agregando';
-        const toastId = toast.loading(`${actionText} insumo...`);
-        try {
-            const dataToSend = {
-                supplyName: form.supplyName.trim(),
-                description: form.description.trim() || null, // Enviar null si está vacío
-                unitOfMeasure: form.unitOfMeasure,
-                // 'status' se envía solo si se está editando y se quiere cambiar, o se usa el defaultValue al crear.
-                // Si tu API de update espera 'status', añádelo:
-                // status: form.status 
-            };
+            setIsSavingForm(true);
+            const actionText = isEditing ? 'Actualizando' : 'Agregando';
+            const toastId = toast.loading(`${actionText} insumo...`);
+            try {
+                const url = isEditing ? `${API_BASE_URL}/supplier/${form.idSupplier}` : `${API_BASE_URL}/supplier`;
+                const method = isEditing ? 'put' : 'post';
+                const dataToSend = {
+                    supplierName: form.supplierName.trim(),
+                    measurementUnit: form.measurementUnit,
+                };
+                if (!isEditing) { dataToSend.status = true; }
+                else if (!form.idSupplier) { throw new Error("ID no encontrado para actualizar."); }
 
-            if (isEditing) {
-                if (!form.idSupply) throw new Error("ID no encontrado para actualizar.");
-                // Si la API de update espera el status:
-                // await supplyService.updateSupply(form.idSupply, { ...dataToSend, status: form.status });
-                await supplyService.updateSupply(form.idSupply, dataToSend);
-            } else {
-                // 'status' se toma de INITIAL_FORM_STATE (true por defecto) o el defaultValue del modelo al crear
-                await supplyService.createSupply({ ...dataToSend, status: form.status });
-            }
-
-            toast.success(`Insumo ${isEditing ? 'actualizado' : 'agregado'}!`, { id: toastId });
-            toggleMainModal();
-            await fetchData(false);
-            setCurrentPage(1); 
-        } catch (error) {
-            console.error("Error en handleSubmit:", error);
-            let backendErrors = { ...INITIAL_FORM_ERRORS }; // Empezar con errores reseteados
-            let generalErrorMessage = `Error al ${actionText.toLowerCase()} el insumo.`;
-
-            if (error && error.errors && Array.isArray(error.errors)) {
-                let specificErrorMessages = [];
-                error.errors.forEach(err => {
-                    if (err.path && err.msg) {
-                        // El path del backend (ej. 'supplyName') ya coincide con las claves de formErrors
-                        backendErrors[err.path] = true; 
-                        specificErrorMessages.push(err.msg);
-                    }
-                });
-                if (specificErrorMessages.length > 0) {
-                    // Tomar el primer mensaje específico para el general del alert si es más descriptivo
-                    backendErrors.general = specificErrorMessages[0]; 
-                    // Para el toast, podríamos unir todos o mostrar el primero
-                    generalErrorMessage = specificErrorMessages.join(" \n");
-                } else if (error.message) { // Si no hay array 'errors' pero sí un 'message'
-                    backendErrors.general = error.message;
-                    generalErrorMessage = error.message;
-                } else {
-                    backendErrors.general = "Error desconocido desde el backend.";
-                    generalErrorMessage = backendErrors.general;
-                }
-            } else if (error && error.message) {
-                backendErrors.general = error.message;
-                generalErrorMessage = error.message;
-            } else {
-                backendErrors.general = "Ocurrió un error inesperado.";
-                generalErrorMessage = backendErrors.general;
-            }
-            
-            setFormErrors(backendErrors);
-            toast.error(<div><strong>Error:</strong><br/>{generalErrorMessage.replace(/\n/g, "<br/>")}</div>, { id: toastId, duration: 6000 });
-
-        } finally {
-            setIsSavingForm(false);
-        }
-    }, [form, isEditing, validateForm, toggleMainModal, fetchData]);
+                await axios({ method, url, data: dataToSend });
+                toast.success(`Insumo ${isEditing ? 'actualizado' : 'agregado'}!`, { id: toastId });
+                toggleMainModal();
+                await fetchData(false); // Refresca datos sin spinner principal
+                setCurrentPage(1);
+            } catch (error) {
+                const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
+                setFormErrors(prev => ({ ...prev, general: `Error: ${errorMsg}` })); // Muestra error general en alert
+                toast.error(`Error al ${actionText.toLowerCase()}: ${errorMsg}`, { id: toastId, duration: 5000 });
+            } finally { setIsSavingForm(false); }
+        // Asegúrate de incluir todas las dependencias necesarias
+        }, [form, isEditing, validateForm, toggleMainModal, fetchData]);
 
     // --- Modal Opening Handlers ---
     const openAddModal = useCallback(() => {

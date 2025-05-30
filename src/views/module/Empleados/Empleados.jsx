@@ -190,12 +190,62 @@ const Empleados = () => {
         setFormErrors(getInitialFormErrors());
     }, []);
 
-    const handleInputChange = useCallback((e) => {
-        const { name, value } = e.target;
-        const newFormState = { ...form, [name]: value };
-        setForm(newFormState);
-        const errorMsg = validateEmployeeField(name, value, newFormState);
-        setFormErrors(prev => ({ ...prev, [name]: errorMsg, general: '' }));
+    // *** AJUSTADO: Validación para Empleado ***
+    const validateForm = useCallback(() => {
+        const errors = getInitialFormErrors(); // Reinicia errores
+        let isValid = true;
+
+        // Convertir a string y hacer trim de forma segura donde aplique
+        const fullName = String(form.fullName ?? '').trim();
+        const document = String(form.document ?? '').trim();                                
+        const cellPhone = String(form.cellPhone ?? '').trim();
+        const email = String(form.email ?? '').trim();
+        const emergencyContact = String(form.emergencyContact ?? '').trim();
+        const relationship = String(form.Relationship ?? '').trim();
+        const nameFamilyMember = String(form.nameFamilyMember ?? '').trim();
+        const bloodType = String(form.BloodType ?? '').trim();
+        const socialSecurityNumber = String(form.socialSecurityNumber ?? '').trim();
+        const address = String(form.Address ?? '').trim();
+        const contractType = String(form.contractType ?? '').trim();
+
+        // Campos requeridos (Ajusta según tus necesidades)
+        if (!fullName) { errors.fullName = true; isValid = false; }
+        if (!form.typeDocument) { errors.typeDocument = true; isValid = false; }
+        if (!document) { errors.document = true; isValid = false; }
+        if (!cellPhone) { errors.cellPhone = true; isValid = false; }
+        if (!email) { errors.email = true; isValid = false; }
+        if (!form.dateOfEntry) { errors.dateOfEntry = true; isValid = false; } // Fecha es requerida
+        if (!emergencyContact) { errors.emergencyContact = true; isValid = false; }
+        if (!relationship) { errors.Relationship = true; isValid = false; }
+        if (!nameFamilyMember) { errors.nameFamilyMember = true; isValid = false; }
+        if (!bloodType) { errors.BloodType = true; isValid = false; }
+        if (!socialSecurityNumber) { errors.socialSecurityNumber = true; isValid = false; }
+        if (!address) { errors.Address = true; isValid = false; }
+        if (!contractType) { errors.contractType = true; isValid = false; }
+
+        // Validaciones específicas de formato (si el campo no está vacío)
+        if (document && !/^[a-zA-Z0-9]+$/.test(document)) { // Permitir letras y números para pasaporte, etc. Ajusta si es necesario.
+             errors.document = true; isValid = false;
+             toast.error("El documento solo puede contener letras y números.", { duration: 3000, icon: <XCircle size={16} /> });
+        }
+        if (cellPhone && !/^\d{7,15}$/.test(cellPhone)) {
+             errors.cellPhone = true; isValid = false;
+             toast.error("El celular debe contener entre 7 y 15 dígitos numéricos.", { duration: 3000, icon: <XCircle size={16} /> });
+        }
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            errors.email = true; isValid = false;
+            toast.error("El formato del correo electrónico no es válido.", { duration: 3000, icon: <XCircle size={16} /> });
+        }
+         if (emergencyContact && !/^\d{7,15}$/.test(emergencyContact)) {
+             errors.emergencyContact = true; isValid = false;
+             toast.error("El teléfono de emergencia debe contener entre 7 y 15 dígitos.", { duration: 3000, icon: <XCircle size={16} /> });
+        }
+
+        setFormErrors(errors);
+        if (!isValid && !toast.isActive('formValidationError')) { // Evita toasts duplicados rápidos
+             toast.error("Por favor, corrija los campos marcados en rojo.", { id: 'formValidationError', duration: 4000, icon: <XCircle className="text-danger" /> });
+        }
+        return isValid;
     }, [form]);
 
     const validateFullForm = useCallback(() => {
