@@ -1,0 +1,105 @@
+/* ActiveOrdersSidebar.module.css */
+.sidebar {
+    /* width: 280px; // Definido en ProduccionPage.jsx o aquí */
+    /* background-color: #f8f9fa; */
+    /* border-left: 1px solid #dee2e6; */
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Para que ocupe la altura del sidebarWrapperStyles */
+}
+
+.sidebarHeader {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.listContainer {
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+.sidebarItem {
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 0.6rem 0.8rem; /* Ajustar padding */
+    border-bottom: 1px solid #efefef; /* Separador más sutil */
+    transition: background-color 0.15s ease-in-out;
+}
+
+.sidebarItem:last-child {
+    border-bottom: none;
+}
+
+.sidebarItem:hover {
+    background-color: #e9ecef;
+}
+
+.activeItem {
+    background-color: #0d6efd !important; /* Color primario de Bootstrap */
+    color: white !important;
+    border-left: 3px solid #0a58ca; /* Borde distintivo para el activo */
+    padding-left: calc(0.8rem - 3px);
+}
+
+.activeItem .text-muted, 
+.activeItem .closeButton {
+    color: rgba(255, 255, 255, 0.75) !important;
+}
+.activeItem .closeButton:hover {
+    color: white !important;
+}
+
+
+.iconCircle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #495057;
+    border: 2px solid transparent;
+}
+
+.activeItem .iconCircle {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+.newOrderActiveIconCircle { /* Para cuando una nueva orden es la activa */
+    border-color: #198754; /* Verde para 'nueva' y activa */
+}
+
+
+.displayName {
+    font-weight: 500;
+}
+.orderIdentifier {
+    font-size: 0.7rem;
+    line-height: 1;
+}
+
+.statusBadge, .stepIndicator {
+    font-size: 0.65rem !important;
+    padding: 0.25em 0.5em !important;
+    font-weight: 600;
+    vertical-align: middle;
+}
+.stepIndicator {
+    min-width: 28px; /* Para que 'P10' etc. quepa bien */
+    text-align: center;
+}
+
+
+.closeButton {
+    color: #6c757d;
+    opacity: 0.6;
+    transition: opacity 0.15s ease-in-out;
+    margin-left: auto; /* Empujar a la derecha si hay espacio */
+}
+
+.closeButton:hover {
+    opacity: 1;
+    color: #dc3545; /* Rojo al hacer hover */
+}

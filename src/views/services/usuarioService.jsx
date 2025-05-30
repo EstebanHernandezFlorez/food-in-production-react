@@ -1,93 +1,80 @@
-// src/services/userService.js
+// src/services/userService.jsx
 
-// import axios from 'axios'; // <-- ELIMINADO
-import axiosInstance from './axiosConfig'; // <-- AÑADIDO (¡Verifica que la ruta './axiosInstance' sea correcta!)
+import axiosInstance from './axiosConfig'; // Verifica que la ruta sea correcta
 
-const PROFILE_API_URL = '/users/profile/me';
-// Usa la ruta relativa
-const API_URL = '/users';
+const API_URL = '/users'; // Base URL para la mayoría de las operaciones de usuario
+const PROFILE_API_URL = `${API_URL}/profile/me`; // URL completa para el perfil
 
 const userService = {
-
     getUserProfile: async () => {
         try {
-            // Llama a la ruta específica del perfil en tu backend
             const response = await axiosInstance.get(PROFILE_API_URL);
-            // Asume que response.data contiene el objeto del usuario con su 'role'
             return response.data;
         } catch (error) {
-            console.error("Error fetching user profile:", error);
-            // Podrías querer manejar errores específicos de autenticación aquí
-            // (ej. si el token es inválido/expirado y recibes un 401 o 403)
+            console.error("Error fetching user profile:", error.response?.data || error.message);
             throw error;
         }
     },
 
     getAllUsers: async () => {
         try {
-            // Usa axiosInstance
             const response = await axiosInstance.get(API_URL);
             return response.data;
         } catch (error) {
-            console.error("Error fetching users:", error);
+            console.error("Error fetching users:", error.response?.data || error.message);
             throw error;
         }
     },
 
-    // Cambié el parámetro en la URL a 'id' para coincidir con tus rutas de Express (:id)
-    getUserById: async (id) => { // El nombre del argumento puede ser cualquiera (id, idUsers, etc.)
+    getUserById: async (id) => {
         try {
-            // Usa axiosInstance
-            const response = await axiosInstance.get(`${API_URL}/${id}`); // Usa 'id' en la URL
+            const response = await axiosInstance.get(`${API_URL}/${id}`);
             return response.data;
         } catch (error) {
-            console.error(`Error fetching user with id ${id}:`, error);
+            console.error(`Error fetching user with id ${id}:`, error.response?.data || error.message);
             throw error;
         }
     },
 
     createUser: async (userData) => {
         try {
-             // Usa axiosInstance
             const response = await axiosInstance.post(API_URL, userData);
             return response.data;
         } catch (error) {
-            console.error("Error creating user:", error);
+            console.error("Error creating user:", error.response?.data || error.message);
             throw error;
         }
     },
 
-    // Cambié el parámetro en la URL a 'id'
-    updateUser: async (id, userData) => { // Recibe 'id'
+    updateUser: async (id, userData) => {
         try {
-             // Usa axiosInstance
-            const response = await axiosInstance.put(`${API_URL}/${id}`, userData); // Usa 'id' en la URL
+            const response = await axiosInstance.put(`${API_URL}/${id}`, userData);
             return response.data;
         } catch (error) {
-            console.error(`Error updating user with id ${id}:`, error);
+            console.error(`Error updating user with id ${id}:`, error.response?.data || error.message);
             throw error;
         }
     },
 
-    // Cambié el parámetro en la URL a 'id'
-    deleteUser: async (id) => { // Recibe 'id'
+    deleteUser: async (id) => {
         try {
-             // Usa axiosInstance
-            await axiosInstance.delete(`${API_URL}/${id}`); // Usa 'id' en la URL
+            // DELETE exitoso usualmente devuelve 204 No Content, axios puede no tener `response.data`
+            await axiosInstance.delete(`${API_URL}/${id}`);
+            // No es necesario devolver nada o puedes devolver un objeto de éxito si lo prefieres
+            return { success: true, message: "Usuario eliminado" };
         } catch (error) {
-            console.error(`Error deleting user with id ${id}:`, error);
+            console.error(`Error deleting user with id ${id}:`, error.response?.data || error.message);
             throw error;
         }
     },
 
-    // Cambié el parámetro en la URL a 'id'
-    changeStateUser: async (id, status) => { // Recibe 'id'
+    changeStateUser: async (id, status) => {
         try {
-             // Usa axiosInstance
-            const response = await axiosInstance.patch(`${API_URL}/${id}`, { status }); // Usa 'id' en la URL
+            // *** CORRECCIÓN AQUÍ para que coincida con la ruta del backend ***
+            const response = await axiosInstance.patch(`${API_URL}/${id}/state`, { status });
             return response.data;
         } catch (error) {
-            console.error(`Error changing status user with id ${id}:`, error);
+            console.error(`Error changing status for user with id ${id}:`, error.response?.data || error.message);
             throw error;
         }
     }

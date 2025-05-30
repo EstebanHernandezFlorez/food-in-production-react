@@ -7,34 +7,37 @@ import {
     Modal, ModalHeader, ModalBody, ModalFooter, Spinner, Alert,
     Dropdown, DropdownToggle, DropdownMenu, DropdownItem
 } from 'reactstrap';
-import { 
-    Edit, Trash2, Plus, AlertTriangle, CheckCircle, XCircle, Save, Users, 
-    ListChecks, Settings, SlidersHorizontal // Asegúrate de importar todos los iconos necesarios
+import {
+    Edit, Trash2, Plus, AlertTriangle, CheckCircle, XCircle, Save, Users,
+    ListChecks, Settings, SlidersHorizontal
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 
 // --- Service Import ---
-import ExpenseTypeService from "../../services/ExpenseType"; // Corregido
+// CAMBIO: Importar y usar ExpenseCategoryService
+import ExpenseCategoryService from "../../services/ExpenseCategoryService";
 
 // --- Reusable Components ---
-import CustomPagination from '../../General/CustomPagination'; // Ajusta la ruta
-import { ConfirmationModal } from '../../General/ConfirmationModal'; // Ajusta la ruta
+import CustomPagination from '../../General/CustomPagination';
+import { ConfirmationModal } from '../../General/ConfirmationModal';
 
 // --- Constants ---
 const INITIAL_FORM_STATE = {
-    idExpenseType: null,
+    // CAMBIO: idExpenseType a idExpenseCategory
+    idExpenseCategory: null,
     name: '',
     description: '',
-    // isBimonthly: false, // Eliminado si no es parte de tu modelo ExpenseType
     status: true
 };
-const INITIAL_FORM_ERRORS = { name: null, description: null };
+const INITIAL_FORM_ERRORS = { name: null, description: null }; // La descripción podría ser opcional
 const INITIAL_CONFIRM_PROPS = { title: "", message: null, confirmText: "Confirmar", confirmColor: "primary", itemDetails: null, isOpen: false, isConfirming: false };
 const ITEMS_PER_PAGE = 7;
 
+// CAMBIO: Nombre del componente si lo deseas, ej: GestionCategoriasGasto
 const TablaGastos = () => {
-    const [data, setData] = useState([]);
+    // CAMBIO: data a expenseCategoriesData (o similar para claridad)
+    const [expenseCategoriesData, setExpenseCategoriesData] = useState([]);
     const [form, setForm] = useState(INITIAL_FORM_STATE);
     const [isEditing, setIsEditing] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
@@ -42,10 +45,8 @@ const TablaGastos = () => {
     const [isLoadingTable, setIsLoadingTable] = useState(true);
     const [formErrors, setFormErrors] = useState(INITIAL_FORM_ERRORS);
     const [currentPage, setCurrentPage] = useState(1);
-    const [confirmModalProps, setConfirmModalProps] = useState(INITIAL_CONFIRM_PROPS); // Usar INITIAL_CONFIRM_PROPS
+    const [confirmModalProps, setConfirmModalProps] = useState(INITIAL_CONFIRM_PROPS);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    // const [isConfirmActionLoading, setIsConfirmActionLoading] = useState(false); // Se maneja dentro de confirmModalProps
-
     const [gastosDropdownOpen, setGastosDropdownOpen] = useState(false);
 
     const confirmActionRef = useRef(null);
@@ -54,41 +55,41 @@ const TablaGastos = () => {
     const toggleGastosDropdown = () => setGastosDropdownOpen(prevState => !prevState);
 
     // --- Navegaciones ---
-
-    
-    const navigateToManageExpenseTypes = useCallback(() => {
-        navigate('/home/conceptos-gasto'); 
+    // CAMBIO: navigateToManageExpenseCategories
+    const navigateToManageExpenseCategories = useCallback(() => {
+        navigate('/home/mano-de-obra/gastos'); // O la ruta que uses para este componente
     }, [navigate]);
 
-    const navigateToMonthlyExpenses = useCallback(() => { 
-        navigate('/home/mano-de-obra'); // O tu ruta principal para registrar gastos mensuales
+    const navigateToMonthlyExpenses = useCallback(() => {
+        navigate('/home/mano-de-obra');
     }, [navigate]);
 
     const navigateToEmployees = useCallback(() => {
-        navigate('/home/rendimiento-empleado');
+        navigate('/home/mano-de-obra/rendimiento');
     }, [navigate]);
 
     const navigateToManageSpecificConcepts = useCallback(() => {
-        navigate('/home/gestion-conceptos-especificos');
+        navigate('/home/mano-de-obra/conceptos');
     }, [navigate]);
 
-    const fetchData = useCallback(async (showLoadingSpinner = true) => {
+    // CAMBIO: fetchData a fetchExpenseCategories y uso de ExpenseCategoryService
+    const fetchExpenseCategories = useCallback(async (showLoadingSpinner = true) => {
         if (showLoadingSpinner) setIsLoadingTable(true);
         try {
-            const concepts = await ExpenseTypeService.getAllExpenseTypes();
-            setData(Array.isArray(concepts) ? concepts : []);
+            const categories = await ExpenseCategoryService.getAllExpenseCategories();
+            setExpenseCategoriesData(Array.isArray(categories) ? categories : []);
         } catch (error) {
-            console.error("Error fetching expense type data:", error);
-            toast.error("Error al cargar los tipos de gasto.");
-            setData([]);
+            console.error("Error fetching expense categories data:", error);
+            toast.error("Error al cargar las categorías de gasto.");
+            setExpenseCategoriesData([]);
         } finally {
              if (showLoadingSpinner) setIsLoadingTable(false);
         }
     }, []);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        fetchExpenseCategories(); // CAMBIO
+    }, [fetchExpenseCategories]); // CAMBIO
 
     const resetForm = useCallback(() => setForm(INITIAL_FORM_STATE), []);
     const clearFormErrors = useCallback(() => setFormErrors(INITIAL_FORM_ERRORS), []);
@@ -100,8 +101,7 @@ const TablaGastos = () => {
             errors.name = 'El nombre es obligatorio.';
             isValid = false;
         }
-        // La descripción puede ser opcional, ajusta si es necesario
-        // if (!form.description || !form.description.trim()) {
+        // if (!form.description || !form.description.trim()) { // Hacer la descripción opcional
         //     errors.description = 'La descripción es obligatoria.';
         //     isValid = false;
         // }
@@ -138,14 +138,12 @@ const TablaGastos = () => {
         setConfirmModalProps(INITIAL_CONFIRM_PROPS);
     }, [confirmModalProps.isConfirming]);
 
-
     const prepareConfirmation = useCallback((actionFn, props) => {
-        // const detailsToPass = props.itemDetails; // No es necesario si actionFn ya tiene el item
-        confirmActionRef.current = actionFn; // Guardar la función de acción directamente
-        setConfirmModalProps({ ...props, isOpen: true, itemDetails: props.itemDetails }); // Asegurar que itemDetails se pasa
+        confirmActionRef.current = actionFn;
+        setConfirmModalProps({ ...props, isOpen: true, itemDetails: props.itemDetails });
     }, []);
 
-
+    // CAMBIO: Uso de ExpenseCategoryService
     const handleSubmit = useCallback(async () => {
         if (!validateForm()) {
             toast.error("Por favor, complete los campos requeridos.", { icon: <XCircle className="text-danger" /> });
@@ -153,38 +151,35 @@ const TablaGastos = () => {
         }
         setIsSubmitting(true);
         const actionText = isEditing ? "Actualizando" : "Creando";
-        const toastId = toast.loading(`${actionText} tipo de gasto...`);
+        const toastId = toast.loading(`${actionText} categoría de gasto...`); // CAMBIO
 
         try {
             const payload = { ...form };
-            // Eliminar isBimonthly si no existe en el backend para ExpenseType
-            // delete payload.isBimonthly; 
-
+            // El campo idExpenseCategory se maneja aquí
             if (isEditing) {
-                if (!payload.idExpenseType) throw new Error("ID del tipo de gasto no encontrado para actualizar.");
-                await ExpenseTypeService.updateExpenseType(payload.idExpenseType, payload);
-                toast.success("Tipo de gasto actualizado!", { id: toastId, icon: <CheckCircle className="text-success" /> });
+                if (!payload.idExpenseCategory) throw new Error("ID de la categoría de gasto no encontrado para actualizar."); // CAMBIO
+                await ExpenseCategoryService.updateExpenseCategory(payload.idExpenseCategory, payload); // CAMBIO
+                toast.success("Categoría de gasto actualizada!", { id: toastId, icon: <CheckCircle className="text-success" /> }); // CAMBIO
             } else {
-                delete payload.idExpenseType; // El backend asigna el ID al crear
-                await ExpenseTypeService.createExpenseType(payload);
-                toast.success("Tipo de gasto creado!", { id: toastId, icon: <CheckCircle className="text-success" /> });
+                delete payload.idExpenseCategory; // El backend asigna el ID al crear
+                await ExpenseCategoryService.createExpenseCategory(payload); // CAMBIO
+                toast.success("Categoría de gasto creada!", { id: toastId, icon: <CheckCircle className="text-success" /> }); // CAMBIO
             }
             toggleMainModal();
-            await fetchData(false);
+            await fetchExpenseCategories(false); // CAMBIO
         } catch (error) {
-            console.error(`Error ${actionText.toLowerCase()} tipo de gasto:`, error);
-            const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
+            console.error(`Error ${actionText.toLowerCase()} categoría de gasto:`, error); // CAMBIO
+            const errorMsg = error.message || "Error desconocido"; // El servicio ya formatea el error
             toast.error(`Error al ${actionText.toLowerCase()}: ${errorMsg}`, { id: toastId, icon: <XCircle className="text-danger" />, duration: 5000 });
         } finally {
             setIsSubmitting(false);
         }
-    }, [form, isEditing, validateForm, toggleMainModal, fetchData]);
-    
+    }, [form, isEditing, validateForm, toggleMainModal, fetchExpenseCategories]); // CAMBIO
+
     const executeConfirmedAction = async () => {
         if (confirmActionRef.current && confirmModalProps.itemDetails) {
             setConfirmModalProps(prev => ({ ...prev, isConfirming: true }));
-            await confirmActionRef.current(confirmModalProps.itemDetails); // Pasar itemDetails a la acción
-            // isConfirming se resetea en la acción o al cerrar
+            await confirmActionRef.current(confirmModalProps.itemDetails);
         } else {
             console.error("Error: Acción de confirmación o detalles del ítem no definidos.");
             toast.error("Error interno al procesar la acción.");
@@ -192,77 +187,76 @@ const TablaGastos = () => {
         }
     };
 
-
+    // CAMBIO: requestChangeStatusConfirmation y executeChangeStatus
     const requestChangeStatusConfirmation = useCallback((item) => {
-        if (!item || item.idExpenseType == null) return;
-        const { idExpenseType, status: currentStatus, name } = item;
+        if (!item || item.idExpenseCategory == null) return; // CAMBIO
+        const { idExpenseCategory, status: currentStatus, name } = item; // CAMBIO
         const actionText = currentStatus ? "desactivar" : "activar";
         const futureStatusText = currentStatus ? "Inactivo" : "Activo";
         const confirmColor = currentStatus ? "warning" : "success";
         prepareConfirmation(executeChangeStatus, {
             title: "Confirmar Cambio de Estado",
-            message: (<p>¿Seguro que desea <strong>{actionText}</strong> el tipo de gasto <strong>{name || 'seleccionado'}</strong>?<br/>Nuevo estado: <strong>{futureStatusText}</strong>.</p>),
+            message: (<p>¿Seguro que desea <strong>{actionText}</strong> la categoría de gasto <strong>{name || 'seleccionada'}</strong>?<br/>Nuevo estado: <strong>{futureStatusText}</strong>.</p>), // CAMBIO
             confirmText: `Confirmar ${actionText.charAt(0).toUpperCase() + actionText.slice(1)}`,
             confirmColor: confirmColor,
-            itemDetails: { idExpenseType, currentStatus, name } // Pasar itemDetails aquí
+            itemDetails: { idExpenseCategory, currentStatus, name } // CAMBIO
         });
     }, [prepareConfirmation]);
 
     const executeChangeStatus = useCallback(async (details) => {
-        if (!details || details.idExpenseType == null) {
-            toast.error("Error interno: Detalles no encontrados."); 
-            setConfirmModalProps(prev => ({ ...prev, isConfirming: false, isOpen: false })); // Cerrar y resetear
-            return;
-        }
-        const { idExpenseType, currentStatus, name } = details;
-        const newStatus = !currentStatus;
-        const actionText = currentStatus ? "desactivar" : "activar";
-        // isConfirming ya está en true desde executeConfirmedAction
-        const toastId = toast.loading(`${actionText.charAt(0).toUpperCase() + actionText.slice(1)}ndo tipo de gasto...`);
-        try {
-            await ExpenseTypeService.changeStateExpenseType(idExpenseType, newStatus);
-            toast.success(`Tipo de gasto "${name || ''}" ${newStatus ? 'activado' : 'desactivado'}.`, { id: toastId, icon: <CheckCircle /> });
-            await fetchData(false); // Actualizar datos de la tabla
-        } catch (error) {
-            console.error(`Error al ${actionText} tipo de gasto:`, error);
-            const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
-            toast.error(`Error: ${errorMsg}`, { id: toastId, icon: <XCircle className="text-danger" />, duration: 5000 });
-        } finally {
-            setConfirmModalProps(INITIAL_CONFIRM_PROPS); // Resetear completamente
-        }
-    }, [fetchData]);
-
-    const requestDeleteConfirmation = useCallback((item) => {
-        if (!item || item.idExpenseType == null) return;
-        prepareConfirmation(executeDelete, {
-            title: "Confirmar Eliminación",
-            message: (<><p>¿Seguro que desea eliminar permanentemente el tipo de gasto <strong>{item.name || 'seleccionado'}</strong>?</p><p><strong className="text-danger">Esta acción no se puede deshacer.</strong></p></>),
-            confirmText: "Eliminar Definitivamente",
-            confirmColor: "danger",
-            itemDetails: { ...item } // Pasar itemDetails aquí
-        });
-    }, [prepareConfirmation]);
-
-    const executeDelete = useCallback(async (itemToDelete) => {
-        if (!itemToDelete || itemToDelete.idExpenseType == null) {
-            toast.error("Error interno: Datos para eliminar no encontrados."); 
+        if (!details || details.idExpenseCategory == null) { // CAMBIO
+            toast.error("Error interno: Detalles no encontrados.");
             setConfirmModalProps(prev => ({ ...prev, isConfirming: false, isOpen: false }));
             return;
         }
-        // isConfirming ya está en true
-        const toastId = toast.loading('Eliminando tipo de gasto...');
+        const { idExpenseCategory, currentStatus, name } = details; // CAMBIO
+        const newStatus = !currentStatus;
+        const actionText = currentStatus ? "desactivar" : "activar";
+        const toastId = toast.loading(`${actionText.charAt(0).toUpperCase() + actionText.slice(1)}ndo categoría de gasto...`); // CAMBIO
         try {
-            await ExpenseTypeService.deleteExpenseType(itemToDelete.idExpenseType);
-            toast.success(`Tipo de gasto "${itemToDelete.name}" eliminado.`, { id: toastId, icon: <CheckCircle className="text-success" /> });
-            await fetchData(false); // Actualizar datos
+            await ExpenseCategoryService.changeStateExpenseCategory(idExpenseCategory, newStatus); // CAMBIO
+            toast.success(`Categoría de gasto "${name || ''}" ${newStatus ? 'activada' : 'desactivada'}.`, { id: toastId, icon: <CheckCircle /> }); // CAMBIO
+            await fetchExpenseCategories(false); // CAMBIO
         } catch (error) {
-            console.error("Error al eliminar tipo de gasto:", error);
-            const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
+            console.error(`Error al ${actionText} categoría de gasto:`, error); // CAMBIO
+            const errorMsg = error.message || "Error desconocido";
             toast.error(`Error: ${errorMsg}`, { id: toastId, icon: <XCircle className="text-danger" />, duration: 5000 });
         } finally {
             setConfirmModalProps(INITIAL_CONFIRM_PROPS);
         }
-    }, [fetchData]);
+    }, [fetchExpenseCategories]); // CAMBIO
+
+    // CAMBIO: requestDeleteConfirmation y executeDelete
+    const requestDeleteConfirmation = useCallback((item) => {
+        if (!item || item.idExpenseCategory == null) return; // CAMBIO
+        prepareConfirmation(executeDelete, {
+            title: "Confirmar Eliminación",
+            message: (<><p>¿Seguro que desea eliminar permanentemente la categoría de gasto <strong>{item.name || 'seleccionada'}</strong>?</p><p><strong className="text-danger">Esta acción no se puede deshacer.</strong></p></>), // CAMBIO
+            confirmText: "Eliminar Definitivamente",
+            confirmColor: "danger",
+            itemDetails: { ...item }
+        });
+    }, [prepareConfirmation]);
+
+    const executeDelete = useCallback(async (itemToDelete) => {
+        if (!itemToDelete || itemToDelete.idExpenseCategory == null) { // CAMBIO
+            toast.error("Error interno: Datos para eliminar no encontrados.");
+            setConfirmModalProps(prev => ({ ...prev, isConfirming: false, isOpen: false }));
+            return;
+        }
+        const toastId = toast.loading('Eliminando categoría de gasto...'); // CAMBIO
+        try {
+            await ExpenseCategoryService.deleteExpenseCategory(itemToDelete.idExpenseCategory); // CAMBIO
+            toast.success(`Categoría de gasto "${itemToDelete.name}" eliminada.`, { id: toastId, icon: <CheckCircle className="text-success" /> }); // CAMBIO
+            await fetchExpenseCategories(false); // CAMBIO
+        } catch (error) {
+            console.error("Error al eliminar categoría de gasto:", error); // CAMBIO
+            const errorMsg = error.message || "Error desconocido";
+            toast.error(`Error: ${errorMsg}`, { id: toastId, icon: <XCircle className="text-danger" />, duration: 5000 });
+        } finally {
+            setConfirmModalProps(INITIAL_CONFIRM_PROPS);
+        }
+    }, [fetchExpenseCategories]); // CAMBIO
 
     const openAddModal = useCallback(() => {
         resetForm(); clearFormErrors(); setIsEditing(false); setModalOpen(true);
@@ -270,27 +264,28 @@ const TablaGastos = () => {
 
     const openEditModal = useCallback((item) => {
         setForm({
-            idExpenseType: item.idExpenseType ?? null,
+            // CAMBIO: idExpenseType a idExpenseCategory
+            idExpenseCategory: item.idExpenseCategory ?? null,
             name: item.name || '',
             description: item.description || '',
-            // isBimonthly: item.isBimonthly || false, // Si no lo usas, elimínalo
             status: item.status !== undefined ? item.status : true,
         });
         setIsEditing(true); clearFormErrors(); setModalOpen(true);
     }, [clearFormErrors]);
 
+    // CAMBIO: filteredData usa expenseCategoriesData
     const filteredData = useMemo(() => {
-         const sortedData = [...data].sort((a, b) => (b.idExpenseType || 0) - (a.idExpenseType || 0));
+         const sortedData = [...expenseCategoriesData].sort((a, b) => (b.idExpenseCategory || 0) - (a.idExpenseCategory || 0)); // CAMBIO
         const lowerSearchText = tableSearchText.trim().toLowerCase();
         if (!lowerSearchText) return sortedData;
         return sortedData.filter(item =>
             item && (
                 (item.name || '').toLowerCase().includes(lowerSearchText) ||
                 (item.description || '').toLowerCase().includes(lowerSearchText) ||
-                 String(item.idExpenseType || '').toLowerCase().includes(lowerSearchText)
+                 String(item.idExpenseCategory || '').toLowerCase().includes(lowerSearchText) // CAMBIO
             )
         );
-    }, [data, tableSearchText]);
+    }, [expenseCategoriesData, tableSearchText]); // CAMBIO
 
     const totalItems = useMemo(() => filteredData.length, [filteredData]);
     const totalPages = useMemo(() => Math.ceil(totalItems / ITEMS_PER_PAGE) || 1, [totalItems]);
@@ -311,13 +306,14 @@ const TablaGastos = () => {
     return (
         <Container fluid className="p-4 main-content">
             <Toaster position="top-center" toastOptions={{ style: { maxWidth: 600 } }} />
-             <h2 className="mb-4">Administrar Tipos de Gasto Generales</h2>
+             {/* CAMBIO: Título */}
+             <h2 className="mb-4">Administrar Categorías de Gasto</h2>
              <Row className="mb-3 align-items-center">
                  <Col md={5} lg={4}>
                     <Input
                         bsSize="sm" type="text" placeholder="Buscar por nombre, descripción o ID..."
                         value={tableSearchText} onChange={handleTableSearch}
-                        aria-label="Buscar tipos de gasto"
+                        aria-label="Buscar categorías de gasto" // CAMBIO
                     />
                 </Col>
                  <Col md={7} lg={8} className="text-md-end mt-2 mt-md-0 d-flex justify-content-end align-items-center gap-2">
@@ -330,8 +326,9 @@ const TablaGastos = () => {
                         </DropdownToggle>
                         <DropdownMenu end>
                             <DropdownItem header>Administración de Conceptos</DropdownItem>
-                            <DropdownItem onClick={navigateToManageExpenseTypes}>
-                                <SlidersHorizontal size={16} className="me-2 text-muted" />Gestionar Gastos
+                            {/* CAMBIO: Etiqueta y navegación */}
+                            <DropdownItem onClick={navigateToManageExpenseCategories} active> {/* Marcar como activo si esta es la página */}
+                                <SlidersHorizontal size={16} className="me-2 text-muted" />Gestionar Categorías
                             </DropdownItem>
                             <DropdownItem onClick={navigateToManageSpecificConcepts}>
                                 <Settings size={16} className="me-2 text-muted" />Gestionar Conceptos Específicos
@@ -339,11 +336,11 @@ const TablaGastos = () => {
                         </DropdownMenu>
                     </Dropdown>
                      <Button color="success" size="sm" onClick={openAddModal} className="button-add">
-                        <Plus size={18} className="me-1" /> Agregar Tipo de Gasto
+                        {/* CAMBIO: Texto del botón */}
+                        <Plus size={18} className="me-1" /> Agregar Categoría
                     </Button>
-
                     <Button color="success" outline size="sm" onClick={navigateToMonthlyExpenses} title="Ir a registro mensual">
-                        <Users size={16} className="me-1" /> Crear Registro Mensual
+                        <ListChecks size={16} className="me-1" /> Crear Registro Mensual
                     </Button>
                 </Col>
             </Row>
@@ -352,9 +349,9 @@ const TablaGastos = () => {
                     <thead className="table-dark">
                         <tr>
                             <th scope="col" style={{ width: '10%' }}>ID</th>
-                            <th scope="col">Nombre Tipo Gasto</th>
+                            {/* CAMBIO: Encabezado de columna */}
+                            <th scope="col">Nombre Categoría Gasto</th>
                             <th scope="col">Descripción</th>
-                            {/* <th scope="col" style={{ width: '10%' }} className="text-center">Bimestral</th> */}
                             <th scope="col" style={{ width: '10%' }} className="text-center">Estado</th>
                             <th scope="col" style={{ width: '15%' }} className="text-center">Acciones</th>
                         </tr>
@@ -364,17 +361,18 @@ const TablaGastos = () => {
                             <tr><td colSpan="5" className="text-center p-5"><Spinner color="primary" /> Cargando...</td></tr>
                         ) : currentItems.length > 0 ? (
                             currentItems.map((item) => (
-                                <tr key={item.idExpenseType} style={{ verticalAlign: 'middle' }}>
-                                    <th scope="row">{item.idExpenseType}</th>
+                                // CAMBIO: key usa idExpenseCategory
+                                <tr key={item.idExpenseCategory} style={{ verticalAlign: 'middle' }}>
+                                    <th scope="row">{item.idExpenseCategory}</th>
                                     <td>{item.name || '-'}</td>
                                     <td>{item.description || '-'}</td>
-                                    {/* <td className="text-center">{item.isBimonthly ? 'Sí' : 'No'}</td> */}
                                     <td className="text-center">
                                         <Button
                                             outline color={item.status ? "success" : "secondary"}
                                             size="sm" className="p-1"
                                             onClick={() => requestChangeStatusConfirmation(item)}
-                                            disabled={item.idExpenseType == null || confirmModalProps.isConfirming}
+                                            // CAMBIO: idExpenseType a idExpenseCategory
+                                            disabled={item.idExpenseCategory == null || confirmModalProps.isConfirming}
                                             title={item.status ? "Activo (Clic para inactivar)" : "Inactivo (Clic para activar)"}
                                         >
                                             {item.status ? "Activo" : "Inactivo"}
@@ -382,10 +380,11 @@ const TablaGastos = () => {
                                     </td>
                                     <td className="text-center">
                                         <div className="d-inline-flex gap-1 action-cell-content">
-                                            <Button color="warning" outline size="sm" onClick={() => openEditModal(item)} title="Editar Tipo de Gasto" className="p-1" disabled={item.idExpenseType == null || confirmModalProps.isConfirming}>
+                                            {/* CAMBIO: title y disabled check */}
+                                            <Button color="warning" outline size="sm" onClick={() => openEditModal(item)} title="Editar Categoría de Gasto" className="p-1" disabled={item.idExpenseCategory == null || confirmModalProps.isConfirming}>
                                                 <Edit size={14} />
                                             </Button>
-                                            <Button color="danger" outline size="sm" onClick={() => requestDeleteConfirmation(item)} title="Eliminar Tipo de Gasto" className="p-1" disabled={item.idExpenseType == null || confirmModalProps.isConfirming}>
+                                            <Button color="danger" outline size="sm" onClick={() => requestDeleteConfirmation(item)} title="Eliminar Categoría de Gasto" className="p-1" disabled={item.idExpenseCategory == null || confirmModalProps.isConfirming}>
                                                 <Trash2 size={14} />
                                             </Button>
                                         </div>
@@ -394,9 +393,10 @@ const TablaGastos = () => {
                             ))
                         ) : (
                             <tr><td colSpan="5" className="text-center fst-italic p-4">
-                                {tableSearchText ? 'No se encontraron tipos de gasto.' : 'No hay tipos de gasto registrados.'}
-                                {!isLoadingTable && data.length === 0 && !tableSearchText && (
-                                    <span className="d-block mt-2">Aún no hay tipos de gasto. <Button size="sm" color="link" onClick={openAddModal} className="p-0 align-baseline">Agregar el primero</Button></span>
+                                {/* CAMBIO: Mensajes */}
+                                {tableSearchText ? 'No se encontraron categorías de gasto.' : 'No hay categorías de gasto registradas.'}
+                                {!isLoadingTable && expenseCategoriesData.length === 0 && !tableSearchText && (
+                                    <span className="d-block mt-2">Aún no hay categorías de gasto. <Button size="sm" color="link" onClick={openAddModal} className="p-0 align-baseline">Agregar la primera</Button></span>
                                 )}
                             </td></tr>
                         )}
@@ -408,27 +408,23 @@ const TablaGastos = () => {
              )}
              <Modal isOpen={modalOpen} toggle={toggleMainModal} centered backdrop="static" keyboard={!isSubmitting}>
                 <ModalHeader toggle={!isSubmitting ? toggleMainModal : undefined}>
-                     <Settings size={20} className="me-2" /> {isEditing ? 'Editar Tipo de Gasto' : 'Agregar Nuevo Tipo de Gasto'}
+                     {/* CAMBIO: Título del modal */}
+                     <Settings size={20} className="me-2" /> {isEditing ? 'Editar Categoría de Gasto' : 'Agregar Nueva Categoría de Gasto'}
                 </ModalHeader>
                 <ModalBody>
-                    {formErrors.api && <Alert color="danger" size="sm">{formErrors.api}</Alert>} {/* Para errores generales del API */}
-                     <Form id="expenseTypeForm" noValidate onSubmit={(e) => e.preventDefault()}>
+                    {formErrors.api && <Alert color="danger" size="sm">{formErrors.api}</Alert>}
+                     <Form id="expenseCategoryForm" noValidate onSubmit={(e) => e.preventDefault()}> {/* CAMBIO: id del form */}
                         <FormGroup>
-                            <Label for="name" className="form-label fw-bold">Nombre Tipo Gasto <span className="text-danger">*</span></Label>
+                            {/* CAMBIO: Label */}
+                            <Label for="name" className="form-label fw-bold">Nombre Categoría Gasto <span className="text-danger">*</span></Label>
                             <Input id="name" bsSize="sm" type="text" name="name" value={form.name} onChange={handleChange} invalid={!!formErrors.name} required disabled={isSubmitting} />
                             <FormFeedback>{formErrors.name}</FormFeedback>
                         </FormGroup>
                         <FormGroup>
-                            <Label for="description" className="form-label">Descripción</Label> {/* No obligatorio */}
+                            <Label for="description" className="form-label">Descripción</Label>
                             <Input id="description" bsSize="sm" type="textarea" name="description" value={form.description} onChange={handleChange} rows={3} invalid={!!formErrors.description} disabled={isSubmitting} />
                             <FormFeedback>{formErrors.description}</FormFeedback>
                         </FormGroup>
-                        {/* 
-                        <FormGroup check className="mb-3">
-                             <Input type="checkbox" name="isBimonthly" id="isBimonthlyModal" checked={form.isBimonthly} onChange={handleChange} disabled={isSubmitting} className="form-check-input" />
-                            <Label htmlFor="isBimonthlyModal" check className="form-check-label">Es Gasto Bimestral</Label>
-                        </FormGroup> 
-                        */}
                         {!isEditing && (
                             <FormGroup check>
                                 <Input type="checkbox" name="status" id="statusModal" checked={form.status} onChange={handleChange} disabled={isSubmitting} />
@@ -441,18 +437,19 @@ const TablaGastos = () => {
                      <Button color="secondary" outline onClick={toggleMainModal} disabled={isSubmitting}>Cancelar</Button>
                      <Button color="primary" onClick={handleSubmit} disabled={isSubmitting}>
                          {isSubmitting ? <><Spinner size="sm" className="me-1"/> {isEditing ? 'Actualizando...' : 'Guardando...'}</>
-                            : <><Save size={16} className="me-1"/> {isEditing ? 'Guardar Cambios' : 'Agregar Tipo Gasto'}</>
+                            // CAMBIO: Texto del botón
+                            : <><Save size={16} className="me-1"/> {isEditing ? 'Guardar Cambios' : 'Agregar Categoría'}</>
                          }
                     </Button>
                 </ModalFooter>
             </Modal>
-            <ConfirmationModal 
-                isOpen={confirmModalProps.isOpen} 
-                toggle={closeConfirmModal} 
-                title={confirmModalProps.title} 
-                onConfirm={executeConfirmedAction} 
-                confirmText={confirmModalProps.confirmText} 
-                confirmColor={confirmModalProps.confirmColor} 
+            <ConfirmationModal
+                isOpen={confirmModalProps.isOpen}
+                toggle={closeConfirmModal}
+                title={confirmModalProps.title}
+                onConfirm={executeConfirmedAction}
+                confirmText={confirmModalProps.confirmText}
+                confirmColor={confirmModalProps.confirmColor}
                 isConfirming={confirmModalProps.isConfirming}
             >
                 {confirmModalProps.message}
@@ -461,4 +458,5 @@ const TablaGastos = () => {
     );
 };
 
-export default TablaGastos;
+// CAMBIO: Nombre de exportación si renombras el componente
+export default TablaGastos; // O export default GestionCategoriasGasto;
