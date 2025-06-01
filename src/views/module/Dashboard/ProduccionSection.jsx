@@ -5,7 +5,7 @@ import StatCardFinance from './StatCardFinance';
 import ChartPlaceholder from './ChartPlaceholder';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
-import productionOrderService from '../../services/ordenProduccionService'; // Ajusta ruta!
+import productionOrderService from '../../services/productionOrderService'; // Ajusta ruta!
 // Podrías necesitar servicios de productos o fichas técnicas si quieres más detalle
 
 const ProduccionSection = ({ selectedYear, selectedMonth }) => {

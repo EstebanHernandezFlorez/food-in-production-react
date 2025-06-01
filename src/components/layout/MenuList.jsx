@@ -2,141 +2,142 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Menu } from 'antd';
 import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../../views/hooks/AuthProvider'; // Ajusta la ruta si es necesario
-import allRoutesConfig from "../../views/module/pages.routes"; // Ajusta la ruta si es necesario
-import '../../assets/css/menu.css'; // Ajusta la ruta si es necesario
+import { useAuth } from '../../views/hooks/AuthProvider';
+import allRoutesConfig from "../../views/module/pages.routes";
+import '../../assets/css/menu.css';
 
 const MenuList = ({ collapsed }) => {
-    const { user, effectivePermissions, can } = useAuth();
+    const { user, effectivePermissions, can, initialAuthCheckComplete } = useAuth();
     const location = useLocation();
 
     const [filteredRoutes, setFilteredRoutes] = useState([]);
     const [openKeys, setOpenKeys] = useState([]);
     const [selectedKeys, setSelectedKeys] = useState([]);
 
-    // Función recursiva para filtrar rutas basadas en permisos
-    const filterAndBuildRoutes = useCallback((routesToFilter, parentPathForLog = 'ROOT') => {
-        if (!user) {
-            // console.log(`[MenuList filterAndBuildRoutes for ${parentPathForLog}] No user, returning empty.`);
-            return [];
-        }
-        if (typeof can !== 'function') {
-            // console.log(`[MenuList filterAndBuildRoutes for ${parentPathForLog}] 'can' function not yet available, returning empty.`);
-            return [];
-        }
-
-        if (parentPathForLog === 'ROOT') {
-            // console.log("[MenuList filterAndBuildRoutes - INVOCATION START] User:", user?.email);
-            // console.log("[MenuList filterAndBuildRoutes - INVOCATION START] Effective Permissions for 'can':", JSON.stringify(effectivePermissions));
-        }
+    const filterAndBuildRoutes = useCallback((routesToFilter) => {
+        if (!user || typeof can !== 'function') return [];
 
         return routesToFilter.reduce((allowed, route) => {
-            // console.log(`[MenuList filterAndBuildRoutes for ${parentPathForLog}] Processing route: ${route.label}, Path: ${route.path}, RequiredPermission: '${route.requiredPermission}'`);
-
             const permissionToCheck = route.requiredPermission;
-            let isRouteAccessible = true;
-
+            let isRouteAccessible = true; // Rutas sin requiredPermission son accesibles por defecto
             if (permissionToCheck) {
                 isRouteAccessible = can(permissionToCheck, "view");
-                // console.log(`[MenuList filterAndBuildRoutes for ${parentPathForLog}] > Call to can('${permissionToCheck}', 'view') for route '${route.label}' -> Result: ${isRouteAccessible}`);
-            } else {
-                // console.log(`[MenuList filterAndBuildRoutes for ${parentPathForLog}] No requiredPermission for ${route.label}, considered accessible (if user is authenticated).`);
             }
-
+            
             let processedChildren = [];
             if (route.children && route.children.length > 0) {
-                // console.log(`[MenuList filterAndBuildRoutes for ${parentPathForLog}] >>>> Recursing for children of ${route.label}. Children to process:`, route.children.map(c => c.label).join(', '));
-                processedChildren = filterAndBuildRoutes(route.children, route.label);
-                // console.log(`[MenuList filterAndBuildRoutes for ${parentPathForLog}] <<<< Finished recursion for ${route.label}. Processed (accessible) children count: ${processedChildren.length}. Children:`, processedChildren.map(c => c.label).join(', '));
+                processedChildren = filterAndBuildRoutes(route.children); // No pasar parentPathForLog si no se usa
             }
 
-            // --- INICIO DE LÓGICA DE OPCIÓN A ---
-            if (isRouteAccessible) { // Si la ruta actual (padre o hoja) cumple su propio chequeo de permiso
-                if (route.children) { // Si es un grupo/padre (originalmente tenía hijos)
-                    if (processedChildren.length > 0) {
-                        // Padre accesible Y TIENE al menos un hijo visible después del filtro
-                        // console.log(`[MenuList filterAndBuildRoutes for ${parentPathForLog}] Route ${route.label} IS ACCESSIBLE and has ${processedChildren.length} visible children. Including parent with children.`);
+            if (isRouteAccessible) {
+                if (route.children) { // Si es un grupo y es accesible
+                    if (processedChildren.length > 0) { // Y tiene hijos accesibles
                         allowed.push({ ...route, children: processedChildren });
-                    } else {
-                        // Padre accesible pero SIN hijos visibles después del filtro. No lo incluimos.
-                        // console.log(`[MenuList filterAndBuildRoutes for ${parentPathForLog}] Route ${route.label} IS ACCESSIBLE but has NO visible children. Excluding parent.`);
                     }
-                } else { // Es una ruta hoja (sin hijos) y es accesible
-                    // console.log(`[MenuList filterAndBuildRoutes for ${parentPathForLog}] Route ${route.label} (leaf) IS ACCESSIBLE. Including.`);
+                    // Si no tiene hijos accesibles, el grupo no se añade a menos que quieras mostrar grupos vacíos
+                } else { // Si es una ruta individual y es accesible
                     allowed.push(route);
                 }
             } else if (route.children && processedChildren.length > 0) {
-                // La ruta padre NO es accesible por su propio `requiredPermission`,
-                // PERO tiene hijos que SÍ lo son.
-                // Se muestra el padre como un agrupador no navegable.
-                // console.log(`[MenuList filterAndBuildRoutes for ${parentPathForLog}] Route ${route.label} NOT ACCESSIBLE, but has ${processedChildren.length} accessible children. Displaying as non-navigable parent.`);
-                allowed.push({ ...route, path: '#', children: processedChildren });
-            } else {
-                // Ruta no accesible y (si tenía hijos) ninguno de sus hijos es accesible.
-                // console.log(`[MenuList filterAndBuildRoutes for ${parentPathForLog}] Route ${route.label} NOT ACCESSIBLE and no accessible children (if any). Excluding.`);
+                // Si la ruta padre (grupo) no es accesible por sí misma pero tiene hijos que sí lo son
+                allowed.push({ ...route, path: '#', children: processedChildren }); // El grupo se vuelve no navegable
             }
-            // --- FIN DE LÓGICA DE OPCIÓN A ---
             return allowed;
         }, []);
-    }, [user, can, effectivePermissions]);
+    }, [user, can]); // effectivePermissions es usado indirectamente por 'can', así que 'can' es suficiente si su referencia es estable o si 'user' y 'effectivePermissions' son las deps de 'can'. Por seguridad, puedes añadir effectivePermissions.
 
     useEffect(() => {
-        // console.log("[MenuList useEffect for filteredRoutes] Triggered. User:", user ? user.email : "No user", "Can is function:", typeof can === 'function');
-        if (user && typeof can === 'function') {
-            const accessibleRoutes = filterAndBuildRoutes(allRoutesConfig, 'ROOT_EFFECT_CALL');
-            // console.log("[MenuList useEffect for filteredRoutes] FINAL ACCESSIBLE ROUTES from filterAndBuildRoutes:", JSON.stringify(accessibleRoutes, (key, value) => key === 'icon' || key === 'element' ? 'COMPONENT_OR_ICON' : value, 2));
-            setFilteredRoutes(accessibleRoutes);
-        } else {
-            // console.log("[MenuList useEffect for filteredRoutes] Conditions not met. Setting empty filtered routes.");
+        if (!initialAuthCheckComplete || !user || !user.role || typeof can !== 'function') {
             setFilteredRoutes([]);
+            return;
         }
-    }, [user, effectivePermissions, can, filterAndBuildRoutes, allRoutesConfig]);
+        
+        let accessibleRoutes;
+        const userActualRoleName = user.role.roleName;
+
+        if (userActualRoleName && userActualRoleName.toLowerCase() === "cocinero") {
+            console.log("[MenuList] Usuario es Cocinero. Filtrando solo para Orden de Producción.");
+            const produccionGroupConfig = allRoutesConfig.find(route => route.path === "produccion");
+            
+            if (produccionGroupConfig && produccionGroupConfig.children) {
+                const ordenProduccionRouteConfig = produccionGroupConfig.children.find(child => 
+                    child.path === "orden-produccion" // Asegúrate que esta es la ruta exacta en pages.routes.jsx
+                );
+
+                if (ordenProduccionRouteConfig && can(ordenProduccionRouteConfig.requiredPermission, "view")) {
+                    accessibleRoutes = [{
+                        ...produccionGroupConfig,
+                        label: produccionGroupConfig.label, // Mantener el label del grupo
+                        icon: produccionGroupConfig.icon,   // Mantener el icono del grupo
+                        path: '#', // El grupo "Producción" no será navegable directamente
+                        children: [ordenProduccionRouteConfig]
+                    }];
+                } else {
+                    console.log("[MenuList] Cocinero no tiene permiso para 'orden-produccion' o ruta no encontrada.");
+                    accessibleRoutes = [];
+                }
+            } else {
+                console.log("[MenuList] No se encontró config para 'produccion' o no tiene hijos.");
+                accessibleRoutes = [];
+            }
+        } else {
+            accessibleRoutes = filterAndBuildRoutes(allRoutesConfig);
+        }
+        setFilteredRoutes(accessibleRoutes);
+
+    }, [user, effectivePermissions, can, initialAuthCheckComplete, filterAndBuildRoutes]);
 
 
     useEffect(() => {
         const currentPath = location.pathname;
         setSelectedKeys([currentPath]);
+        
+        if (collapsed || !filteredRoutes.length) {
+            if (!collapsed) setOpenKeys([]); // Solo limpiar openKeys si no está colapsado y no hay rutas o por cambio de colapso
+            return;
+        }
+    
         let keyToOpen = '';
-
         const findOpenKeyRecursive = (routes, currentBasePath = '/home', parentKey = null) => {
             for (const route of routes) {
-                const routeFullPath = route.path === '#' ? parentKey : `${currentBasePath}/${route.path}`.replace(/\/+/g, '/');
-                if (currentPath === routeFullPath) {
-                    keyToOpen = parentKey || routeFullPath;
-                    return true;
-                }
-                if (route.children && route.children.length > 0) {
-                    if (currentPath.startsWith(routeFullPath + '/')) {
-                        keyToOpen = routeFullPath;
+                const routeFullPath = route.path === '#' 
+                    ? (parentKey || `nonav-${route.label}-${Math.random().toString(36).substring(2,7)}`) // Clave única para no navegables
+                    : `${currentBasePath}/${route.path}`.replace(/\/+/g, '/');
+    
+                if (currentPath === routeFullPath || (route.children && currentPath.startsWith(routeFullPath + (routeFullPath.endsWith('/') ? '' : '/')))) {
+                    keyToOpen = route.path === '#' ? parentKey || routeFullPath : routeFullPath; // Si es un item de menú, su path es la key. Si es un grupo #, el parentKey (si existe) o su propia key.
+                    
+                    if (route.children && route.children.length > 0 && currentPath.startsWith(routeFullPath + (routeFullPath.endsWith('/') ? '' : '/'))) {
+                         // Si la ruta actual es hija de este item, se busca recursivamente
+                        if (findOpenKeyRecursive(route.children, routeFullPath, routeFullPath)) return true;
                     }
-                    if (findOpenKeyRecursive(route.children, routeFullPath, routeFullPath)) {
-                        return true;
-                    }
+                    return true; 
                 }
             }
             return false;
         };
-
-        if (filteredRoutes.length > 0) {
-            findOpenKeyRecursive(filteredRoutes);
-        }
-
-        if (!collapsed && keyToOpen) {
+        
+        findOpenKeyRecursive(filteredRoutes);
+    
+        if (keyToOpen) {
+            // Evitar re-establecer openKeys innecesariamente si ya incluye la key, o si es una key raíz diferente
             setOpenKeys(prevOpenKeys => {
-                if (!prevOpenKeys.includes(keyToOpen)) {
-                    return [keyToOpen];
+                if (rootSubmenuKeys.includes(keyToOpen)) { // Es una key de un submenú raíz
+                    return prevOpenKeys.includes(keyToOpen) ? prevOpenKeys : [keyToOpen];
                 }
-                return prevOpenKeys;
+                // Para submenús anidados, podrías querer añadir a las keys abiertas existentes
+                return prevOpenKeys.includes(keyToOpen) ? prevOpenKeys : [...prevOpenKeys, keyToOpen].filter((v, i, a) => a.indexOf(v) === i);
             });
-        } else if (collapsed) {
-            setOpenKeys([]);
+        } else if (!collapsed) {
+            // setOpenKeys([]); // Considera si quieres cerrar todo si no hay coincidencia directa
         }
-    }, [location.pathname, filteredRoutes, collapsed]);
-
+    
+    }, [location.pathname, filteredRoutes, collapsed]); // rootSubmenuKeys como dependencia si su cálculo puede cambiar y afectar esto
+    
 
     const rootSubmenuKeys = useMemo(() =>
         filteredRoutes
-            .filter(r => r.children && r.children.length > 0 && r.path !== '#')
+            .filter(r => r.children && r.children.length > 0 && r.path !== '#') // Solo submenús con path navegable
             .map(r => `/home/${r.path}`.replace(/\/+/g, '/')),
     [filteredRoutes]);
 
@@ -151,28 +152,32 @@ const MenuList = ({ collapsed }) => {
 
     const generateMenuItems = useCallback((routes, basePath = '/home') => {
         return routes.map(item => {
-            const currentPath = item.path === '#' ? '#' : `${basePath}/${item.path}`.replace(/\/+/g, '/');
-            const key = item.path === '#' ? `submenu-nonav-${item.label}-${Math.random().toString(36).substr(2, 5)}` : currentPath; // Asegurar unicidad para '#'
+            const keyForPath = item.path === '#' ? `group-${item.label}-${basePath}` : `${basePath}/${item.path}`.replace(/\/+/g, '/');
+            // Clave única para items no navegables (path '#') o items con el mismo path bajo diferentes padres (raro en este setup)
+            const uniqueKey = item.path === '#' ? `group-${item.label}-${(Math.random() + 1).toString(36).substring(7)}` : keyForPath;
 
             const menuItem = {
-                key: key,
+                key: uniqueKey,
                 icon: item.icon,
+                label: item.label, 
             };
 
             if (item.children && item.children.length > 0) {
-                menuItem.children = generateMenuItems(item.children, item.path === '#' ? basePath : currentPath);
-                menuItem.label = item.label;
-            } else if (item.path !== '#') {
+                // Si el path es '#', los hijos se generan desde el mismo basePath del padre (grupo)
+                // Si el path no es '#', los hijos se generan desde el currentPath del padre
+                menuItem.children = generateMenuItems(item.children, item.path === '#' ? basePath : keyForPath);
+            } else if (item.path !== '#') { 
                 menuItem.label = (
-                    <Link to={currentPath} style={{ textDecoration: 'none' }}>
+                    <Link to={keyForPath} style={{ textDecoration: 'none' }}>
                         {item.label}
                     </Link>
                 );
-            } else {
-                return null; // Un item '#' sin hijos no debería renderizarse
+            } else if (item.path === '#' && (!item.children || item.children.length === 0)) {
+                return null; // Agrupador sin path y sin hijos visibles, no renderizar
             }
+            
             return menuItem;
-        }).filter(item => item !== null);
+        }).filter(item => item !== null); // Filtrar los nulos
     }, []);
 
 
@@ -180,33 +185,45 @@ const MenuList = ({ collapsed }) => {
         return generateMenuItems(filteredRoutes);
     }, [filteredRoutes, generateMenuItems]);
 
+    if (!initialAuthCheckComplete || !user || !user.role) { // Esperar carga y datos de usuario
+        return null; // O un loader si se prefiere
+    }
+    
+    const userActualRoleName = user.role.roleName;
+    const isCocineroRole = userActualRoleName && userActualRoleName.toLowerCase() === "cocinero";
 
-    if (!user) {
-        return null;
+    // Para el cocinero, si el Sider estuviera visible pero no hay items (por ej. sin permiso a OrdenProd), no mostrar nada.
+    if (isCocineroRole && menuItems.length === 0) {
+        return null; 
+    }
+    
+    // Mensaje para otros roles si no tienen módulos asignados
+    if (!isCocineroRole && menuItems.length === 0 && initialAuthCheckComplete && user) {
+        // Podrías verificar también !authLoading.isSuperAdmin o similar si tienes esa lógica.
+        return <div style={{ padding: '20px', color: '#5C4033', textAlign: 'center', fontSize: '0.9em' }}>No tiene módulos asignados.</div>;
+    }
+    
+    // Solo renderizar el Menú si hay items
+    if (menuItems.length > 0) {
+        return (
+            <Menu
+                mode="inline"
+                theme="light" // O la que uses
+                selectedKeys={selectedKeys}
+                openKeys={collapsed ? [] : openKeys}
+                onOpenChange={onOpenChange}
+                style={{
+                    borderRight: 0,
+                    backgroundColor: 'transparent', 
+                }}
+                inlineCollapsed={collapsed}
+                items={menuItems}
+                className="menu-list-container"
+            />
+        );
     }
 
-    if (menuItems.length === 0) {
-        // console.log("[MenuList Render] No menu items to display after processing. Rendering null or placeholder.");
-        // Puedes mostrar un mensaje si lo deseas:
-        // return <div style={{ padding: '10px', color: 'grey', textAlign: 'center' }}>No tiene módulos asignados.</div>;
-        return null;
-    }
-
-    return (
-        <Menu
-            mode="inline"
-            theme="light"
-            selectedKeys={selectedKeys}
-            openKeys={collapsed ? [] : openKeys}
-            onOpenChange={onOpenChange}
-            style={{
-                borderRight: 0,
-                backgroundColor: 'transparent',
-            }}
-            inlineCollapsed={collapsed}
-            items={menuItems}
-        />
-    );
+    return null; // Fallback si no hay items y no es cocinero (o si es cocinero y no tiene items)
 };
 
 export default MenuList;

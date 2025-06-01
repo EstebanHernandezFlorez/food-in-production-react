@@ -17,7 +17,7 @@ import React, {
   import toast, { Toaster } from "react-hot-toast";
   import { useNavigate, useLocation } from "react-router-dom";
 
-  import productService from "../../services/productoInsumoService";
+  import productService from "../../services/productService";
   // fichaTecnicaService ya no se usa aquí si la lista de fichas se maneja en otra página
   // import fichaTecnicaService from "../../services/fichaTecnicaService";
   import CustomPagination from "../../General/CustomPagination";
@@ -191,44 +191,44 @@ import React, {
         setConfirmModalOpen(true);
     }, [toggleConfirmModal]); // toggleConfirmModal aquí es para el modal de confirmación
 
-    const handleSubmit = useCallback(async () => {
-      if (!validateForm()) {
-        toast.error(formErrors.general || "Revise los campos marcados.");
-        return;
-      }
-      setIsSavingForm(true);
-      const actionText = isEditing ? "Actualizando" : "Agregando";
-      const toastId = toast.loading(`${actionText} producto/insumo...`);
-      const dataToSend = { ...form, productName: form.productName.trim() };
-      if (!isEditing) {
-        delete dataToSend.idProduct;
-      }
-      try {
-        if (isEditing) {
-          if (!form.idProduct) throw new Error("ID no válido para actualizar.");
-          await productService.updateProduct(form.idProduct, dataToSend);
-        } else {
-          await productService.createProduct(dataToSend);
+      const handleSubmit = useCallback(async () => {
+        if (!validateForm()) {
+          toast.error(formErrors.general || "Revise los campos marcados.");
+          return;
         }
-        toast.success(
-          `Producto/Insumo ${isEditing ? "actualizado" : "agregado"}!`,
-          { id: toastId }
-        );
-        toggleMainModal();
-        await fetchData(false);
-        setCurrentPage(1);
-      } catch (error) {
-        const errorMsg =
-          error.response?.data?.message || error.message || "Error desconocido";
-        setFormErrors((prev) => ({ ...prev, general: `Error: ${errorMsg}` }));
-        toast.error(`Error al ${actionText.toLowerCase()}: ${errorMsg}`, {
-          id: toastId,
-          duration: 5000,
-        });
-      } finally {
-        setIsSavingForm(false);
-      }
-    }, [form, isEditing, validateForm, toggleMainModal, fetchData, formErrors.general]);
+        setIsSavingForm(true);
+        const actionText = isEditing ? "Actualizando" : "Agregando";
+        const toastId = toast.loading(`${actionText} producto/insumo...`);
+        const dataToSend = { ...form, productName: form.productName.trim() };
+        if (!isEditing) {
+          delete dataToSend.idProduct;
+        }
+        try {
+          if (isEditing) {
+            if (!form.idProduct) throw new Error("ID no válido para actualizar.");
+            await productService.updateProduct(form.idProduct, dataToSend);
+          } else {
+            await productService.createProduct(dataToSend);
+          }
+          toast.success(
+            `Producto/Insumo ${isEditing ? "actualizado" : "agregado"}!`,
+            { id: toastId }
+          );
+          toggleMainModal();
+          await fetchData(false);
+          setCurrentPage(1);
+        } catch (error) {
+          const errorMsg =
+            error.response?.data?.message || error.message || "Error desconocido";
+          setFormErrors((prev) => ({ ...prev, general: `Error: ${errorMsg}` }));
+          toast.error(`Error al ${actionText.toLowerCase()}: ${errorMsg}`, {
+            id: toastId,
+            duration: 5000,
+          });
+        } finally {
+          setIsSavingForm(false);
+        }
+      }, [form, isEditing, validateForm, toggleMainModal, fetchData, formErrors.general]);
 
     const requestChangeStatusConfirmation = useCallback((product) => {
       if (!product || !product.idProduct) return;
@@ -431,7 +431,7 @@ import React, {
             <Button color="success" size="sm" onClick={openAddModal} className="me-2 button-add">
               <Plus size={18} className="me-1" /> Agregar Producto/Insumo
             </Button>
-            <Button color="primary" size="sm" onClick={() => navigate("/home/ficha-tecnica/crear")} className="button-add-ficha">
+            <Button color="primary" size="sm" onClick={() => navigate("/home/fichas-tecnicas/crear")} className="button-add-ficha">
               <FileText size={18} className="me-1" /> Crear Ficha Técnica
             </Button>
           </Col>

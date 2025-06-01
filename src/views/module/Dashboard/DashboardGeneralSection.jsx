@@ -18,7 +18,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 // Servicios necesarios
 import clientesService from '../../services/clientesService';
 import monthlyOverallExpenseService from '../../services/MonthlyOverallExpenseService';
-import productionOrderService from '../../services/ordenProduccionService';
+import productionOrderService from '../../services/productionOrderService';
 
 const DashboardGeneralSection = ({ selectedYear, selectedMonth }) => {
   const [kpiData, setKpiData] = useState({

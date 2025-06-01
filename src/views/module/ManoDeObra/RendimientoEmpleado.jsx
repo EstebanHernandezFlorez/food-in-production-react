@@ -1,414 +1,423 @@
-import React, { useState, useCallback } from 'react';
+// src/components/Performance/EmployeePerformanceDashboard.jsx
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-    Container, Row, Col, Button, FormGroup, Alert, Spinner,
-    Modal, ModalHeader, ModalBody, ModalFooter, Card, CardHeader, CardBody, Table, Input, InputGroup
+    Container, Row, Col, Button, FormGroup, Label, Alert, Spinner,
+    Card, CardHeader, CardBody, Table, Input
 } from 'reactstrap';
 import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
 import { useNavigate } from 'react-router-dom';
+import { ChevronDown, ChevronUp, Filter, Search, Clock, DollarSign, Percent, User as UserIcon, BarChart as BarChartIcon } from 'lucide-react';
+import Select from 'react-select';
+import dayjs from 'dayjs';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+
 import {
-    BarChart, Bar, LineChart, Line, PieChart, Pie, ResponsiveContainer,
-    XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell
+    BarChart, Bar, ResponsiveContainer, ComposedChart,
+    XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell, LabelList
 } from 'recharts';
-import MonthlyOverallExpenseService from '../../services/MonthlyOverallExpenseService';
 
-// Colors for charts
-const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
 
-const ExpenseDashboardByDate = () => {
+// --- Servicios ---
+import empleadoService from '../../services/empleadoService';
+// Asumiendo que tienes un servicio para obtener los datos de rendimiento
+// import performanceService from '../../services/performanceService'; // DEBES CREAR ESTE SERVICIO
+import productoInsumoService from '../../services/productService';
+import toast, { Toaster } from 'react-hot-toast';
+import { formatCurrencyCOP } from "../../../utils/formatting";
+import '../../../assets/css/EmployeePerformanceDashboard.css'; // Asegúrate de tener este CSS para estilos adicionales
+
+const CHART_COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#00C49F', '#FFBB28', '#0088FE', '#AF19FF', '#FF4560', '#30C9E8'];
+
+
+const EmployeePerformanceDashboard = () => {
     const navigate = useNavigate();
-    
-    // Date state
+
     const [startDate, setStartDate] = useState(null);
     const [endDate, setEndDate] = useState(null);
-    
-    // Search state
-    const [searchTerm, setSearchTerm] = useState('');
-    
-    // UI state
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [allProducts, setAllProducts] = useState([]);
+    const [selectedEmployee, setSelectedEmployee] = useState(null);
+    const [allEmployees, setAllEmployees] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [modalMessage, setModalMessage] = useState('');
-    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [rawPerformanceData, setRawPerformanceData] = useState([]);
+    const [groupedPerformanceData, setGroupedPerformanceData] = useState({});
+    const [chartSummaryData, setChartSummaryData] = useState([]);
     const [showResults, setShowResults] = useState(false);
-    
-    // Data state
-    const [filteredExpenses, setFilteredExpenses] = useState([]);
-    const [chartData, setChartData] = useState({
-        byTypeAmount: [],
-        byTime: [],
-        byTypePercentage: [],
-        totalInRange: 0
-    });
+    const [expandedRow, setExpandedRow] = useState(null);
 
-    // Helper function to format dates for display
-    const formatDateKey = (date) => {
-        if (!date) return '';
-        const d = new Date(date);
-        return isNaN(d.getTime()) ? '' : d.toLocaleDateString();
-    };
+    const fetchFilterOptions = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const [productsRes, employeesRes] = await Promise.all([
+                productoInsumoService.getAllProducts(),
+                empleadoService.getAllEmpleados()
+            ]);
 
-    // --- Data Fetching and Processing Logic ---
-    const processData = useCallback((allExpenses) => {
-        setError(null); // Clear previous errors
-        setFilteredExpenses([]);
-        setChartData({ byTypeAmount: [], byTime: [], byTypePercentage: [], totalInRange: 0 });
-        setShowResults(false); // Hide results initially for new search
+            if (Array.isArray(productsRes)) {
+                setAllProducts(productsRes.map(p => ({ value: p.idProduct, label: p.nameProduct || `Producto ID ${p.idProduct}` })));
+            }
+            if (Array.isArray(employeesRes)) {
+                setAllEmployees(employeesRes.map(e => ({ value: e.idEmployee, label: `${e.name} ${e.lastName || ''}`.trim() })));
+            }
+        } catch (err) {
+            console.error("Error fetching filter options:", err);
+            toast.error("Error al cargar opciones para filtros.");
+        } finally {
+            setIsLoading(false); // Solo se desactiva después de que ambas promesas se resuelvan
+        }
+    }, []);
 
-        if (!startDate || !endDate) {
-            setModalMessage("Por favor, seleccione las fechas de inicio y fin.");
-            setIsModalVisible(true);
+    useEffect(() => {
+        fetchFilterOptions();
+    }, [fetchFilterOptions]);
+
+    const processAndGroupData = useCallback((data) => {
+        if (!data || data.length === 0) {
+            setGroupedPerformanceData({});
+            setChartSummaryData([]);
             return;
         }
-        if (startDate > endDate) {
-            setModalMessage("La fecha de inicio no puede ser posterior a la fecha de fin.");
-            setIsModalVisible(true);
-            return;
-        }
-
-        // --- 1. Filter by Date Range ---
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0); // Normalize start date
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999); // Normalize end date to include the whole day
-
-        // *** CRITICAL: Adjust 'expense.registrationDate' if your date field is named differently ***
-        const filtered = allExpenses.filter(exp => {
-            try {
-                const expenseDate = new Date(exp.registrationDate);
-                // Basic check if date is valid before comparison
-                if (isNaN(expenseDate.getTime())) {
-                    console.warn(`Invalid date found for expense ID ${exp.idOverallMonth || 'N/A'}:`, exp.registrationDate);
-                    return false;
-                }
-                return expenseDate >= start && expenseDate <= end;
-            } catch (e) {
-                console.error("Error parsing date:", exp.registrationDate, e);
-                return false; // Exclude if date parsing fails
+        const grouped = data.reduce((acc, item) => {
+            const key = item.employeeName || `Empleado ID ${item.employeeId}`;
+            if (!acc[key]) {
+                acc[key] = {
+                    employeeId: item.employeeId,
+                    employeeName: item.employeeName || `Empleado ID ${item.employeeId}`,
+                    records: [],
+                    totalTimeSpent: 0,
+                    totalCostSaved: 0,
+                    efficiencyScores: [],
+                    recordCount: 0
+                };
             }
-        });
-
-        // --- Additional filter by search term if provided ---
-        const searchFiltered = searchTerm 
-            ? filtered.filter(exp => {
-                const searchLower = searchTerm.toLowerCase();
-                return (
-                    (exp.description && exp.description.toLowerCase().includes(searchLower)) || 
-                    (exp.expenseType?.expenseTypeName && exp.expenseType.expenseTypeName.toLowerCase().includes(searchLower))
-                );
-            }) 
-            : filtered;
-
-        setFilteredExpenses(searchFiltered);
-
-        if (searchFiltered.length === 0) {
-            setModalMessage("No se encontraron gastos para los criterios seleccionados.");
-            setIsModalVisible(true);
-            // Keep showResults false
-            return; // Stop processing if no data
-        }
-
-        // --- 2. Aggregate Data for Charts ---
-        let totalInRange = 0;
-        const aggregationByType = {};
-        const aggregationByTime = {};
-
-        searchFiltered.forEach(exp => {
-            // *** Adjust 'exp.totalAmount' if amount field is different ***
-            const amount = Number(exp.totalAmount) || 0;
-            totalInRange += amount;
-
-            // Aggregate by Type (for Money and Percentage charts)
-            // *** Adjust 'exp.expenseType.expenseTypeName' if type field is different ***
-            const typeName = exp.expenseType?.expenseTypeName || 'Sin Tipo';
-            aggregationByType[typeName] = (aggregationByType[typeName] || 0) + amount;
-
-            // Aggregate by Time (Date)
-            // *** Adjust 'exp.registrationDate' if date field is different ***
-            const dateKey = formatDateKey(exp.registrationDate);
-            if(dateKey) { // Ensure dateKey is valid
-                aggregationByTime[dateKey] = (aggregationByTime[dateKey] || 0) + amount;
+            acc[key].records.push(item);
+            acc[key].totalTimeSpent += (Number(item.timeSpent) || 0);
+            acc[key].totalCostSaved += (Number(item.costSaved) || 0);
+            if (typeof item.efficiencyPercentage === 'number' && !isNaN(item.efficiencyPercentage)) {
+                acc[key].efficiencyScores.push(item.efficiencyPercentage);
             }
+            acc[key].recordCount++;
+            return acc;
+        }, {});
+        setGroupedPerformanceData(grouped);
+
+        const summary = Object.values(grouped).map(empGroup => {
+            const avgEfficiency = empGroup.efficiencyScores.length > 0
+                ? empGroup.efficiencyScores.reduce((a, b) => a + b, 0) / empGroup.efficiencyScores.length
+                : 0;
+            return {
+                name: empGroup.employeeName,
+                totalTimeSpent: empGroup.totalTimeSpent,
+                totalCostSaved: empGroup.totalCostSaved,
+                averageEfficiency: parseFloat(avgEfficiency.toFixed(2))
+            };
         });
+        setChartSummaryData(summary);
+    }, []);
 
-        // --- 3. Format Data for Recharts ---
-        const chartByTypeAmount = Object.entries(aggregationByType).map(([name, value]) => ({ name, value }));
-        const chartByTime = Object.entries(aggregationByTime)
-                                .map(([date, total]) => ({ date, total }))
-                                .sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort by date
-        const chartByTypePercentage = chartByTypeAmount.map(item => ({
-            name: item.name,
-            value: totalInRange > 0 ? parseFloat(((item.value / totalInRange) * 100).toFixed(2)) : 0,
-        }));
-
-        setChartData({
-            byTypeAmount: chartByTypeAmount,
-            byTime: chartByTime,
-            byTypePercentage: chartByTypePercentage,
-            totalInRange: totalInRange,
-        });
-
-        setShowResults(true); // Show results area now
-
-    }, [startDate, endDate, searchTerm]); // Added searchTerm as dependency
-
-    const handleSearch = useCallback(async () => {
+    const handleFetchPerformanceData = useCallback(async () => {
         setIsLoading(true);
         setError(null);
-        setShowResults(false); // Hide previous results
+        setShowResults(false);
+        setRawPerformanceData([]);
+        setGroupedPerformanceData({});
+        setChartSummaryData([]);
+        setExpandedRow(null);
 
-        if (!startDate || !endDate) {
-            setModalMessage("Por favor, seleccione las fechas de inicio y fin.");
-            setIsModalVisible(true);
-            setIsLoading(false);
-            return;
-        }
-        if (startDate > endDate) {
-            setModalMessage("La fecha de inicio no puede ser posterior a la fecha de fin.");
-            setIsModalVisible(true);
-            setIsLoading(false);
-            return;
-        }
+        const filters = {};
+        if (startDate) filters.startDate = dayjs(startDate).format('YYYY-MM-DD');
+        if (endDate) filters.endDate = dayjs(endDate).format('YYYY-MM-DD');
+        if (selectedProduct) filters.productId = selectedProduct.value;
+        if (selectedEmployee) filters.employeeId = selectedEmployee.value;
+
+        console.log("Fetching performance data with filters:", filters);
 
         try {
-            const allExpenses = await MonthlyOverallExpenseService.getAllMonthlyOverallExpenses();
-            console.log("Raw data from service:", allExpenses);
-            processData(allExpenses); // Process the fetched data
+            // --- INICIO SIMULACIÓN (REEMPLAZAR CUANDO TENGAS EL BACKEND Y performanceService) ---
+            // const dataFromService = await performanceService.getEmployeePerformanceData(filters);
+            // if (!Array.isArray(dataFromService)) {
+            //     throw new Error("La respuesta del servicio de rendimiento no es un array.");
+            // }
+            // let filteredBackendData = dataFromService;
+            // --- FIN LLAMADA REAL (REEMPLAZAR SIMULACIÓN) ---
+
+
+            // --- SIMULACIÓN DE DATOS (COMENTAR O ELIMINAR CUANDO EL BACKEND ESTÉ LISTO) ---
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            let simulatedData = [
+                { id: 1, employeeId: 1, employeeName: 'Ana Pérez', productId: 1, productName: 'Pollo Entero', date: '2023-10-26', initialWeight: 10, finalWeight: 8.5, initialPortions: 1, finalPortions: 4, timeSpent: 30, costSaved: 5000, efficiencyPercentage: 85 },
+                { id: 2, employeeId: 2, employeeName: 'Luis Meza', productId: 2, productName: 'Lomo Fino', date: '2023-10-26', initialWeight: 5, finalWeight: 4.8, initialPortions: 1, finalPortions: 10, timeSpent: 20, costSaved: 2500, efficiencyPercentage: 96 },
+                { id: 3, employeeId: 1, employeeName: 'Ana Pérez', productId: 2, productName: 'Lomo Fino', date: '2023-10-27', initialWeight: 6, finalWeight: 5.5, initialPortions: 1, finalPortions: 12, timeSpent: 25, costSaved: 3000, efficiencyPercentage: 91.67 },
+                { id: 4, employeeId: 3, employeeName: 'Carlos Ruiz', productId: 1, productName: 'Pollo Entero', date: '2023-10-28', initialWeight: 12, finalWeight: 10.2, initialPortions: 1, finalPortions: 5, timeSpent: 35, costSaved: 6000, efficiencyPercentage: 85 },
+                { id: 5, employeeId: 2, employeeName: 'Luis Meza', productId: 1, productName: 'Pollo Entero', date: '2023-10-29', initialWeight: 8, finalWeight: 7.0, initialPortions: 1, finalPortions: 3, timeSpent: 28, costSaved: 4000, efficiencyPercentage: 87.5 },
+                 // Más datos para Ana Pérez
+                { id: 6, employeeId: 1, employeeName: 'Ana Pérez', productId: 1, productName: 'Pollo Entero', date: '2023-10-30', initialWeight: 9, finalWeight: 7.8, initialPortions: 1, finalPortions: 3, timeSpent: 28, costSaved: 4500, efficiencyPercentage: 86.67 },
+                { id: 7, employeeId: 1, employeeName: 'Ana Pérez', productId: 3, productName: 'Pescado Blanco', date: '2023-10-30', initialWeight: 7, finalWeight: 6.5, initialPortions: 1, finalPortions: 5, timeSpent: 22, costSaved: 1500, efficiencyPercentage: 92.86 },
+            ];
+
+            let filteredBackendData = simulatedData;
+            // Si el backend ya filtra, estas líneas no serían necesarias aquí.
+            // Si el backend devuelve todo y filtras en frontend (no ideal para grandes datasets):
+            if (filters.startDate) {
+                filteredBackendData = filteredBackendData.filter(d => dayjs(d.date).isSameOrAfter(dayjs(filters.startDate), 'day'));
+            }
+            if (filters.endDate) {
+                filteredBackendData = filteredBackendData.filter(d => dayjs(d.date).isSameOrBefore(dayjs(filters.endDate), 'day'));
+            }
+            if (filters.productId) {
+                filteredBackendData = filteredBackendData.filter(d => d.productId === filters.productId);
+            }
+            if (filters.employeeId) {
+                filteredBackendData = filteredBackendData.filter(d => d.employeeId === filters.employeeId);
+            }
+            // --- FIN SIMULACIÓN ---
+
+            setRawPerformanceData(filteredBackendData);
+            processAndGroupData(filteredBackendData);
+
+            if (filteredBackendData.length === 0) {
+                toast.info("No se encontraron datos de rendimiento para los filtros seleccionados.");
+            }
+            setShowResults(true);
+
         } catch (err) {
-            console.error("Error fetching monthly expenses:", err);
-            setError(err.message || "Error al cargar los datos. Verifique la conexión.");
-            setFilteredExpenses([]);
-            setChartData({ byTypeAmount: [], byTime: [], byTypePercentage: [], totalInRange: 0 });
+            console.error("Error fetching performance data:", err);
+            const errorMsg = err.response?.data?.message || err.message || "Error al cargar datos.";
+            setError(errorMsg);
+            toast.error(errorMsg);
         } finally {
             setIsLoading(false);
         }
-    }, [startDate, endDate, processData]); // Include processData in dependencies
+    }, [startDate, endDate, selectedProduct, selectedEmployee, processAndGroupData]);
 
-    const handleOk = () => setIsModalVisible(false);
-    const handleCancel = () => setIsModalVisible(false);
+    const toggleRow = (employeeId, itemId) => { const currentKey = `${employeeId}-${itemId}`; setExpandedRow(expandedRow === currentKey ? null : currentKey); };
     const handleBack = () => navigate(-1);
+    const handleClearFilters = () => { setStartDate(null); setEndDate(null); setSelectedProduct(null); setSelectedEmployee(null); setShowResults(false); setRawPerformanceData([]); setGroupedPerformanceData({}); setChartSummaryData([]); setError(null); setExpandedRow(null); };
 
-    // --- Render Functions ---
-    const renderCharts = () => (
-        <Col md={4} className="graphs-column">
-            {/* Chart 1: Dinero (Amount by Type) */}
-            <Card className="mb-3">
-                <CardHeader>Gastos por Tipo (Monto)</CardHeader>
+    const renderSummaryCharts = () => (
+        <Col lg={4} md={12} className="mb-4 mb-lg-0">
+            <h4 className="mb-3 text-muted">Resumen por Empleado</h4>
+            <Card className="mb-3 shadow-sm">
+                <CardHeader style={{backgroundColor: 'var(--dashboard-accent-color, #9e3535)', color: 'var(--dashboard-accent-text-color, #FFF)'}}>
+                    <Clock size={18} className="me-2" /> Tiempo Total Invertido (min)
+                </CardHeader>
                 <CardBody>
-                    {chartData.byTypeAmount.length > 0 ? (
+                    {chartSummaryData.length > 0 ? (
                         <ResponsiveContainer width="100%" height={250}>
-                            <BarChart data={chartData.byTypeAmount} layout="vertical" margin={{ top: 5, right: 30, left: 50, bottom: 5 }}>
+                            <BarChart data={chartSummaryData} layout="vertical" margin={{ top: 5, right: 40, left: 80, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis type="number" />
-                                <YAxis dataKey="name" type="category" width={80} />
-                                <Tooltip formatter={(value) => `$${value.toFixed(2)}`} />
-                                {/* <Legend /> */}
-                                <Bar dataKey="value" fill="#8884d8">
-                                    {chartData.byTypeAmount.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
+                                <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 12 }}/>
+                                <Tooltip formatter={(value) => `${value} min`} />
+                                <Bar dataKey="totalTimeSpent" fill={CHART_COLORS[0]} barSize={20}>
+                                   <LabelList dataKey="totalTimeSpent" position="right" formatter={(value) => `${value}`} style={{ fill: '#333', fontSize: '0.8em' }} />
                                 </Bar>
                             </BarChart>
                         </ResponsiveContainer>
-                    ) : <p className="text-center text-muted">No hay datos para mostrar.</p>}
+                    ) : <p className="text-center text-muted p-3">Sin datos para graficar.</p>}
                 </CardBody>
             </Card>
 
-            {/* Chart 2: Tiempo (Amount over Time) */}
-            <Card className="mb-3">
-                <CardHeader>Gastos a lo largo del Tiempo</CardHeader>
-                <CardBody>
-                    {chartData.byTime.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={250}>
-                            {/* Use LineChart for trends, BarChart for discrete daily totals */}
-                            <LineChart data={chartData.byTime} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="date" />
-                                <YAxis />
-                                <Tooltip formatter={(value) => `$${value.toFixed(2)}`} />
-                                <Legend />
-                                <Line type="monotone" dataKey="total" stroke="#82ca9d" activeDot={{ r: 8 }} name="Gasto Diario"/>
-                            </LineChart>
-                        </ResponsiveContainer>
-                    ) : <p className="text-center text-muted">No hay datos para mostrar.</p>}
-                </CardBody>
-            </Card>
-
-            {/* Chart 3: Porcentajes (Percentage by Type) */}
-            <Card>
-                <CardHeader>Distribución Porcentual por Tipo</CardHeader>
-                <CardBody>
-                    {chartData.byTypePercentage.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={250}>
-                            <PieChart>
-                                <Pie
-                                    data={chartData.byTypePercentage}
-                                    cx="50%"
-                                    cy="50%"
-                                    labelLine={false}
-                                    label={({ name, percent }) => `${name}: ${percent.toFixed(1)}%`}
-                                    outerRadius={80}
-                                    fill="#8884d8"
-                                    dataKey="value"
-                                    nameKey="name"
-                                >
-                                    {chartData.byTypePercentage.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip formatter={(value) => `${value.toFixed(2)}%`} />
-                                {/* <Legend /> */} {/* Legend might be redundant with labels */}
-                            </PieChart>
-                        </ResponsiveContainer>
-                    ) : <p className="text-center text-muted">No hay datos para mostrar.</p>}
-                </CardBody>
-            </Card>
-        </Col>
-    );
-
-    const renderTable = () => (
-        <Col md={8} className="results-column">
-            <Card>
-                <CardHeader>
-                    Detalle de Gastos ({formatDateKey(startDate)} - {formatDateKey(endDate)})
-                    <span className='float-end'>Total: <strong>${chartData.totalInRange.toFixed(2)}</strong></span>
+            <Card className="mb-3 shadow-sm">
+                <CardHeader style={{backgroundColor: 'var(--dashboard-accent-color, #9e3535)', color: 'var(--dashboard-accent-text-color, #FFF)'}}>
+                    <DollarSign size={18} className="me-2" /> Ahorro/Costo Total
                 </CardHeader>
                 <CardBody>
-                    {filteredExpenses.length > 0 ? (
-                        <div style={{maxHeight: '700px', overflowY: 'auto'}}> {/* Add scroll for long tables */}
-                            <Table hover responsive size="sm">
-                                <thead>
-                                    <tr>
-                                        <th>Fecha</th>
-                                        <th>Tipo Gasto</th>
-                                        <th>Descripción</th>
-                                        <th>Monto</th>
-                                        {/* Add other relevant columns */}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredExpenses
-                                        // Optional: sort by date within the table as well
-                                        .sort((a, b) => new Date(a.registrationDate) - new Date(b.registrationDate))
-                                        .map((expense, index) => (
-                                        <tr key={expense.idOverallMonth || index}>
-                                            {/* *** Adjust property access *** */}
-                                            <td>{expense.registrationDate ? new Date(expense.registrationDate).toLocaleDateString() : 'N/A'}</td>
-                                            <td>{expense.expenseType?.expenseTypeName || 'N/A'}</td>
-                                            <td>{expense.description || '-'}</td>
-                                            <td>${(Number(expense.totalAmount) || 0).toFixed(2)}</td>
-                                        </tr>
+                    {chartSummaryData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={250}>
+                            <BarChart data={chartSummaryData} layout="vertical" margin={{ top: 5, right: 50, left: 80, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis type="number" />
+                                <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 12 }}/>
+                                <Tooltip formatter={(value) => `${formatCurrencyCOP(value)}`} />
+                                <Bar dataKey="totalCostSaved" barSize={20}>
+                                    {chartSummaryData.map((entry, index) => (
+                                        <Cell key={`cell-cost-${index}`} fill={entry.totalCostSaved >= 0 ? CHART_COLORS[1] : CHART_COLORS[3]} />
                                     ))}
-                                </tbody>
-                            </Table>
-                        </div>
-                    ) : (
-                        // This case should ideally be handled by the initial check/modal
-                        <p className="text-center text-muted">No hay registros detallados para este rango.</p>
-                    )}
+                                     <LabelList dataKey="totalCostSaved" position="right" formatter={(value) => formatCurrencyCOP(value,0)} style={{ fill: '#333', fontSize: '0.8em' }} />
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    ) : <p className="text-center text-muted p-3">Sin datos para graficar.</p>}
+                </CardBody>
+            </Card>
+
+            <Card className="shadow-sm">
+                <CardHeader style={{backgroundColor: 'var(--dashboard-accent-color, #9e3535)', color: 'var(--dashboard-accent-text-color, #FFF)'}}>
+                    <Percent size={18} className="me-2" /> Eficiencia Promedio (%)
+                </CardHeader>
+                <CardBody>
+                     {chartSummaryData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={250}>
+                            <ComposedChart layout="vertical" data={chartSummaryData} margin={{ top: 5, right: 40, left: 80, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis type="number" domain={[0, 'dataMax + 10']} tickFormatter={(tick) => `${tick}%`}/>
+                                <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 12 }}/>
+                                <Tooltip formatter={(value) => `${value.toFixed(2)}%`} />
+                                <Bar dataKey="averageEfficiency" barSize={20} fill={CHART_COLORS[2]}>
+                                    <LabelList dataKey="averageEfficiency" position="right" formatter={(value) => `${value}%`} style={{ fill: '#333', fontSize: '0.8em' }} />
+                                </Bar>
+                            </ComposedChart>
+                        </ResponsiveContainer>
+                    ) : <p className="text-center text-muted p-3">Sin datos para graficar.</p>}
                 </CardBody>
             </Card>
         </Col>
     );
 
     return (
-        <Container fluid className="p-4">
+        <Container fluid className="p-4 employee-performance-dashboard">
+            <Toaster position="top-center" />
             <Row className="mb-3 align-items-center">
-                <Col md="auto">
-                    <h2>Dashboard de Gastos por Fecha</h2>
-                </Col>
-                <Col md="auto" className="ms-md-auto">
-                    <Button color="secondary" onClick={handleBack}>Volver</Button>
-                </Col>
+                <Col><h2 style={{color: 'var(--dashboard-text-color, #5C4033)'}}><BarChartIcon size={28} className="me-2" style={{color: 'var(--dashboard-accent-color, #9e3535)'}} />Rendimiento de Empleados</h2></Col>
+                <Col md="auto"><Button color="secondary" outline onClick={handleBack}>Volver</Button></Col>
             </Row>
 
-            {/* --- Filters --- */}
-            <Row className="mb-4 p-3 bg-light border rounded align-items-end">
-                <Col md={3}>
-                    <FormGroup>
-                        <label htmlFor="startDate">Desde:</label>
-                        <DatePicker
-                            id="startDate"
-                            selected={startDate}
-                            onChange={(date) => setStartDate(date)}
-                            dateFormat="dd/MM/yyyy"
-                            className="form-control form-control-sm" // Use sm for consistency
-                            placeholderText="Fecha de inicio"
-                            selectsStart
-                            startDate={startDate}
-                            endDate={endDate}
-                        />
-                    </FormGroup>
-                </Col>
-                <Col md={3}>
-                    <FormGroup>
-                        <label htmlFor="endDate">Hasta:</label>
-                        <DatePicker
-                            id="endDate"
-                            selected={endDate}
-                            onChange={(date) => setEndDate(date)}
-                            dateFormat="dd/MM/yyyy"
-                            className="form-control form-control-sm"
-                            placeholderText="Fecha de fin"
-                            selectsEnd
-                            startDate={startDate}
-                            endDate={endDate}
-                            minDate={startDate} // Prevent end date before start date
-                        />
-                    </FormGroup>
-                </Col>
-                <Col md={4}>
-                    <FormGroup>
-                        <label htmlFor="searchTerm">Buscar:</label>
-                        <InputGroup size="sm">
-                            <Input
-                                id="searchTerm"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                placeholder="Buscar en descripción o tipo..."
-                            />
-                        </InputGroup>
-                    </FormGroup>
-                </Col>
-                <Col md={2}>
-                    <Button color="primary" onClick={handleSearch} disabled={isLoading} className="w-100">
-                        {isLoading ? <Spinner size="sm" /> : 'Buscar'}
-                    </Button>
-                </Col>
-            </Row>
+            <div className="filters-section mb-4 p-3">
+                 <Row className="g-3 align-items-end">
+                        <Col md={3} sm={6} xs={12}>
+                            <FormGroup>
+                                <Label for="startDate" className="fw-bold small">Desde:</Label>
+                                <DatePicker id="startDate" selected={startDate} onChange={(date) => setStartDate(date)} dateFormat="dd/MM/yyyy" className="form-control form-control-sm" placeholderText="Fecha de inicio" selectsStart startDate={startDate} endDate={endDate} isClearable autoComplete="off" />
+                            </FormGroup>
+                        </Col>
+                        <Col md={3} sm={6} xs={12}>
+                            <FormGroup>
+                                <Label for="endDate" className="fw-bold small">Hasta:</Label>
+                                <DatePicker id="endDate" selected={endDate} onChange={(date) => setEndDate(date)} dateFormat="dd/MM/yyyy" className="form-control form-control-sm" placeholderText="Fecha de fin" selectsEnd startDate={startDate} endDate={endDate} minDate={startDate} isClearable autoComplete="off" />
+                            </FormGroup>
+                        </Col>
+                        <Col md={3} sm={6} xs={12}>
+                            <FormGroup>
+                                <Label for="employeeFilter" className="fw-bold small">Empleado:</Label>
+                                <Select
+                                    id="employeeFilter"
+                                    options={allEmployees}
+                                    value={selectedEmployee}
+                                    onChange={setSelectedEmployee}
+                                    placeholder="Todos los empleados..."
+                                    isClearable
+                                    isSearchable
+                                    classNamePrefix="react-select-sm"
+                                />
+                            </FormGroup>
+                        </Col>
+                        <Col md={3} sm={6} xs={12}>
+                            <FormGroup>
+                                <Label for="productFilter" className="fw-bold small">Producto/Insumo:</Label>
+                                <Select
+                                    id="productFilter"
+                                    options={allProducts}
+                                    value={selectedProduct}
+                                    onChange={setSelectedProduct}
+                                    placeholder="Todos los productos..."
+                                    isClearable
+                                    isSearchable
+                                    classNamePrefix="react-select-sm"
+                                />
+                            </FormGroup>
+                        </Col>
+                        <Col md={12} className="d-flex justify-content-md-end mt-3 gap-2">
+                            <Button color="outline-secondary" size="sm" onClick={handleClearFilters} style={{minWidth: '100px'}}>
+                                Limpiar
+                            </Button>
+                            <Button color="primary" onClick={handleFetchPerformanceData} disabled={isLoading} className="btn-sm" style={{minWidth: '100px'}}>
+                                {isLoading ? <Spinner size="sm" /> : <><Search size={16} className="me-1" /> Buscar</>}
+                            </Button>
+                        </Col>
+                    </Row>
+            </div>
 
-            {/* --- Loading / Error --- */}
-            {isLoading && (
-                <div className="text-center p-5">
-                    <Spinner color="primary">Cargando...</Spinner>
-                    <p>Consultando gastos...</p>
-                </div>
-            )}
-            {error && !isLoading && <Alert color="danger">Error: {error}</Alert>}
+            {isLoading && (<div className="text-center p-5"><Spinner color="primary" style={{ width: '3rem', height: '3rem' }}>Cargando...</Spinner><p className="mt-2">Consultando datos...</p></div>)}
+            {error && !isLoading && <Alert color="danger" className="text-center">Error: {error}</Alert>}
 
-            {/* --- Results Area --- */}
-            {!isLoading && !error && showResults && (
-                <Row className="results-graphs-container">
-                    {renderTable()}
-                    {renderCharts()}
+            {showResults && !isLoading && !error && (
+                <Row>
+                    <Col lg={Object.keys(groupedPerformanceData).length > 0 && chartSummaryData.length > 0 ? 8 : 12} md={12} className="mb-4 mb-lg-0">
+                        {Object.keys(groupedPerformanceData).length > 0 ? (
+                            Object.entries(groupedPerformanceData).map(([employeeKey, empData]) => (
+                                <Card key={employeeKey} className="mb-4 shadow-sm employee-performance-card">
+                                    <CardHeader className="d-flex align-items-center justify-content-between" style={{backgroundColor: 'var(--dashboard-accent-color, #9e3535)', color: 'var(--dashboard-accent-text-color, #FFF)'}}>
+                                        <div>
+                                            <UserIcon size={20} className="me-2"/>
+                                            <span className="fw-bold">{empData.employeeName}</span>
+                                        </div>
+                                        <span className="badge bg-light text-dark rounded-pill">{empData.recordCount} registro(s)</span>
+                                    </CardHeader>
+                                    <CardBody className="p-0">
+                                        {empData.records.length > 0 ? (
+                                            <div className="table-responsive">
+                                                <Table hover striped className="performance-table mb-0" size="sm">
+                                                    <thead>
+                                                        <tr>
+                                                            <th style={{width: '50px'}}></th><th>Fecha</th><th>Producto/Insumo</th>
+                                                            <th className="text-end">P. Ini.</th><th className="text-end">P. Fin.</th>
+                                                            <th className="text-end">Porc. Ini.</th><th className="text-end">Porc. Fin.</th>
+                                                            <th className="text-center" style={{width: '120px'}}>Acciones</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {empData.records.map((item) => (
+                                                            <React.Fragment key={`${empData.employeeId}-${item.id}`}> {/* Clave más única */}
+                                                                <tr>
+                                                                    <td className="text-center"><Button color="link" size="sm" className="p-1" onClick={() => toggleRow(empData.employeeId, item.id)} title={expandedRow === `${empData.employeeId}-${item.id}` ? "Ocultar" : "Ver Rendimiento"}><ChevronDown size={18} className={expandedRow === `${empData.employeeId}-${item.id}` ? 'rotated-chevron' : ''} /></Button></td>
+                                                                    <td>{dayjs(item.date).format('DD/MM/YYYY')}</td>
+                                                                    <td>{item.productName}</td>
+                                                                    <td className="text-end">{item.initialWeight?.toFixed(2)}</td>
+                                                                    <td className="text-end">{item.finalWeight?.toFixed(2)}</td>
+                                                                    <td className="text-end">{item.initialPortions}</td>
+                                                                    <td className="text-end">{item.finalPortions}</td>
+                                                                    <td className="text-center"><Button style={{backgroundColor: 'var(--dashboard-accent-color, #9e3535)', color: 'var(--dashboard-accent-text-color, #FFF)'}} outline={false} size="sm" onClick={() => toggleRow(empData.employeeId, item.id)}>Rendimiento</Button></td>
+                                                                </tr>
+                                                                {expandedRow === `${empData.employeeId}-${item.id}` && (
+                                                                    <tr className="expanded-row">
+                                                                        <td colSpan="8" className="p-0">
+                                                                            <div className="p-3">
+                                                                                <Card className="shadow-inner" outline style={{borderColor: 'var(--dashboard-accent-color, #9e3535)'}}>
+                                                                                    <CardHeader className="py-2 px-3" style={{backgroundColor: 'var(--dashboard-accent-color, #9e3535)', color: 'var(--dashboard-accent-text-color, #FFF)'}}>
+                                                                                        <h6 className="mb-0">Detalle: {item.productName} ({dayjs(item.date).format('DD/MM/YYYY')})</h6>
+                                                                                    </CardHeader>
+                                                                                    <CardBody className="p-3">
+                                                                                        <Row>
+                                                                                            <Col md={4} className="mb-3 mb-md-0"><div className="d-flex align-items-center mb-1"><Clock size={18} className="me-2" style={{color: 'var(--dashboard-accent-color, #9e3535)'}} /><strong style={{color: 'var(--dashboard-text-color, #5C4033)'}}>Tiempo:</strong></div><p className="ms-4 ps-1 mb-0" style={{color: 'var(--dashboard-text-color, #5C4033)'}}>{item.timeSpent || 0} min</p></Col>
+                                                                                            <Col md={4} className="mb-3 mb-md-0"><div className="d-flex align-items-center mb-1"><DollarSign size={18} className="me-2" style={{color: 'var(--dashboard-accent-color, #9e3535)'}} /><strong style={{color: 'var(--dashboard-text-color, #5C4033)'}}>Ahorro/Costo:</strong></div><p className={`ms-4 ps-1 mb-0 fw-bold ${item.costSaved >= 0 ? 'text-success' : 'text-danger'}`}>{formatCurrencyCOP(item.costSaved || 0)}</p></Col>
+                                                                                            <Col md={4}><div className="d-flex align-items-center mb-1"><Percent size={18} className="me-2" style={{color: 'var(--dashboard-accent-color, #9e3535)'}} /><strong style={{color: 'var(--dashboard-text-color, #5C4033)'}}>Eficiencia (%):</strong></div><p className="ms-4 ps-1 mb-0" style={{color: 'var(--dashboard-text-color, #5C4033)'}}>{item.efficiencyPercentage?.toFixed(2) || 0}%</p></Col>
+                                                                                        </Row>
+                                                                                    </CardBody>
+                                                                                </Card>
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>
+                                                                )}
+                                                            </React.Fragment>
+                                                        ))}
+                                                    </tbody>
+                                                </Table>
+                                            </div>
+                                        ) : ( <Alert color="light" className="text-center fst-italic m-3 py-4">No hay registros de rendimiento para este empleado con los filtros aplicados.</Alert> )}
+                                    </CardBody>
+                                </Card>
+                            ))
+                        ) : (
+                            <Alert color="info" className="text-center fst-italic m-3 py-4">No se encontraron datos de rendimiento para los filtros aplicados.</Alert>
+                        )}
+                    </Col>
+                    {Object.keys(groupedPerformanceData).length > 0 && chartSummaryData.length > 0 && renderSummaryCharts()}
                 </Row>
             )}
-            {!isLoading && !error && !showResults && (
-                // Optional: Show a placeholder message if nothing has been searched yet
-                <Alert color="info">
-                    Seleccione un rango de fechas y {searchTerm ? 'criterios de búsqueda ' : ''}haga clic en Buscar para ver los datos.
+             {!isLoading && !showResults && (
+                 <Alert color="secondary" className="text-center py-4 mt-4">
+                    <Filter size={20} className="me-2" />
+                    Seleccione los filtros y haga clic en "Buscar" para ver los datos de rendimiento.
                 </Alert>
             )}
-
-            {/* --- Modal --- */}
-            <Modal isOpen={isModalVisible} toggle={handleCancel} centered>
-                <ModalHeader toggle={handleCancel}>Información</ModalHeader>
-                <ModalBody>{modalMessage}</ModalBody>
-                <ModalFooter>
-                    <Button color="primary" onClick={handleOk}>Aceptar</Button>
-                </ModalFooter>
-            </Modal>
         </Container>
     );
 };
 
-export default ExpenseDashboardByDate;
+export default EmployeePerformanceDashboard;
