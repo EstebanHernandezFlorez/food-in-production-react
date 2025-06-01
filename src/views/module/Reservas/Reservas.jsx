@@ -91,13 +91,14 @@ const emptyForm = {
   email: "",
   cellphone: "",
   address: "",
-  dateTime: "",
+  dateTime: "", // Cambiado para que inicie vacío
   timeDurationR: "", // Inicializar con cadena vacía
   evenType: "",
   numberPeople: "",
   matter: "",
   servicios: [],
   decorationAmount: "",
+  additionalServiceAmount: "", // NUEVO: Campo para monto de servicios adicionales
   pass: [],
   totalPay: "",
   remaining: "",
@@ -334,6 +335,8 @@ const Calendario = () => {
   const [additionalAmountLabel, setAdditionalAmountLabel] = useState("Monto Decoración")
   // --- NUEVO: Estado para controlar la visibilidad del input Monto Decoración ---
   const [showDecorationAmountInput, setShowDecorationAmountInput] = useState(false)
+  // --- NUEVO: Estado para controlar la visibilidad del input de servicios adicionales ---
+  const [showAdditionalServiceAmountInput, setShowAdditionalServiceAmountInput] = useState(false)
 
   // --- NUEVA FUNCIÓN: Convertir formato de tiempo a número ---
   const convertTimeFormatToNumber = (timeStr) => {
@@ -376,6 +379,11 @@ const Calendario = () => {
     } else {
       return "" // Para menos de 2 personas o valores inválidos
     }
+  }
+
+  // --- NUEVA FUNCIÓN: Verificar si un servicio es de decoración ---
+  const isDecorationService = (serviceName) => {
+    return serviceName && serviceName.toLowerCase().includes("decoracion")
   }
 
   // --- Opciones formateadas para react-select ---
@@ -519,7 +527,7 @@ const Calendario = () => {
         const sameMonth = reservationDateTime.getMonth() === reservaDateTime.getMonth()
         const sameDay = reservationDateTime.getDate() === reservaDateTime.getDate()
         const sameHour = reservationDateTime.getHours() === reservaDateTime.getHours()
-        const sameMinute = reservationDateTime.getMinutes() === reservationDateTime.getMinutes()
+        const sameMinute = reservationDateTime.getMinutes() === reservaDateTime.getMinutes()
 
         // Imprimir información de depuración
         console.log("Comparando fechas:", {
@@ -558,41 +566,27 @@ const Calendario = () => {
     return totalPrice
   }
 
-  // --- Resto de Funciones (handleDateClick, handleEventClick, handleEventDrop, etc.) ---
+  // --- MODIFICADO: handleDateClick para que la fecha y hora aparezcan vacías ---
   const handleDateClick = (arg) => {
-    const now = new Date()
-    const clickedDateTime = new Date(arg.dateStr)
-    const nowUTC = new Date(now.toISOString())
-    const clickedUTC = new Date(clickedDateTime.toISOString())
-
-    if (clickedUTC.getTime() < nowUTC.getTime() && arg.dateStr !== now.toISOString().split("T")[0]) {
-      // Permitir click en hoy
-      toast.error("No se pueden crear reservas en fechas pasadas.")
-      return
-    }
+    console.log("[handleDateClick] Iniciando. Argumento:", arg)
 
     setSelectedReserva(null)
-    const defaultTime = "T09:00"
-    // Establecer fecha/hora. Si es hoy, usar hora actual + 1 hora, si no, usar hora por defecto.
-    let initialDateTime = arg.dateStr + defaultTime
-    if (arg.dateStr === now.toISOString().split("T")[0]) {
-      now.setHours(now.getHours() + 1, 0, 0, 0) // Hora actual + 1 hora, minutos a 00
-      initialDateTime = now.toISOString().slice(0, 16)
-    }
-
-    // Resetear el label y la visibilidad del monto adicional
     setAdditionalAmountLabel("Monto Decoración")
     setShowDecorationAmountInput(false)
+    setShowAdditionalServiceAmountInput(false) // NUEVO: Resetear estado
 
+    // MODIFICADO: Siempre inicializar con fecha y hora vacías
     setForm({
       ...emptyForm,
-      dateTime: initialDateTime,
-      pass: [{ fecha: new Date().toISOString().split("T")[0], cantidad: "50000" }], // Inicializar pass con 50,000
-    }) // Inicializar pass con fecha hoy
+      dateTime: "", // Siempre vacío para nueva reserva
+      pass: [{ fecha: new Date().toISOString().split("T")[0], cantidad: "50000" }],
+    })
+
     setErrors({})
     setClientSearchText("")
     setClientSearchResults([])
     setShowClientSearch(false)
+    console.log("[handleDateClick] Abriendo modal con fecha y hora vacías...")
     setModalOpen(true)
   }
 
@@ -617,14 +611,14 @@ const Calendario = () => {
             price: service.price || service.Price || service.precio || 0,
           }))
 
-          // --- LÓGICA MODIFICADA PARA MONTO DECORACIÓN ---
-          const tieneDecoracion = selectedServiceValues.some(
-            (s) => s.label && s.label.toLowerCase().includes("decoracion"), // Asume que el nombre del servicio de decoración contiene "decoracion"
-          )
+          // --- LÓGICA MODIFICADA PARA MONTO DECORACIÓN Y SERVICIOS ADICIONALES ---
+          const tieneDecoracion = selectedServiceValues.some((s) => isDecorationService(s.label))
+          const tieneOtrosServicios = selectedServiceValues.some((s) => !isDecorationService(s.label))
           const esCumpleanos =
             detailedReservation.evenType && detailedReservation.evenType.toLowerCase().includes("cumpleaños")
 
           let currentDecorationAmount = detailedReservation.decorationAmount || "0"
+          let currentAdditionalServiceAmount = detailedReservation.additionalServiceAmount || "0"
 
           if (tieneDecoracion) {
             setAdditionalAmountLabel("Monto Decoración")
@@ -634,8 +628,6 @@ const Calendario = () => {
             } else {
               setShowDecorationAmountInput(true)
               // Si no es cumpleaños y tiene decoración, el monto se mantiene o se calcula si es necesario
-              // Aquí, simplemente usamos el valor que ya tiene la reserva,
-              // o el calculado si no tiene y hay número de personas
               if (!currentDecorationAmount && detailedReservation.numberPeople) {
                 currentDecorationAmount = calculateDecorationAmount(detailedReservation.numberPeople)
               }
@@ -643,6 +635,14 @@ const Calendario = () => {
           } else {
             setShowDecorationAmountInput(false)
             currentDecorationAmount = "0"
+          }
+
+          // NUEVO: Lógica para servicios adicionales no decoración
+          if (tieneOtrosServicios) {
+            setShowAdditionalServiceAmountInput(true)
+          } else {
+            setShowAdditionalServiceAmountInput(false)
+            currentAdditionalServiceAmount = "0"
           }
           // --- FIN LÓGICA MODIFICADA ---
 
@@ -713,6 +713,7 @@ const Calendario = () => {
             timeDurationR: durationAsNumber, // Usar el valor convertido
             status: statusToUse,
             decorationAmount: currentDecorationAmount, // Asegurarse de que se usa el monto de decoración actualizado
+            additionalServiceAmount: currentAdditionalServiceAmount, // NUEVO: Campo para servicios adicionales
           })
           console.log(
             "Duración cargada:",
@@ -938,7 +939,13 @@ const Calendario = () => {
     // Añadir abono con fecha actual por defecto y monto mínimo
     const todayStr = new Date().toISOString().split("T")[0]
     setForm((prevForm) => ({ ...prevForm, pass: [...(prevForm.pass || []), { fecha: todayStr, cantidad: "50000" }] }))
-    setErrors((prevErrors) => ({ ...prevErrors, pass: "" }))
+
+    setErrors((prevErrors) => {
+      // Limpiar error general de 'pass'
+      const newErrors = { ...prevErrors }
+      delete newErrors.pass
+      return newErrors
+    })
   }
 
   const removeAbono = (index) => {
@@ -961,14 +968,17 @@ const Calendario = () => {
     setForm((prevForm) => ({ ...prevForm, remaining: restanteFormatted }))
   }, [])
 
+  // --- MODIFICADO: handleMultiServiceChange para manejar servicios adicionales ---
   const handleMultiServiceChange = (selectedOptions) => {
     const currentServices = selectedOptions || []
     const updatedForm = { ...form, servicios: currentServices }
 
-    // --- LÓGICA MODIFICADA PARA MONTO DECORACIÓN ---
-    const tieneDecoracion = currentServices.some((s) => s.label && s.label.toLowerCase().includes("decoracion"))
+    // --- LÓGICA MODIFICADA PARA MONTO DECORACIÓN Y SERVICIOS ADICIONALES ---
+    const tieneDecoracion = currentServices.some((s) => isDecorationService(s.label))
+    const tieneOtrosServicios = currentServices.some((s) => !isDecorationService(s.label))
     const esCumpleanos = form.evenType && form.evenType.toLowerCase().includes("cumpleaños")
 
+    // Lógica para decoración
     if (tieneDecoracion) {
       setAdditionalAmountLabel("Monto Decoración")
       if (esCumpleanos) {
@@ -976,7 +986,7 @@ const Calendario = () => {
         updatedForm.decorationAmount = "0"
       } else {
         setShowDecorationAmountInput(true)
-        const numPeople = updatedForm.numberPeople || form.numberPeople // Usar nro personas del form
+        const numPeople = updatedForm.numberPeople || form.numberPeople
         updatedForm.decorationAmount = numPeople
           ? calculateDecorationAmount(numPeople)
           : updatedForm.decorationAmount || ""
@@ -984,6 +994,18 @@ const Calendario = () => {
     } else {
       setShowDecorationAmountInput(false)
       updatedForm.decorationAmount = "0"
+    }
+
+    // NUEVO: Lógica para servicios adicionales no decoración
+    if (tieneOtrosServicios) {
+      setShowAdditionalServiceAmountInput(true)
+      // Si no hay monto previo, inicializar vacío para que el usuario lo complete
+      if (!updatedForm.additionalServiceAmount) {
+        updatedForm.additionalServiceAmount = ""
+      }
+    } else {
+      setShowAdditionalServiceAmountInput(false)
+      updatedForm.additionalServiceAmount = "0"
     }
     // --- FIN LÓGICA MODIFICADA ---
 
@@ -1008,6 +1030,7 @@ const Calendario = () => {
       const numValue = Number.parseFloat(value)
       if (isNaN(numValue) || numValue <= 0) return "Cantidad debe ser > 0."
       if (numValue < 50000) return "El monto mínimo debe ser de $50.000."
+      if (numValue < 50000) return "El monto mínimo del abono debe ser de $50.000."
     }
     return ""
   }, [])
@@ -1059,6 +1082,12 @@ const Calendario = () => {
             return !isNaN(decorAmount) && decorAmount >= 0 ? "" : `${additionalAmountLabel} debe ser >= 0.`
           }
           return "" // Si no se muestra el input, no hay error
+        case "additionalServiceAmount": // NUEVO: Validación para servicios adicionales
+          if (showAdditionalServiceAmountInput) {
+            const additionalAmount = Number.parseFloat(value)
+            return !isNaN(additionalAmount) && additionalAmount >= 0 ? "" : "Monto Servicio Adicional debe ser >= 0."
+          }
+          return ""
         case "totalPay":
           const totalP = Number.parseFloat(value)
           return !isNaN(totalP) && totalP >= 0 ? "" : "Total a Pagar debe ser >= 0." // Permitir 0
@@ -1076,7 +1105,8 @@ const Calendario = () => {
       additionalAmountLabel,
       form.idCustomers,
       selectedReserva?.idReservations,
-      showDecorationAmountInput, // Añadido para la validación condicional
+      showDecorationAmountInput,
+      showAdditionalServiceAmountInput, // NUEVO: Añadido para la validación condicional
     ],
   )
 
@@ -1089,13 +1119,16 @@ const Calendario = () => {
       "timeDurationR",
       "evenType",
       "numberPeople",
-      // "decorationAmount", // La validación de decorationAmount se maneja dentro de validateField
       "totalPay",
       "servicios",
     ]
     // Validar decorationAmount solo si se muestra el input
     if (showDecorationAmountInput) {
       fieldsToValidate.push("decorationAmount")
+    }
+    // NUEVO: Validar additionalServiceAmount solo si se muestra el input
+    if (showAdditionalServiceAmountInput) {
+      fieldsToValidate.push("additionalServiceAmount")
     }
 
     fieldsToValidate.forEach((key) => {
@@ -1134,7 +1167,7 @@ const Calendario = () => {
     }
     setErrors(newErrors)
     return isValid
-  }, [form, validateAbonoField, validateField, showDecorationAmountInput])
+  }, [form, validateAbonoField, validateField, showDecorationAmountInput, showAdditionalServiceAmountInput])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -1184,9 +1217,11 @@ const Calendario = () => {
         }
       }
 
-      const tieneDecoracion = currentServices.some((s) => s.label && s.label.toLowerCase().includes("decoracion"))
+      const tieneDecoracion = currentServices.some((s) => isDecorationService(s.label))
+      const tieneOtrosServicios = currentServices.some((s) => !isDecorationService(s.label))
       const esCumpleanos = currentEvenType && currentEvenType.toLowerCase().includes("cumpleaños")
 
+      // Lógica para decoración
       if (tieneDecoracion) {
         setAdditionalAmountLabel("Monto Decoración")
         if (esCumpleanos) {
@@ -1201,6 +1236,14 @@ const Calendario = () => {
       } else {
         setShowDecorationAmountInput(false)
         updatedForm.decorationAmount = "0"
+      }
+
+      // NUEVO: Lógica para servicios adicionales
+      if (tieneOtrosServicios) {
+        setShowAdditionalServiceAmountInput(true)
+      } else {
+        setShowAdditionalServiceAmountInput(false)
+        updatedForm.additionalServiceAmount = "0"
       }
     }
 
@@ -1265,9 +1308,11 @@ const Calendario = () => {
 
   const requestSaveConfirmation = useCallback(() => {
     // Recalcular monto de decoración antes de validar, por si acaso.
-    const tieneDecoracion = form.servicios.some((s) => s.label && s.label.toLowerCase().includes("decoracion"))
+    const tieneDecoracion = form.servicios.some((s) => isDecorationService(s.label))
+    const tieneOtrosServicios = form.servicios.some((s) => !isDecorationService(s.label))
     const esCumpleanos = form.evenType && form.evenType.toLowerCase().includes("cumpleaños")
     let finalDecorationAmount = form.decorationAmount
+    let finalAdditionalServiceAmount = form.additionalServiceAmount
 
     if (tieneDecoracion && esCumpleanos) {
       finalDecorationAmount = "0"
@@ -1281,7 +1326,16 @@ const Calendario = () => {
       finalDecorationAmount = "0"
     }
 
-    const formToValidate = { ...form, decorationAmount: finalDecorationAmount }
+    // NUEVO: Lógica para servicios adicionales
+    if (!tieneOtrosServicios) {
+      finalAdditionalServiceAmount = "0"
+    }
+
+    const formToValidate = {
+      ...form,
+      decorationAmount: finalDecorationAmount,
+      additionalServiceAmount: finalAdditionalServiceAmount,
+    }
 
     // Actualizar restante con el formulario que se va a validar
     updateRestante(formToValidate.totalPay, formToValidate.pass)
@@ -1303,6 +1357,10 @@ const Calendario = () => {
       // Validar decorationAmount solo si debe mostrarse o si es decoración no gratuita
       if (showDecorationAmountInput || (tieneDecoracion && !esCumpleanos)) {
         fieldsToValidate.push("decorationAmount")
+      }
+      // NUEVO: Validar additionalServiceAmount solo si debe mostrarse
+      if (showAdditionalServiceAmountInput || tieneOtrosServicios) {
+        fieldsToValidate.push("additionalServiceAmount")
       }
 
       fieldsToValidate.forEach((key) => {
@@ -1380,6 +1438,7 @@ const Calendario = () => {
     validateField,
     validateAbonoField,
     showDecorationAmountInput,
+    showAdditionalServiceAmountInput,
   ])
 
   // Función para ejecutar el guardado
@@ -1412,6 +1471,7 @@ const Calendario = () => {
           pass: abonosToSend,
           numberPeople: Number.parseInt(formDataToSave.numberPeople || 0),
           decorationAmount: Number.parseFloat(formDataToSave.decorationAmount || 0),
+          additionalServiceAmount: Number.parseFloat(formDataToSave.additionalServiceAmount || 0), // NUEVO: Campo para servicios adicionales
           totalPay: Number.parseFloat(formDataToSave.totalPay || 0),
           remaining: Number.parseFloat(formDataToSave.remaining || 0),
           status: formDataToSave.status,
@@ -1471,7 +1531,7 @@ const Calendario = () => {
         setIsConfirmActionLoading(false)
       }
     },
-    [form, selectedReserva, toggleConfirmModal], // Removido updateDurationOnly, updateStatusOnly ya que la lógica de guardado completo se mantiene
+    [form, selectedReserva, toggleConfirmModal],
   )
 
   // Función para solicitar confirmación de eliminación (esta función aún existe, aunque el botón del modal se oculte)
@@ -2134,6 +2194,31 @@ const Calendario = () => {
               />
               {errors.servicios && <div className="text-danger small mt-1">{errors.servicios}</div>}
             </FormGroup>
+
+            {/* NUEVO: Input para monto de servicios adicionales */}
+            {showAdditionalServiceAmountInput && (
+              <Row>
+                <Col md={6}>
+                  <FormGroup>
+                    <Label for="additionalServiceAmount" style={{ fontWeight: "bold" }}>
+                      Monto Servicio Adicional
+                    </Label>
+                    <Input
+                      type="number"
+                      name="additionalServiceAmount"
+                      id="additionalServiceAmount"
+                      value={form.additionalServiceAmount || ""}
+                      onChange={handleChange}
+                      invalid={!!errors.additionalServiceAmount}
+                      style={{ borderColor: "#9e3535" }}
+                      placeholder="Ingrese el monto"
+                    />
+                    {errors.additionalServiceAmount && <FormFeedback>{errors.additionalServiceAmount}</FormFeedback>}
+                  </FormGroup>
+                </Col>
+              </Row>
+            )}
+
             {showDecorationAmountInput && (
               <Row>
                 <Col md={6}>
@@ -2169,6 +2254,7 @@ const Calendario = () => {
                     onChange={handleChange}
                     invalid={!!errors.dateTime}
                     style={{ borderColor: "#9e3535" }}
+                    autoComplete="off"
                   />
                   {errors.dateTime && <FormFeedback>{errors.dateTime}</FormFeedback>}
                 </FormGroup>
@@ -2227,6 +2313,7 @@ const Calendario = () => {
                         type="number"
                         id={`cantidad-${index}`}
                         value={abono.cantidad || ""}
+                        min="50000"
                         onChange={(e) => handleAbonoChange(index, "cantidad", e.target.value)}
                         invalid={!!errors[`pass-${index}-cantidad`]}
                         style={{ borderColor: "#9e3535" }}

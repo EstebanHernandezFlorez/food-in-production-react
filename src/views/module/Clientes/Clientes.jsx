@@ -228,12 +228,12 @@ const Clientes = () => {
         }
 
         // Opcional: Añadir validación de duplicados si es necesario (ej. por Correo o Celular si son únicos)
-        // const correoExistente = data.some(c => c.Correo && c.Correo.toLowerCase() === String(form.Correo ?? '').trim().toLowerCase());
-        // if (correoExistente) {
-        //     toast.error("Ya existe un cliente con este correo electrónico.", { duration: 4000 });
-        //     setFormErrors(prev => ({ ...prev, Correo: true }));
-        //     return;
-        // }
+        const correoExistente = data.some(c => c.Correo && c.Correo.toLowerCase() === String(form.Correo ?? '').trim().toLowerCase());
+        if (correoExistente) {
+            toast.error("Ya existe un cliente con este correo electrónico.", { duration: 4000 });
+            setFormErrors(prev => ({ ...prev, Correo: true }));
+            return;
+        }
 
         const toastId = toast.loading('Agregando cliente...');
         try {
