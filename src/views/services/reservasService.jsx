@@ -1,7 +1,7 @@
-import axios from "axios"
+import axios from "axios";
 
 // Usar la URL directamente para evitar problemas con variables de entorno
-const API_URL = "http://localhost:3000/reservations"
+const API_URL = "http://localhost:3000/reservations";
 
 /**
  * Mapeo de estados entre la UI y la API
@@ -11,29 +11,31 @@ const mapUIStateToAPI = (uiState) => {
   // Validar que el estado sea uno de los valores permitidos
   if (
     typeof uiState === "string" &&
-    ["pendiente", "confirmada", "en_proceso", "terminada", "anulada"].includes(uiState)
+    ["pendiente", "confirmada", "en_proceso", "terminada", "anulada"].includes(uiState.toLowerCase()) // Asegurar minúsculas
   ) {
-    return uiState
+    return uiState.toLowerCase();
   }
 
   // Valor por defecto si no es válido
-  return "pendiente"
-}
+  console.warn(`Estado UI inválido recibido: ${uiState}, usando 'pendiente' por defecto.`);
+  return "pendiente";
+};
 
 const mapAPIStateToUI = (apiStatus) => {
-  console.log("Estado API recibido:", apiStatus)
+  // console.log("Estado API recibido para mapear a UI:", apiStatus); // Logueo más específico
 
   // Si el estado es uno de los valores válidos del ENUM, lo usamos directamente
   if (
     typeof apiStatus === "string" &&
-    ["pendiente", "confirmada", "en_proceso", "terminada", "anulada"].includes(apiStatus)
+    ["pendiente", "confirmada", "en_proceso", "terminada", "anulada"].includes(apiStatus.toLowerCase()) // Asegurar minúsculas
   ) {
-    return apiStatus
+    return apiStatus.toLowerCase();
   }
 
   // Valor por defecto si no es válido
-  return "pendiente"
-}
+  console.warn(`Estado API inválido recibido: ${apiStatus}, usando 'pendiente' por defecto para UI.`);
+  return "pendiente";
+};
 
 /**
  * Servicio para gestionar las reservas
@@ -44,21 +46,26 @@ const reservasService = {
    */
   getAllReservations: async () => {
     try {
-      console.log("Solicitando todas las reservas a:", API_URL)
-      const response = await axios.get(API_URL)
+      console.log("[reservasService] Solicitando todas las reservas a:", API_URL);
+      const response = await axios.get(API_URL);
 
       // Convertir los estados de la API al formato de la UI
       const reservationsWithUIStates = response.data.map((reservation) => ({
         ...reservation,
         status: mapAPIStateToUI(reservation.status),
-      }))
+      }));
 
-      console.log("Respuesta procesada:", reservationsWithUIStates)
-      return reservationsWithUIStates
+      // console.log("[reservasService] Respuesta procesada (getAllReservations):", reservationsWithUIStates); // Log detallado si es necesario
+      return reservationsWithUIStates;
     } catch (error) {
-      console.error("Error al obtener las reservas:", error)
-      console.error("Detalles del error:", error.response?.data || error.message)
-      throw error
+      console.error("[reservasService] Error al obtener las reservas:", error);
+      if (error.response) {
+        console.error("[reservasService] Detalles del error (getAllReservations) - Status:", error.response.status);
+        console.error("[reservasService] Detalles del error (getAllReservations) - Data:", JSON.stringify(error.response.data, null, 2));
+      } else {
+        console.error("[reservasService] Detalles del error (getAllReservations) - Mensaje:", error.message);
+      }
+      throw error;
     }
   },
 
@@ -68,32 +75,27 @@ const reservasService = {
    */
   createReservation: async (reserva) => {
     try {
-      // Log de datos originales para depuración
-      console.log("Datos originales recibidos en createReservation:", JSON.stringify(reserva, null, 2))
+      console.log("[reservasService] Datos originales recibidos en createReservation:", JSON.stringify(reserva, null, 2));
 
-      // CAMBIO 1: Asegurar que idCustomers sea un número y esté presente
-      const idCustomersNum = Number(reserva.idCustomers)
-      console.log("numero principal:", reserva.idCustomers)
-      if (isNaN(idCustomersNum)) {
-        throw new Error(`ID de cliente inválido: ${reserva.idCustomers}`)
+      const idCustomersNum = Number(reserva.idCustomers);
+      if (isNaN(idCustomersNum) || idCustomersNum <= 0) { // Añadir verificación de <= 0
+        console.error("[reservasService] ID de cliente inválido:", reserva.idCustomers);
+        throw new Error(`ID de cliente inválido: ${reserva.idCustomers}`);
       }
 
-      // NUEVO: Convertir el estado de la UI al formato de la API
-      console.log("Estado UI recibido:", reserva.status)
-      const apiStatus = mapUIStateToAPI(reserva.status)
-      console.log("Estado convertido para API:", apiStatus)
+      console.log("[reservasService] Estado UI recibido (createReservation):", reserva.status);
+      const apiStatus = mapUIStateToAPI(reserva.status);
+      console.log("[reservasService] Estado convertido para API (createReservation):", apiStatus);
 
-      // CAMBIO 2: Crear una copia limpia de los datos para enviar
-      // Convertir campos numéricos a números
       const dataToSend = {
-        idCustomers: idCustomersNum, // Asegurar que sea un número
-        dateTime: new Date(reserva.dateTime).toISOString(), // Convertir a formato ISO 8601
+        idCustomers: idCustomersNum,
+        dateTime: new Date(reserva.dateTime).toISOString(),
         numberPeople: Number(reserva.numberPeople),
-        matter: reserva.matter || "",
-        timeDurationR: reserva.timeDurationR.toString(),
+        matter: reserva.matter || "", // Asegurar que no sea null si el backend no lo permite y no tiene default
+        timeDurationR: String(reserva.timeDurationR), // Backend espera STRING
         pass: Array.isArray(reserva.pass)
           ? reserva.pass.map((p) => ({
-              fecha: p.fecha,
+              fecha: p.fecha, // Asegurar formato de fecha si es necesario para el backend
               cantidad: Number(p.cantidad),
             }))
           : [],
@@ -101,50 +103,84 @@ const reservasService = {
         remaining: Number(reserva.remaining),
         evenType: reserva.evenType,
         totalPay: Number(reserva.totalPay),
-        status: apiStatus, // Usar el ENUM directamente
-      }
+        status: apiStatus,
+      };
 
-      console.log("Duración a enviar en creación:", dataToSend.timeDurationR, "tipo:", typeof dataToSend.timeDurationR)
+      console.log("[reservasService] Duración a enviar en creación:", dataToSend.timeDurationR, "tipo:", typeof dataToSend.timeDurationR);
 
-      // CAMBIO 3: Añadir idAditionalServices si existe
-      if (reserva.idAditionalServices && Array.isArray(reserva.idAditionalServices)) {
-        dataToSend.idAditionalServices = reserva.idAditionalServices
-      } else if (reserva.servicios && Array.isArray(reserva.servicios)) {
-        // Si no hay idAditionalServices pero hay servicios, extraer los IDs
+      if (reserva.idAditionalServices && Array.isArray(reserva.idAditionalServices) && reserva.idAditionalServices.length > 0) {
+        dataToSend.idAditionalServices = reserva.idAditionalServices.map(id => Number(id)).filter(id => !isNaN(id));
+      } else if (reserva.servicios && Array.isArray(reserva.servicios) && reserva.servicios.length > 0) {
         dataToSend.idAditionalServices = reserva.servicios
           .map((s) => (typeof s === "object" && s !== null ? Number(s.value) : Number(s)))
-          .filter((id) => !isNaN(id))
+          .filter((id) => !isNaN(id) && id > 0); // Asegurar que los IDs sean válidos
       }
+      // Si no hay servicios adicionales, no enviar el campo idAditionalServices si el backend lo prefiere así.
+      // else {
+      //   delete dataToSend.idAditionalServices; // Opcional, depende del backend
+      // }
 
-      // Log de datos finales para depuración
-      console.log("DATOS FINALES A ENVIAR:", JSON.stringify(dataToSend, null, 2))
 
-      // CAMBIO 5: Configuración adicional para la solicitud
+      console.log("[reservasService] DATOS FINALES A ENVIAR (createReservation):", JSON.stringify(dataToSend, null, 2));
+
       const config = {
         headers: {
           "Content-Type": "application/json",
         },
-      }
+      };
 
-      try {
-        const response = await axios.post(API_URL, dataToSend, config)
-        console.log("Respuesta del servidor (crear):", response.data)
+      // Bloque try-catch específico para la llamada axios
+      const response = await axios.post(API_URL, dataToSend, config);
+      console.log("[reservasService] Respuesta del servidor (crear):", response.data);
 
-        // Convertir el estado de la respuesta al formato de la UI
-        const responseWithUIState = {
-          ...response.data,
-          status: mapAPIStateToUI(response.data.status),
+      const responseWithUIState = {
+        ...response.data,
+        status: mapAPIStateToUI(response.data.status),
+      };
+      return responseWithUIState;
+
+    } catch (axiosError) { // Renombrado a axiosError para claridad
+      console.error("[reservasService] Error EXCEPCIÓN en createReservation:", axiosError.message); // Log del mensaje de la excepción
+
+      if (axiosError.response) {
+        console.error("[reservasService] Respuesta de error del servidor (status):", axiosError.response.status);
+        console.error("[reservasService] Respuesta de error del servidor (data completa):", JSON.stringify(axiosError.response.data, null, 2));
+
+        if (axiosError.response.data && Array.isArray(axiosError.response.data.errors)) {
+          console.error("[reservasService] DETALLE DE ERRORES DEL BACKEND:");
+          axiosError.response.data.errors.forEach((err, index) => {
+            console.error(`[reservasService] Error ${index + 1}:`, JSON.stringify(err, null, 2));
+            // Loguear campos individuales si existen
+            if (err.message) console.error(`  Message: ${err.message}`);
+            if (err.path) console.error(`  Path: ${err.path}`);
+            if (err.type) console.error(`  Type: ${err.type}`);
+            if (err.value !== undefined) console.error(`  Value: ${JSON.stringify(err.value)}`);
+          });
+        } else if (axiosError.response.data) {
+            // Si no es el formato {errors: []}, mostrar lo que sea que venga
+            console.error("[reservasService] Respuesta de error del servidor (data directa):", axiosError.response.data);
         }
 
-        return responseWithUIState
-      } catch (axiosError) {
-        console.error("Error creating reservation:", axiosError)
-        console.error("Respuesta de error del servidor:", axiosError.response?.data)
-        throw new Error(axiosError.response?.data?.message || axiosError.message)
+        let userFriendlyErrorMessage = "No se pudo crear la reserva."; // Mensaje por defecto
+        if (axiosError.response.data) {
+            if (typeof axiosError.response.data.message === 'string') {
+                userFriendlyErrorMessage = axiosError.response.data.message;
+            } else if (Array.isArray(axiosError.response.data.errors) && axiosError.response.data.errors.length > 0 && typeof axiosError.response.data.errors[0].message === 'string') {
+                userFriendlyErrorMessage = axiosError.response.data.errors[0].message;
+            } else if (typeof axiosError.response.data.error === 'string'){ // Otro formato común
+                userFriendlyErrorMessage = axiosError.response.data.error;
+            }
+        }
+        // Mantener el throw original si es un error genérico de Axios, o uno más específico si viene del backend
+        throw new Error(userFriendlyErrorMessage || axiosError.message);
+
+      } else if (axiosError.request) {
+        console.error("[reservasService] Error creating reservation: No se recibió respuesta del servidor", axiosError.request);
+        throw new Error("No se pudo conectar con el servidor. Intente más tarde.");
+      } else {
+        console.error("[reservasService] Error creating reservation: Error al configurar la solicitud", axiosError.message);
+        throw new Error(`Error al configurar la solicitud: ${axiosError.message}`);
       }
-    } catch (error) {
-      console.log("Error creating reservation:", error)
-      throw error
     }
   },
 
@@ -154,86 +190,80 @@ const reservasService = {
    */
   getReservationById: async (id) => {
     try {
-      console.log(`Solicitando detalles de la reserva ${id}`)
-      const response = await axios.get(`${API_URL}/${id}`)
+      console.log(`[reservasService] Solicitando detalles de la reserva ${id}`);
+      const response = await axios.get(`${API_URL}/${id}`);
+      console.log("[reservasService] Respuesta de detalles de reserva:", response.data);
 
-      // Log de la respuesta para depuración
-      console.log("Respuesta de detalles de reserva:", response.data)
+      const reservation = response.data;
 
-      // Verificar si la respuesta tiene la estructura esperada
-      const reservation = response.data
-
-      // Verificar si falta información del cliente o servicios
       if (!reservation.Customer && reservation.idCustomers) {
-        console.warn(`Advertencia: La reserva ${id} no incluye datos del cliente`)
+        console.warn(`[reservasService] Advertencia: La reserva ${id} no incluye datos del cliente completos.`);
       }
 
-      if (
-        !reservation.AditionalServices ||
-        !Array.isArray(reservation.AditionalServices) ||
-        reservation.AditionalServices.length === 0
-      ) {
-        console.warn(`Advertencia: La reserva ${id} no incluye servicios adicionales o está vacío`)
+      if (!Array.isArray(reservation.AditionalServices) || reservation.AditionalServices.length === 0) {
+        // Podría ser que no tenga servicios, no necesariamente una advertencia si es válido
+        // console.log(`[reservasService] Info: La reserva ${id} no tiene servicios adicionales asignados.`);
       }
 
-      // NUEVO: Asegurarse de que pass sea un array
       if (!reservation.pass) {
-        console.warn(`Advertencia: La reserva ${id} no incluye campo pass, inicializando como array vacío`)
-        reservation.pass = []
+        console.warn(`[reservasService] Advertencia: La reserva ${id} no incluye campo pass, inicializando como array vacío.`);
+        reservation.pass = [];
       } else if (typeof reservation.pass === "string") {
         try {
-          console.log(`Reserva ${id} tiene pass como string, intentando parsear:`, reservation.pass)
-          reservation.pass = JSON.parse(reservation.pass)
+          console.log(`[reservasService] Reserva ${id} tiene pass como string, intentando parsear:`, reservation.pass);
+          reservation.pass = JSON.parse(reservation.pass);
         } catch (parseError) {
-          console.error(`Error al parsear pass para reserva ${id}:`, parseError)
-          reservation.pass = []
+          console.error(`[reservasService] Error al parsear pass para reserva ${id}:`, parseError);
+          reservation.pass = [];
         }
-      } else if (!Array.isArray(reservation.pass)) {
-        console.warn(`Advertencia: La reserva ${id} tiene pass en formato incorrecto, convirtiendo a array`)
-        reservation.pass = []
+      }
+      // Asegurar que pass sea siempre un array
+      if (!Array.isArray(reservation.pass)) {
+        console.warn(`[reservasService] Advertencia: La reserva ${id} tiene pass en formato incorrecto, convirtiendo a array vacío.`);
+        reservation.pass = [];
       }
 
-      // NUEVO: Verificar si cada elemento de pass tiene la estructura correcta
       if (Array.isArray(reservation.pass)) {
         reservation.pass = reservation.pass.map((abono) => {
-          // Asegurarse de que cada abono tenga fecha y cantidad
           if (!abono || typeof abono !== "object") {
-            return { fecha: "", cantidad: 0 }
+            return { fecha: "", cantidad: 0 };
           }
           return {
-            fecha: abono.fecha || "",
-            cantidad: abono.cantidad || 0,
-          }
-        })
+            fecha: abono.fecha || "", // Considerar formatear a YYYY-MM-DD si es necesario
+            cantidad: Number(abono.cantidad) || 0,
+          };
+        });
       }
 
-      // NUEVO: Convertir el estado de la API al formato de la UI
-      console.log("Estado API recibido:", reservation.status)
-      reservation.status = mapAPIStateToUI(reservation.status)
-      console.log("Estado convertido para UI:", reservation.status)
+      console.log("[reservasService] Estado API recibido (getById):", reservation.status);
+      reservation.status = mapAPIStateToUI(reservation.status);
+      console.log("[reservasService] Estado convertido para UI (getById):", reservation.status);
 
-      console.log("Duración recibida de la API:", reservation.timeDurationR, "tipo:", typeof reservation.timeDurationR)
-
-      // Si la duración es undefined o null, establecer un valor por defecto
+      console.log("[reservasService] Duración recibida de la API (getById):", reservation.timeDurationR, "tipo:", typeof reservation.timeDurationR);
       if (reservation.timeDurationR === undefined || reservation.timeDurationR === null) {
-  console.warn(`Advertencia: La reserva ${id} no incluye duración, estableciendo valor por defecto`)
-  reservation.timeDurationR = ""
-}
+        console.warn(`[reservasService] Advertencia: La reserva ${id} no incluye duración, estableciendo string vacío.`);
+        reservation.timeDurationR = ""; // Debe ser string si el modelo es STRING
+      } else {
+        reservation.timeDurationR = String(reservation.timeDurationR); // Asegurar que sea string
+      }
 
-      console.log("Reserva procesada con pass:", reservation.pass)
-      return reservation
+      // console.log("[reservasService] Reserva procesada (getById) con pass:", reservation.pass);
+      return reservation;
     } catch (error) {
-      console.error(`Error fetching reservation with id ${id}:`, error)
-      console.error("Detalles del error:", error.response?.data || error.message)
-
-      // Devolver un objeto con información de error para evitar errores en la UI
+      console.error(`[reservasService] Error fetching reservation with id ${id}:`, error);
+      if (error.response) {
+        console.error("[reservasService] Detalles del error (getById) - Status:", error.response.status);
+        console.error("[reservasService] Detalles del error (getById) - Data:", JSON.stringify(error.response.data, null, 2));
+      } else {
+        console.error("[reservasService] Detalles del error (getById) - Mensaje:", error.message);
+      }
       return {
         idReservations: id,
         error: true,
-        errorMessage: error.response?.data?.message || error.message || "Error al cargar los detalles de la reserva",
-        pass: [], // NUEVO: Incluir un array vacío para pass
-        status: "pendiente", // Estado por defecto para casos de error
-      }
+        errorMessage: error.response?.data?.message || error.response?.data?.error || error.message || "Error al cargar los detalles de la reserva.",
+        pass: [],
+        status: "pendiente",
+      };
     }
   },
 
@@ -244,188 +274,125 @@ const reservasService = {
    */
   updateReservation: async (id, reserva) => {
     try {
-      // NUEVO: Verificar que el ID sea válido
+      if (!id && reserva.idReservations) {
+        id = reserva.idReservations;
+      }
       if (!id) {
-        console.error("ID de reserva no proporcionado o inválido:", id)
-        // Intentar obtener el ID de la reserva del objeto reserva
-        id = reserva.idReservations
-        if (!id) {
-          throw new Error("No se proporcionó un ID de reserva válido")
-        }
-        console.log("Usando ID de reserva del objeto:", id)
+        console.error("[reservasService] ID de reserva no proporcionado o inválido para actualizar.");
+        throw new Error("No se proporcionó un ID de reserva válido para actualizar.");
       }
 
-      // Log de datos originales para depuración
-      console.log("Datos originales recibidos en updateReservation:", JSON.stringify(reserva, null, 2))
+      console.log("[reservasService] Datos originales recibidos en updateReservation:", JSON.stringify(reserva, null, 2));
 
-      // CAMBIO 6: Asegurar que idCustomers sea un número y esté presente
-      const idCustomersNum = Number(reserva.idCustomers)
-      if (isNaN(idCustomersNum)) {
-        throw new Error(`ID de cliente inválido: ${reserva.idCustomers}`)
+      const idCustomersNum = Number(reserva.idCustomers);
+      if (isNaN(idCustomersNum) || idCustomersNum <= 0) {
+        console.error("[reservasService] ID de cliente inválido (updateReservation):", reserva.idCustomers);
+        throw new Error(`ID de cliente inválido: ${reserva.idCustomers}`);
       }
 
-      // NUEVO: Asegurar que pass sea un array válido con mejor validación
-      let formattedPass = []
+      let formattedPass = [];
       if (Array.isArray(reserva.pass)) {
         formattedPass = reserva.pass.map((abono) => {
-          // Validar cada abono individualmente
           if (!abono || typeof abono !== "object") {
-            return { fecha: "", cantidad: 0 }
+            return { fecha: "", cantidad: 0 };
           }
           return {
-            fecha: abono.fecha || "",
+            fecha: abono.fecha,
             cantidad: Number(abono.cantidad) || 0,
-          }
-        })
-        // Filtrar abonos inválidos (opcional)
-        formattedPass = formattedPass.filter((abono) => abono.fecha && !isNaN(abono.cantidad) && abono.cantidad > 0)
-      } else if (reserva.pass && typeof reserva.pass === "object" && !Array.isArray(reserva.pass)) {
-        // Si pass es un objeto pero no un array
-        console.warn("El campo pass no es un array, convirtiendo a formato correcto")
-        formattedPass = [{ fecha: "", cantidad: 0 }]
+          };
+        });
+        // Considerar no filtrar abonos con cantidad 0 si son válidos para el backend
+        // formattedPass = formattedPass.filter((abono) => abono.fecha && !isNaN(abono.cantidad));
       }
 
-      // NUEVO: Convertir el estado de la UI al formato de la API
-      console.log("Estado UI recibido:", reserva.status)
-      const apiStatus = mapUIStateToAPI(reserva.status)
-      console.log("Estado convertido para API:", apiStatus)
+      console.log("[reservasService] Estado UI recibido (updateReservation):", reserva.status);
+      const apiStatus = mapUIStateToAPI(reserva.status);
+      console.log("[reservasService] Estado convertido para API (updateReservation):", apiStatus);
 
-      // CAMBIO 7: Crear una copia limpia de los datos para enviar
-      // Similar a createReservation pero para actualización
       const dataToSend = {
-        idCustomers: idCustomersNum, // Asegurar que sea un número
-        dateTime: new Date(reserva.dateTime).toISOString(), // Convertir a formato ISO 8601
+        idCustomers: idCustomersNum,
+        dateTime: new Date(reserva.dateTime).toISOString(),
         numberPeople: Number(reserva.numberPeople),
         matter: reserva.matter || "",
-        timeDurationR: reserva.timeDurationR.toString(), // IMPORTANTE: Enviar como string
-        // MODIFICADO: Usar los abonos formateados
-        pass: formattedPass.length > 0 ? formattedPass : [],
+        timeDurationR: String(reserva.timeDurationR), // Backend espera STRING
+        pass: formattedPass, // Enviar el array formateado (puede estar vacío)
         decorationAmount: Number(reserva.decorationAmount),
         remaining: Number(reserva.remaining),
         evenType: reserva.evenType,
         totalPay: Number(reserva.totalPay),
-        status: apiStatus, // Usar el ENUM directamente
-      }
+        status: apiStatus,
+      };
 
-      console.log(
-        "Duración a enviar en actualización:",
-        dataToSend.timeDurationR,
-        "tipo:",
-        typeof dataToSend.timeDurationR,
-      )
+      console.log("[reservasService] Duración a enviar en actualización:", dataToSend.timeDurationR, "tipo:", typeof dataToSend.timeDurationR);
 
-      // CAMBIO 8: Añadir idAditionalServices si existe
       if (reserva.idAditionalServices && Array.isArray(reserva.idAditionalServices)) {
-        dataToSend.idAditionalServices = reserva.idAditionalServices
+        dataToSend.idAditionalServices = reserva.idAditionalServices.map(id => Number(id)).filter(id => !isNaN(id));
+         if(dataToSend.idAditionalServices.length === 0) delete dataToSend.idAditionalServices; // No enviar array vacío si no es necesario
       } else if (reserva.servicios && Array.isArray(reserva.servicios)) {
-        // Si no hay idAditionalServices pero hay servicios, extraer los IDs
         dataToSend.idAditionalServices = reserva.servicios
           .map((s) => (typeof s === "object" && s !== null ? Number(s.value) : Number(s)))
-          .filter((id) => !isNaN(id))
+          .filter((id) => !isNaN(id) && id > 0);
+         if(dataToSend.idAditionalServices.length === 0) delete dataToSend.idAditionalServices;
       }
 
-      // Log de datos finales para depuración
-      console.log("DATOS FINALES A ENVIAR (UPDATE):", JSON.stringify(dataToSend, null, 2))
-      console.log("URL de la solicitud:", `${API_URL}/${id}`)
 
-      // CAMBIO 10: Configuración adicional para la solicitud
+      console.log("[reservasService] DATOS FINALES A ENVIAR (UPDATE):", JSON.stringify(dataToSend, null, 2));
+      console.log("[reservasService] URL de la solicitud (UPDATE):", `${API_URL}/${id}`);
+
       const config = {
         headers: {
           "Content-Type": "application/json",
         },
-      }
+      };
 
-      // NUEVO: Solución temporal - Intentar con diferentes formatos de datos
-      try {
-        console.log("Intentando actualizar con formato completo...")
-        const response = await axios.put(`${API_URL}/${id}`, dataToSend, config)
-        console.log("Respuesta del servidor (actualizar):", response.data)
+      // Simplificado: Intentar solo con PUT completo. Si falla, el log detallado ayudará.
+      const response = await axios.put(`${API_URL}/${id}`, dataToSend, config);
+      console.log("[reservasService] Respuesta del servidor (actualizar):", response.data);
 
-        // Convertir el estado de la respuesta al formato de la UI
-        const responseWithUIState = {
-          ...response.data,
-          status: mapAPIStateToUI(response.data.status),
+      const responseWithUIState = {
+        ...response.data,
+        status: mapAPIStateToUI(response.data.status),
+      };
+      return responseWithUIState;
+
+    } catch (axiosError) { // Renombrado a axiosError para claridad
+      console.error("[reservasService] Error EXCEPCIÓN en updateReservation:", axiosError.message);
+
+      if (axiosError.response) {
+        console.error("[reservasService] Respuesta de error del servidor (status):", axiosError.response.status);
+        console.error("[reservasService] Respuesta de error del servidor (data completa):", JSON.stringify(axiosError.response.data, null, 2));
+
+        if (axiosError.response.data && Array.isArray(axiosError.response.data.errors)) {
+          console.error("[reservasService] DETALLE DE ERRORES DEL BACKEND (UPDATE):");
+          axiosError.response.data.errors.forEach((err, index) => {
+            console.error(`[reservasService] Error ${index + 1}:`, JSON.stringify(err, null, 2));
+            if (err.message) console.error(`  Message: ${err.message}`);
+            if (err.path) console.error(`  Path: ${err.path}`);
+            // ... otros campos ...
+          });
+        } else if (axiosError.response.data) {
+            console.error("[reservasService] Respuesta de error del servidor (data directa):", axiosError.response.data);
         }
-
-        return responseWithUIState
-      } catch (firstError) {
-        console.error("Primer intento fallido:", firstError)
-
-        // Intentar con un formato más simple
-        try {
-          console.log("Intentando con formato simplificado...")
-
-          // Crear un objeto más simple
-          const simplifiedData = {
-            idCustomers: idCustomersNum,
-            dateTime: new Date(reserva.dateTime).toISOString(),
-            numberPeople: Number(reserva.numberPeople),
-            matter: reserva.matter || "",
-            timeDurationR: reserva.timeDurationR.toString(), // IMPORTANTE: Enviar como string
-            decorationAmount: Number(reserva.decorationAmount),
-            totalPay: Number(reserva.totalPay),
-            remaining: Number(reserva.remaining),
-            evenType: reserva.evenType,
-            status: apiStatus, // Usar el ENUM directamente
-          }
-
-          // Intentar sin el campo pass
-          console.log("Datos simplificados:", simplifiedData)
-          const response = await axios.put(`${API_URL}/${id}`, simplifiedData, config)
-          console.log("Respuesta del servidor (actualizar simplificado):", response.data)
-
-          // Si funciona, intentar actualizar los servicios por separado
-          if (dataToSend.idAditionalServices && dataToSend.idAditionalServices.length > 0) {
-            try {
-              console.log("Actualizando servicios por separado...")
-              await axios.post(
-                `${API_URL}/${id}/services`,
-                {
-                  idAditionalServices: dataToSend.idAditionalServices,
-                },
-                config,
-              )
-            } catch (servicesError) {
-              console.error("Error al actualizar servicios:", servicesError)
+        
+        let userFriendlyErrorMessage = "No se pudo actualizar la reserva.";
+        if (axiosError.response.data) {
+            if (typeof axiosError.response.data.message === 'string') {
+                userFriendlyErrorMessage = axiosError.response.data.message;
+            } else if (Array.isArray(axiosError.response.data.errors) && axiosError.response.data.errors.length > 0 && typeof axiosError.response.data.errors[0].message === 'string') {
+                userFriendlyErrorMessage = axiosError.response.data.errors[0].message;
+            } else if (typeof axiosError.response.data.error === 'string'){
+                userFriendlyErrorMessage = axiosError.response.data.error;
             }
-          }
-
-          // Convertir el estado de la respuesta al formato de la UI
-          const responseWithUIState = {
-            ...response.data,
-            status: mapAPIStateToUI(response.data.status),
-          }
-
-          return responseWithUIState
-        } catch (secondError) {
-          console.error("Segundo intento fallido:", secondError)
-
-          // Último intento: PATCH en lugar de PUT
-          try {
-            console.log("Intentando con PATCH...")
-            const patchData = {
-              timeDurationR: reserva.timeDurationR.toString(), // IMPORTANTE: Enviar como string
-              status: apiStatus, // Usar el ENUM directamente
-            }
-
-            const response = await axios.patch(`${API_URL}/${id}`, patchData, config)
-            console.log("Respuesta del servidor (PATCH):", response.data)
-
-            const responseWithUIState = {
-              ...response.data,
-              status: mapAPIStateToUI(response.data.status),
-            }
-
-            return responseWithUIState
-          } catch (thirdError) {
-            console.error("Tercer intento fallido:", thirdError)
-            throw new Error(thirdError.response?.data?.message || thirdError.message)
-          }
         }
+        throw new Error(userFriendlyErrorMessage || axiosError.message);
+
+      } else if (axiosError.request) {
+        console.error("[reservasService] Error updating reservation: No se recibió respuesta del servidor", axiosError.request);
+        throw new Error("No se pudo conectar con el servidor. Intente más tarde.");
+      } else {
+        console.error("[reservasService] Error updating reservation: Error al configurar la solicitud", axiosError.message);
+        throw new Error(`Error al configurar la solicitud: ${axiosError.message}`);
       }
-    } catch (error) {
-      console.error(`Error updating reservation with id ${id}:`, error)
-      throw error
     }
   },
 
@@ -435,104 +402,90 @@ const reservasService = {
    */
   deleteReservation: async (id) => {
     try {
-      console.log(`Eliminando reserva con ID: ${id}`)
-      const response = await axios.delete(`${API_URL}/${id}`)
-      console.log("Respuesta del servidor (eliminar):", response.data)
-      return response.data
+      console.log(`[reservasService] Eliminando reserva con ID: ${id}`);
+      const response = await axios.delete(`${API_URL}/${id}`);
+      console.log("[reservasService] Respuesta del servidor (eliminar):", response.data);
+      return response.data; // Asumiendo que el backend devuelve algo útil, ej: { success: true, message: "..." }
     } catch (error) {
-      console.error(`Error deleting reservation with id ${id}:`, error)
-      console.error("Detalles del error:", error.response?.data || error.message)
-      throw error
-    }
-  },
-
-  /**
-   * Cambia el estado de una reserva
-   * @param {number} id - ID de la reserva
-   * @param {string} uiStatus - Estado en formato UI (pendiente, confirmada, etc.)
-   */
-  changeReservationStatus: async (id, uiStatus) => {
-    try {
-      console.log(`Cambiando estado de reserva ${id} a: ${uiStatus}`)
-
-      // Convertir el estado de la UI al formato de la API
-      const apiStatus = mapUIStateToAPI(uiStatus)
-
-      const response = await axios.patch(`${API_URL}/${id}`, {
-        status: apiStatus, // Usar el ENUM directamente
-        actionConfirmed: true, // Asegurarse de que se envía este campo requerido
-      })
-
-      console.log("Respuesta del servidor (cambiar estado):", response.data)
-
-      // Convertir el estado de la respuesta al formato de la UI
-      const responseWithUIState = {
-        ...response.data,
-        status: mapAPIStateToUI(response.data.status),
+      console.error(`[reservasService] Error deleting reservation with id ${id}:`, error);
+      if (error.response) {
+        console.error("[reservasService] Detalles del error (delete) - Status:", error.response.status);
+        console.error("[reservasService] Detalles del error (delete) - Data:", JSON.stringify(error.response.data, null, 2));
+      } else {
+        console.error("[reservasService] Detalles del error (delete) - Mensaje:", error.message);
       }
-
-      return responseWithUIState
-    } catch (error) {
-      console.error(`Error changing status for reservation with id ${id}:`, error)
-      console.error("Detalles del error:", error.response?.data || error.message)
-      throw error
+      throw new Error(error.response?.data?.message || error.response?.data?.error || "No se pudo eliminar la reserva.");
     }
   },
 
   /**
-   * Actualiza solo la duración de una reserva
-   * @param {number} id - ID de la reserva
-   * @param {number} duration - Nueva duración
-   */
-  updateDuration: async (id, duration) => {
-    try {
-      console.log(`Actualizando solo duración de reserva ${id} a: ${duration}`)
-
-      // IMPORTANTE: Enviar como string
-      const durationString = duration.toString()
-
-      const response = await axios.patch(`${API_URL}/${id}`, {
-        timeDurationR: durationString,
-        actionConfirmed: true,
-      })
-
-      console.log("Respuesta del servidor (actualizar duración):", response.data)
-      return {
-        ...response.data,
-        timeDurationR: durationString,
-      }
-    } catch (error) {
-      console.error(`Error updating duration for reservation with id ${id}:`, error)
-      throw error
-    }
-  },
-
-  /**
-   * Actualiza solo el estado de una reserva
+   * Cambia el estado de una reserva (usando PATCH)
    * @param {number} id - ID de la reserva
    * @param {string} uiStatus - Estado en formato UI
    */
-  updateStatus: async (id, uiStatus) => {
+  changeReservationStatus: async (id, uiStatus) => { // Renombrado de updateStatus a changeReservationStatus para diferenciar
     try {
-      console.log(`Actualizando solo estado de reserva ${id} a: ${uiStatus}`)
+      console.log(`[reservasService] Cambiando estado de reserva ${id} a: ${uiStatus}`);
+      const apiStatus = mapUIStateToAPI(uiStatus);
 
-      const apiStatus = mapUIStateToAPI(uiStatus)
-
+      // El backend podría requerir un objeto específico para PATCH, ej: solo los campos a cambiar
       const response = await axios.patch(`${API_URL}/${id}`, {
-        status: apiStatus, // Usar el ENUM directamente
-        actionConfirmed: true,
-      })
+        status: apiStatus,
+        // actionConfirmed: true, // Enviar solo si el backend lo requiere explícitamente para esta operación
+      });
 
-      console.log("Respuesta del servidor (actualizar estado):", response.data)
+      console.log("[reservasService] Respuesta del servidor (cambiar estado):", response.data);
       return {
         ...response.data,
-        status: uiStatus,
-      }
+        status: mapAPIStateToUI(response.data.status), // Mapear de nuevo por si el backend transforma el estado
+      };
     } catch (error) {
-      console.error(`Error updating status for reservation with id ${id}:`, error)
-      throw error
+      console.error(`[reservasService] Error changing status for reservation with id ${id}:`, error);
+       if (error.response) {
+        console.error("[reservasService] Detalles del error (changeStatus) - Status:", error.response.status);
+        console.error("[reservasService] Detalles del error (changeStatus) - Data:", JSON.stringify(error.response.data, null, 2));
+      } else {
+        console.error("[reservasService] Detalles del error (changeStatus) - Mensaje:", error.message);
+      }
+      throw new Error(error.response?.data?.message || error.response?.data?.error || "No se pudo cambiar el estado de la reserva.");
     }
   },
-}
 
-export default reservasService
+  /**
+   * Actualiza solo la duración de una reserva (usando PATCH)
+   * @param {number} id - ID de la reserva
+   * @param {number|string} duration - Nueva duración (se convertirá a string)
+   */
+  updateDuration: async (id, duration) => {
+    try {
+      console.log(`[reservasService] Actualizando solo duración de reserva ${id} a: ${duration}`);
+      const durationString = String(duration); // Backend espera STRING
+
+      const response = await axios.patch(`${API_URL}/${id}`, {
+        timeDurationR: durationString,
+        // actionConfirmed: true, // Enviar solo si el backend lo requiere explícitamente
+      });
+
+      console.log("[reservasService] Respuesta del servidor (actualizar duración):", response.data);
+      return {
+        ...response.data,
+        timeDurationR: String(response.data.timeDurationR !== undefined ? response.data.timeDurationR : durationString),
+      };
+    } catch (error) {
+      console.error(`[reservasService] Error updating duration for reservation with id ${id}:`, error);
+       if (error.response) {
+        console.error("[reservasService] Detalles del error (updateDuration) - Status:", error.response.status);
+        console.error("[reservasService] Detalles del error (updateDuration) - Data:", JSON.stringify(error.response.data, null, 2));
+      } else {
+        console.error("[reservasService] Detalles del error (updateDuration) - Mensaje:", error.message);
+      }
+      throw new Error(error.response?.data?.message || error.response?.data?.error || "No se pudo actualizar la duración.");
+    }
+  },
+
+  // 'updateStatus' ya existe como 'changeReservationStatus'. Si necesitas una función que solo actualice
+  // el estado usando un endpoint específico, la crearías aquí. Por ahora, la he eliminado para evitar duplicidad.
+
+};
+
+export default reservasService;
