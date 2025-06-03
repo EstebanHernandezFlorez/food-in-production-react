@@ -644,7 +644,7 @@ const Calendario = () => {
             setShowAdditionalServiceAmountInput(false)
             currentAdditionalServiceAmount = "0"
           }
-          // --- FIN LÓGICA MODIFICADA ---
+          
 
           let formattedPass = []
           if (Array.isArray(detailedReservation.pass)) {
@@ -681,7 +681,24 @@ const Calendario = () => {
           }
 
           console.log("Estado a usar:", statusToUse)
+   // --- AQUÍ ES DONDE AJUSTAMOS EL dateTime ---
+          let dateTimeForInput = "";
+          if (detailedReservation.dateTime) { // <--- ESTE ES EL IF QUE DEBES ASEGURARTE DE TENER
+              const dateObj = new Date(detailedReservation.dateTime); // Interpreta la cadena UTC
 
+              // Formatear para el input datetime-local (YYYY-MM-DDTHH:MM en hora local del navegador)
+              const year = dateObj.getFullYear();
+              const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+              const day = dateObj.getDate().toString().padStart(2, '0');
+              const hours = dateObj.getHours().toString().padStart(2, '0');
+              const minutes = dateObj.getMinutes().toString().padStart(2, '0');
+              
+              dateTimeForInput = `${year}-${month}-${day}T${hours}:${minutes}`;
+              console.log("[handleEventClick] Fecha UTC original:", detailedReservation.dateTime);
+              console.log("[handleEventClick] Fecha formateada para input (local):", dateTimeForInput);
+          } else {
+              console.warn("[handleEventClick] detailedReservation.dateTime está vacío o no definido.");
+          }
           // Modificar el objeto form para incluir el estado correcto
           setForm({
             ...emptyForm,
@@ -704,7 +721,7 @@ const Calendario = () => {
               (detailedReservation.Customer ? detailedReservation.Customer.cellphone : ""),
             address:
               detailedReservation.address || (detailedReservation.Customer ? detailedReservation.Customer.address : ""),
-            dateTime: detailedReservation.dateTime ? detailedReservation.dateTime.slice(0, 16) : "",
+            dateTime: dateTimeForInput,
             servicios: selectedServiceValues,
             pass:
               formattedPass.length > 0
@@ -717,6 +734,7 @@ const Calendario = () => {
           })
           console.log(
             "Duración cargada:",
+            durationAsNumber,
             detailedReservation.timeDurationR,
             "tipo:",
             typeof detailedReservation.timeDurationR,
@@ -1477,7 +1495,7 @@ const Calendario = () => {
           status: formDataToSave.status,
         }
         dataToSend.timeDurationR = Number(formDataToSave.timeDurationR) || 0
-        dataToSend.duration = dataToSend.timeDurationR
+        dataToSend.timeDurationR = dataToSend.timeDurationR
 
         delete dataToSend.servicios
         delete dataToSend.fullName
