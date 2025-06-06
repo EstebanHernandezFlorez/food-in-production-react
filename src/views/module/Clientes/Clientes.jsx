@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import "../../../assets/css/App.css"; // Asegúrate que la ruta es correcta
+import "../../../assets/css/App.css"; 
 import {
     Table, Button, Container, Row, Col, Form, FormGroup, Input, Label,
     Modal, ModalHeader, ModalBody, ModalFooter, Spinner,
@@ -8,13 +8,9 @@ import {
 // Usaremos los mismos iconos que en Proveedores para consistencia
 import { Trash2, Edit, Plus, AlertTriangle, CheckCircle, XCircle, UserCheck, UserX } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
-
-// --- Service Import ---
-import clientesService from '../../services/clientesService'; // Asegúrate que la ruta es correcta
-
-// --- Reusable Components ---
-import CustomPagination from '../../General/CustomPagination'; // Asume que está en la misma carpeta que el de Proveedores
-import FondoForm from "../../../assets/login.jpg"; // Reutiliza la imagen o cambia si tienes una específica para clientes
+import clientesService from '../../services/clientesService'; 
+import CustomPagination from '../../General/CustomPagination'; 
+import FondoForm from "../../../assets/login.jpg"; 
 
 // --- Confirmation Modal Component (igual que en Proveedores) ---
 const ConfirmationModal = ({ isOpen, toggle, title, children, onConfirm, confirmText = "Confirmar", confirmColor = "primary", isConfirming = false }) => (
@@ -46,14 +42,14 @@ const ConfirmationModal = ({ isOpen, toggle, title, children, onConfirm, confirm
 // --- Constants ---
 // Estado inicial adaptado para Clientes
 const INITIAL_FORM_STATE = {
-    id: "", // Usaremos 'id' como en el código original de Clientes
+    id: "", 
     NombreCompleto: "",
     Distintivo: "",
-    CategoriaCliente: "", // Campo específico de Clientes
+    CategoriaCliente: "", 
     Celular: "",
     Correo: "",
     Direccion: "",
-    Estado: "Activo", // Mantén 'Activo'/'Inactivo' como en el código original de Clientes
+    Estado: "Activo", 
 };
 
 // Errores iniciales adaptados para Clientes
@@ -61,9 +57,9 @@ const INITIAL_FORM_ERRORS = {
     NombreCompleto: false,
     Distintivo: false,
     CategoriaCliente: false,
-    Celular: false, // Opcional?
-    Correo: false, // Opcional?
-    Direccion: false, // Opcional?
+    Celular: false, 
+    Correo: false, 
+    Direccion: false, 
 };
 
 const INITIAL_CONFIRM_PROPS = {
@@ -149,7 +145,7 @@ const Clientes = () => {
             Distintivo: !distintivoString,         // Requerido
             CategoriaCliente: !form.CategoriaCliente, // Requerido (Select)
             // Validaciones opcionales pero con formato correcto si se ingresan
-            Celular: celularString && !/^\d{10}$/.test(celularString), // 10 dígitos si no está vacío
+            Celular: !/^\d{10,12}$/.test(celularString),
             Correo: correoString && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoString), // Formato email si no está vacío
             Direccion: false, // No marcamos error si está vacío, ya que es opcional
         };
@@ -234,6 +230,17 @@ const Clientes = () => {
             setFormErrors(prev => ({ ...prev, Correo: true }));
             return;
         }
+        const celularAValidar = String(form.Celular ?? '').trim();
+
+        const celularExistente = data.some(c => c.Celular === celularAValidar);
+        if (celularExistente) {
+            toast.error("Ya existe un cliente con este número de celular.", { duration: 4000 });
+            setFormErrors(prev => ({ ...prev, Celular: true }));
+            return;
+        }
+
+
+
 
         const toastId = toast.loading('Agregando cliente...');
         try {
@@ -265,18 +272,18 @@ const Clientes = () => {
            return;
         }
 
-        // Opcional: Validar duplicados excluyendo el cliente actual si es necesario
-        // const currentId = form.id;
-        // const correoExistente = data.some(c =>
-        //     c.id !== currentId &&
-        //     c.Correo &&
-        //     c.Correo.toLowerCase() === String(form.Correo ?? '').trim().toLowerCase()
-        // );
-        // if (correoExistente) {
-        //    toast.error("Ya existe otro cliente con este correo electrónico.", { duration: 4000 });
-        //    setFormErrors(prev => ({ ...prev, Correo: true }));
-        //    return;
-        // }
+        const currentId = form.id;
+        const celularAValidar = String(form.Celular ?? '').trim();
+
+        // Validar que el celular no pertenezca a OTRO cliente
+        const celularExistente = data.some(c => 
+            c.id !== currentId && c.Celular === celularAValidar
+        );
+        if (celularExistente) {
+           toast.error("Este número de celular ya está registrado por otro cliente.", { duration: 4000 });
+           setFormErrors(prev => ({ ...prev, Celular: true }));
+           return;
+        }
 
         if (!form.id) {
             console.error("[EDIT CLIENT REQ ERROR] Client ID (id) missing.");
@@ -544,24 +551,24 @@ const Clientes = () => {
              />
 
             {/* Header and Actions */}
-            <h2 className="mb-4">Gestión de Clientes</h2>
-            <Row className="mb-3 align-items-center">
-                 <Col md={6} lg={4}>
-                    {/* Search Input igual que Proveedores */}
-                    <Input
-                        type="text"
-                        bsSize="sm"
-                        placeholder="Buscar por nombre, distintivo, categoría, celular o correo..."
-                        value={tableSearchText}
-                        onChange={handleTableSearch}
-                        style={{ borderRadius: '0.25rem' }}
-                        aria-label="Buscar clientes"
-                    />
-                </Col>
-                <Col md={6} lg={8} className="text-md-end mt-2 mt-md-0">
-                    {/* Add Button igual que Proveedores */}
+            <h2 className="mb-5">Gestión de Clientes</h2>
+          <Row className="mb-4 align-items-center justify-content-between">
+    {/* Columna para el buscador, tomará el espacio que necesite */}
+    <Col md="auto">
+        <Input
+            type="text"
+            bsSize="sm"
+            placeholder="Buscar por nombre, distintivo, categoría, celular o correo..."
+            value={tableSearchText}
+            onChange={handleTableSearch}
+            style={{ borderRadius: '0.25rem' }}
+            aria-label="Buscar clientes"
+        />
+    </Col>
+                <Col md="auto" className="mt-2 mt-md-0">
+                    {/* Add Button */}
                     <Button color="success" size="sm" onClick={openAddModal} className="button-add">
-                        <Plus size={18} className="me-1" /> Agregar Cliente
+                        <Plus size={20} className="me-1" /> Agregar Cliente
                     </Button>
                 </Col>
             </Row>
@@ -573,7 +580,6 @@ const Clientes = () => {
                      <thead>
                         <tr>
                             {/* Columnas adaptadas para Clientes */}
-                            <th scope="col">ID</th>
                             <th scope="col">Nombre Completo</th>
                             <th scope="col">Distintivo</th>
                             <th scope="col">Categoría</th>
@@ -591,7 +597,6 @@ const Clientes = () => {
                             // Mapea los 'currentItems' que ya están paginados y filtrados
                             currentItems.map((item) => (
                                 <tr key={item.id} style={{ verticalAlign: 'middle', backgroundColor: item.Estado === "Inactivo" ? "#f8f9fa" : undefined }}>
-                                    <th scope="row">{item.id}</th>
                                     <td>{item.NombreCompleto || '-'}</td>
                                     <td>{item.Distintivo || '-'}</td>
                                     <td>{item.CategoriaCliente || '-'}</td>
@@ -599,7 +604,7 @@ const Clientes = () => {
                                     <td>{item.Correo || '-'}</td>
                                     {/* <td>{item.Direccion || '-'}</td> */}
                                     <td className="text-center">
-                                        {/* Status Button como en Proveedores, adaptado a 'Activo'/'Inactivo' */}
+                                        {/* Status Button , adaptado a 'Activo'/'Inactivo' */}
                                         <Button
                                             size="sm"
                                             className={`status-button ${item.Estado === 'Activo' ? 'status-active' : 'status-inactive'}`}
@@ -612,7 +617,7 @@ const Clientes = () => {
                                         </Button>
                                     </td>
                                     <td className="text-center">
-                                        {/* Action Buttons como en Proveedores */}
+                                        {/* Action Buttons  */}
                                         <div className="d-inline-flex gap-1 action-cell-content" role="group" aria-label={`Acciones para ${item.NombreCompleto}`}>
                                             <Button
                                                 disabled={!item.id || isLoading || isConfirmActionLoading}
@@ -648,10 +653,10 @@ const Clientes = () => {
                 </Table>
             </div>
 
-             {/* Paginator como en Proveedores */}
+             {/* Paginator  */}
              { totalPages > 1 && !isLoading && (
                 <CustomPagination
-                    currentPage={validCurrentPage} // Usa la página validada
+                    currentPage={validCurrentPage} 
                     totalPages={totalPages}
                     onPageChange={handlePageChange}
                 />
@@ -701,9 +706,19 @@ const Clientes = () => {
                                     {/* --- Fila 3: Celular y Correo --- */}
                                     <Col md={6}>
                                         <FormGroup>
-                                            <Label for="modalCelular" className="form-label fw-bold">Celular</Label> {/* Opcional */}
-                                            <Input id="modalCelular" type="tel" inputMode="tel" pattern="[0-9]{10}" name="Celular" value={form.Celular} onChange={handleChange} invalid={formErrors.Celular} aria-describedby="celularError"/>
-                                            {formErrors.Celular && <div id="celularError" className="invalid-feedback d-block">Ingrese un número de celular válido (10 dígitos numéricos).</div>}
+                                            <Label for="modalCelular" className="form-label fw-bold">Celular</Label> {/* Requerido */}
+                                            <Input id="modalCelular" 
+                                            type="tel"
+                                            inputMode="tel" 
+                                            maxLength="12" 
+                                            pattern="[0-9]{10,12}" 
+                                            name="Celular" 
+                                            value={form.Celular} 
+                                            onChange={handleChange} 
+                                            invalid={formErrors.Celular} 
+                                            aria-describedby="celularError"/>
+                                            {formErrors.Celular && <div id="celularError" 
+                                            className="invalid-feedback d-block">El celular es obligatorio y debe tener entre 10 y 12 dígitos.</div>}
                                         </FormGroup>
                                     </Col>
                                     <Col md={6}>
