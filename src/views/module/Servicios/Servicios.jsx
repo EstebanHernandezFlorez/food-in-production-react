@@ -1,21 +1,16 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import "../../../assets/css/App.css"; // Make sure the path is correct
+import "../../../assets/css/App.css"; 
 import {
     Table, Button, Container, Row, Col, Form, FormGroup, Input, Label,
     Modal, ModalHeader, ModalBody, ModalFooter, Spinner,
 } from "reactstrap";
-// Use lucide-react icons like in Proveedores
+
 import { Trash2, Edit, Plus, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
-// Use react-hot-toast like in Proveedores
 import toast, { Toaster } from 'react-hot-toast';
+import serviciosService from '../../services/serviciosService'; 
+import CustomPagination from '../../General/CustomPagination'; 
 
-// --- Service Import ---
-import serviciosService from '../../services/serviciosService'; // Keep your service import
-
-// --- Reusable Components ---
-import CustomPagination from '../../General/CustomPagination'; // Assuming this is reusable
-// You might not need FondoForm unless you want to add an image to the service modal
 
 // --- Confirmation Modal Component (Copied from Proveedores, assuming it's not imported separately) ---
 const ConfirmationModal = ({ isOpen, toggle, title, children, onConfirm, confirmText = "Confirmar", confirmColor = "primary", isConfirming = false }) => (
@@ -47,9 +42,9 @@ const ConfirmationModal = ({ isOpen, toggle, title, children, onConfirm, confirm
 
 // --- Constants ---
 const INITIAL_FORM_STATE = {
-    id: "",     // Corresponds to idServicio from backend mapping
-    Nombre: "", // Corresponds to name from backend mapping
-    Estado: "Activo", // Frontend uses 'Activo'/'Inactivo' string
+    id: "",     
+    Nombre: "", 
+    Estado: "Activo", 
 };
 
 const INITIAL_FORM_ERRORS = {
@@ -64,15 +59,15 @@ const INITIAL_CONFIRM_PROPS = {
     itemDetails: null,
 };
 
-const ITEMS_PER_PAGE = 7; // Or your preferred value
+const ITEMS_PER_PAGE = 7; 
 
 // --- Main Component ---
 const Servicios = () => {
     // --- State ---
-    const [data, setData] = useState([]); // Stores service data in frontend format { id, Nombre, Estado }
+    const [data, setData] = useState([]); 
     const [form, setForm] = useState(INITIAL_FORM_STATE);
     const [isEditing, setIsEditing] = useState(false);
-    const [modalOpen, setModalOpen] = useState(false); // Single modal for add/edit
+    const [modalOpen, setModalOpen] = useState(false); 
     const [tableSearchText, setTableSearchText] = useState("");
     const [isLoading, setIsLoading] = useState(true);
     const [formErrors, setFormErrors] = useState(INITIAL_FORM_ERRORS);
@@ -82,7 +77,7 @@ const Servicios = () => {
     const [isConfirmActionLoading, setIsConfirmActionLoading] = useState(false);
 
     // --- Refs ---
-    const confirmActionRef = useRef(null); // Stores the function to execute on confirmation
+    const confirmActionRef = useRef(null); 
 
     // --- Data Fetching ---
     const fetchData = useCallback(async (showLoadingSpinner = true) => {
@@ -95,7 +90,7 @@ const Servicios = () => {
         } catch (error) {
             console.error("[FETCH ERROR] Failed to load services:", error);
             toast.error("Error al cargar servicios. Verifique la conexión.");
-            setData([]); // Set to empty array on error
+            setData([]); 
         } finally {
              if (showLoadingSpinner) setIsLoading(false);
              console.log("[FETCH] Fetching finished.");
@@ -121,14 +116,13 @@ const Servicios = () => {
             Nombre: !serviceName,
         };
         setFormErrors(errors);
-        return !errors.Nombre; // Return true if valid
+        return !errors.Nombre; 
     }, [form]);
 
     // --- Event Handlers ---
     const handleChange = useCallback((e) => {
         const { name, value } = e.target;
         setForm((prevForm) => ({ ...prevForm, [name]: value }));
-        // Clear error when user starts typing in the field
         if (formErrors[name]) {
             setFormErrors(prev => ({ ...prev, [name]: false }));
         }
@@ -136,14 +130,14 @@ const Servicios = () => {
 
     const handleTableSearch = useCallback((e) => {
         setTableSearchText(e.target.value.toLowerCase());
-        setCurrentPage(1); // Reset to first page on search
+        setCurrentPage(1); 
     }, []);
 
     // --- Modal Toggles ---
     const toggleMainModal = useCallback(() => {
         const closing = modalOpen;
         setModalOpen(prev => !prev);
-        if (closing) { // If modal is closing, reset state
+        if (closing) { 
             resetForm();
             clearFormErrors();
             setIsEditing(false);
@@ -151,7 +145,7 @@ const Servicios = () => {
     }, [modalOpen, resetForm, clearFormErrors]);
 
     const toggleConfirmModal = useCallback(() => {
-        if (isConfirmActionLoading) return; // Prevent closing while action is processing
+        if (isConfirmActionLoading) return; 
         setConfirmModalOpen(prev => !prev);
     }, [isConfirmActionLoading]);
 
@@ -171,7 +165,7 @@ const Servicios = () => {
 
         confirmActionRef.current = () => {
             if (actionFn) {
-                actionFn(detailsToPass); // Pass details to the execution function
+                actionFn(detailsToPass); 
             } else {
                  console.error("[CONFIRM ACTION] actionFn is null or undefined in ref execution.");
                  toast.error("Error interno al intentar ejecutar la acción confirmada.");
@@ -207,21 +201,19 @@ const Servicios = () => {
 
         const toastId = toast.loading('Agregando servicio...');
         try {
-            // The service expects { Nombre, Estado } or similar, map if needed
-            // Assuming serviciosService.createServicio handles the mapping internally
-            // Pass only Nombre, Estado is implicitly 'Activo' or handled by backend/service layer
+           
             const serviceToSend = { Nombre: form.Nombre.trim(), Estado: 'Activo' };
             console.log("[ADD] Calling service with:", serviceToSend);
             await serviciosService.createServicio(serviceToSend);
 
             toast.success("Servicio agregado exitosamente!", { id: toastId });
-            toggleMainModal(); // Close modal on success
-            await fetchData(false); // Refresh data without full page spinner
-            setCurrentPage(1); // Go to first page to see the new item potentially
+            toggleMainModal(); 
+            await fetchData(false); 
+            setCurrentPage(1); 
 
         } catch (error) {
             console.error("[ADD ERROR]", error);
-            // Improved error message parsing (similar to original Servicios)
+           
             let errorMessage = 'No se pudo agregar el servicio.';
             if (error.response) {
                 if (error.response.data?.errors && Array.isArray(error.response.data.errors) && error.response.data.errors.length > 0) {
@@ -255,7 +247,7 @@ const Servicios = () => {
            (registro) =>
                registro.Nombre != null &&
                String(registro.Nombre).trim().toLowerCase() === currentName &&
-               registro.id !== currentId // Exclude the service being edited
+               registro.id !== currentId 
         );
         if (servicioExistente) {
            toast.error("Ya existe otro servicio con este nombre.", { duration: 4000 });
@@ -275,7 +267,7 @@ const Servicios = () => {
             message: <p>¿Está seguro que desea guardar los cambios para <strong>{form.Nombre || 'este servicio'}</strong>?</p>,
             confirmText: "Confirmar Cambios",
             confirmColor: "primary",
-            itemDetails: { ...form } // Pass the current form data
+            itemDetails: { ...form } 
         });
     }, [form, data, validateForm, prepareConfirmation]);
 
@@ -293,16 +285,14 @@ const Servicios = () => {
         const toastId = toast.loading('Actualizando servicio...');
 
         try {
-            // Pass ID and the data { Nombre } to the update service
-            // Estado is not typically edited directly here, but via changeStatus
             const updateData = { Nombre: servicioToUpdate.Nombre.trim() };
             console.log("[EDIT EXEC] Calling service with ID:", servicioToUpdate.id, "Data:", updateData);
             await serviciosService.updateServicio(servicioToUpdate.id, updateData);
 
             toast.success("Servicio actualizado exitosamente!", { id: toastId });
-            toggleConfirmModal(); // Close confirmation modal
-            toggleMainModal();    // Close form modal
-            await fetchData(false); // Refresh data
+            toggleConfirmModal(); 
+            toggleMainModal();    
+            await fetchData(false); 
 
         } catch (error) {
             console.error("[EDIT EXEC ERROR]", error);
@@ -323,7 +313,7 @@ const Servicios = () => {
                  errorMessage = error.message || "Ocurrió un error inesperado.";
              }
             toast.error(`Error al actualizar: ${errorMessage}`, { id: toastId, duration: 5000 });
-            // Don't close main modal on error, but close confirmation modal
+            
             toggleConfirmModal();
         } finally {
              setIsConfirmActionLoading(false);
@@ -340,7 +330,7 @@ const Servicios = () => {
         const isCurrentlyActive = currentEstado === "Activo";
         const actionText = isCurrentlyActive ? "desactivar" : "activar";
         const futureStatusText = isCurrentlyActive ? "Inactivo" : "Activo";
-        const confirmColor = isCurrentlyActive ? "warning" : "success"; // Or danger/success
+        const confirmColor = isCurrentlyActive ? "warning" : "success"; 
 
         prepareConfirmation(executeChangeStatus, {
             title: "Confirmar Cambio de Estado",
@@ -349,7 +339,7 @@ const Servicios = () => {
             ),
             confirmText: `Confirmar ${actionText.charAt(0).toUpperCase() + actionText.slice(1)}`,
             confirmColor: confirmColor,
-            itemDetails: { id, currentEstado, nombre } // Pass necessary details
+            itemDetails: { id, currentEstado, nombre } 
         });
     }, [prepareConfirmation]);
 
@@ -365,7 +355,7 @@ const Servicios = () => {
 
         const { id, currentEstado, nombre } = details;
         const isCurrentlyActive = currentEstado === "Activo";
-        const newStatus = isCurrentlyActive ? "Inactivo" : "Activo"; // The new *frontend* state string
+        const newStatus = isCurrentlyActive ? "Inactivo" : "Activo"; 
         const actionText = isCurrentlyActive ? "desactivar" : "activar";
         console.log(`[STATUS EXEC] Executing for ID: ${id} to New Status: ${newStatus}`);
 
@@ -373,14 +363,13 @@ const Servicios = () => {
         const toastId = toast.loading(`${actionText.charAt(0).toUpperCase() + actionText.slice(1)}ndo servicio...`);
 
         try {
-            // Pass ID and the new status string ('Activo'/'Inactivo')
-            // The service layer (changeStateServicio) needs to handle converting this to boolean if necessary for the backend
+            
             console.log("[STATUS EXEC] Calling service changeStateServicio with ID:", id, "New Status:", newStatus);
             await serviciosService.changeStateServicio(id, newStatus);
 
             toast.success(`Servicio ${nombre || ''} ${actionText === 'activar' ? 'activado' : 'desactivado'} correctamente.`, { id: toastId });
             toggleConfirmModal();
-            await fetchData(false); // Refresh data
+            await fetchData(false); 
 
         } catch (error) {
             console.error("[STATUS EXEC ERROR]", error);
@@ -397,7 +386,7 @@ const Servicios = () => {
                  errorMessage = error.message || "Ocurrió un error inesperado.";
             }
             toast.error(`Error al ${actionText}: ${errorMessage}`, { id: toastId, duration: 5000 });
-            toggleConfirmModal(); // Close confirm modal on error
+            toggleConfirmModal(); 
         } finally {
             setIsConfirmActionLoading(false);
         }
@@ -411,8 +400,7 @@ const Servicios = () => {
         }
         console.log("[DELETE REQ] Requesting confirmation for service:", servicio);
 
-        // Unlike providers, we might not need to check for associations here,
-        // but you could add a service call if needed (e.g., isServiceInUse(servicio.id))
+       
 
         prepareConfirmation(executeDelete, {
             title: "Confirmar Eliminación",
@@ -424,7 +412,7 @@ const Servicios = () => {
             ),
             confirmText: "Eliminar Definitivamente",
             confirmColor: "danger",
-            itemDetails: { ...servicio } // Pass service details
+            itemDetails: { ...servicio } 
         });
     }, [prepareConfirmation]);
 
@@ -449,7 +437,7 @@ const Servicios = () => {
                 id: toastId, icon: <CheckCircle className="text-success" />
             });
             toggleConfirmModal();
-            await fetchData(false); // Refresh data
+            await fetchData(false); 
 
         } catch (error) {
             console.error("[DELETE EXEC ERROR]", error);
@@ -468,7 +456,7 @@ const Servicios = () => {
             toast.error(`Error al eliminar: ${errorMessage}`, {
                 id: toastId, icon: <XCircle className="text-danger" />, duration: 5000
             });
-            toggleConfirmModal(); // Close confirm modal on error
+            toggleConfirmModal(); 
         } finally {
             setIsConfirmActionLoading(false);
         }
@@ -483,14 +471,14 @@ const Servicios = () => {
     }, [resetForm, clearFormErrors]);
 
     const openEditModal = useCallback((servicio) => {
-        // Populate form with data from the selected service
+       
         setForm({
-            id: String(servicio.id || ""), // Ensure ID is string if needed elsewhere
+            id: String(servicio.id || ""), 
             Nombre: servicio.Nombre || "",
-            Estado: servicio.Estado || "Activo", // Keep the state string
+            Estado: servicio.Estado || "Activo", 
         });
         setIsEditing(true);
-        clearFormErrors(); // Clear previous errors
+        clearFormErrors(); 
         setModalOpen(true);
     }, [clearFormErrors]);
 
@@ -534,7 +522,7 @@ const Servicios = () => {
              <Toaster
                 position="top-center"
                 toastOptions={{
-                    // Optional default options
+                    
                     duration: 3000,
                     style: {
                       background: '#363636',
@@ -548,38 +536,46 @@ const Servicios = () => {
                       },
                     },
                     error: {
-                        duration: 4000, // Longer duration for errors
+                        duration: 4000, 
                     },
                 }}
              />
 
-            {/* Header and Actions */}
-            <h2 className="mb-4 text-center">Gestión de Servicios Adicionales</h2>
-            <Row className="mb-3 align-items-center">
-                 <Col md={6} lg={4}>
+           {/* Fila exclusiva para el Título */}
+            <Row>
+                <Col>
+                    <h2 className="mb-5">Gestión de Servicios Adicionales</h2>
+                </Col>
+            </Row>
+
+            {/* Fila para los Controles (Buscador y Botón) */}
+            <Row className="mb-4 align-items-center justify-content-between">
+                {/* Columna para el buscador */}
+                <Col md="auto">
                     <Input
                         type="text"
-                        bsSize="sm" // Consistent sizing
-                        placeholder="Buscar por nombre..."
+                        bsSize="sm"
+                        placeholder="Buscar por nombre"
                         value={tableSearchText}
                         onChange={handleTableSearch}
-                        style={{ borderRadius: '0.25rem' }} // Consistent border radius
+                        style={{ borderRadius: '0.25rem' }}
                         aria-label="Buscar servicios"
                     />
                 </Col>
-                <Col md={6} lg={8} className="text-md-end mt-2 mt-md-0">
-                    <Button color="success" size="sm" onClick={openAddModal} className="button-add-service"> {/* Optional class */}
-                        <Plus size={18} className="me-1" /> Agregar Servicio
+                
+                {/* Columna para el botón de agregar */}
+                <Col md="auto" className="mt-2 mt-md-0">
+                    <Button color="success" size="sm" onClick={openAddModal} className="button-add">
+                        <Plus size={20} className="me-1" />  Agregar Servicio
                     </Button>
                 </Col>
             </Row>
 
-            {/* Data Table - Apply Proveedores styling */}
+            {/* Data Table  */}
             <div className="table-responsive shadow-sm custom-table-container mb-3">
                  <Table hover size="sm" className="mb-0 custom-table" aria-live="polite">
                      <thead>
                         <tr>
-                            {/* <th scope="col">ID</th> */} {/* Usually not shown or needed for user */}
                             <th scope="col">Nombre</th>
                             <th scope="col" className="text-center">Estado</th>
                             <th scope="col" className="text-center">Acciones</th>
@@ -598,9 +594,8 @@ const Servicios = () => {
                                             size="sm"
                                             // Apply consistent status button classes
                                             className={`status-button ${item.Estado === 'Activo' ? 'status-active' : 'status-inactive'}`}
-                                            // Use request function for confirmation
                                             onClick={() => requestChangeStatusConfirmation(item.id, item.Estado, item.Nombre)}
-                                            disabled={!item.id || isConfirmActionLoading || isLoading} // Disable while any loading
+                                            disabled={!item.id || isConfirmActionLoading || isLoading} 
                                             title={item.Estado === 'Activo' ? "Clic para Desactivar" : "Clic para Activar"}
                                             aria-label={`Cambiar estado de ${item.Nombre}. Estado actual: ${item.Estado}`}
                                         >
@@ -615,7 +610,6 @@ const Servicios = () => {
                                                 size="sm"
                                                 onClick={() => openEditModal(item)}
                                                 title="Editar"
-                                                // Apply consistent action button classes
                                                 className="action-button action-edit"
                                                 aria-label={`Editar ${item.Nombre}`}
                                             >
@@ -624,10 +618,8 @@ const Servicios = () => {
                                             <Button
                                                 disabled={!item.id || isConfirmActionLoading || isLoading}
                                                 size="sm"
-                                                // Use request function for confirmation
                                                 onClick={() => requestDeleteConfirmation(item)}
                                                 title="Eliminar"
-                                                // Apply consistent action button classes
                                                 className="action-button action-delete"
                                                 aria-label={`Eliminar ${item.Nombre}`}
                                              >
@@ -668,10 +660,10 @@ const Servicios = () => {
                             <Input
                                 id="modalNombre"
                                 type="text"
-                                name="Nombre" // Matches state key
+                                name="Nombre" 
                                 value={form.Nombre}
                                 onChange={handleChange}
-                                invalid={formErrors.Nombre} // Use formErrors state
+                                invalid={formErrors.Nombre} 
                                 required
                                 aria-required="true"
                                 aria-describedby="nombreError"
@@ -690,7 +682,7 @@ const Servicios = () => {
                         type="button"
                         color="primary"
                         onClick={isEditing ? requestEditConfirmation : handleSubmit}
-                        disabled={isConfirmActionLoading} // Disable during confirmation loading as well
+                        disabled={isConfirmActionLoading}
                     >
                         {isEditing ? <><Edit size={18} className="me-1"/> Guardar Cambios</> : <><Plus size={18} className="me-1"/> Agregar Servicio</>}
                     </Button>
@@ -702,11 +694,10 @@ const Servicios = () => {
                 isOpen={confirmModalOpen}
                 toggle={toggleConfirmModal}
                 title={confirmModalProps.title}
-                // Execute the function stored in the ref
                 onConfirm={() => confirmActionRef.current && confirmActionRef.current()}
                 confirmText={confirmModalProps.confirmText}
                 confirmColor={confirmModalProps.confirmColor}
-                isConfirming={isConfirmActionLoading} // Pass loading state
+                isConfirming={isConfirmActionLoading} 
             >
                 {/* Message comes from confirmModalProps */}
                 {confirmModalProps.message}

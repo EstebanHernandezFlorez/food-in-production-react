@@ -1,4 +1,3 @@
-"use client"
 
 import { useEffect, useState, useCallback, useRef } from "react"
 import {
@@ -91,14 +90,14 @@ const emptyForm = {
   email: "",
   cellphone: "",
   address: "",
-  dateTime: "", // Cambiado para que inicie vacío
-  timeDurationR: "", // Inicializar con cadena vacía
+  dateTime: "",
+  timeDurationR: "",
   evenType: "",
   numberPeople: "",
   matter: "",
   servicios: [],
   decorationAmount: "",
-  additionalServiceAmount: "", // NUEVO: Campo para monto de servicios adicionales
+  additionalServiceAmount: "",
   pass: [],
   totalPay: "",
   remaining: "",
@@ -108,12 +107,12 @@ const emptyForm = {
 // Modificar el mapeo de colores para usar colores pastel más suaves
 // ESTE colorMap ES PARA LA LISTA, NO PARA EL CALENDARIO DIRECTAMENTE
 const colorMap = {
-  terminada: "rgba(76, 175, 80, 0.7)", // Verde más vivo
-  anulada: "rgba(244, 67, 54, 0.7)", // Rojo más vivo
-  pendiente: "rgba(255, 152, 0, 0.7)", // Naranja más vivo
-  en_proceso: "rgba(255, 235, 59, 0.7)", // Amarillo más vivo
-  confirmada: "rgba(33, 150, 243, 0.7)", // Azul más vivo
-  default: "rgba(158, 158, 158, 0.7)", // Gris más vivo
+  terminada: "rgba(76, 175, 80, 0.7)",
+  anulada: "rgba(244, 67, 54, 0.7)",
+  pendiente: "rgba(255, 152, 0, 0.7)",
+  en_proceso: "rgba(255, 235, 59, 0.7)",
+  confirmada: "rgba(33, 150, 243, 0.7)",
+  default: "rgba(158, 158, 158, 0.7)",
 }
 
 // Modificar los estilos CSS personalizados para el calendario
@@ -298,6 +297,79 @@ const customCalendarStyles = `
       font-size: 0.6rem; /* Ajustar para móviles */
     }
   }
+
+  /* --- INICIO: ESTILOS PARA EL FORMULARIO POR PASOS --- */
+  .step-wizard-list {
+    display: flex;
+    justify-content: space-around;
+    padding: 0;
+    margin: 0 0 20px 0;
+    list-style-type: none;
+    position: relative;
+  }
+  
+  .step-wizard-item {
+    flex: 1;
+    text-align: center;
+    position: relative;
+  }
+
+  .step-wizard-item:not(:first-child)::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: -50%;
+    height: 2px;
+    width: 100%;
+    background-color: #ced4da;
+    transform: translateY(-50%);
+    z-index: 1;
+  }
+
+  .step-wizard-item.completed:not(:first-child)::before,
+  .step-wizard-item.current:not(:first-child)::before {
+    background-color: #9e3535;
+  }
+  
+  .progress-count {
+    height: 40px;
+    width: 40px;
+    border-radius: 50%;
+    background-color: #f8f9fa;
+    border: 2px solid #ced4da;
+    color: #ced4da;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin: 0 auto 5px;
+    position: relative;
+    z-index: 2;
+  }
+  
+  .step-wizard-item.completed .progress-count {
+    background-color: #9e3535;
+    border-color: #9e3535;
+    color: white;
+  }
+  
+  .step-wizard-item.current .progress-count {
+    border-color: #9e3535;
+    color: #9e3535;
+  }
+
+  .progress-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #ced4da;
+  }
+  
+  .step-wizard-item.completed .progress-label,
+  .step-wizard-item.current .progress-label {
+    color: #495057;
+  }
+  /* --- FIN: ESTILOS PARA EL FORMULARIO POR PASOS --- */
+
 `
 
 // --- COMPONENTE PRINCIPAL ---
@@ -337,6 +409,86 @@ const Calendario = () => {
   const [showDecorationAmountInput, setShowDecorationAmountInput] = useState(false)
   // --- NUEVO: Estado para controlar la visibilidad del input de servicios adicionales ---
   const [showAdditionalServiceAmountInput, setShowAdditionalServiceAmountInput] = useState(false)
+  
+  // --- INICIO: ESTADO Y LÓGICA PARA FORMULARIO POR PASOS ---
+  const [currentStep, setCurrentStep] = useState(1)
+  const totalSteps = 3
+
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      if (currentStep < totalSteps) {
+        setCurrentStep((prev) => prev + 1)
+      }
+    } else {
+        toast.error("Por favor, corrige los errores antes de continuar.")
+    }
+  }
+
+  const handlePrevious = () => {
+    if (currentStep > 1) {
+      setCurrentStep((prev) => prev - 1)
+    }
+  }
+  
+  const validateStep = (step) => {
+    const newErrors = { ...errors }
+    let isValid = true;
+    
+    // Función para limpiar errores de campos no validados en este paso
+    const clearOtherErrors = (fieldsToKeep) => {
+        Object.keys(newErrors).forEach(key => {
+            if (!fieldsToKeep.includes(key)) {
+                delete newErrors[key];
+            }
+        });
+    };
+
+    switch (step) {
+      case 1: { // Paso 1: Datos del Cliente
+        const fields = ['idCustomers', 'fullName'];
+        fields.forEach(key => {
+            const error = validateField(key, form[key]);
+            if (error) {
+                newErrors[key] = error;
+                isValid = false;
+            } else {
+                delete newErrors[key];
+            }
+        });
+        if (!form.fullName?.trim()) { // Validacion adicional
+            newErrors.idCustomers = "Debes buscar y seleccionar un cliente.";
+            isValid = false;
+        }
+        break;
+      }
+      case 2: { // Paso 2: Detalles de la Reserva
+        const fields = [
+            'numberPeople', 'evenType', 'servicios', 'dateTime', 'timeDurationR',
+        ];
+        if (showDecorationAmountInput) fields.push('decorationAmount');
+        if (showAdditionalServiceAmountInput) fields.push('additionalServiceAmount');
+        
+        fields.forEach(key => {
+            const error = validateField(key, form[key]);
+            if (error) {
+                newErrors[key] = error;
+                isValid = false;
+            } else {
+                delete newErrors[key];
+            }
+        });
+        break;
+      }
+      // El paso 3 se valida con la función completa `requestSaveConfirmation`
+      default:
+        break;
+    }
+    
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  // --- FIN: ESTADO Y LÓGICA PARA FORMULARIO POR PASOS ---
 
   // --- NUEVA FUNCIÓN: Convertir formato de tiempo a número ---
   const convertTimeFormatToNumber = (timeStr) => {
@@ -353,11 +505,9 @@ const Calendario = () => {
         const hours = Number.parseInt(parts[0], 10) || 0
         const minutes = Number.parseInt(parts[1], 10) || 0
         const seconds = Number.parseInt(parts[2], 10) || 0
-
-        // Devolver solo los segundos si es lo que necesitas, o el total en segundos
         return seconds.toString()
       }
-      return timeStr // Si no se puede parsear, devolver el original
+      return timeStr
     } catch (error) {
       console.error("Error al convertir formato de tiempo:", error)
       return timeStr
@@ -442,7 +592,7 @@ const Calendario = () => {
       ])
       const normalizedServices = (fetchedServices || []).map((service) => ({
         ...service,
-        id: service.idAditionalServices || service.id, // Normalizar ID
+        id: service.idAditionalServices || service.id,
         Nombre:
           service.Nombre || service.name || service.Name || `Servicio ${service.idAditionalServices || service.id}`,
         price: service.price || service.Price || service.precio || 0, // Normalizar el precio
@@ -569,6 +719,7 @@ const Calendario = () => {
   // --- MODIFICADO: handleDateClick para que la fecha y hora aparezcan vacías ---
   const handleDateClick = (arg) => {
     console.log("[handleDateClick] Iniciando. Argumento:", arg)
+    setCurrentStep(1); // Resetear al primer paso
 
     setSelectedReserva(null)
     setAdditionalAmountLabel("Monto Decoración")
@@ -597,6 +748,7 @@ const Calendario = () => {
       toast.error("ID de reserva inválido.")
       return
     }
+    setCurrentStep(1); // Resetear al primer paso
     setLoading(true)
     reservasService
       .getReservationById(idReservations)
@@ -644,7 +796,6 @@ const Calendario = () => {
             setShowAdditionalServiceAmountInput(false)
             currentAdditionalServiceAmount = "0"
           }
-          
 
           let formattedPass = []
           if (Array.isArray(detailedReservation.pass)) {
@@ -681,23 +832,24 @@ const Calendario = () => {
           }
 
           console.log("Estado a usar:", statusToUse)
-   // --- AQUÍ ES DONDE AJUSTAMOS EL dateTime ---
-          let dateTimeForInput = "";
-          if (detailedReservation.dateTime) { // <--- ESTE ES EL IF QUE DEBES ASEGURARTE DE TENER
-              const dateObj = new Date(detailedReservation.dateTime); // Interpreta la cadena UTC
+          // --- AQUÍ ES DONDE AJUSTAMOS EL dateTime ---
+          let dateTimeForInput = ""
+          if (detailedReservation.dateTime) {
+            // <--- ESTE ES EL IF QUE DEBES ASEGURARTE DE TENER
+            const dateObj = new Date(detailedReservation.dateTime) // Interpreta la cadena UTC
 
-              // Formatear para el input datetime-local (YYYY-MM-DDTHH:MM en hora local del navegador)
-              const year = dateObj.getFullYear();
-              const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
-              const day = dateObj.getDate().toString().padStart(2, '0');
-              const hours = dateObj.getHours().toString().padStart(2, '0');
-              const minutes = dateObj.getMinutes().toString().padStart(2, '0');
-              
-              dateTimeForInput = `${year}-${month}-${day}T${hours}:${minutes}`;
-              console.log("[handleEventClick] Fecha UTC original:", detailedReservation.dateTime);
-              console.log("[handleEventClick] Fecha formateada para input (local):", dateTimeForInput);
+            // Formatear para el input datetime-local (YYYY-MM-DDTHH:MM en hora local del navegador)
+            const year = dateObj.getFullYear()
+            const month = (dateObj.getMonth() + 1).toString().padStart(2, "0")
+            const day = dateObj.getDate().toString().padStart(2, "0")
+            const hours = dateObj.getHours().toString().padStart(2, "0")
+            const minutes = dateObj.getMinutes().toString().padStart(2, "0")
+
+            dateTimeForInput = `${year}-${month}-${day}T${hours}:${minutes}`
+            console.log("[handleEventClick] Fecha UTC original:", detailedReservation.dateTime)
+            console.log("[handleEventClick] Fecha formateada para input (local):", dateTimeForInput)
           } else {
-              console.warn("[handleEventClick] detailedReservation.dateTime está vacío o no definido.");
+            console.warn("[handleEventClick] detailedReservation.dateTime está vacío o no definido.")
           }
           // Modificar el objeto form para incluir el estado correcto
           setForm({
@@ -1053,7 +1205,7 @@ const Calendario = () => {
     return ""
   }, [])
 
-  const validateField = useCallback(
+   const validateField = useCallback(
     (name, value) => {
       if (name === "idCustomers") {
         if (value === null || value === undefined || value === "" || value <= 0 || isNaN(Number(value))) {
@@ -1067,25 +1219,48 @@ const Calendario = () => {
       switch (name) {
         case "fullName":
           return value?.trim() ? "" : "Nombre de cliente requerido (seleccione un cliente)."
-        case "dateTime":
+
+        // ======================= INICIO DE LA MODIFICACIÓN =======================
+        case "dateTime": {
           if (!value) return "Fecha y hora requeridas."
+
           const selectedDate = new Date(value)
           const now = new Date()
+          // Normalizamos 'now' para no comparar segundos/milisegundos, que pueden causar fallos
+          now.setSeconds(0, 0)
 
-          // Verificar si la fecha/hora es pasada
-          if (selectedDate < now) return "Fecha/hora no puede ser pasada."
+          // Si la fecha seleccionada es en el pasado
+          if (selectedDate < now) {
+            // Si es una NUEVA reserva (no hay `selectedReserva`), siempre es un error.
+            if (!selectedReserva) {
+              return "La fecha y hora no pueden ser en el pasado."
+            }
 
-          // Verificar si hay conflicto de hora
+            // Si es una reserva EXISTENTE, permitimos guardar si la fecha no ha cambiado.
+            // Esto es para poder editar reservas pasadas (ej. cambiar estado a 'Terminada').
+            // Obtenemos la fecha original de la reserva que se está editando.
+            const originalDate = new Date(selectedReserva.dateTime)
+
+            // Comparamos los valores numéricos de las fechas. Si son diferentes, significa
+            // que el usuario intentó cambiar la fecha a otra fecha pasada, lo cual es un error.
+            if (selectedDate.getTime() !== originalDate.getTime()) {
+              return "No se puede cambiar la fecha a una fecha pasada."
+            }
+          }
+
+          // Las validaciones de conflicto siguen aplicando en todos los casos.
           if (checkTimeConflict(value, selectedReserva?.idReservations)) {
             return "Ya existe una reserva en esta hora. Por favor, seleccione otra hora."
           }
 
-          // Verificar si el cliente ya tiene una reserva en esta fecha
           if (form.idCustomers && checkDuplicateReservation(form.idCustomers, value, selectedReserva?.idReservations)) {
-            return "Este cliente ya tiene una reserva en esta fecha. No se permiten múltiples reservas para el mismo cliente en un día."
+            return "Este cliente ya tiene una reserva en esta fecha."
           }
 
-          return ""
+          return "" // Si todas las validaciones pasan
+        }
+        // ======================= FIN DE LA MODIFICACIÓN =======================
+
         case "timeDurationR":
           return value ? "" : "Duración requerida."
         case "evenType":
@@ -1122,9 +1297,9 @@ const Calendario = () => {
       checkTimeConflict,
       additionalAmountLabel,
       form.idCustomers,
-      selectedReserva?.idReservations,
+      selectedReserva, // AÑADIR `selectedReserva` completo a las dependencias
       showDecorationAmountInput,
-      showAdditionalServiceAmountInput, // NUEVO: Añadido para la validación condicional
+      showAdditionalServiceAmountInput,
     ],
   )
 
@@ -1424,7 +1599,7 @@ const Calendario = () => {
     }
 
     if (!tempValidateForm()) {
-      toast.error("Por favor, corrija los errores indicados antes de continuar.")
+      toast.error("Por favor, complete los campos indicados antes de continuar.")
       return
     }
 
@@ -2077,376 +2252,423 @@ const Calendario = () => {
         </Col>
       </Row>
 
-      {/* --- Modal de Reserva --- */}
-      <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)} size="lg" centered backdrop="static">
+      {/* --- INICIO: Modal de Reserva por Pasos --- */}
+      <Modal 
+        isOpen={modalOpen} 
+        toggle={() => setModalOpen(!modalOpen)} 
+        onClosed={() => setCurrentStep(1)} // Resetear al cerrar
+        size="lg" 
+        centered 
+        backdrop="static"
+      >
         <ModalHeader toggle={() => setModalOpen(!modalOpen)} style={styles.modalHeader}>
           {selectedReserva ? "Editar Reserva" : "Nueva Reserva"}
         </ModalHeader>
         <ModalBody>
-          {/* --- Sección Datos del Cliente --- */}
-          <fieldset style={styles.modalFieldset}>
-            {" "}
-            {/* Margen inferior ya reducido en styles */}
-            <legend style={styles.modalLegend}>Datos del Cliente</legend>
-            <FormGroup>
-              <Label for="clientSearch" style={{ fontWeight: "bold" }}>
-                Buscar Cliente
-              </Label>
-              <Input
-                type="text"
-                id="clientSearch"
-                placeholder="Buscar por nombre, celular o correo..."
-                value={clientSearchText}
-                onChange={(e) => handleClientSearch(e.target.value)}
-                invalid={!!errors.idCustomers}
-                style={{ borderColor: "#9e3535" }}
-              />
-              {errors.idCustomers && <FormFeedback>{errors.idCustomers}</FormFeedback>}
-              {showClientSearch && clientSearchResults.length > 0 && (
-                <div style={styles.clientSearchResults}>
-                  {isClientSearchLoading ? (
-                    <div className="p-2 text-center">
-                      <Spinner size="sm" /> Buscando...
-                    </div>
-                  ) : (
-                    clientSearchResults.map((cliente) => (
-                      <div
-                        key={cliente.idCustomers}
-                        className="p-2 border-bottom"
-                        style={{ cursor: "pointer" }}
-                        onClick={() => selectClient(cliente)}
-                      >
-                        {cliente.FullName} ({cliente.Cellphone})
+          {/* --- Indicador de Progreso --- */}
+          <ul className="step-wizard-list">
+              <li className={`step-wizard-item ${currentStep === 1 ? 'current' : ''} ${currentStep > 1 ? 'completed' : ''}`}>
+                  <span className="progress-count">1</span>
+                  <span className="progress-label">Cliente</span>
+              </li>
+              <li className={`step-wizard-item ${currentStep === 2 ? 'current' : ''} ${currentStep > 2 ? 'completed' : ''}`}>
+                  <span className="progress-count">2</span>
+                  <span className="progress-label">Reserva</span>
+              </li>
+              <li className={`step-wizard-item ${currentStep === 3 ? 'current' : ''}`}>
+                  <span className="progress-count">3</span>
+                  <span className="progress-label">Pago</span>
+              </li>
+          </ul>
+
+          {/* --- Renderizado Condicional del Contenido del Paso --- */}
+
+          {/* --- PASO 1: Datos del Cliente --- */}
+          {currentStep === 1 && (
+            <fieldset style={styles.modalFieldset}>
+              <legend style={styles.modalLegend}>Datos del Cliente</legend>
+              <FormGroup>
+                <Label for="clientSearch" style={{ fontWeight: "bold" }}>
+                  Buscar Cliente
+                </Label>
+                <Input
+                  type="text"
+                  id="clientSearch"
+                  placeholder="Buscar por nombre, celular o correo..."
+                  value={clientSearchText}
+                  onChange={(e) => handleClientSearch(e.target.value)}
+                  invalid={!!errors.idCustomers}
+                  style={{ borderColor: "#9e3535" }}
+                />
+                {errors.idCustomers && <FormFeedback>{errors.idCustomers}</FormFeedback>}
+                {showClientSearch && clientSearchResults.length > 0 && (
+                  <div style={styles.clientSearchResults}>
+                    {isClientSearchLoading ? (
+                      <div className="p-2 text-center">
+                        <Spinner size="sm" /> Buscando...
                       </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </FormGroup>
-            <FormGroup>
-              <Label for="clientDisplay" style={{ fontWeight: "bold" }}>
-                Cliente Seleccionado
-              </Label>
-              <Input
-                type="text"
-                id="clientDisplay"
-                value={form.fullName || "N/A"}
-                readOnly
-                style={{ borderColor: "#9e3535", backgroundColor: "#e9ecef" }}
-              />
-            </FormGroup>
-          </fieldset>
+                    ) : (
+                      clientSearchResults.map((cliente) => (
+                        <div
+                          key={cliente.idCustomers}
+                          className="p-2 border-bottom"
+                          style={{ cursor: "pointer" }}
+                          onClick={() => selectClient(cliente)}
+                        >
+                          {cliente.FullName} ({cliente.Cellphone})
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </FormGroup>
+              <FormGroup>
+                <Label for="clientDisplay" style={{ fontWeight: "bold" }}>
+                  Cliente Seleccionado
+                </Label>
+                <Input
+                  type="text"
+                  id="clientDisplay"
+                  value={form.fullName || "N/A"}
+                  readOnly
+                  style={{ borderColor: "#9e3535", backgroundColor: "#e9ecef" }}
+                />
+              </FormGroup>
+            </fieldset>
+          )}
 
-          {/* --- Sección Datos de la Reserva --- */}
-          <fieldset style={styles.modalFieldset}>
-            <legend style={styles.modalLegend}>Detalles de la Reserva</legend>
-            <Row>
-              <Col md={6}>
-                <FormGroup>
-                  <Label for="numberPeople" style={{ fontWeight: "bold" }}>
-                    Número de Personas
-                  </Label>
-                  <Input
-                    type="number"
-                    name="numberPeople"
-                    id="numberPeople"
-                    value={form.numberPeople || ""}
-                    onChange={handleChange}
-                    invalid={!!errors.numberPeople}
-                    style={{ borderColor: "#9e3535" }}
-                  />
-                  {errors.numberPeople && <FormFeedback>{errors.numberPeople}</FormFeedback>}
-                </FormGroup>
-              </Col>
-              <Col md={6}>
-                <FormGroup>
-                  <Label for="evenType" style={{ fontWeight: "bold" }}>
-                    Tipo de Evento
-                  </Label>
-                  <Input
-                    type="select"
-                    name="evenType"
-                    id="evenType"
-                    value={form.evenType || ""}
-                    onChange={handleChange}
-                    invalid={!!errors.evenType}
-                    style={{ borderColor: "#9e3535" }}
-                  >
-                    <option value="">Seleccionar tipo...</option>
-                    <option value="Cumpleaños">Cumpleaños</option>
-                    <option value="Boda">Boda</option>
-                    <option value="Aniversario">Aniversario</option>
-                    <option value="Bautizo">Bautizo</option>
-                    <option value="Graduación">Graduación</option>
-                    <option value="Empresarial">Empresarial</option>
-                    <option value="Despedida">Despedida</option>
-                    <option value="Baby Shower">Baby Shower</option>
-                    <option value="Fiesta Infantil">Fiesta Infantil</option>
-                    <option value="Reunión Familiar">Reunión Familiar</option>
-                    <option value="Conferencia">Conferencia</option>
-                    <option value="Otro">Otro</option>
-                  </Input>
-                  {errors.evenType && <FormFeedback>{errors.evenType}</FormFeedback>}
-                </FormGroup>
-              </Col>
-            </Row>
-            <FormGroup>
-              <Label for="servicios" style={{ fontWeight: "bold" }}>
-                Servicios Adicionales
-              </Label>
-              <Select
-                isMulti
-                options={serviceOptions}
-                value={form.servicios}
-                onChange={handleMultiServiceChange}
-                placeholder="Seleccione los servicios..."
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    borderColor: "#9e3535",
-                    "&:hover": {
-                      borderColor: "#9e3535",
-                    },
-                  }),
-                }}
-              />
-              {errors.servicios && <div className="text-danger small mt-1">{errors.servicios}</div>}
-            </FormGroup>
-
-            {/* NUEVO: Input para monto de servicios adicionales */}
-            {showAdditionalServiceAmountInput && (
+          {/* --- PASO 2: Detalles de la Reserva --- */}
+          {currentStep === 2 && (
+            <fieldset style={styles.modalFieldset}>
+              <legend style={styles.modalLegend}>Detalles de la Reserva</legend>
               <Row>
                 <Col md={6}>
                   <FormGroup>
-                    <Label for="additionalServiceAmount" style={{ fontWeight: "bold" }}>
-                      Monto Servicio Adicional
+                    <Label for="numberPeople" style={{ fontWeight: "bold" }}>
+                      Número de Personas
                     </Label>
                     <Input
                       type="number"
-                      name="additionalServiceAmount"
-                      id="additionalServiceAmount"
-                      value={form.additionalServiceAmount || ""}
+                      name="numberPeople"
+                      id="numberPeople"
+                      value={form.numberPeople || ""}
                       onChange={handleChange}
-                      invalid={!!errors.additionalServiceAmount}
+                      invalid={!!errors.numberPeople}
                       style={{ borderColor: "#9e3535" }}
-                      placeholder="Ingrese el monto"
                     />
-                    {errors.additionalServiceAmount && <FormFeedback>{errors.additionalServiceAmount}</FormFeedback>}
+                    {errors.numberPeople && <FormFeedback>{errors.numberPeople}</FormFeedback>}
                   </FormGroup>
                 </Col>
-              </Row>
-            )}
-
-            {showDecorationAmountInput && (
-              <Row>
                 <Col md={6}>
                   <FormGroup>
-                    <Label for="decorationAmount" style={{ fontWeight: "bold" }}>
-                      {additionalAmountLabel}
+                    <Label for="evenType" style={{ fontWeight: "bold" }}>
+                      Tipo de Evento
                     </Label>
                     <Input
-                      type="number"
-                      name="decorationAmount"
-                      id="decorationAmount"
-                      value={form.decorationAmount || ""}
+                      type="select"
+                      name="evenType"
+                      id="evenType"
+                      value={form.evenType || ""}
                       onChange={handleChange}
-                      invalid={!!errors.decorationAmount}
+                      invalid={!!errors.evenType}
                       style={{ borderColor: "#9e3535" }}
-                    />
-                    {errors.decorationAmount && <FormFeedback>{errors.decorationAmount}</FormFeedback>}
+                    >
+                      <option value="">Seleccionar tipo...</option>
+                      <option value="Cumpleaños">Cumpleaños</option>
+                      <option value="Boda">Boda</option>
+                      <option value="Aniversario">Aniversario</option>
+                      <option value="Bautizo">Bautizo</option>
+                      <option value="Graduación">Graduación</option>
+                      <option value="Empresarial">Empresarial</option>
+                      <option value="Despedida">Despedida</option>
+                      <option value="Baby Shower">Baby Shower</option>
+                      <option value="Fiesta Infantil">Fiesta Infantil</option>
+                      <option value="Reunión Familiar">Reunión Familiar</option>
+                      <option value="Conferencia">Conferencia</option>
+                      <option value="Otro">Otro</option>
+                    </Input>
+                    {errors.evenType && <FormFeedback>{errors.evenType}</FormFeedback>}
                   </FormGroup>
                 </Col>
               </Row>
-            )}
-            <Row>
-              <Col md={6}>
-                <FormGroup>
-                  <Label for="dateTime" style={{ fontWeight: "bold" }}>
-                    Fecha y Hora
-                  </Label>
-                  <Input
-                    type="datetime-local"
-                    name="dateTime"
-                    id="dateTime"
-                    value={form.dateTime || ""}
-                    onChange={handleChange}
-                    invalid={!!errors.dateTime}
-                    style={{ borderColor: "#9e3535" }}
-                    autoComplete="off"
-                  />
-                  {errors.dateTime && <FormFeedback>{errors.dateTime}</FormFeedback>}
-                </FormGroup>
-              </Col>
-              <Col md={6}>
-                <FormGroup>
-                  <Label for="timeDurationR" style={{ fontWeight: "bold" }}>
-                    Duración (Horas)
-                  </Label>
-                  <Input
-                    type="number"
-                    name="timeDurationR"
-                    id="timeDurationR"
-                    value={form.timeDurationR || ""}
-                    onChange={handleChange}
-                    invalid={!!errors.timeDurationR}
-                    style={{ borderColor: "#9e3535" }}
-                  />
-                  {errors.timeDurationR && <FormFeedback>{errors.timeDurationR}</FormFeedback>}
-                </FormGroup>
-              </Col>
-            </Row>
-          </fieldset>
+              <FormGroup>
+                <Label for="servicios" style={{ fontWeight: "bold" }}>
+                  Servicios Adicionales
+                </Label>
+                <Select
+                  isMulti
+                  options={serviceOptions}
+                  value={form.servicios}
+                  onChange={handleMultiServiceChange}
+                  placeholder="Seleccione los servicios..."
+                  styles={{
+                    control: (base, state) => ({
+                      ...base,
+                      borderColor: errors.servicios ? '#dc3545' : '#9e3535',
+                      '&:hover': {
+                        borderColor: errors.servicios ? '#dc3545' : '#9e3535',
+                      },
+                      boxShadow: state.isFocused ? '0 0 0 0.25rem rgba(158, 53, 53, 0.25)' : 'none',
+                    }),
+                  }}
+                />
+                {errors.servicios && <div className="text-danger small mt-1">{errors.servicios}</div>}
+              </FormGroup>
 
-          {/* --- Sección Pago y Estado de la Reserva --- */}
-          <fieldset style={styles.modalFieldset}>
-            <legend style={styles.modalLegend}>Pago y Estado</legend>
-
-            {/* Primero los abonos (reorganizado) */}
-            <fieldset style={{ ...styles.modalFieldset, marginBottom: "1rem" }}>
-              <legend style={styles.modalLegend}>Abonos</legend>
-              {(form.pass || []).map((abono, index) => (
-                <Row key={index} className="mb-2 align-items-end">
-                  <Col md={5}>
-                    <FormGroup className="mb-0">
-                      <Label for={`fecha-${index}`} className="mb-1" style={{ fontWeight: "bold" }}>
-                        Fecha
-                      </Label>
-                      <Input
-                        type="date"
-                        id={`fecha-${index}`}
-                        value={abono.fecha || ""}
-                        onChange={(e) => handleAbonoChange(index, "fecha", e.target.value)}
-                        invalid={!!errors[`pass-${index}-fecha`]}
-                        style={{ borderColor: "#9e3535" }}
-                      />
-                      {errors[`pass-${index}-fecha`] && <FormFeedback>{errors[`pass-${index}-fecha`]}</FormFeedback>}
-                    </FormGroup>
-                  </Col>
-                  <Col md={5}>
-                    <FormGroup className="mb-0">
-                      <Label for={`cantidad-${index}`} className="mb-1" style={{ fontWeight: "bold" }}>
-                        Cantidad
+              {showAdditionalServiceAmountInput && (
+                <Row>
+                  <Col md={6}>
+                    <FormGroup>
+                      <Label for="additionalServiceAmount" style={{ fontWeight: "bold" }}>
+                        Monto Servicio Adicional
                       </Label>
                       <Input
                         type="number"
-                        id={`cantidad-${index}`}
-                        value={abono.cantidad || ""}
-                        min="50000"
-                        onChange={(e) => handleAbonoChange(index, "cantidad", e.target.value)}
-                        invalid={!!errors[`pass-${index}-cantidad`]}
+                        name="additionalServiceAmount"
+                        id="additionalServiceAmount"
+                        value={form.additionalServiceAmount || ""}
+                        onChange={handleChange}
+                        invalid={!!errors.additionalServiceAmount}
                         style={{ borderColor: "#9e3535" }}
+                        placeholder="Ingrese el monto"
                       />
-                      {errors[`pass-${index}-cantidad`] && (
-                        <FormFeedback>{errors[`pass-${index}-cantidad`]}</FormFeedback>
-                      )}
+                      {errors.additionalServiceAmount && <FormFeedback>{errors.additionalServiceAmount}</FormFeedback>}
                     </FormGroup>
                   </Col>
-                  <Col md={2} className="d-flex">
-                    <Button color="danger" outline onClick={() => removeAbono(index)} className="w-100">
-                      <FaTrashAlt />
-                    </Button>
+                </Row>
+              )}
+
+              {showDecorationAmountInput && (
+                <Row>
+                  <Col md={6}>
+                    <FormGroup>
+                      <Label for="decorationAmount" style={{ fontWeight: "bold" }}>
+                        {additionalAmountLabel}
+                      </Label>
+                      <Input
+                        type="number"
+                        name="decorationAmount"
+                        id="decorationAmount"
+                        value={form.decorationAmount || ""}
+                        onChange={handleChange}
+                        invalid={!!errors.decorationAmount}
+                        style={{ borderColor: "#9e3535" }}
+                      />
+                      {errors.decorationAmount && <FormFeedback>{errors.decorationAmount}</FormFeedback>}
+                    </FormGroup>
                   </Col>
                 </Row>
-              ))}
-              <Button color="primary" outline onClick={addAbono} className="mt-2">
-                Agregar Abono
-              </Button>
-              {errors.pass && <div className="text-danger small mt-1">{errors.pass}</div>}
+              )}
+              <Row>
+                <Col md={6}>
+                  <FormGroup>
+                    <Label for="dateTime" style={{ fontWeight: "bold" }}>
+                      Fecha y Hora
+                    </Label>
+                    <Input
+                      type="datetime-local"
+                      name="dateTime"
+                      id="dateTime"
+                      value={form.dateTime || ""}
+                      onChange={handleChange}
+                      invalid={!!errors.dateTime}
+                      style={{ borderColor: "#9e3535" }}
+                      autoComplete="off"
+                    />
+                    {errors.dateTime && <FormFeedback>{errors.dateTime}</FormFeedback>}
+                  </FormGroup>
+                </Col>
+                <Col md={6}>
+                  <FormGroup>
+                    <Label for="timeDurationR" style={{ fontWeight: "bold" }}>
+                      Duración (Horas)
+                    </Label>
+                    <Input
+                      type="number"
+                      name="timeDurationR"
+                      id="timeDurationR"
+                      value={form.timeDurationR || ""}
+                      onChange={handleChange}
+                      invalid={!!errors.timeDurationR}
+                      style={{ borderColor: "#9e3535" }}
+                    />
+                    {errors.timeDurationR && <FormFeedback>{errors.timeDurationR}</FormFeedback>}
+                  </FormGroup>
+                </Col>
+              </Row>
             </fieldset>
+          )}
 
-            {/* Luego el total a pagar y restante */}
-            <Row>
-              <Col md={6}>
-                <FormGroup>
-                  <Label for="totalPay" style={{ fontWeight: "bold" }}>
-                    Total a Pagar
-                  </Label>
-                  <Input
-                    type="number"
-                    name="totalPay"
-                    id="totalPay"
-                    value={form.totalPay || ""}
-                    onChange={handleChange}
-                    invalid={!!errors.totalPay}
-                    style={{ borderColor: "#9e3535" }}
-                  />
-                  {errors.totalPay && <FormFeedback>{errors.totalPay}</FormFeedback>}
-                </FormGroup>
-              </Col>
-              <Col md={6}>
-                <FormGroup>
-                  <Label for="remaining" style={{ fontWeight: "bold" }}>
-                    Restante
-                  </Label>
-                  <Input
-                    type="text"
-                    id="remaining"
-                    value={formatCurrency(form.remaining)}
-                    readOnly
-                    style={{ borderColor: "#9e3535" }}
-                  />
-                  {errors.remaining && <div className="text-danger small mt-1">{errors.remaining}</div>}
-                </FormGroup>
-              </Col>
-            </Row>
+          {/* --- PASO 3: Pago y Estado de la Reserva --- */}
+          {currentStep === 3 && (
+            <fieldset style={styles.modalFieldset}>
+              <legend style={styles.modalLegend}>Pago y Estado</legend>
 
-            {/* Estado y observaciones */}
-            <Row>
-              <Col md={6}>
-                <FormGroup>
-                  <Label for="status" style={{ fontWeight: "bold" }}>
-                    Estado
-                  </Label>
-                  <Input
-                    type="select"
-                    name="status"
-                    id="status"
-                    value={form.status || "pendiente"}
-                    onChange={handleChange}
-                    style={{ borderColor: "#9e3535" }}
-                  >
-                    <option value="pendiente">Pendiente</option>
-                    <option value="confirmada">Confirmada</option>
-                    <option value="en_proceso">En Proceso</option>
-                    <option value="terminada">Terminada</option>
-                    <option value="anulada">Anulada</option>
-                  </Input>
-                </FormGroup>
-              </Col>
-              <Col md={6}>
-                <FormGroup>
-                  <Label for="matter" style={{ fontWeight: "bold" }}>
-                    Observaciones
-                  </Label>
-                  <Input
-                    type="textarea"
-                    name="matter"
-                    id="matter"
-                    value={form.matter || ""}
-                    onChange={handleChange}
-                    rows="1"
-                    style={{ borderColor: "#9e3535" }}
-                  />
-                </FormGroup>
-              </Col>
-            </Row>
-          </fieldset>
+              <fieldset style={{ ...styles.modalFieldset, marginBottom: "1rem" }}>
+                <legend style={styles.modalLegend}>Abonos</legend>
+                {(form.pass || []).map((abono, index) => (
+                  <Row key={index} className="mb-2 align-items-end">
+                    <Col md={5}>
+                      <FormGroup className="mb-0">
+                        <Label for={`fecha-${index}`} className="mb-1" style={{ fontWeight: "bold" }}>
+                          Fecha
+                        </Label>
+                        <Input
+                          type="date"
+                          id={`fecha-${index}`}
+                          value={abono.fecha || ""}
+                          onChange={(e) => handleAbonoChange(index, "fecha", e.target.value)}
+                          invalid={!!errors[`pass-${index}-fecha`]}
+                          style={{ borderColor: "#9e3535" }}
+                        />
+                        {errors[`pass-${index}-fecha`] && <FormFeedback>{errors[`pass-${index}-fecha`]}</FormFeedback>}
+                      </FormGroup>
+                    </Col>
+                    <Col md={5}>
+                      <FormGroup className="mb-0">
+                        <Label for={`cantidad-${index}`} className="mb-1" style={{ fontWeight: "bold" }}>
+                          Cantidad
+                        </Label>
+                        <Input
+                          type="number"
+                          id={`cantidad-${index}`}
+                          value={abono.cantidad || ""}
+                          min="50000"
+                          onChange={(e) => handleAbonoChange(index, "cantidad", e.target.value)}
+                          invalid={!!errors[`pass-${index}-cantidad`]}
+                          style={{ borderColor: "#9e3535" }}
+                        />
+                        {errors[`pass-${index}-cantidad`] && (
+                          <FormFeedback>{errors[`pass-${index}-cantidad`]}</FormFeedback>
+                        )}
+                      </FormGroup>
+                    </Col>
+                    <Col md={2} className="d-flex">
+                      <Button color="danger" outline onClick={() => removeAbono(index)} className="w-100">
+                        <FaTrashAlt />
+                      </Button>
+                    </Col>
+                  </Row>
+                ))}
+                <Button color="primary" outline onClick={addAbono} className="mt-2">
+                  Agregar Abono
+                </Button>
+                {errors.pass && <div className="text-danger small mt-1">{errors.pass}</div>}
+              </fieldset>
+
+              <Row>
+                <Col md={6}>
+                  <FormGroup>
+                    <Label for="totalPay" style={{ fontWeight: "bold" }}>
+                      Total a Pagar
+                    </Label>
+                    <Input
+                      type="number"
+                      name="totalPay"
+                      id="totalPay"
+                      value={form.totalPay || ""}
+                      onChange={handleChange}
+                      invalid={!!errors.totalPay}
+                      style={{ borderColor: "#9e3535" }}
+                    />
+                    {errors.totalPay && <FormFeedback>{errors.totalPay}</FormFeedback>}
+                  </FormGroup>
+                </Col>
+                <Col md={6}>
+                  <FormGroup>
+                    <Label for="remaining" style={{ fontWeight: "bold" }}>
+                      Restante
+                    </Label>
+                    <Input
+                      type="text"
+                      id="remaining"
+                      value={formatCurrency(form.remaining)}
+                      readOnly
+                      style={{ borderColor: "#9e3535" }}
+                    />
+                    {errors.remaining && <div className="text-danger small mt-1">{errors.remaining}</div>}
+                  </FormGroup>
+                </Col>
+              </Row>
+
+              <Row>
+                <Col md={6}>
+                  <FormGroup>
+                    <Label for="status" style={{ fontWeight: "bold" }}>
+                      Estado
+                    </Label>
+                    <Input
+                      type="select"
+                      name="status"
+                      id="status"
+                      value={form.status || "pendiente"}
+                      onChange={handleChange}
+                      style={{ borderColor: "#9e3535" }}
+                    >
+                      <option value="pendiente">Pendiente</option>
+                      <option value="confirmada">Confirmada</option>
+                      <option value="en_proceso">En Proceso</option>
+                      <option value="terminada">Terminada</option>
+                      <option value="anulada">Anulada</option>
+                    </Input>
+                  </FormGroup>
+                </Col>
+                <Col md={6}>
+                  <FormGroup>
+                    <Label for="matter" style={{ fontWeight: "bold" }}>
+                      Observaciones
+                    </Label>
+                    <Input
+                      type="textarea"
+                      name="matter"
+                      id="matter"
+                      value={form.matter || ""}
+                      onChange={handleChange}
+                      rows="1"
+                      style={{ borderColor: "#9e3535" }}
+                    />
+                  </FormGroup>
+                </Col>
+              </Row>
+            </fieldset>
+          )}
+
         </ModalBody>
         <ModalFooter>
-          <Button color="secondary" outline onClick={() => setModalOpen(!modalOpen)}>
+          <Button color="secondary" outline onClick={() => setModalOpen(false)}>
             Cancelar
           </Button>
-          <Button
-            color="primary"
-            onClick={() => {
-              clearDateTimeError()
-              requestSaveConfirmation()
-            }}
-          >
-            {selectedReserva ? "Guardar Cambios" : "Crear Reserva"}
-          </Button>
+
+          {/* Botón "Anterior" */}
+          {currentStep > 1 && (
+             <Button color="secondary" onClick={handlePrevious}>
+                Anterior
+             </Button>
+          )}
+
+          {/* Botón "Siguiente" */}
+          {currentStep < totalSteps && (
+            <Button color="primary" onClick={handleNext}>
+                Siguiente
+            </Button>
+          )}
+
+          {/* Botón "Guardar/Crear" en el último paso */}
+          {currentStep === totalSteps && (
+             <Button
+                color="primary"
+                onClick={() => {
+                  clearDateTimeError()
+                  requestSaveConfirmation()
+                }}
+             >
+                {selectedReserva ? "Guardar Cambios" : "Crear Reserva"}
+            </Button>
+          )}
         </ModalFooter>
       </Modal>
+      {/* --- FIN: Modal de Reserva por Pasos --- */}
+
 
       {/* --- Modal de Lista de Reservas --- */}
       <Modal isOpen={listModalOpen} toggle={toggleListModal} size="xl" centered backdrop="static">
