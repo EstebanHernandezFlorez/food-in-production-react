@@ -1,9 +1,8 @@
-// src/views/module/OrdenProduccion/ActiveOrdersContext.jsx
 import React, { createContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import productionOrderService from '../../services/productionOrderService'; // VERIFICA RUTA
-import '../../../assets/css/produccion/ProduccionStyles.css'; // VERIFICA ESTA RUTA
+import productionOrderService from '../../services/productionOrderService';
+import '../../../assets/css/produccion/ProduccionStyles.css';
 
 let providerInstanceCounter = 0;
 
@@ -45,14 +44,25 @@ export const ActiveOrdersContext = createContext(null);
 export const ActiveOrdersProvider = ({ children }) => {
     const instanceId = useRef(++providerInstanceCounter);
     const [activeOrders, setActiveOrders] = useState({});
-    const [currentViewedOrderId, _setCurrentViewedOrderIdInternal] = useState(null);
+    const [_currentViewedOrderIdInternal, _setCurrentViewedOrderIdInternal] = useState(null);
     const [isLoadingOrderContext, setIsLoadingOrderContext] = useState(true);
     const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
     const navigate = useNavigate();
     const location = useLocation();
 
+    const currentViewedOrderIdRef = useRef(_currentViewedOrderIdInternal);
+    useEffect(() => {
+        currentViewedOrderIdRef.current = _currentViewedOrderIdInternal;
+    }, [_currentViewedOrderIdInternal]);
+    
+    const setCurrentViewedOrderId = useCallback((id) => {
+        _setCurrentViewedOrderIdInternal(id);
+    }, []);
+
     const transformFetchedOrderToContextFormat = useCallback((fetchedOrder) => {
+        console.log(`%c[CONTEXT ${instanceId.current}] transformFetchedOrderToContextFormat: fetchedOrder RAW:`, "color: blue", JSON.stringify(fetchedOrder, null, 2));
+
         if (!fetchedOrder || !fetchedOrder.idProductionOrder) {
             console.warn(`%c[CONTEXT ${instanceId.current}] transformFetchedOrderToContextFormat: Datos de orden inválidos.`, "color: orange", fetchedOrder);
             return null;
@@ -63,26 +73,27 @@ export const ActiveOrdersProvider = ({ children }) => {
             initialAmount, inputInitialWeight, inputInitialWeightUnit,
             finalQuantityProduct, finishedProductWeight, finishedProductWeightUnit,
             inputFinalWeightUnused, inputFinalWeightUnusedUnit,
-            orderDate, idEmployeeRegistered, /* EmployeeRegistered, */ idProvider, /* Provider, */ observations, status,
-            ProductionOrderDetails, dateTimeCreation, createdAt, dateTimeLastModified, updatedAt,
+            orderDate, idEmployeeRegistered, idProvider, observations, status,
+            productionOrderDetails,
+            dateTimeCreation, createdAt, dateTimeLastModified, updatedAt,
             isBaseDataValidated,
             productNameSnapshot: backendProductNameSnapshot
         } = fetchedOrder;
 
         const formOrderMapped = {
-            ...defaultOrderStructure.formOrder, // Start with defaults
+            ...defaultOrderStructure.formOrder,
             idProduct: idProduct?.toString() || '',
             productNameSnapshot: backendProductNameSnapshot || Product?.productName || '',
             idSpecSheet: idSpecSheet?.toString() || '',
             initialAmount: initialAmount?.toString() || '',
-            inputInitialWeight: inputInitialWeight?.toString() || '',
-            inputInitialWeightUnit: inputInitialWeightUnit || 'kg',
+            inputInitialWeight: inputInitialWeight !== null && inputInitialWeight !== undefined ? inputInitialWeight.toString() : '',
+            inputInitialWeightUnit: inputInitialWeightUnit || defaultOrderStructure.formOrder.inputInitialWeightUnit,
             finalQuantityProduct: finalQuantityProduct?.toString() || '',
             finishedProductWeight: finishedProductWeight?.toString() || '',
-            finishedProductWeightUnit: finishedProductWeightUnit || 'kg',
+            finishedProductWeightUnit: finishedProductWeightUnit || defaultOrderStructure.formOrder.finishedProductWeightUnit,
             inputFinalWeightUnused: inputFinalWeightUnused?.toString() || '',
-            inputFinalWeightUnusedUnit: inputFinalWeightUnusedUnit || 'kg',
-            orderDate: orderDate ? new Date(orderDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            inputFinalWeightUnusedUnit: inputFinalWeightUnusedUnit || defaultOrderStructure.formOrder.inputFinalWeightUnusedUnit,
+            orderDate: orderDate ? new Date(orderDate).toISOString().split('T')[0] : defaultOrderStructure.formOrder.orderDate,
             idEmployeeRegistered: idEmployeeRegistered?.toString() || '',
             idProvider: idProvider?.toString() || '',
             observations: observations || '',
@@ -102,22 +113,25 @@ export const ActiveOrdersProvider = ({ children }) => {
             default: localStatus = status || 'UNKNOWN'; localStatusDisplay = status || 'Desconocido';
         }
 
-        const processStepsFormatted = (ProductionOrderDetails || []).map(detail => ({
-            idProductionOrderDetail: String(detail.idProductionOrderDetail),
-            idProcess: String(detail.idProcess || detail.idProcessSnapshot || ''),
-            processOrder: detail.processOrder,
-            processName: detail.processNameSnapshot || detail.Process?.processName || 'Proceso Desconocido',
-            processDescription: detail.processDescriptionSnapshot || detail.Process?.description || '',
-            idEmployee: String(detail.idEmployeeAssigned || ''),
-            startDate: detail.startDate ? new Date(detail.startDate).toISOString().slice(0, 16) : '',
-            endDate: detail.endDate ? new Date(detail.endDate).toISOString().slice(0, 16) : '',
-            status: detail.status || 'PENDING',
-            statusDisplay: detail.status || 'Pendiente',
-            observations: detail.observations || '',
-            estimatedTimeMinutes: detail.Process?.estimatedTimeMinutes || null,
-            isNewStep: false,
-        })).sort((a, b) => (a.processOrder || 0) - (b.processOrder || 0));
-
+        const processStepsFormatted = (productionOrderDetails || []).map(detail => {
+            const processInfo = detail.processDetails || detail.Process;
+            return {
+                idProductionOrderDetail: detail.idProductionOrderDetail ? String(detail.idProductionOrderDetail) : null,
+                idProcess: String(detail.idProcess || detail.idProcessSnapshot || processInfo?.idProcess || ''),
+                processOrder: detail.processOrder,
+                processName: detail.processNameSnapshot || processInfo?.processName || 'Proceso Desconocido',
+                processDescription: detail.processDescriptionSnapshot || processInfo?.description || '',
+                idEmployee: String(detail.idEmployeeAssigned || detail.idEmployee || ''),
+                startDate: detail.startDate ? new Date(detail.startDate).toISOString() : '',
+                endDate: detail.endDate ? new Date(detail.endDate).toISOString() : '',
+                status: detail.status || 'PENDING',
+                statusDisplay: detail.status || 'Pendiente',
+                observations: detail.observations || '',
+                estimatedTimeMinutes: processInfo?.estimatedTimeMinutes || detail.estimatedTimeMinutes || null,
+                isNewStep: !detail.idProductionOrderDetail,
+            };
+        }).sort((a, b) => (a.processOrder || 0) - (b.processOrder || 0));
+        
         let calculatedActiveStepIndex = null;
         if (localStatus === 'IN_PROGRESS' || localStatus === 'PAUSED') {
             const firstNonCompletedStepIndex = processStepsFormatted.findIndex(p => p.status !== 'COMPLETED');
@@ -126,23 +140,24 @@ export const ActiveOrdersProvider = ({ children }) => {
             calculatedActiveStepIndex = processStepsFormatted.length - 1;
         }
         
-        return {
+        const transformedOrder = {
             id: String(idProductionOrder),
-            orderNumberDisplay: orderNumber || `OP-${idProductionOrder}`,
-            formOrder: formOrderMapped,
+            isNewForForm: false,
             localOrderStatus: localStatus,
             localOrderStatusDisplay: localStatusDisplay,
+            orderNumberDisplay: orderNumber || `OP-${idProductionOrder}`,
+            productNameSnapshot: backendProductNameSnapshot || Product?.productName || '',
+            formOrder: formOrderMapped,
             processSteps: processStepsFormatted,
             activeStepIndex: calculatedActiveStepIndex,
             selectedSpecSheetData: SpecSheet || null,
-            baseDataValidated: !!isBaseDataValidated || (localStatus !== 'PENDING' && localStatus !== 'SETUP'),
-            isNewForForm: false,
+            baseDataValidated: !!isBaseDataValidated || (localStatus !== 'PENDING' && localStatus !== 'SETUP' && localStatus !== 'UNKNOWN'),
             formErrors: {},
-            productNameSnapshot: backendProductNameSnapshot || Product?.productName || '',
             creationDate: dateTimeCreation || createdAt,
             lastModifiedDate: dateTimeLastModified || updatedAt,
         };
-    }, []); // No tiene dependencias externas directas, solo usa defaultOrderStructure y lo que se le pasa.
+        return transformedOrder;
+    }, []);
 
     const loadInitialActiveOrders = useCallback(async () => {
         console.log(`%c[CONTEXT ${instanceId.current}] loadInitialActiveOrders: Iniciando...`, "color: brown");
@@ -151,12 +166,22 @@ export const ActiveOrdersProvider = ({ children }) => {
             const filters = { status_not_in: ['COMPLETED', 'CANCELLED'].join(',') };
             const response = await productionOrderService.getAllProductionOrders(filters);
             const loadedOrders = {};
-            if (response && Array.isArray(response.data || response)) {
-                const ordersArray = response.data || response;
-                ordersArray.forEach(orderData => {
+            
+            if (response && Array.isArray(response.rows)) {
+                response.rows.forEach(orderData => {
+                    const status = orderData.status?.toUpperCase();
+                    if (status === 'COMPLETED' || status === 'CANCELLED') {
+                        console.warn(`%c[CONTEXT ${instanceId.current}] loadInitialActiveOrders: Ignorando orden ID ${orderData.idProductionOrder} porque su estado es '${status}'.`, "color: orange");
+                        return;
+                    }
+
                     const transformed = transformFetchedOrderToContextFormat(orderData);
-                    if (transformed) loadedOrders[transformed.id] = transformed;
+                    if (transformed) {
+                        loadedOrders[transformed.id] = transformed;
+                    }
                 });
+            } else {
+                 console.warn(`%c[CONTEXT ${instanceId.current}] loadInitialActiveOrders: La respuesta no es un array o no tiene la propiedad 'rows'.`, "color: orange", response);
             }
             setActiveOrders(loadedOrders);
         } catch (error) {
@@ -166,235 +191,219 @@ export const ActiveOrdersProvider = ({ children }) => {
         } finally {
             setIsLoadingOrderContext(false);
             setInitialLoadComplete(true);
-            console.log(`%c[CONTEXT ${instanceId.current}] loadInitialActiveOrders: Finalizado. Órdenes cargadas:`, Object.keys(activeOrders).length, "color: brown");
+            console.log(`%c[CONTEXT ${instanceId.current}] loadInitialActiveOrders: Finalizado.`, "color: brown");
         }
-    }, [transformFetchedOrderToContextFormat]); // Depende de transformFetchedOrderToContextFormat
+    }, [transformFetchedOrderToContextFormat]); 
 
     useEffect(() => {
         console.log(`%c[CONTEXT ${instanceId.current}] Provider: MONTADO`, "color: green; font-weight: bold;");
         loadInitialActiveOrders();
         return () => console.log(`%c[CONTEXT ${instanceId.current}] Provider: DESMONTÁNDOSE`, "color: red; font-weight: bold;");
-    }, [loadInitialActiveOrders]); // Este efecto solo debe correr una vez al montar gracias a la dependencia estable.
-
-    const setCurrentViewedOrderId = useCallback((id) => {
-        _setCurrentViewedOrderIdInternal(id ? String(id) : null);
-    }, []); // _setCurrentViewedOrderIdInternal es estable
+    }, [loadInitialActiveOrders]);
 
     const navigateToOrderPath = useCallback((orderIdOrNew) => {
-        const basePath = '/home/produccion/orden-produccion';
-        let targetPath = orderIdOrNew === null ? basePath : String(orderIdOrNew).startsWith('NEW_') ? `${basePath}/crear` : `${basePath}/${orderIdOrNew}`;
-        
-        // Solo navegar si la ruta actual es diferente para evitar bucles o navegaciones innecesarias
-        if (location.pathname.toLowerCase() !== targetPath.toLowerCase()) {
-            console.log(`%c[CONTEXT ${instanceId.current}] navigateToOrderPath: Navegando a ${targetPath}`, "color: blue", { current: location.pathname, target: targetPath });
-            navigate(targetPath, { replace: true });
+        const basePath = '/home/produccion/orden-produccion'; let targetPath = basePath;
+        const searchParams = new URLSearchParams(location.search);
+        if (orderIdOrNew === null) { searchParams.delete('action'); searchParams.delete('orderId'); }
+        else if (String(orderIdOrNew).startsWith('NEW_')) { searchParams.set('action', 'crear'); searchParams.delete('orderId'); }
+        else if (orderIdOrNew) { searchParams.set('orderId', String(orderIdOrNew)); searchParams.delete('action'); }
+        const searchString = searchParams.toString(); if (searchString) targetPath += `?${searchString}`;
+        const currentFullPath = location.pathname.toLowerCase() + location.search.toLowerCase();
+        const targetFullPath = targetPath.toLowerCase();
+        if (currentFullPath !== targetFullPath) { 
+            navigate(targetPath, { replace: true }); 
         }
-    }, [navigate, location.pathname]); // location.pathname es una dependencia necesaria aquí.
+    }, [navigate, location.pathname, location.search]);
 
     const addOrFocusOrder = useCallback(async (orderIdToFocus, isNew = false, options = {}) => {
-        console.log(`%c[CONTEXT ${instanceId.current}] addOrFocusOrder: id=${orderIdToFocus}, isNew=${isNew}`, "color: purple", options);
-        const finalOptions = {
-            fetchIfNeeded: options.fetchIfNeeded !== undefined ? options.fetchIfNeeded : true,
-            navigateIfNeeded: options.navigateIfNeeded !== undefined ? options.navigateIfNeeded : true
-        };
-
+        const cvo = currentViewedOrderIdRef.current;
+        const finalOptions = { fetchIfNeeded: options.fetchIfNeeded !== false, navigateIfNeeded: options.navigateIfNeeded !== false, isUrlSyncCall: !!options.isUrlSyncCall };
         let needsLoading = !isNew && orderIdToFocus && !activeOrders[String(orderIdToFocus)] && finalOptions.fetchIfNeeded;
         if (needsLoading) setIsLoadingOrderContext(true);
-
-        let finalTargetOrderId = null;
-        let orderDataForCvo = null;
+        let finalTargetOrderId = null; let orderDataForCvo = null;
 
         if (isNew) {
-            const newDraftId = `NEW_${Date.now()}`;
-            orderDataForCvo = { ...defaultOrderStructure, id: newDraftId };
-            setActiveOrders(prev => ({ ...prev, [newDraftId]: orderDataForCvo }));
-            finalTargetOrderId = newDraftId;
+            if (finalOptions.isUrlSyncCall && cvo && String(cvo).startsWith('NEW_')) {
+                finalTargetOrderId = cvo; 
+                orderDataForCvo = activeOrders[cvo];
+                if (!orderDataForCvo) { 
+                    const newId = `NEW_${Date.now()}_SYNC`; 
+                    orderDataForCvo = { ...defaultOrderStructure, id: newId, formOrder: {...defaultOrderStructure.formOrder} }; 
+                    setActiveOrders(prev => ({ ...prev, [newId]: orderDataForCvo })); 
+                    finalTargetOrderId = newId; 
+                }
+            } else { 
+                const newId = `NEW_${Date.now()}`; 
+                orderDataForCvo = { ...defaultOrderStructure, id: newId, formOrder: {...defaultOrderStructure.formOrder} }; 
+                setActiveOrders(prev => ({ ...prev, [newId]: orderDataForCvo })); 
+                finalTargetOrderId = newId; 
+            }
         } else if (orderIdToFocus) {
             const idStr = String(orderIdToFocus);
-            if (activeOrders[idStr]) {
-                orderDataForCvo = activeOrders[idStr];
-                finalTargetOrderId = idStr;
+            if (activeOrders[idStr]) { 
+                orderDataForCvo = activeOrders[idStr]; 
+                finalTargetOrderId = idStr; 
             } else if (finalOptions.fetchIfNeeded) {
-                try {
+                try { 
                     const fetched = await productionOrderService.getProductionOrderById(idStr);
-                    if (fetched) {
-                        orderDataForCvo = transformFetchedOrderToContextFormat(fetched);
-                        if (orderDataForCvo) {
-                            setActiveOrders(prev => ({ ...prev, [orderDataForCvo.id]: orderDataForCvo }));
-                            finalTargetOrderId = orderDataForCvo.id;
-                        } else finalTargetOrderId = null; // Falló la transformación
-                    } else {
-                        toast.error(`Orden de producción ${idStr} no encontrada.`);
-                        finalTargetOrderId = null;
+                    if (fetched) { 
+                        orderDataForCvo = transformFetchedOrderToContextFormat(fetched); 
+                        if (orderDataForCvo) { 
+                            setActiveOrders(prev => ({ ...prev, [orderDataForCvo.id]: orderDataForCvo })); 
+                            finalTargetOrderId = orderDataForCvo.id; 
+                        } else {
+                            finalTargetOrderId = null; 
+                            toast.error(`No se pudieron procesar los datos para la orden ${idStr}.`);
+                        }
+                    } else { 
+                        toast.error(`Orden ${idStr} no encontrada en el servidor.`); 
+                        finalTargetOrderId = null; 
                     }
-                } catch (err) {
-                    toast.error(`Error cargando orden de producción ${idStr}.`);
-                    finalTargetOrderId = null;
+                } catch (err) { 
+                    toast.error(`Error cargando orden ${idStr}: ${err.message}`); 
+                    finalTargetOrderId = null; 
                 }
-            } else {
-                // No fetch, y no está en activeOrders, mantener el actual o null
-                finalTargetOrderId = currentViewedOrderId;
-                orderDataForCvo = currentViewedOrderId ? activeOrders[currentViewedOrderId] : null;
+            } else { 
+                finalTargetOrderId = cvo; 
+                orderDataForCvo = cvo ? activeOrders[cvo] : null; 
             }
-        } else { // Ni nuevo, ni ID para enfocar (ej. navegar a la base /orden-produccion)
-            finalTargetOrderId = null;
+        } else { 
+            finalTargetOrderId = null; 
+            orderDataForCvo = null; 
         }
 
-        if (currentViewedOrderId !== finalTargetOrderId) {
-            _setCurrentViewedOrderIdInternal(finalTargetOrderId);
+        if (cvo !== finalTargetOrderId) { 
+            setCurrentViewedOrderId(finalTargetOrderId); 
         }
-
         if (finalOptions.navigateIfNeeded) {
             navigateToOrderPath(finalTargetOrderId);
         }
         if (needsLoading) setIsLoadingOrderContext(false);
         return orderDataForCvo;
-    }, [currentViewedOrderId, activeOrders, transformFetchedOrderToContextFormat, navigateToOrderPath]); // Asegurar dependencias correctas
+    }, [activeOrders, transformFetchedOrderToContextFormat, navigateToOrderPath, setCurrentViewedOrderId]);
+
+    const publicSetCurrentViewedOrderId = useCallback((id) => {
+        if (id) addOrFocusOrder(id, false, { navigateIfNeeded: true, fetchIfNeeded: true });
+        else addOrFocusOrder(null, false, { navigateIfNeeded: true });
+    }, [addOrFocusOrder]); 
 
     const updateOrderState = useCallback((orderIdToUpdate, partialNewState, newIdIfChanged = null) => {
         const idToUpdateStr = String(orderIdToUpdate);
         const newIdStr = newIdIfChanged ? String(newIdIfChanged) : null;
-        
-        console.log(`%c[CONTEXT ${instanceId.current}] updateOrderState: id=${idToUpdateStr}, newId=${newIdStr}`, "color: darkcyan", partialNewState);
-
+    
         setActiveOrders(prevActiveOrders => {
             const orderToUpdate = prevActiveOrders[idToUpdateStr];
-            const isReplacingNewDraft = newIdStr && newIdStr !== idToUpdateStr && idToUpdateStr.startsWith("NEW_");
-
-            if (!orderToUpdate && !isReplacingNewDraft) { // Si no existe la orden y no estamos reemplazando un borrador, no hacer nada
-                console.warn(`%c[CONTEXT ${instanceId.current}] updateOrderState: Orden ${idToUpdateStr} no encontrada para actualizar y no es reemplazo de borrador.`, "color: orange");
+            if (!orderToUpdate) {
+                console.warn(`%c[CONTEXT] updateOrderState: Orden ${idToUpdateStr} no encontrada.`, "color: orange");
                 return prevActiveOrders;
             }
+            
+            const isReplacingDraft = newIdStr && newIdStr !== idToUpdateStr && idToUpdateStr.startsWith("NEW_");
+    
+            const potentialNextState = {
+                ...orderToUpdate,
+                ...partialNewState,
+                formOrder: {
+                    ...orderToUpdate.formOrder,
+                    ...(partialNewState.formOrder || {})
+                },
+                formErrors: partialNewState.formOrder?.hasOwnProperty('idProduct')
+                    ? { ...orderToUpdate.formErrors, idProduct: null, ...(partialNewState.formErrors || {}) }
+                    : { ...orderToUpdate.formErrors, ...(partialNewState.formErrors || {}) }
+            };
+    
+            // <<<--- LÓGICA DE VALIDACIÓN DE DUPLICADOS HA SIDO ELIMINADA DE AQUÍ --- >>>
+            // La validación ahora es responsabilidad exclusiva del backend.
 
             let updatedOrder;
-            if (isReplacingNewDraft) { // Reemplazando un borrador con una orden guardada
+            if (isReplacingDraft) {
                 updatedOrder = {
-                    ...defaultOrderStructure, // Empezar con la base para asegurar todos los campos
-                    ...partialNewState,       // Aplicar el estado completo de la nueva orden guardada
-                    id: newIdStr,             // Asegurar el nuevo ID
-                    isNewForForm: false,      // Ya no es un nuevo borrador
-                };
-            } else { // Actualizando una orden existente (borrador o guardada)
-                updatedOrder = {
-                    ...orderToUpdate,
+                    ...defaultOrderStructure,
                     ...partialNewState,
-                    id: newIdStr || orderToUpdate.id, // Mantener ID si no cambia
-                    // Merge profundo para formOrder y formErrors si es necesario
-                    formOrder: { ...(orderToUpdate.formOrder || defaultOrderStructure.formOrder), ...(partialNewState.formOrder || {}) },
-                    formErrors: { ...(orderToUpdate.formErrors || {}), ...(partialNewState.formErrors || {}) },
+                    id: newIdStr,
+                    isNewForForm: false,
+                    formOrder: {
+                        ...defaultOrderStructure.formOrder,
+                        ...(partialNewState.formOrder || {}),
+                        ...(orderToUpdate.formOrder || {})
+                    },
+                    formErrors: potentialNextState.formErrors,
                 };
-                if (newIdStr && newIdStr !== orderToUpdate.id) { // Esto no debería pasar a menos que sea el reemplazo de borrador
-                     updatedOrder.isNewForForm = false;
-                }
+            } else { 
+                updatedOrder = { 
+                    ...potentialNextState,
+                    id: newIdStr || orderToUpdate.id,
+                    processSteps: partialNewState.processSteps !== undefined ? partialNewState.processSteps : orderToUpdate.processSteps,
+                };
             }
-
-            let newActiveOrdersState = { ...prevActiveOrders };
-            if (isReplacingNewDraft) {
-                delete newActiveOrdersState[idToUpdateStr]; // Eliminar el antiguo ID de borrador
+    
+            const newActiveOrders = { ...prevActiveOrders };
+            if (isReplacingDraft) {
+                delete newActiveOrders[idToUpdateStr];
             }
-            newActiveOrdersState[updatedOrder.id] = updatedOrder; // Añadir/actualizar con el ID correcto
-
-            // Actualizar currentViewedOrderId y navegar solo si el ID que se estaba viendo cambió
-            if (currentViewedOrderId === idToUpdateStr && newIdStr && newIdStr !== idToUpdateStr) {
-                _setCurrentViewedOrderIdInternal(newIdStr); // Esto NO debe estar dentro de setActiveOrders
-                // La navegación se maneja fuera si es necesario, o si es una consecuencia directa, se podría llamar aquí
-                // pero es mejor que la página que guarda la orden maneje la navegación post-guardado si el ID cambia.
-                // navigateToOrderPath(newIdStr); // Opcional, considerar quién debe manejar la navegación
-            }
-            return newActiveOrdersState;
+            newActiveOrders[updatedOrder.id] = updatedOrder;
+            return newActiveOrders;
         });
-         // Si se cambió el ID de un borrador a uno real, y era el actual, navegar.
-        if (currentViewedOrderId === idToUpdateStr && newIdStr && newIdStr !== idToUpdateStr) {
+    
+        if (currentViewedOrderIdRef.current === idToUpdateStr && newIdStr && newIdStr !== idToUpdateStr) {
+            setCurrentViewedOrderId(newIdStr);
             navigateToOrderPath(newIdStr);
         }
-    }, [currentViewedOrderId, navigateToOrderPath]); // _setCurrentViewedOrderIdInternal es estable
+    }, [navigateToOrderPath, setCurrentViewedOrderId]);
 
     const removeOrder = useCallback((orderIdToRemove) => {
-        const idStr = String(orderIdToRemove);
-        console.log(`%c[CONTEXT ${instanceId.current}] removeOrder: id=${idStr}`, "color: orangered");
-        setActiveOrders(prev => {
-            const { [idStr]: _, ...rest } = prev;
-            return rest;
+        const idStr = String(orderIdToRemove); 
+        setActiveOrders(prev => { 
+            const { [idStr]: _, ...rest } = prev; 
+            return rest; 
         });
-        if (currentViewedOrderId === idStr) {
-            _setCurrentViewedOrderIdInternal(null);
-            navigateToOrderPath(null); // Navegar a la vista base si se elimina la orden actual
+        if (currentViewedOrderIdRef.current === idStr) { 
+            setCurrentViewedOrderId(null); 
+            navigateToOrderPath(null);
         }
-    }, [currentViewedOrderId, navigateToOrderPath]); // _setCurrentViewedOrderIdInternal es estable
+    }, [navigateToOrderPath, setCurrentViewedOrderId]);
 
-    // Efecto para sincronizar el estado del contexto con la URL
-    useEffect(() => {
+    useEffect(() => { 
         if (!initialLoadComplete || isLoadingOrderContext) return;
+        const currentPathname = location.pathname.toLowerCase(); 
+        const moduleBasePath = "/home/produccion/orden-produccion";
+        if (currentPathname !== moduleBasePath) return;
 
-        const pathSegments = location.pathname.toLowerCase().split('/').filter(Boolean);
-        const moduleBase = "orden-produccion";
-        let action = null;
-        let paramId = null;
-
-        const moduleIndex = pathSegments.indexOf(moduleBase);
-
-        if (moduleIndex !== -1) { // Estamos dentro de /orden-produccion
-            if (moduleIndex + 1 < pathSegments.length) { // Hay algo después de /orden-produccion
-                const nextSeg = pathSegments[moduleIndex + 1];
-                if (nextSeg === 'crear') {
-                    action = 'crear';
-                } else if (!isNaN(parseInt(nextSeg))) { // Es un número, asumimos ID de orden
-                    action = 'ver';
-                    paramId = nextSeg;
-                } else {
-                    // Subruta desconocida después de /orden-produccion, ej /orden-produccion/otracosa
-                    action = 'base_unknown_subpath';
-                }
-            } else { // Estamos en /orden-produccion exactamente
-                action = 'base';
-            }
-        }
+        const queryParams = new URLSearchParams(location.search); 
+        const actionQueryParam = queryParams.get('action'); 
+        const orderIdQueryParam = queryParams.get('orderId');
         
-        // console.log(`%c[CONTEXT ${instanceId.current}] URL Sync Effect: action=${action}, paramId=${paramId}, cvoid=${currentViewedOrderId}`, "color: sienna");
-
-        if (action === 'crear') {
-            // Si la URL es /crear y no tenemos un borrador activo, o el activo no es un borrador, crear uno.
-            if (!currentViewedOrderId || !String(currentViewedOrderId).startsWith('NEW_')) {
-                addOrFocusOrder(null, true, { navigateIfNeeded: false });
+        const getCurrentCVO = () => currentViewedOrderIdRef.current;
+        
+        if (actionQueryParam === 'crear') {
+            if (!getCurrentCVO() || !String(getCurrentCVO()).startsWith('NEW_')) {
+                 addOrFocusOrder(null, true, { navigateIfNeeded: false, isUrlSyncCall: true });
             }
-        } else if (action === 'ver' && paramId) {
-            // Si la URL es /:id y el currentViewedOrderId no coincide, enfocar/cargar esa orden.
-            if (String(currentViewedOrderId) !== paramId) {
-                addOrFocusOrder(paramId, false, { fetchIfNeeded: !activeOrders[paramId], navigateIfNeeded: false });
+        } else if (orderIdQueryParam) {
+            if (String(getCurrentCVO()) !== orderIdQueryParam || !activeOrders[orderIdQueryParam]) {
+                 addOrFocusOrder(orderIdQueryParam, false, { 
+                     fetchIfNeeded: !activeOrders[orderIdQueryParam], 
+                     navigateIfNeeded: false, 
+                     isUrlSyncCall: true 
+                 });
             }
-        } else if (action === 'base' && currentViewedOrderId) {
-            // Si estamos en la ruta base /orden-produccion pero hay una orden seleccionada, deseleccionarla.
-            // O podría ser una decisión de diseño mantenerla seleccionada. Por ahora, la deseleccionamos.
-            // _setCurrentViewedOrderIdInternal(null); // Esto podría ser demasiado agresivo.
-        } else if (action === 'base_unknown_subpath') {
-            // Si la URL es algo como /orden-produccion/subruta-rara, redirigir a la base.
-            // Esto evita que el usuario se quede en una URL inválida que no limpia el estado.
-            // navigateToOrderPath(null); // Descomentar si se quiere este comportamiento
+        } else if (!actionQueryParam && !orderIdQueryParam) { 
+            if (getCurrentCVO() !== null) { 
+                setCurrentViewedOrderId(null);
+            }
         }
+    }, [location.pathname, location.search, addOrFocusOrder, isLoadingOrderContext, initialLoadComplete, activeOrders, setCurrentViewedOrderId]);
 
-    }, [location.pathname, currentViewedOrderId, addOrFocusOrder, isLoadingOrderContext, initialLoadComplete, activeOrders, navigateToOrderPath]);
-
-
-    // MEMOIZAR EL VALOR DEL CONTEXTO
     const contextValue = useMemo(() => ({
-        activeOrders,
-        currentViewedOrderId,
+        activeOrders, 
+        currentViewedOrderId: _currentViewedOrderIdInternal, 
         isLoadingOrderContext,
-        addOrFocusOrder,
-        setCurrentViewedOrderId,
-        updateOrderState,
+        addOrFocusOrder, 
+        setCurrentViewedOrderId: publicSetCurrentViewedOrderId, 
+        updateOrderState, 
         removeOrder,
         transformFetchedOrderToContextFormat
-    }), [
-        activeOrders,
-        currentViewedOrderId,
-        isLoadingOrderContext,
-        addOrFocusOrder,          // Estas son estables (useCallback)
-        setCurrentViewedOrderId,  // Estas son estables (useCallback)
-        updateOrderState,         // Estas son estables (useCallback)
-        removeOrder,              // Estas son estables (useCallback)
-        transformFetchedOrderToContextFormat // Esta es estable (useCallback)
-    ]);
+    }), [ activeOrders, _currentViewedOrderIdInternal, isLoadingOrderContext, addOrFocusOrder, publicSetCurrentViewedOrderId, updateOrderState, removeOrder, transformFetchedOrderToContextFormat ]);
 
     return <ActiveOrdersContext.Provider value={contextValue}>{children}</ActiveOrdersContext.Provider>;
 };

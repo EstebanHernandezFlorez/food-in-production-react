@@ -1,197 +1,230 @@
-/* src/assets/css/dashboard-flup-content-style.css (REVISADO) */
 
-/* --- VARIABLES DE COLOR (Tus variables existentes) --- */
+/* --- IMPORTACIÓN DE FUENTE Y VARIABLES BASE --- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 :root {
-  --flup-bg-main: #f7f8fa; /* Fondo del área principal del dashboard */
-  --flup-bg-card: #ffffff;
-  --flup-text-primary: #1a202c;
-  --flup-text-secondary: #5c677d;
-  --flup-text-accent: #00bfa5; /* Verde menta principal */
-  --flup-border-color: #e9edf2;
-  --flup-shadow-card: 0 4px 12px rgba(0, 0, 0, 0.05);
-  --flup-header-height-internal: 60px; /* Altura del header INTERNO del dashboard */
-  --flup-content-padding-internal: 1.5rem; /* Padding INTERNO del contenido del dashboard */
-  --flup-border-radius: 8px;
-  --flup-border-radius-sm: 6px;
-  --flup-text-accent-rgb: 0, 191, 165;
+  --font-family-sans: 'Inter', sans-serif;
+  --bg-app-finance: #f9fafb;
+  --bg-card-finance: #ffffff;
+  --text-primary-finance: #111827;
+  --text-secondary-finance: #4B5563;
+  --text-tertiary-finance: #9CA3AF;
+  --accent-green-finance: #10B981;
+  --accent-red-finance: #EF4444;
+  --accent-blue-finance: #3B82F6;
+  --border-color-finance: #E5E7EB;
+  --button-bg-finance: #F3F4F6;
+  --card-border-radius-finance: 0.75rem; /* 12px */
+  --content-padding-finance: 1.5rem; /* 24px */
+  --element-padding-finance: 1.25rem; /* 20px */
+  --shadow-sm-finance: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md-finance: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
-/* --- ESTILOS GENERALES DEL ÁREA DE CONTENIDO DEL DASHBOARD --- */
-.flup-dashboard-content-area {
+body {
+  font-family: var(--font-family-sans);
+  background-color: var(--bg-app-finance);
+  color: var(--text-primary-finance);
+}
+
+/* --- LAYOUT PRINCIPAL DEL DASHBOARD --- */
+.dashboard-main-content-area-flex {
   display: flex;
   flex-direction: column;
-  background-color: var(--flup-bg-main);
-  height: 100%; /* << IMPORTANTE: Ocupa el 100% de la altura de su contenedor padre (el <Content> de AppLayout) */
-  overflow: hidden; /* Evita que este contenedor tenga scroll, el scroll estará en el wrapper interno */
+  gap: 1.5rem; /* Espacio entre el header y el contenido */
+  padding: var(--content-padding-finance);
+  height: 100%;
+  overflow-y: auto;
 }
 
-/* --- HEADER SUPERIOR DEL CONTENIDO (Header INTERNO del Dashboard) --- */
-.flup-content-header {
-  min-height: var(--flup-header-height-internal);
-  background-color: var(--flup-bg-card);
-  border-bottom: 1px solid var(--flup-border-color);
-  padding: 0.75rem var(--flup-content-padding-internal);
+/* --- HEADER DEL DASHBOARD (Dentro del área de contenido) --- */
+.page-header-finance {
+  background-color: var(--bg-card-finance);
+  padding: var(--element-padding-finance);
+  border-radius: var(--card-border-radius-finance);
+  box-shadow: var(--shadow-sm-finance);
+}
+
+.page-header-finance .header-top-row {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  flex-shrink: 0; /* Para que no se encoja */
-  /* position: sticky; // No necesita ser sticky si flup-content-wrapper tiene el scroll
-  top: 0;
-  z-index: 900; */
-  gap: 1.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
-.flup-content-header .header-title-section {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-.flup-content-header .header-section-icon {
-    /* Estilos para el icono de la sección aquí si son necesarios,
-       o directamente en el JSX como lo tienes */
-}
-.flup-content-header .header-title {
+.page-header-finance h1.page-title {
   font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--flup-text-primary);
+  font-weight: 700;
+  color: var(--text-primary-finance);
   margin: 0;
 }
 
-.flup-content-header .header-controls {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-.flup-content-header .dashboard-section-select,
-.flup-content-header .date-filters select {
-  padding: 0.6rem 0.85rem;
-  border: 1px solid var(--flup-border-color);
-  border-radius: var(--flup-border-radius-sm);
-  background-color: var(--flup-bg-card); /* Para que combine con el header */
-  color: var(--flup-text-primary);
-  font-weight: 500;
-  cursor: pointer;
-  font-size: 0.875rem;
-  outline: none; /* Quitar outline por defecto */
-}
-.flup-content-header .dashboard-section-select {
-  min-width: 200px;
-}
-.flup-content-header .date-filters {
+.page-header-finance .date-filters {
   display: flex;
   gap: 0.5rem;
 }
-.flup-content-header .dashboard-section-select:disabled,
-.flup-content-header .date-filters select:disabled {
-    cursor: not-allowed;
-    opacity: 0.7;
+
+.page-header-finance .date-filters select {
+  background-color: var(--button-bg-finance);
+  border: 1px solid var(--border-color-finance);
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary-finance);
+  cursor: pointer;
 }
-.flup-content-header .dashboard-section-select:focus,
-.flup-content-header .date-filters select:focus {
-  border-color: var(--flup-text-accent);
-  box-shadow: 0 0 0 2px rgba(var(--flup-text-accent-rgb), 0.2);
+.page-header-finance .date-filters select:focus {
+  outline: none;
+  border-color: var(--accent-blue-finance);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
-/* --- CONTENEDOR DEL CONTENIDO PRINCIPAL (SCROLLABLE) --- */
-.flup-content-wrapper {
-  padding: var(--flup-content-padding-internal);
-  overflow-y: auto; /* << IMPORTANTE: Este es el que tendrá el scroll para el contenido del dashboard */
-  flex-grow: 1; /* Ocupa el espacio restante verticalmente después del header interno */
+/* --- TABS DE NAVEGACIÓN DE MÓDULOS --- */
+.module-navigation-tabs {
+  margin-top: 1rem;
+  border-bottom: 1px solid var(--border-color-finance);
 }
-
-/* --- TARJETAS DE ESTADÍSTICAS (KPIs) --- */
-.flup-kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
-  gap: 1.5rem;
-  margin-bottom: var(--flup-content-padding-internal); /* Usa la variable de padding */
-}
-
-.flup-stat-card {
-  background-color: var(--flup-bg-card);
-  border-radius: var(--flup-border-radius);
-  padding: 1rem;
-  box-shadow: var(--flup-shadow-card);
-  border: 1px solid var(--flup-border-color);
+.module-navigation-tabs ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  min-height: 140px; /* Altura mínima para forma más cuadrada */
+  gap: 0.5rem;
+  overflow-x: auto;
 }
-.flup-stat-card.is-loading { /* Para el estado de carga de las tarjetas */
-    opacity: 0.7;
-    /* background-image: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-    background-size: 200% 100%;
-    animation: loadingShimmer 1.5s infinite linear; */
-}
-/* @keyframes loadingShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; }} */
-.animate-spin-slow { /* Animación de carga más sutil para iconos */
-    animation: spin 2s linear infinite;
-}
-/* (El resto de tus estilos para .flup-stat-card .card-header, .card-title, .card-value, .card-change se mantienen) */
-.flup-stat-card .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; }
-.flup-stat-card .card-title { font-size: 0.875rem; color: var(--flup-text-secondary); font-weight: 500; margin: 0; line-height: 1.3; }
-.flup-stat-card .card-icon { color: var(--flup-text-secondary); opacity: 0.7; }
-.flup-stat-card .card-value { font-size: 1.625rem; font-weight: 600; color: var(--flup-text-primary); margin: 0.25rem 0 0.5rem 0; line-height: 1.2; }
-.flup-stat-card .card-change { display: flex; align-items: center; font-size: 0.8rem; font-weight: 500; }
-.flup-stat-card .card-change svg { margin-right: 0.35rem; width: 15px; height: 15px; }
-.flup-stat-card .card-change.positive { color: var(--accent-green-finance, #10b981); } /* Usa tus variables de base.css si existen */
-.flup-stat-card .card-change.negative { color: var(--accent-red-finance, #ef4444); }
-.flup-stat-card .card-change.neutral { color: var(--flup-text-secondary); }
-.flup-stat-card .card-content { margin-top: auto; padding-top: 0.5rem; }
-
-
-/* --- CONTENEDORES DE GRÁFICOS --- */
-.flup-charts-section {
-  display: grid;
-  gap: 1.5rem; /* Espacio entre el contenedor de ventas de producto y la grilla inferior */
-  /* Si quieres que el primer gráfico ocupe más columnas: */
-  /* grid-template-columns: 2fr 1fr; // Por ejemplo, si solo hay dos secciones lado a lado */
-}
-
-.flup-chart-container {
-  background-color: var(--flup-bg-card);
-  border-radius: var(--flup-border-radius);
-  padding: 1.5rem;
-  box-shadow: var(--flup-shadow-card);
-  border: 1px solid var(--flup-border-color);
-  min-height: 300px;
+.module-navigation-tabs .nav-button {
   display: flex;
-  flex-direction: column;
-}
-.flup-chart-container .chart-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-}
-.flup-chart-container .chart-title {
-  font-size: 1.125rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  color: var(--flup-text-primary);
+  color: var(--text-secondary-finance);
+  background-color: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: -1px; /* Para que el borde se alinee con el borde padre */
+  white-space: nowrap;
+}
+.module-navigation-tabs .nav-button:hover {
+  color: var(--text-primary-finance);
+  background-color: var(--button-bg-finance);
+}
+.module-navigation-tabs .nav-button.active {
+  color: var(--accent-blue-finance);
+  border-bottom-color: var(--accent-blue-finance);
+}
+.module-navigation-tabs .nav-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* --- GRID DE KPIs Y TARJETAS --- */
+.kpi-grid-finance {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.kpi-card-finance {
+  background-color: var(--bg-card-finance);
+  padding: var(--element-padding-finance);
+  border-radius: var(--card-border-radius-finance);
+  box-shadow: var(--shadow-md-finance);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.kpi-card-finance-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.kpi-card-finance-title-block h3 {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary-finance);
   margin: 0;
 }
-/* (El resto de tus estilos para .flup-chart-container .chart-legend, .legend-item, .legend-dot se mantienen) */
-.flup-chart-container .chart-legend { display: flex; gap: 1rem; font-size: 0.8rem; color: var(--flup-text-secondary); flex-wrap: wrap; margin-top: 1rem;}
-.flup-chart-container .legend-item { display: flex; align-items: center; }
-.flup-chart-container .legend-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 0.375rem; display: inline-block; }
-
-
-.flup-bottom-charts-grid { /* Grid para los dos gráficos inferiores */
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); /* Que cada uno ocupe espacio, mínimo 320px */
-  gap: 1.5rem;
+.kpi-card-icon-large {
+  color: var(--text-tertiary-finance);
+}
+.kpi-card-finance-main-value {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: var(--text-primary-finance);
+  margin: 0;
+  line-height: 1.2;
+}
+.kpi-card-finance-change {
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.kpi-card-finance-change.positive { color: var(--accent-green-finance); }
+.kpi-card-finance-change.negative { color: var(--accent-red-finance); }
+.kpi-card-finance-content {
+    margin-top: auto;
+    padding-top: 0.5rem;
 }
 
-/* (Estilos de .chart-placeholder-finance, .progress-bar-track, .progress-bar-fill se mantienen) */
-.chart-placeholder-finance { display: flex; align-items: center; justify-content: center; flex-grow: 1; min-height: 250px; border: 1px dashed var(--flup-border-color); border-radius: var(--flup-border-radius-sm); color: var(--flup-text-secondary); font-size: 0.9rem; background-color: var(--flup-bg-main); padding: 1rem; text-align: center; }
-.progress-bar-track { background-color: #e2e8f0; border-radius: 9999px; height: 6px; overflow: hidden; margin-top: 0.25rem; }
-.progress-bar-fill { background-color: var(--flup-text-accent); height: 100%; border-radius: 9999px; transition: width 0.5s ease-out; }
+/* --- TARJETAS DE CONTENIDO (GRÁFICOS, TABLAS) --- */
+.content-card-finance {
+  background-color: var(--bg-card-finance);
+  padding: var(--element-padding-finance);
+  border-radius: var(--card-border-radius-finance);
+  box-shadow: var(--shadow-md-finance);
+  display: flex;
+  flex-direction: column;
+}
+.content-card-finance .card-title-main {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary-finance);
+  margin: 0 0 1.5rem 0;
+}
 
+/* --- SECCIONES DE GRÁFICOS --- */
+.charts-section-finance, .bottom-charts-grid-finance {
+  display: grid;
+  gap: 1.5rem;
+}
+.bottom-charts-grid-finance {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+/* --- PLACEHOLDER DE GRÁFICO --- */
+.chart-placeholder-finance {
+  flex-grow: 1;
+  min-height: 200px;
+  background-color: #F9FAFB;
+  border-radius: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary-finance);
+  border: 1px dashed var(--border-color-finance);
+  padding: 1rem;
+  text-align: center;
+}
+.chart-placeholder-finance .placeholder-icon {
+    color: var(--text-tertiary-finance);
+    margin-bottom: 1rem;
+}
+.chart-placeholder-finance .placeholder-text {
+    font-weight: 500;
+}
 
 /* --- ESTADOS DE CARGA Y ERROR --- */
-.flup-content-loading-state, .flup-content-error-state {
+.loading-state-finance, .error-state-finance {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -199,40 +232,45 @@
   padding: 3rem;
   text-align: center;
   min-height: 300px;
-  color: var(--flup-text-secondary);
-  flex-grow: 1; /* Para que ocupe espacio si es el único contenido */
+  color: var(--text-secondary-finance);
+  background-color: var(--bg-card-finance);
+  border-radius: var(--card-border-radius-finance);
+  flex-grow: 1;
 }
-.flup-content-loading-state svg { color: var(--flup-text-accent); margin-bottom: 1rem; }
-.flup-content-error-state { color: var(--accent-red-finance, #ef4444); background-color: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: var(--flup-border-radius); }
+.loading-state-finance .lucide-spin {
+  animation: spin 2s linear infinite;
+}
+.error-state-finance {
+  color: var(--accent-red-finance);
+  background-color: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.1);
+}
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-/* --- RESPONSIVIDAD (Tus media queries se mantienen, pero asegúrate que los selectores internos sean consistentes) --- */
-@media (max-width: 992px) {
-    .flup-content-header {
-        flex-direction: column;
-        align-items: flex-start;
-        height: auto;
-        padding-top: 1rem;
-        padding-bottom: 1rem;
-    }
-    .flup-content-header .header-title-section { margin-bottom: 0.75rem; }
-    .flup-content-header .header-controls { width: 100%; justify-content: space-between; }
-    .flup-content-header .dashboard-section-select { flex-grow: 1; min-width: 160px; }
+/* --- TABLAS Y OTROS ELEMENTOS --- */
+.table-responsive { overflow-x: auto; }
+.dashboard-table-finance {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
 }
-@media (max-width: 768px) {
-  .flup-content-header .header-title { font-size: 1.375rem; }
-  .flup-kpi-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 1rem; } /* Ajuste para más de 2 tarjetas */
-  .flup-stat-card { min-height: 120px; padding: 0.75rem; }
-  .flup-stat-card .card-value { font-size: 1.375rem; }
-  .flup-stat-card .card-title { font-size: 0.8rem; }
-  .flup-stat-card .card-change { font-size: 0.75rem; }
-  .flup-stat-card .card-change svg { width: 13px; height: 13px; }
-  .flup-bottom-charts-grid { grid-template-columns: 1fr; }
-  .flup-charts-section { grid-template-columns: 1fr; } /* Todos los gráficos en una columna en móvil */
+.dashboard-table-finance th, .dashboard-table-finance td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color-finance);
 }
-@media (max-width: 480px) {
-    .flup-content-header .header-controls { flex-direction: column; align-items: stretch; gap: 0.75rem; }
-    .flup-content-header .dashboard-section-select,
-    .flup-content-header .date-filters select { width: 100%; }
-    .flup-content-header .date-filters { flex-direction: column; align-items: stretch; gap: 0.75rem; }
-    .flup-kpi-grid { grid-template-columns: 1fr; } /* Una KPI card por fila en móviles muy pequeños */
+.dashboard-table-finance th {
+  font-weight: 600;
+  color: var(--text-secondary-finance);
+  background-color: var(--bg-app-finance);
 }
+.badge-distintivo { padding: 0.25em 0.6em; border-radius: 0.375rem; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
+.badge-distintivo.vip { background-color: #fef3c7; color: #92400e; }
+.badge-distintivo.frecuente { background-color: #dbeafe; color: #1e40af; }
+.form-label { margin-bottom: .5rem; display: inline-block; font-weight: 500;}
+.form-select { width: 100%; padding: .375rem 2.25rem .375rem .75rem; -moz-padding-start: calc(0.75rem - 3px); font-size: 1rem; font-weight: 400; line-height: 1.5; color: #212529; background-color: #fff; background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right .75rem center; background-size: 16px 12px; border: 1px solid #ced4da; border-radius: .25rem; transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out; -webkit-appearance: none; -moz-appearance: none; appearance: none; }
+.form-select-sm { padding-top: .25rem; padding-bottom: .25rem; padding-left: .5rem; font-size: .875rem; border-radius: .2rem; }
+
+/* Animación Global */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+.animate-fadeIn { animation: fadeIn 0.4s ease-out forwards; }

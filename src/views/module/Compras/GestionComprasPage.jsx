@@ -1,4 +1,3 @@
-// src/components/Compras/GestionComprasPage.jsx
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
@@ -7,128 +6,129 @@ import { useNavigate } from 'react-router-dom';
 import "bootstrap/dist/css/bootstrap.min.css";
 import {
     Table, Button, Container, Row, Col, Input,
-    Modal, ModalHeader, ModalBody, ModalFooter, Spinner
+    Modal, ModalHeader, ModalBody, ModalFooter, Spinner,
+    Card, CardBody, CardText, CardTitle
 } from "reactstrap";
-import { Eye, List, Plus, Trash2, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { Eye, List, Plus, Trash2, AlertTriangle, ArrowUp, ArrowDown, Package } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
-// --- Internal Components ---
-import CustomPagination from '../../General/CustomPagination'; // Ajusta la ruta si es necesario
-import { formatCurrencyCOP } from "../../../utils/formatting"; // Ajusta la ruta si es necesario
-
-// --- Services ---
+// --- Internal Components & Services ---
+import CustomPagination from '../../General/CustomPagination';
+import { formatCurrencyCOP } from "../../../utils/formatting";
 import purchaseService from '../../services/registroCompraService';
 
 // --- Styles ---
-import "../../../assets/css/App.css"; // Ajusta la ruta si es necesario
+import "../../../assets/css/App.css";
 
-// --- Constants ---
+// --- Constantes y Componentes Modales ---
 const ITEMS_PER_PAGE = 8;
 const INITIAL_CONFIRM_PROPS = { title: "", message: null, confirmText: "Confirmar", confirmColor: "primary", itemDetails: null };
 
-// --- PurchaseDetailsModal Component ---
+// --- COMPONENTE MODAL DE DETALLES ACTUALIZADO ---
 const PurchaseDetailsModal = ({ isOpen, toggle, purchase }) => {
     if (!purchase) return null;
 
-    const getInsumoName = (detail) => {
-        // Asume que el insumo viene en detail.supply
-        // y que el insumo tiene .name o .supplyName y .idSupply
-        return detail.supply?.name || detail.supply?.supplyName || `ID Insumo: ${detail.idSupply || 'N/A'}` || 'Desconocido';
-    }
+    // --- INICIO DE LA NUEVA LÓGICA DE CÁLCULO DE TOTALES POR INSUMO ---
+    const insumoSummary = useMemo(() => {
+        if (!purchase.details || !Array.isArray(purchase.details)) {
+            return { items: {}, grandTotalValue: 0 };
+        }
+        const summary = purchase.details.reduce((acc, detail) => {
+            const id = detail.idSupply;
+            const name = detail.supply?.supplyName || `Insumo ID: ${id}`;
+            const unit = detail.supply?.unitOfMeasure || 'U.';
+            const quantity = Number(detail.quantity) || 0;
+            const subtotal = Number(detail.subtotal) || 0;
+            if (!acc.items[id]) {
+                acc.items[id] = { name, unit, totalQuantity: 0, totalValue: 0 };
+            }
+            acc.items[id].totalQuantity += quantity;
+            acc.items[id].totalValue += subtotal;
+            acc.grandTotalValue += subtotal;
+            return acc;
+        }, { items: {}, grandTotalValue: 0 });
+        return summary;
+    }, [purchase.details]);
+    // --- FIN DE LA NUEVA LÓGICA DE CÁLCULO DE TOTALES POR INSUMO ---
+
+    const getInsumoName = (detail) => detail.supply?.supplyName || `ID Insumo: ${detail.idSupply || 'N/A'}`;
     const getUnitPrice = (detail) => Number(detail.unitPrice) || 0;
     const getQuantity = (detail) => Number(detail.quantity) || 0;
-    
-    // El subtotal del detalle DEBE venir calculado del backend en detail.subtotal
-    // El fallback es solo por si acaso, pero no debería ser necesario si el backend funciona bien.
-    const getSubtotal = (detail) => {
-        const backendSubtotal = Number(detail.subtotal);
-        if (!isNaN(backendSubtotal)) {
-            return backendSubtotal;
-        }
-        // Fallback si detail.subtotal no está o no es un número
-        console.warn(`Subtotal del detalle (ID: ${detail.idPurchaseDetail}) no encontrado o no es numérico, calculando en frontend.`);
-        return getQuantity(detail) * getUnitPrice(detail);
-    };
-
-    const getUnitOfMeasure = (detail) => {
-        return detail.supply?.unitOfMeasure || detail.supply?.unitOfMeasure || ''; // unitOfMeasure es el campo que definimos en el modelo Supply
-    }
+    const getSubtotal = (detail) => Number(detail.subtotal) || (getQuantity(detail) * getUnitPrice(detail));
+    const getUnitOfMeasure = (detail) => detail.supply?.unitOfMeasure || '';
+    const getLastPrice = (detail) => detail.supply?.lastPrice || 0;
+    const priceHasChanged = (detail) => { const currentPrice = getUnitPrice(detail); const lastPrice = getLastPrice(detail); return lastPrice > 0 && currentPrice !== lastPrice; };
 
     return (
         <Modal isOpen={isOpen} toggle={toggle} centered size="lg" backdrop="static" scrollable>
-            <ModalHeader toggle={toggle}><List size={20} className="me-2" /> Detalles Compra #{purchase.idRegisterPurchase}</ModalHeader>
-            <ModalBody>
-                <Row className="mb-3 g-3">
-                    <Col md={6}><strong>Proveedor:</strong> {purchase.provider?.company || 'N/A'}</Col>
-                    <Col md={6}><strong>Fecha:</strong> {purchase.purchaseDate ? dayjs(purchase.purchaseDate).format('DD/MM/YYYY') : 'N/A'}</Col>
-                    <Col md={12}><strong>Categoría:</strong> {purchase.category || 'N/A'}</Col>
+            <ModalHeader toggle={toggle} className="bg-light">
+                <div className="d-flex align-items-center"> <List size={20} className="me-2" /> <span>Detalles de Compra #{purchase.idRegisterPurchase}</span> </div>
+            </ModalHeader>
+            <ModalBody className="p-4">
+                <Row className="mb-4 g-3">
+                    <Col md={6}><strong>Proveedor:</strong><br />{purchase.provider?.company || 'N/A'}</Col>
+                    <Col md={3}><strong>Fecha:</strong><br />{purchase.purchaseDate ? dayjs(purchase.purchaseDate).format('DD/MM/YYYY') : 'N/A'}</Col>
+                    <Col md={3}><strong>Categoría:</strong><br />{purchase.category || 'N/A'}</Col>
+                    {purchase.invoiceNumber && <Col md={6}><strong>Factura Nº:</strong><br />{purchase.invoiceNumber}</Col>}
                 </Row>
-                <hr />
-                <h6>Insumos Incluidos:</h6>
+                <h5 className="mb-3">Desglose de Compras Individuales</h5>
                 {Array.isArray(purchase.details) && purchase.details.length > 0 ? (
-                    <div className="table-responsive">
-                        <Table bordered hover size="sm">
-                            <thead className="table-light">
-                                <tr>
-                                    <th>Insumo</th>
-                                    <th className="text-end">Cant.</th>
-                                    <th className="text-center">U.M.</th>
-                                    <th className="text-end">Precio U.</th>
-                                    <th className="text-end">Subtotal</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {purchase.details.map((detail, index) => (
-                                    <tr key={detail.idPurchaseDetail || `detail-${index}-${detail.idSupply}`}>
-                                        <td>{getInsumoName(detail)}</td>
-                                        <td className="text-end">{getQuantity(detail)}</td>
-                                        <td className="text-center">{getUnitOfMeasure(detail)}</td>
-                                        <td className="text-end">{formatCurrencyCOP(getUnitPrice(detail))}</td>
-                                        <td className="text-end">{formatCurrencyCOP(getSubtotal(detail))}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                            <tfoot>
-                                <tr className="table-light">
-                                    <td colSpan="4" className="text-end fw-bold">Subtotal Compra:</td>
-                                    <td className="text-end fw-bold">{formatCurrencyCOP(Number(purchase.subtotalAmount) || 0)}</td>
-                                </tr>
-                                {/* Aquí irían impuestos y descuentos si los tuvieras a nivel de cabecera */}
-                                <tr className="table-light">
-                                    <td colSpan="4" className="text-end fw-bold">Total Compra:</td>
-                                    <td className="text-end fw-bold">{formatCurrencyCOP(Number(purchase.totalAmount) || 0)}</td>
-                                </tr>
-                            </tfoot>
-                        </Table>
-                    </div>
+                    <Row className="g-3"> {purchase.details.map((detail, index) => {
+                        const unitPrice = getUnitPrice(detail); const lastKnownPrice = getLastPrice(detail); const priceChanged = priceHasChanged(detail); const priceIncreased = unitPrice > lastKnownPrice;
+                        return (
+                            <Col md={6} key={detail.idPurchaseDetail || `detail-${index}`}>
+                                <Card className="h-100 shadow-sm">
+                                    <CardBody>
+                                        <CardTitle tag="h6" className="d-flex align-items-center"> <Package size={18} className="me-2 text-primary" /> {getInsumoName(detail)} </CardTitle> <hr className="my-2" />
+                                        <CardText tag="div" className="small">
+                                            <Row> <Col xs={6}><strong>Cantidad:</strong></Col> <Col xs={6} className="text-end fw-bold">{getQuantity(detail)} {getUnitOfMeasure(detail)}</Col> </Row>
+                                            <Row className="mt-1"> <Col xs={6}><strong>Precio Unitario:</strong></Col> <Col xs={6} className="text-end fw-bold">{formatCurrencyCOP(unitPrice)}</Col> </Row>
+                                            {priceChanged && (<Row className="mt-1"> <Col xs={6} className="text-muted">Precio Anterior:</Col> <Col xs={6} className={`text-end fw-bold text-${priceIncreased ? 'danger' : 'success'}`}> {formatCurrencyCOP(lastKnownPrice)} {priceIncreased ? <ArrowUp size={14} className="ms-1" /> : <ArrowDown size={14} className="ms-1" />} </Col> </Row>)}
+                                        </CardText>
+                                    </CardBody>
+                                    <div className="card-footer bg-light text-end"> <strong className="me-2">Subtotal de esta compra:</strong> <span className="fs-5 fw-bold text-dark">{formatCurrencyCOP(getSubtotal(detail))}</span> </div>
+                                </Card>
+                            </Col>
+                        );
+                    })} </Row>
                 ) : <p className="fst-italic">No hay detalles de insumos disponibles.</p>}
+
+                {/* --- INICIO DE LA NUEVA SECCIÓN DE RESUMEN --- */}
+                {Object.keys(insumoSummary.items).length > 0 && (
+                    <>
+                        <hr className="my-4" />
+                        <h5 className="mb-3">Resumen Total de Insumos</h5>
+                        <Card className="shadow-sm">
+                            <CardBody>
+                                {Object.values(insumoSummary.items).map(item => (
+                                    <div key={item.name} className="d-flex justify-content-between align-items-center mb-2 border-bottom pb-2">
+                                        <div>
+                                            <strong className="d-block">{item.name}</strong>
+                                            <span className="text-muted small">Cantidad Total Acumulada</span>
+                                        </div>
+                                        <div className="text-end">
+                                            <strong className="d-block fs-5">{item.totalQuantity.toFixed(2)} {item.unit}</strong>
+                                            <span className="text-muted small">{formatCurrencyCOP(item.totalValue)}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </CardBody>
+                        </Card>
+                    </>
+                )}
+                {/* --- FIN DE LA NUEVA SECCIÓN DE RESUMEN --- */}
+
             </ModalBody>
-            <ModalFooter><Button color="secondary" outline onClick={toggle}>Cerrar</Button></ModalFooter>
+            <ModalFooter className="d-flex justify-content-between align-items-center">
+                <div> <strong className="me-2">Total General de la Orden:</strong> <span className="fs-4 fw-bolder text-success">{formatCurrencyCOP(Number(purchase.totalAmount) || 0)}</span> </div>
+                <Button color="secondary" outline onClick={toggle}>Cerrar</Button>
+            </ModalFooter>
         </Modal>
     );
 };
+const ConfirmationModal = ({ isOpen, toggle, title, children, onConfirm, confirmText = "Confirmar", confirmColor = "primary", isConfirming = false }) => ( <Modal isOpen={isOpen} toggle={!isConfirming ? toggle : undefined} centered backdrop="static" keyboard={!isConfirming}> <ModalHeader toggle={!isConfirming ? toggle : undefined}> <div className="d-flex align-items-center"> <AlertTriangle size={24} className={`text-${confirmColor === 'danger' ? 'danger' : 'primary'} me-2`} /> <span className="fw-bold">{title}</span> </div> </ModalHeader> <ModalBody>{children}</ModalBody> <ModalFooter> <Button color="secondary" outline onClick={toggle} disabled={isConfirming}>Cancelar</Button> <Button color={confirmColor} onClick={onConfirm} disabled={isConfirming}> {isConfirming ? (<><Spinner size="sm"/> Procesando...</>) : confirmText} </Button> </ModalFooter> </Modal> );
 
-// --- ConfirmationModal Component ---
-const ConfirmationModal = ({ isOpen, toggle, title, children, onConfirm, confirmText = "Confirmar", confirmColor = "primary", isConfirming = false }) => (
-     <Modal isOpen={isOpen} toggle={!isConfirming ? toggle : undefined} centered backdrop="static" keyboard={!isConfirming}>
-        <ModalHeader toggle={!isConfirming ? toggle : undefined}>
-             <div className="d-flex align-items-center">
-                <AlertTriangle size={24} className={`text-${confirmColor === 'danger' ? 'danger' : 'primary'} me-2`} />
-                <span className="fw-bold">{title}</span>
-            </div>
-        </ModalHeader>
-        <ModalBody>{children}</ModalBody>
-        <ModalFooter>
-            <Button color="secondary" outline onClick={toggle} disabled={isConfirming}>Cancelar</Button>
-            <Button color={confirmColor} onClick={onConfirm} disabled={isConfirming}>
-                {isConfirming ? (<><Spinner size="sm"/> Procesando...</>) : confirmText}
-            </Button>
-        </ModalFooter>
-    </Modal>
-);
-
-
-// --- Componente Principal: GestionComprasPage ---
+// --- Componente Principal: GestionComprasPage (sin cambios en su lógica interna) ---
 const GestionComprasPage = () => {
     const [compras, setCompras] = useState([]);
     const [isLoadingTable, setIsLoadingTable] = useState(true);
@@ -141,99 +141,17 @@ const GestionComprasPage = () => {
     const [isConfirmActionLoading, setIsConfirmActionLoading] = useState(false);
     const confirmActionRef = useRef(null);
     const navigate = useNavigate();
-
-    const fetchCompras = useCallback(async (showLoading = true) => {
-        if (showLoading) setIsLoadingTable(true);
-        try {
-            const data = await purchaseService.getAllRegisterPurchasesWithDetails();
-            // console.log("Datos recibidos de getAllRegisterPurchasesWithDetails:", data); // DEBUG
-            setCompras(Array.isArray(data) ? data : []);
-        } catch (error) {
-            console.error("Error fetching compras:", error);
-            toast.error("Error al cargar las compras registradas.");
-            setCompras([]);
-        } finally {
-            if (showLoading) setIsLoadingTable(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchCompras();
-    }, [fetchCompras]);
-
-    const toggleDetailsModal = useCallback(() => {
-        setDetailsModalOpen(prev => !prev);
-        if (detailsModalOpen) setSelectedPurchaseForDetails(null);
-    }, [detailsModalOpen]);
-
-    const toggleConfirmModal = useCallback(() => {
-        if (isConfirmActionLoading) return;
-        setConfirmModalOpen(prev => !prev);
-    }, [isConfirmActionLoading]);
-
-    useEffect(() => {
-        if (!confirmModalOpen && !isConfirmActionLoading) {
-            setConfirmModalProps(INITIAL_CONFIRM_PROPS);
-            confirmActionRef.current = null;
-        }
-    }, [confirmModalOpen, isConfirmActionLoading]);
-
-    const prepareConfirmation = useCallback((actionFn, props) => {
-        setConfirmModalProps({ ...INITIAL_CONFIRM_PROPS, ...props });
-        confirmActionRef.current = actionFn;
-        setConfirmModalOpen(true);
-    }, []);
-
-    const requestDeleteConfirmation = useCallback((compra) => {
-        prepareConfirmation(
-            () => executeDelete(compra),
-            {
-                title: "Confirmar Eliminación",
-                message: (
-                    <>
-                        <p>¿Está seguro que desea eliminar el registro de compra con ID <strong>#{compra.idRegisterPurchase}</strong>?</p>
-                        <p className="text-muted small">Proveedor: {compra.provider?.company || 'N/A'}<br/>Fecha: {dayjs(compra.purchaseDate).format('DD/MM/YYYY')}</p>
-                        <p className="text-danger fw-bold">Esta acción no se puede deshacer.</p>
-                    </>
-                ),
-                confirmText: "Eliminar",
-                confirmColor: "danger"
-            }
-        );
-    }, [prepareConfirmation]);
-
-    const executeDelete = useCallback(async (compraToDelete) => {
-        setIsConfirmActionLoading(true);
-        const toastId = toast.loading(`Eliminando compra #${compraToDelete.idRegisterPurchase}...`);
-        try {
-            await purchaseService.deleteRegisterPurchase(compraToDelete.idRegisterPurchase);
-            toast.success(`Compra #${compraToDelete.idRegisterPurchase} eliminada.`, { id: toastId, icon: <CheckCircle /> });
-            toggleConfirmModal();
-            fetchCompras(false);
-        } catch (error) {
-            console.error("Error deleting purchase:", error);
-            const errorMsg = error.message || 'Error desconocido al eliminar.';
-            toast.error(`Error al eliminar: ${errorMsg}`, { id: toastId, icon: <XCircle />, duration: 5000 });
-        } finally {
-            setIsConfirmActionLoading(false);
-        }
-    }, [toggleConfirmModal, fetchCompras]);
-
-    const handleTableSearch = useCallback((e) => {
-        setTableSearchText(e.target.value);
-        setCurrentPage(1);
-    }, []);
-
-    const handleShowDetails = useCallback((purchase) => {
-        // console.log("Mostrando detalles para la compra:", purchase); // DEBUG
-        setSelectedPurchaseForDetails(purchase);
-        toggleDetailsModal();
-    }, [toggleDetailsModal]);
-
-    const handleNavigateToRegister = useCallback(() => {
-        navigate('/home/compras/registrar');
-    }, [navigate]);
-
+    const fetchCompras = useCallback(async (showLoading = true) => { if (showLoading) setIsLoadingTable(true); try { const data = await purchaseService.getAllRegisterPurchasesWithDetails(); setCompras(Array.isArray(data) ? data : []); } catch (error) { toast.error("Error al cargar las compras registradas."); setCompras([]); } finally { if (showLoading) setIsLoadingTable(false); } }, []);
+    useEffect(() => { fetchCompras(); }, [fetchCompras]);
+    const toggleDetailsModal = useCallback(() => { setDetailsModalOpen(prev => !prev); if (detailsModalOpen) setSelectedPurchaseForDetails(null); }, [detailsModalOpen]);
+    const toggleConfirmModal = useCallback(() => { if (isConfirmActionLoading) return; setConfirmModalOpen(prev => !prev); }, [isConfirmActionLoading]);
+    useEffect(() => { if (!confirmModalOpen && !isConfirmActionLoading) { setConfirmModalProps(INITIAL_CONFIRM_PROPS); confirmActionRef.current = null; } }, [confirmModalOpen, isConfirmActionLoading]);
+    const prepareConfirmation = useCallback((actionFn, props) => { setConfirmModalProps({ ...INITIAL_CONFIRM_PROPS, ...props }); confirmActionRef.current = actionFn; setConfirmModalOpen(true); }, []);
+    const executeDelete = useCallback(async (compraToDelete) => { setIsConfirmActionLoading(true); const toastId = toast.loading(`Eliminando compra #${compraToDelete.idRegisterPurchase}...`); try { await purchaseService.deleteRegisterPurchase(compraToDelete.idRegisterPurchase); toast.success(`Compra #${compraToDelete.idRegisterPurchase} eliminada.`, { id: toastId }); toggleConfirmModal(); fetchCompras(false); } catch (error) { const errorMsg = error.response?.data?.message || error.message || 'Error desconocido al eliminar.'; toast.error(`Error al eliminar: ${errorMsg}`, { id: toastId, duration: 5000 }); } finally { setIsConfirmActionLoading(false); } }, [toggleConfirmModal, fetchCompras]);
+    const requestDeleteConfirmation = useCallback((compra) => { prepareConfirmation( () => executeDelete(compra), { title: "Confirmar Eliminación", message: ( <> <p>¿Está seguro que desea eliminar el registro de compra con ID <strong>#{compra.idRegisterPurchase}</strong>?</p> <p className="text-muted small">Proveedor: {compra.provider?.company || 'N/A'}<br/>Fecha: {dayjs(compra.purchaseDate).format('DD/MM/YYYY')}</p> <p className="text-danger fw-bold">Esta acción no se puede deshacer.</p> </> ), confirmText: "Eliminar", confirmColor: "danger" } ); }, [prepareConfirmation, executeDelete]);
+    const handleTableSearch = useCallback((e) => { setTableSearchText(e.target.value); setCurrentPage(1); }, []);
+    const handleShowDetails = useCallback((purchase) => { setSelectedPurchaseForDetails(purchase); toggleDetailsModal(); }, [toggleDetailsModal]);
+    const handleNavigateToRegister = useCallback(() => { navigate('/home/compras/registrar'); }, [navigate]);
     const filteredData = useMemo(() => {
         if (!Array.isArray(compras)) return [];
         const sortedCompras = [...compras].sort((a, b) => (Number(a.idRegisterPurchase) || 0) - (Number(b.idRegisterPurchase) || 0));
@@ -246,24 +164,11 @@ const GestionComprasPage = () => {
             (c.category?.toLowerCase() || '').includes(lowerSearchText)
         );
     }, [compras, tableSearchText]);
-
     const totalItems = useMemo(() => filteredData.length, [filteredData]);
     const totalPages = useMemo(() => Math.ceil(totalItems / ITEMS_PER_PAGE) || 1, [totalItems]);
-
-    useEffect(() => {
-        if (currentPage > totalPages && totalPages > 0) setCurrentPage(totalPages);
-        else if (currentPage < 1 && totalPages > 0) setCurrentPage(1);
-    }, [totalPages, currentPage]);
-
-    const currentItems = useMemo(() => {
-        const safeCurrentPage = Math.max(1, Math.min(currentPage, totalPages));
-        const startIndex = (safeCurrentPage - 1) * ITEMS_PER_PAGE;
-        return filteredData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-    }, [filteredData, currentPage, totalPages]);
-
-    const handlePageChange = useCallback((pageNumber) => {
-         setCurrentPage(pageNumber);
-    }, []);
+    useEffect(() => { if (currentPage > totalPages && totalPages > 0) setCurrentPage(totalPages); else if (currentPage < 1 && totalPages > 0) setCurrentPage(1); }, [totalPages, currentPage]);
+    const currentItems = useMemo(() => { const safeCurrentPage = Math.max(1, Math.min(currentPage, totalPages)); const startIndex = (safeCurrentPage - 1) * ITEMS_PER_PAGE; return filteredData.slice(startIndex, startIndex + ITEMS_PER_PAGE); }, [filteredData, currentPage, totalPages]);
+    const handlePageChange = useCallback((pageNumber) => { setCurrentPage(pageNumber); }, []);
 
     return (
         <Container fluid className="p-4 main-content">
@@ -271,7 +176,7 @@ const GestionComprasPage = () => {
             <h2 className="mb-4">Gestión de Compras Registradas</h2>
             <Row className="mb-3 align-items-center">
                 <Col md={6} lg={4}>
-                    <Input bsSize="sm" type="text" placeholder="Buscar ID, Proveedor, Fecha, Categoría..." value={tableSearchText} onChange={handleTableSearch} aria-label="Buscar compras" />
+                    <Input bsSize="sm" type="text" placeholder="Buscar ID, Proveedor, Fecha..." value={tableSearchText} onChange={handleTableSearch} aria-label="Buscar compras" />
                 </Col>
                 <Col md={6} lg={8} className="text-md-end mt-2 mt-md-0">
                     <Button color="success" size="sm" onClick={handleNavigateToRegister} className="button-add">
@@ -281,15 +186,15 @@ const GestionComprasPage = () => {
             </Row>
 
             <div className="table-responsive shadow-sm custom-table-container mb-3">
-                <Table hover size="sm" className="mb-0 custom-table" aria-live="polite">
-                    <thead className="table-dark">
+                <Table hover striped size="sm" className="mb-0 custom-table align-middle" aria-live="polite">
+                    <thead className="table-light">
                         <tr>
-                            <th scope="col">ID</th>
-                            <th scope="col">Proveedor</th>
-                            <th scope="col">Fecha</th>
-                            <th scope="col">Categoría</th>
-                            <th scope="col" className="text-end">Monto Total</th>
-                            <th scope="col" className="text-center">Acciones</th>
+                            <th scope="col" className="text-center" style={{ width: '10%' }}>ID</th>
+                            <th scope="col" style={{ width: '30%' }}>Proveedor</th>
+                            <th scope="col" style={{ width: '15%' }}>Fecha</th>
+                            <th scope="col" style={{ width: '15%' }}>Categoría</th>
+                            <th scope="col" className="text-end" style={{ width: '15%' }}>Monto Total</th>
+                            <th scope="col" className="text-center" style={{ width: '15%' }}>Acciones</th>
                         </tr>
                     </thead>
                      <tbody>
@@ -297,17 +202,16 @@ const GestionComprasPage = () => {
                             <tr><td colSpan="6" className="text-center p-5"><Spinner color="primary" /> Cargando...</td></tr>
                         ) : currentItems.length > 0 ? (
                             currentItems.map((compra) => (
-                                <tr key={compra.idRegisterPurchase} style={{ verticalAlign: 'middle' }}>
-                                    <th scope="row">{compra.idRegisterPurchase}</th>
+                                <tr key={compra.idRegisterPurchase}>
+                                    <th scope="row" className="text-center">{compra.idRegisterPurchase}</th>
                                     <td>{compra.provider?.company || <span className="text-muted fst-italic">N/A</span>}</td>
                                     <td>{compra.purchaseDate ? dayjs(compra.purchaseDate).format('DD/MM/YYYY') : '-'}</td>
                                     <td>{compra.category || <span className="text-muted fst-italic">N/A</span>}</td>
-                                    {/* Asegurarse que compra.totalAmount tenga un valor numérico */}
-                                    <td className="text-end">{formatCurrencyCOP(Number(compra.totalAmount) || 0)}</td>
+                                    <td className="text-end fw-bold">{formatCurrencyCOP(Number(compra.totalAmount) || 0)}</td>
                                     <td className="text-center">
                                         <div className="d-inline-flex gap-1">
-                                            <Button color="info" outline size="sm" onClick={() => handleShowDetails(compra)} title="Ver Detalles"><Eye size={16} /></Button>
-                                            <Button color="danger" outline size="sm" onClick={() => requestDeleteConfirmation(compra)} title="Eliminar Registro" disabled={isConfirmActionLoading}><Trash2 size={16} /></Button>
+                                            <Button color="info" outline size="sm" onClick={() => handleShowDetails(compra)} title="Ver Detalles" className="action-button"><Eye size={18} /></Button>
+                                            <Button color="danger" outline size="sm" onClick={() => requestDeleteConfirmation(compra)} title="Eliminar Registro" disabled={isConfirmActionLoading} className="action-button"><Trash2 size={18} /></Button>
                                         </div>
                                     </td>
                                 </tr>

@@ -32,6 +32,8 @@ import SpecificConceptManagement from './views/module/ManoDeObra/SpecificConcept
 // import ProduccionPage from "./views/module/OrdenProduccion/ProduccionPage"; // Probablemente ya en pagesRoutes
 import FichaTecnica from "./views/module/ProductoInsumo/FichaTecnica";
 import ListaFichasTecnicas from "./views/module/ProductoInsumo/ListaFichasTecnicas";
+import OrdenProduccionForm from "./views/module/OrdenProduccion/OrdenProduccion";
+import OrderFinalizationSection from "./views/module/OrdenProduccion/components/OrderFinalizationSection";
 
 // Helper para renderizar rutas anidadas desde pages.routes.jsx
 const renderRoutes = (routesArray, basePath = "") => {
@@ -125,6 +127,7 @@ export default function App() {
               <Route path="fichas-tecnicas/crear" element={<FichaTecnica />} />
               <Route path="fichas-tecnicas/editar/:idSpecsheet" element={<FichaTecnica />} />
               <Route path="producto/:idProduct/fichas" element={<ListaFichasTecnicas />} />
+              <Route path="produccion/ordenes/crear" element={<OrdenProduccionForm />} />
 
               <Route path="mano-de-obra/gastos" element={<TablaGastos />} />
               <Route path="mano-de-obra/rendimiento" element={<RendimientoEmpleado />} />

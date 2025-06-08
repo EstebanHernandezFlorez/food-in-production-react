@@ -8,11 +8,10 @@ const proveedorService = {
     getAllProveedores: async () => {
         try {
             const response = await axios.get(API_URL);
-            // Se espera que cada proveedor tenga al menos: idProvider, company, status
-            return response.data;
+            return Array.isArray(response.data.rows) ? response.data.rows : (Array.isArray(response.data) ? response.data : []);
         } catch (error) {
             console.error("[Service Error] Fetching all providers failed:", error.response?.data || error.message);
-            throw error;
+            return []; // Devolver array vacío en caso de error
         }
     },
 

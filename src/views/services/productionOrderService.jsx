@@ -1,20 +1,37 @@
-// src/services/productionOrderService.js
+// RUTA: src/services/productionOrderService.js
 import axios from 'axios';
-// Asegúrate que la ruta relativa '../enviroments/local.js' sea correcta
-// desde la ubicación de productionOrderService.js
-import { apiurl } from '../../enviroments/local.js'; // Cambia la ruta según tu estructura de carpetas
+import { apiurl } from '../../enviroments/local.js';
 
-// Ahora usas 'apiurl' que importaste
 const PRODUCTION_ORDER_API_URL = `${apiurl}/production-orders`;
 
 const productionOrderService = {
     getAllProductionOrders: async (params = {}) => {
         try {
             const response = await axios.get(PRODUCTION_ORDER_API_URL, { params });
-            return response.data;
+
+            // <<<--- CORRECCIÓN PRINCIPAL: Manejar la estructura de paginación de Sequelize { count, rows } --- >>>
+            // Esta es la primera y más probable estructura que encontraremos.
+            if (response.data && Array.isArray(response.data.rows)) {
+                return response.data.rows; // Devolvemos el array que está dentro de la propiedad 'rows'.
+            }
+
+            // Fallback 1: Manejar una estructura { data: [...] } si alguna otra ruta la usa.
+            if (response.data && Array.isArray(response.data.data)) {
+                return response.data.data;
+            }
+
+            // Fallback 2: Manejar una respuesta que es directamente un array.
+            if (Array.isArray(response.data)) {
+                return response.data;
+            }
+
+            // Si ninguna de las estructuras conocidas coincide, advertimos y devolvemos un array vacío.
+            console.warn("La respuesta de getAllProductionOrders no tiene un formato de array esperado ({rows: []} o {data: []}). Se devuelve un array vacío.", response.data);
+            return [];
         } catch (error) {
             console.error("Error fetching production orders:", error.response?.data || error.message);
-            throw error.response?.data || error;
+            // En caso de error, también devolvemos un array vacío para proteger el componente.
+            return [];
         }
     },
 
@@ -38,12 +55,12 @@ const productionOrderService = {
         }
     },
 
-    updateProductionOrderGeneral: async (idOrder, orderData) => {
+    updateProductionOrder: async (idOrder, orderData) => {
         try {
             const response = await axios.put(`${PRODUCTION_ORDER_API_URL}/${idOrder}`, orderData);
             return response.data;
         } catch (error) {
-            console.error(`Error updating general info for production order ID ${idOrder}:`, error.response?.data || error.message);
+            console.error(`Error updating production order ID ${idOrder}:`, error.response?.data || error.message);
             throw error.response?.data || error;
         }
     },
@@ -67,10 +84,11 @@ const productionOrderService = {
             throw error.response?.data || error;
         }
     },
-
-    changeProductionOrderStatus: async (idOrder, newStatus) => {
+    
+    changeProductionOrderStatus: async (idOrder, status, observations) => {
         try {
-            const response = await axios.patch(`${PRODUCTION_ORDER_API_URL}/${idOrder}/status`, { status: newStatus });
+            const payload = { status, observations };
+            const response = await axios.patch(`${PRODUCTION_ORDER_API_URL}/${idOrder}/status`, payload);
             return response.data;
         } catch (error) {
             console.error(`Error changing status for production order ID ${idOrder}:`, error.response?.data || error.message);
@@ -86,7 +104,17 @@ const productionOrderService = {
             console.error(`Error finalizing production order ID ${idOrder}:`, error.response?.data || error.message);
             throw error.response?.data || error;
         }
-    }
+    },
+
+    checkActiveOrderForProduct: async (productId) => {
+        try {
+            const response = await axios.get(`${PRODUCTION_ORDER_API_URL}/check-active/${productId}`);
+            return response.data; 
+        } catch (error) {
+            console.error(`Error checking active order for product ${productId}:`, error);
+            return { hasActiveOrder: false }; 
+        }
+    },
 };
 
 export default productionOrderService;

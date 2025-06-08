@@ -4,7 +4,7 @@ import React from "react";
 import { Outlet } from 'react-router-dom'; // <--- IMPORTANTE: Importar Outlet
 
 // --- COMPONENTES DE PÁGINA ---
-import Dashboard from "./Dashboard/dashboard";
+import Dashboard from "./Dashboard/index";
 import Roles from "./roles/roles";
 import Usuarios from "./usuarios/usuarios";
 import Proveedores from "./Proveedores/Proveedores";
