@@ -1,24 +1,34 @@
-// src/services/specSheetService.js
-import axios from 'axios';
-import { apiurl } from '../../enviroments/local.js'; // Ajusta la ruta si es necesario
+// RUTA: src/services/specSheetService.js
 
-const SPEC_SHEET_API_URL = `${apiurl}/specSheet`; // Usar 'apiurl'
+import axios from 'axios';
+import { apiurl } from '../../enviroments/local.js';
+
+const SPEC_SHEET_API_URL = `${apiurl}/specSheet`;
 
 const specSheetService = {
+    // <<<--- CORRECCIÓN: Asegurar que siempre devuelva un array --- >>>
     getAllSpecSheets: async (params = {}) => {
         try {
             const response = await axios.get(SPEC_SHEET_API_URL, { params });
-            return response.data;
+            // Verificación defensiva para asegurar que se devuelve un array
+            if (response.data && Array.isArray(response.data.data)) {
+                return response.data.data;
+            }
+            if (Array.isArray(response.data)) {
+                return response.data;
+            }
+            console.warn("La respuesta de getAllSpecSheets no es un array. Se devuelve un array vacío.", response.data);
+            return [];
         } catch (error) {
             console.error('Error fetching spec sheets:', error.response?.data || error.message);
-            throw error.response?.data || error;
+            return []; // Devuelve array vacío en caso de error
         }
     },
 
     getSpecSheetById: async (idSpecSheet) => {
         try {
             const response = await axios.get(`${SPEC_SHEET_API_URL}/${idSpecSheet}`);
-            return response.data; // El backend debería devolver la ficha con sus detalles (insumos y procesos)
+            return response.data;
         } catch (error) {
             console.error(`Error fetching spec sheet ID ${idSpecSheet}:`, error.response?.data || error.message);
             throw error.response?.data || error;
@@ -26,7 +36,6 @@ const specSheetService = {
     },
 
     createSpecSheet: async (specSheetData) => {
-        // specSheetData debe incluir: idProduct, startDate, quantityBase, y arrays para 'supplies' y 'processes'
         try {
             const response = await axios.post(SPEC_SHEET_API_URL, specSheetData);
             return response.data;
@@ -58,7 +67,6 @@ const specSheetService = {
 
     changeSpecSheetStatus: async (idSpecSheet, status) => {
         try {
-            // Ruta del backend /specSheet/:idSpecSheet/status
             const response = await axios.patch(`${SPEC_SHEET_API_URL}/${idSpecSheet}/status`, { status });
             return response.data;
         } catch (error) {
@@ -69,7 +77,6 @@ const specSheetService = {
 
     getSpecSheetsByProductId: async (idProduct) => {
         try {
-            // Ruta del backend /specSheet/by-product/:idProduct
             const response = await axios.get(`${SPEC_SHEET_API_URL}/by-product/${idProduct}`);
             return response.data;
         } catch (error) {

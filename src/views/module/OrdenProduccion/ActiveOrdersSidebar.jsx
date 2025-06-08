@@ -2,7 +2,7 @@
 import React, { useContext } from 'react';
 import { ListGroup, ListGroupItem, Badge, Spinner } from 'reactstrap';
 import { ActiveOrdersContext } from './ActiveOrdersContext';
-import { useNavigate, useParams } from 'react-router-dom'; // useParams no se usa aquí directamente para filtrar, se puede quitar si no hay otra razón.
+// import { useNavigate, useParams } from 'react-router-dom'; // No se usan directamente
 import { ChefHat, Inbox, Edit3 } from 'lucide-react';
 import '../../../assets/css/produccion/ProduccionStyles.css'; // VERIFICA ESTA RUTA
 
@@ -72,92 +72,50 @@ const styles = {
 
 
 const ActiveOrdersSidebar = () => {
-    // useNavigate y useParams no se usan directamente en este componente tras el cambio de filtro.
-    // Podrían quitarse si no son necesarios para otra lógica aquí.
-    // const navigate = useNavigate();
-    // const { orderIdParam } = useParams(); // No se usa para filtrar aquí.
     const context = useContext(ActiveOrdersContext);
 
     if (!context) {
-        // console.warn("[SIDEBAR] Contexto no disponible."); // Comentado para producción
         return <p className="p-3 text-muted small">Contexto de órdenes no disponible.</p>;
     }
 
-    const { activeOrders, currentViewedOrderId, addOrFocusOrder, isLoadingOrderContext } = context;
-    
-    // console.log("[SIDEBAR] Render/Re-render. Estado del contexto:", 
-    //     { 
-    //         activeOrdersCount: Object.keys(activeOrders).length, 
-    //         activeOrdersKeys: Object.keys(activeOrders),
-    //         currentViewedOrderId, 
-    //         isLoadingOrderContext
-    //     }
-    // );
+    const { activeOrders, currentViewedOrderId, setCurrentViewedOrderId, isLoadingOrderContext } = context;
+    // addOrFocusOrder fue reemplazado por setCurrentViewedOrderId para uso externo del sidebar
 
     const displayableOrderKeys = Object.keys(activeOrders)
         .filter(orderId => {
             const order = activeOrders[orderId];
-            if (!order) {
-                // console.warn(`[SIDEBAR FILTER] Orden con ID '${orderId}' no encontrada en activeOrders. Será filtrada.`);
-                return false;
-            }
-
-            // Mostrar todas las órdenes excepto las 'COMPLETED' o 'CANCELLED'
-            if (['COMPLETED', 'CANCELLED'].includes(order.localOrderStatus)) {
-                // console.log(`[SIDEBAR FILTER] Ocultando orden ${orderId} (estado: ${order.localOrderStatus})`);
-                return false;
-            }
-            
-            // console.log(`[SIDEBAR FILTER] Mostrando orden ${orderId} (estado: ${order.localOrderStatus}, isNew: ${order.isNewForForm})`);
-            return true;
+            if (!order) return false;
+            return !['COMPLETED', 'CANCELLED'].includes(order.localOrderStatus);
         })
-        .sort((aKey, bKey) => { // Lógica de ordenamiento existente
+        .sort((aKey, bKey) => {
             const orderA = activeOrders[aKey];
             const orderB = activeOrders[bKey];
-
             if (orderA.isNewForForm && !orderB.isNewForForm) return -1;
             if (!orderA.isNewForForm && orderB.isNewForForm) return 1;
-
             if (orderA.isNewForForm && orderB.isNewForForm) {
                 if (orderA.localOrderStatus === 'PENDING' && orderB.localOrderStatus !== 'PENDING') return -1;
                 if (orderA.localOrderStatus !== 'PENDING' && orderB.localOrderStatus === 'PENDING') return 1;
             }
-            
             const idNumA = parseInt(String(orderA.id).replace(/\D/g, ''), 10);
             const idNumB = parseInt(String(orderB.id).replace(/\D/g, ''), 10);
-
             if (!isNaN(idNumA) && !isNaN(idNumB)) {
-                if (idNumA !== idNumB) return idNumB - idNumA; // Más recientes (ID mayor) primero para numéricos
+                if (idNumA !== idNumB) return idNumB - idNumA;
             }
-            
-            // Para IDs tipo NEW_timestamp, un sort descendente (más reciente primero)
-             if (String(orderA.id).startsWith('NEW_') && String(orderB.id).startsWith('NEW_')) {
+            if (String(orderA.id).startsWith('NEW_') && String(orderB.id).startsWith('NEW_')) {
                 return String(orderB.id).localeCompare(String(orderA.id));
             }
-            // Fallback general
             return String(orderB.id).localeCompare(String(orderA.id));
         });
     
-    // console.log("[SIDEBAR] displayableOrderKeys FINAL:", displayableOrderKeys);
-
     const handleSelectOrder = (orderId) => {
-        // console.log("[SIDEBAR] handleSelectOrder: Intentando seleccionar orden ID:", orderId);
         if (isLoadingOrderContext || currentViewedOrderId === orderId) {
-            // console.log("[SIDEBAR] handleSelectOrder: Retornando temprano. isLoading:", isLoadingOrderContext, "CVO es igual:", currentViewedOrderId === orderId);
             return;
         }
-        
-        const selectedOrder = activeOrders[orderId];
-        if (selectedOrder) {
-            // console.log("[SIDEBAR] handleSelectOrder: Orden encontrada en contexto. Llamando a addOrFocusOrder con ID:", orderId, "y isTriggeredForNew: false");
-            addOrFocusOrder(orderId, false); 
-        } else {
-            // console.warn("[SIDEBAR] handleSelectOrder: Orden ID", orderId, "no encontrada en activeOrders al intentar seleccionar.");
-        }
+        // Usar la función exportada setCurrentViewedOrderId que ahora llama a addOrFocusOrder
+        setCurrentViewedOrderId(orderId);
     };
 
     if (isLoadingOrderContext && displayableOrderKeys.length === 0) {
-        // console.log("[SIDEBAR] Mostrando Spinner de carga (sin displayableOrderKeys aún).");
         return (
             <div className="p-3 text-center text-muted small d-flex align-items-center justify-content-center" style={{minHeight: '100px'}}>
                 <Spinner size="sm" className="me-2"/> Cargando órdenes...
@@ -166,7 +124,6 @@ const ActiveOrdersSidebar = () => {
     }
 
     if (displayableOrderKeys.length === 0) {
-        // console.log("[SIDEBAR] Mostrando mensaje 'No hay órdenes activas'.");
         return (
             <div className="p-4 text-center text-muted d-flex flex-column align-items-center justify-content-center" style={{minHeight: '200px'}}>
                 <Inbox size={40} className="mb-3 text-secondary" />
@@ -176,21 +133,16 @@ const ActiveOrdersSidebar = () => {
         );
     }
     
-    // console.log("[SIDEBAR] Renderizando lista de órdenes. Cantidad:", displayableOrderKeys.length);
     return (
         <ListGroup flush className="active-orders-list" style={styles.listGroup}>
             {displayableOrderKeys.map(orderId => {
                 const order = activeOrders[orderId];
-                if (!order) {
-                    // console.warn("[SIDEBAR MAP] Intentando renderizar orden nula para ID:", orderId);
-                    return null; 
-                }
-                // console.log("[SIDEBAR MAP] Renderizando item para orden ID:", orderId, "Datos:", {status: order.localOrderStatus, isNew: order.isNewForForm, name: order.productNameSnapshot});
+                if (!order) return null; 
 
                 const isActive = currentViewedOrderId === orderId;
                 
                 let mainDisplayText = order.productNameSnapshot || `Orden #${order.orderNumberDisplay || String(order.id).substring(0,15)}`;
-                if (order.isNewForForm && !order.productNameSnapshot) { // Para borradores nuevos sin producto
+                if (order.isNewForForm && !order.productNameSnapshot) {
                      mainDisplayText = order.localOrderStatus === 'PENDING' ? "Nuevo Borrador" : "Configurando Orden";
                 }
 
@@ -201,11 +153,8 @@ const ActiveOrdersSidebar = () => {
                 
                 let statusBadgeText = order.localOrderStatusDisplay || order.localOrderStatus;
                 if (order.isNewForForm && (order.localOrderStatus === 'PENDING' || order.localOrderStatus === 'SETUP') && !order.productNameSnapshot) {
-                    // No mostrar badge de estado para borradores muy nuevos si no tienen nombre de producto aún,
-                    // o si la info principal ya lo indica.
                     statusBadgeText = null; 
                 }
-
 
                 let stepNumberIndicator = null;
                 if (order.localOrderStatus === 'IN_PROGRESS' &&
@@ -253,7 +202,6 @@ const ActiveOrdersSidebar = () => {
                                             order.localOrderStatus === 'PAUSED' ? 'secondary' :
                                             order.localOrderStatus === 'ALL_STEPS_COMPLETED' ? 'info' :
                                             order.localOrderStatus === 'SETUP_COMPLETED' ? 'primary' :
-                                            // Para PENDING y SETUP (que no sean isNewForForm sin nombre)
                                             order.localOrderStatus === 'SETUP' ? 'info' : 
                                             order.localOrderStatus === 'PENDING' ? 'light' : 
                                             'light' 

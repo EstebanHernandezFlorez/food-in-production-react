@@ -16,6 +16,15 @@ const InsumosTable = ({
 }) => {
     const colSpanValue = 5; // Ajusta si añades/quitas columnas
 
+    // ==================================================================
+    // CAMBIO AÑADIDO AQUÍ
+    // 1. Se crea una copia del array para no mutar los props originales.
+    // 2. Se ordena la copia en orden ASCENDENTE basándose en el idSupply.
+    //    (a.idSupply - b.idSupply) asegura el orden ascendente (menor a mayor).
+    const sortedItems = [...currentItems].sort((a, b) => (a.idSupply || 0) - (b.idSupply || 0));
+    // ==================================================================
+
+
     return (
         <div className="table-responsive shadow-sm custom-table-container mb-3">
             <Table hover striped size="sm" className="mb-0 custom-table align-middle">
@@ -35,8 +44,10 @@ const InsumosTable = ({
                 <tbody>
                     {isLoading && dataLength === 0 ? (
                         <tr><td colSpan={colSpanValue} className="text-center p-5"><Spinner color="primary" /> Cargando...</td></tr>
-                    ) : currentItems.length > 0 ? (
-                        currentItems.map((item) => (
+                    // Se usa sortedItems en lugar de currentItems
+                    ) : sortedItems.length > 0 ? (
+                        // Se usa sortedItems.map()
+                        sortedItems.map((item) => (
                             // Asegúrate que item.idSupply exista y sea único
                             <tr key={item.idSupply || `item-${Math.random()}`}> 
                                 <th scope="row" className="text-center">{item.idSupply || '-'}</th>
@@ -66,7 +77,7 @@ const InsumosTable = ({
                                             onClick={() => openEditModal(item)} // openEditModal recibe el 'item' completo
                                             title="Editar"
                                             className="action-button action-edit"
-                                            color="secondary" outline
+                                            color="info" outline
                                         >
                                             <Edit size={18} />
                                         </Button>

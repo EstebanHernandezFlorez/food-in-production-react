@@ -1,18 +1,22 @@
 // src/views/module/OrdenProduccion/components/OrderFinalizationSection.jsx
 import React from 'react';
-import { Row, Col, FormGroup, Label, Input, FormFeedback, Card, CardBody, CardHeader, Button } from 'reactstrap';
-import { Package, Scale, X } from 'lucide-react'; // X para botón cancelar finalización
+import { Row, Col, FormGroup, Label, Input, FormFeedback, Card, CardBody, CardHeader, Button, Spinner } from 'reactstrap';
+import { Package, Scale, CheckCircle, X } from 'lucide-react';
 
 const OrderFinalizationSection = ({
     formOrder,
     formErrors,
     handleChangeOrderForm,
     isSaving,
-    onCancelFinalization // Nueva prop para ocultar esta sección
-    // onSaveFinalization no se necesita aquí, el botón está en OrderActionButtons
+    onCancelFinalization,
+    onConfirmFinalize
 }) => {
+    // Determina si los campos de unidad deben estar habilitados
+    const isFinishedWeightUnitDisabled = isSaving || !formOrder.finishedProductWeight || parseFloat(formOrder.finishedProductWeight) <= 0;
+    const isUnusedWeightUnitDisabled = isSaving || !formOrder.inputFinalWeightUnused || parseFloat(formOrder.inputFinalWeightUnused) <= 0;
+
     return (
-        <Card className="mb-4 shadow-sm border-success"> {/* Borde para destacar */}
+        <Card className="mb-4 shadow-sm border-success">
             <CardHeader className="py-2 px-3 bg-success text-white d-flex justify-content-between align-items-center">
                 <h6 className="mb-0 d-flex align-items-center">
                     <Package size={18} className="me-2"/> Datos de Finalización de Orden
@@ -23,18 +27,18 @@ const OrderFinalizationSection = ({
                 <Row>
                     <Col md={4} className="mb-3">
                         <FormGroup>
-                            <Label for="finalQuantityProduct" className="fw-semibold small"> {/* fw-semibold en vez de fw-bold */}
+                            <Label for="finalQuantityProduct" className="fw-semibold small">
                                 Cantidad Producida (Unidades) <span className="text-danger">*</span>
                             </Label>
                             <Input
                                 type="number"
                                 name="finalQuantityProduct"
                                 id="finalQuantityProduct"
-                                value={formOrder.finalQuantityProduct || ''} // Asegurar que sea string vacío si es null/undefined
+                                value={formOrder.finalQuantityProduct || ''}
                                 onChange={handleChangeOrderForm}
                                 invalid={!!formErrors?.finalQuantityProduct}
                                 disabled={isSaving}
-                                min={0}
+                                min="0"
                                 bsSize="sm"
                                 placeholder="Ej: 98"
                             />
@@ -52,9 +56,9 @@ const OrderFinalizationSection = ({
                                 id="finishedProductWeight"
                                 value={formOrder.finishedProductWeight || ''}
                                 onChange={handleChangeOrderForm}
-                                invalid={!!formErrors?.finishedProductWeight}
+                                invalid={!!formErrors?.finishedProductWeight || !!formErrors?.finishedProductWeightUnit}
                                 disabled={isSaving}
-                                min={0} step="0.001"
+                                min="0" step="0.001"
                                 bsSize="sm"
                                 placeholder="Ej: 48.500"
                             />
@@ -64,28 +68,29 @@ const OrderFinalizationSection = ({
                     <Col md={4} className="mb-3">
                         <FormGroup>
                             <Label for="finishedProductWeightUnit" className="fw-semibold small">Unidad Peso Terminado</Label>
+                            {/* --- INICIO DE LA MODIFICACIÓN --- */}
                             <Input
-                                type="text" // Considerar select si las unidades son fijas
+                                type="select"
                                 name="finishedProductWeightUnit"
                                 id="finishedProductWeightUnit"
-                                value={formOrder.finishedProductWeightUnit || 'kg'} // Default a kg
+                                value={formOrder.finishedProductWeightUnit || 'kg'}
                                 onChange={handleChangeOrderForm}
-                                disabled={isSaving || !formOrder.finishedProductWeight} // Deshabilitar si no hay peso
+                                disabled={isFinishedWeightUnitDisabled}
                                 bsSize="sm"
-                                placeholder="Ej: kg"
-                                list="commonUnitsFinal"
-                            />
-                             <datalist id="commonUnitsFinal">
-                                <option value="kg" />
-                                <option value="g" />
-                                <option value="lb" />
-                                <option value="unidad" />
-                            </datalist>
+                                invalid={!!formErrors?.finishedProductWeightUnit}
+                            >
+                                <option value="kg">kg (Kilogramos)</option>
+                                <option value="g">g (Gramos)</option>
+                                <option value="lb">lb (Libras)</option>
+                                <option value="oz">oz (Onzas)</option>
+                            </Input>
+                            <FormFeedback>{formErrors?.finishedProductWeightUnit}</FormFeedback>
+                            {/* --- FIN DE LA MODIFICACIÓN --- */}
                         </FormGroup>
                     </Col>
                 </Row>
                 <Row>
-                    <Col md={4} className="mb-3"> {/* Añadido mb-3 */}
+                    <Col md={4} className="mb-3">
                         <FormGroup>
                             <Label for="inputFinalWeightUnused" className="fw-semibold small">
                                 <Scale size={14} className="me-1"/>Material Inicial No Usado (Merma)
@@ -96,31 +101,66 @@ const OrderFinalizationSection = ({
                                 id="inputFinalWeightUnused"
                                 value={formOrder.inputFinalWeightUnused || ''}
                                 onChange={handleChangeOrderForm}
+                                invalid={!!formErrors?.inputFinalWeightUnused || !!formErrors?.inputFinalWeightUnusedUnit}
                                 disabled={isSaving}
-                                min={0} step="0.001"
+                                min="0" step="0.001"
                                 bsSize="sm"
                                 placeholder="Ej: 0.500"
                             />
+                             <FormFeedback>{formErrors?.inputFinalWeightUnused}</FormFeedback>
                         </FormGroup>
                     </Col>
-                     <Col md={4} className="mb-3"> {/* Añadido mb-3 */}
+                     <Col md={4} className="mb-3">
                         <FormGroup>
                             <Label for="inputFinalWeightUnusedUnit" className="fw-semibold small">Unidad Peso No Usado</Label>
+                            {/* --- INICIO DE LA MODIFICACIÓN --- */}
                             <Input
-                                type="text" // Considerar select
+                                type="select"
                                 name="inputFinalWeightUnusedUnit"
                                 id="inputFinalWeightUnusedUnit"
-                                value={formOrder.inputFinalWeightUnusedUnit || 'kg'} // Default a kg
+                                value={formOrder.inputFinalWeightUnusedUnit || 'kg'}
                                 onChange={handleChangeOrderForm}
-                                disabled={isSaving || !formOrder.inputFinalWeightUnused} // Deshabilitar si no hay peso no usado
+                                disabled={isUnusedWeightUnitDisabled}
                                 bsSize="sm"
-                                placeholder="Ej: kg"
-                                list="commonUnitsFinal" // Reutilizar datalist
+                                invalid={!!formErrors?.inputFinalWeightUnusedUnit}
+                            >
+                                <option value="kg">kg (Kilogramos)</option>
+                                <option value="g">g (Gramos)</option>
+                                <option value="lb">lb (Libras)</option>
+                                <option value="oz">oz (Onzas)</option>
+                            </Input>
+                            <FormFeedback>{formErrors?.inputFinalWeightUnusedUnit}</FormFeedback>
+                            {/* --- FIN DE LA MODIFICACIÓN --- */}
+                        </FormGroup>
+                    </Col>
+                </Row>
+                <Row>
+                    <Col>
+                        <FormGroup>
+                            <Label for="observations" className="fw-semibold small">Observaciones de Finalización (Opcional)</Label>
+                            <Input
+                                type="textarea"
+                                name="observations"
+                                id="observations"
+                                value={formOrder.observations || ''}
+                                onChange={handleChangeOrderForm}
+                                disabled={isSaving}
+                                rows="3"
+                                bsSize="sm"
+                                placeholder="Cualquier detalle relevante sobre la finalización..."
                             />
                         </FormGroup>
                     </Col>
                 </Row>
-                {/* Aquí podrías añadir la sección para registrar Consumo Real de Insumos si lo deseas */}
+                <div className="text-end mt-3">
+                    <Button color="secondary" outline onClick={onCancelFinalization} disabled={isSaving} className="me-2">
+                        <X size={16} className="me-1"/> Cancelar
+                    </Button>
+                    <Button color="success" onClick={onConfirmFinalize} disabled={isSaving}>
+                        {isSaving ? <Spinner size="sm" className="me-1"/> : <CheckCircle size={16} className="me-1"/>}
+                        Confirmar y Finalizar Orden
+                    </Button>
+                </div>
             </CardBody>
         </Card>
     );

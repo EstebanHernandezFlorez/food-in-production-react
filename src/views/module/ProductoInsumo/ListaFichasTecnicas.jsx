@@ -114,7 +114,15 @@ const ListaFichasTecnicas = () => {
 
     const handleNavigateToProductList = useCallback(() => navigate('/home/produccion/producto-insumo'), [navigate]);
     const handleNavigateToEditFicha = useCallback((idSpecSheet) => { if (idSpecSheet) navigate(`/home/fichas-tecnicas/editar/${idSpecSheet}`); else toast.error("ID de ficha inválido."); }, [navigate]);
-    const handleNavigateToCrearFicha = useCallback(() => navigate(`/home/fichas-tecnicas/crear`), [navigate]);
+    const handleNavigateToCrearFicha = useCallback(() => {
+        // En lugar de navegar a una ruta genérica...
+        // navigate(`/home/fichas-tecnicas/crear`); 
+
+        // ...navegamos a la misma ruta pero añadiendo el ID del producto actual.
+        // Esto le dirá al siguiente componente qué producto pre-seleccionar.
+        navigate(`/home/fichas-tecnicas/crear?idProducto=${idProduct}`);
+
+    }, [navigate, idProduct]);
 
     const cargarFichasYProducto = useCallback(async (showToastOnLoad = false) => {
         if (!idProduct) {
