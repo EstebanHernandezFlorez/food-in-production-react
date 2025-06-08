@@ -48,7 +48,7 @@ import React, {
   // --- Constants ---
   const LOG_PREFIX = "[ProductoInsumo]";
   const INITIAL_FORM_STATE = { idProduct: "", productName: "", status: true };
-  const INITIAL_FORM_ERRORS = { productName: false, general: "" };
+  const INITIAL_FORM_ERRORS = { productName: "", general: "" };
   const INITIAL_CONFIRM_PROPS = { title: "", message: null, confirmText: "Confirmar", confirmColor: "primary", itemDetails: null };
   const ITEMS_PER_PAGE = 7;
 
@@ -115,20 +115,23 @@ import React, {
     const clearFormErrors = useCallback(() => setFormErrors(INITIAL_FORM_ERRORS), []);
 
     const validateForm = useCallback(() => {
-      const errors = { ...INITIAL_FORM_ERRORS };
+      const errors = { productName: "", general: "" };
       let isValid = true;
       errors.general = "";
       const trimmedName = String(form.productName ?? "").trim();
       if (!trimmedName) {
-        errors.productName = true;
+        errors.productName ="El nombre del producto es requerido."; // Mensaje para campo vacío
+    isValid = false;
+  }else if (trimmedName.length < 3) {
+        errors.productName = "El nombre del producto debe tener al menos 3 caracteres."; // Mensaje para mínimo de 3
         isValid = false;
-      } else if (trimmedName.length < 3) {
-        errors.productName = true;
+      } else if (trimmedName.length > 30) { // <<<< NUEVA VALIDACIÓN AQUÍ
+        errors.productName = "El nombre del producto no debe exceder los 30 caracteres."; // Mensaje específico
         isValid = false;
-      } else if (!/^[a-zA-Z0-9\sñÑáéíóúÁÉÍÓÚüÜ]+$/.test(trimmedName)) {
-          errors.productName = true;
-          isValid = false;
-      }
+      }else if (!/^[a-zA-Z0-9\sñÑáéíóúÁÉÍÓÚüÜ]+$/.test(trimmedName)) {
+        errors.productName = "El nombre solo puede contener letras, números, espacios, ñ y acentos."; // Mensaje para caracteres inválidos
+        isValid = false;
+    }
       setFormErrors(errors);
       return isValid;
     }, [form]);
@@ -139,7 +142,7 @@ import React, {
         if (formErrors[name]) {
           setFormErrors((prevErr) => ({
             ...prevErr,
-            [name]: false,
+            [name]: "",
             general: "",
           }));
         }
@@ -515,7 +518,7 @@ import React, {
         {/* Modal para Agregar/Editar Producto/Insumo (se mantiene) */}
         <Modal isOpen={modalOpen} toggle={!isSavingForm ? toggleMainModal : undefined} centered size="md" backdrop="static" keyboard={!isSavingForm} aria-labelledby="productoInsumoModalTitle">
           {/* ... contenido del modal ... */}
-          <ModalHeader toggle={!isSavingForm ? toggleMainModal : undefined} id="productoInsumoModalTitle"> <div className="d-flex align-items-center"> {isEditing ? <Edit size={20} className="me-2" /> : <Plus size={20} className="me-2" />} {modalTitle} </div> </ModalHeader> <ModalBody> {formErrors.general && ( <Alert color="danger" fade={false} className="d-flex align-items-center py-2 mb-3"> <AlertTriangle size={18} className="me-2" /> {formErrors.general} </Alert> )} <Form id="productoInsumoForm" noValidate onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}> <FormGroup> <Label for="modalProductName" className="form-label fw-bold">Nombre Producto/Insumo <span className="text-danger">*</span></Label> <Input id="modalProductName" type="text" name="productName" value={form.productName} onChange={handleChange} invalid={formErrors.productName} required aria-describedby="productNameFeedback" disabled={isSavingForm} placeholder="Ej: Harina de Trigo Superior" /> <FormFeedback id="productNameFeedback"> {formErrors.productName && "El nombre es requerido (mín. 3 caracteres, solo letras/números/espacios/ñ/acentos)."} </FormFeedback> </FormGroup> </Form> </ModalBody> <ModalFooter className="border-top pt-3"> <Button color="secondary" outline onClick={toggleMainModal} disabled={isSavingForm}>Cancelar</Button> <Button type="submit" form="productoInsumoForm" color="primary" disabled={!canSubmitForm}>{submitButtonText}</Button> </ModalFooter>
+          <ModalHeader toggle={!isSavingForm ? toggleMainModal : undefined} id="productoInsumoModalTitle"> <div className="d-flex align-items-center"> {isEditing ? <Edit size={20} className="me-2" /> : <Plus size={20} className="me-2" />} {modalTitle} </div> </ModalHeader> <ModalBody> {formErrors.general && ( <Alert color="danger" fade={false} className="d-flex align-items-center py-2 mb-3"> <AlertTriangle size={18} className="me-2" /> {formErrors.general} </Alert> )} <Form id="productoInsumoForm" noValidate onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}> <FormGroup> <Label for="modalProductName" className="form-label fw-bold">Nombre Producto/Insumo <span className="text-danger">*</span></Label> <Input id="modalProductName" type="text" name="productName" value={form.productName} onChange={handleChange} invalid={!!formErrors.productName} required aria-describedby="productNameFeedback" disabled={isSavingForm} placeholder="Ej: Harina de Trigo Superior" /> <FormFeedback id="productNameFeedback"> {formErrors.productName } </FormFeedback> </FormGroup> </Form> </ModalBody> <ModalFooter className="border-top pt-3"> <Button color="secondary" outline onClick={toggleMainModal} disabled={isSavingForm}>Cancelar</Button> <Button type="submit" form="productoInsumoForm" color="primary" disabled={!canSubmitForm}>{submitButtonText}</Button> </ModalFooter>
         </Modal>
 
         {/* Modal de Confirmación (se mantiene) */}
