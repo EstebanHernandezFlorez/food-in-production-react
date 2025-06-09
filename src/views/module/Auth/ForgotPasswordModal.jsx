@@ -8,6 +8,10 @@ const isValidEmail = (email) => {
   return emailRegex.test(email);
 };
 
+
+
+
+
 // Función de validación de contraseña (ajusta según tus reglas exactas si es necesario)
 const validatePassword = (password) => {
     const passwordRegex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{10,}$/;
