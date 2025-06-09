@@ -136,12 +136,15 @@ const Insumos = () => {
 
         if (!trimmedName) {
             errors.supplyName = true; isValid = false; errors.general = "El nombre del insumo es requerido.";
-        } else if (trimmedName.length < 2 || trimmedName.length > 100) {
-            errors.supplyName = true; isValid = false; errors.general = "El nombre del insumo debe tener entre 2 y 100 caracteres.";
+        }if  (!trimmedName) {
+            errors.supplyName = "El nombre del insumo es requerido.";
+        } else if (trimmedName.length < 2 || trimmedName.length > 30) {
+            // Aquí está la validación de longitud que coincide con tu backend
+            errors.supplyName = "El nombre del insumo debe tener entre 2 y 30 caracteres.";
         }
 
-        if (trimmedDescription.length > 500) {
-             errors.description = true; isValid = false; errors.general = (errors.general ? errors.general + " " : "") + "La descripción no puede exceder los 500 caracteres.";
+        if (trimmedDescription.length > 250) {
+             errors.description = true; isValid = false; errors.general = (errors.general ? errors.general + " " : "") + "La descripción no puede exceder los 250 caracteres.";
         }
 
         if (!form.unitOfMeasure) { // Corregido
