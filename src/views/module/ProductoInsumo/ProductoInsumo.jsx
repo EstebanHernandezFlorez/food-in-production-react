@@ -526,6 +526,7 @@ import React, {
                                 <FormFeedback>Debe ser un número positivo.</FormFeedback>
                             </FormGroup>
                         </Col>
+                        
                         <Col md={6}>
                             <FormGroup>
                                 <Label for="modalMaxStock" className="form-label fw-bold">Stock Máximo</Label>
