@@ -51,10 +51,11 @@ const InsumoFormModal = ({
                                     disabled={isSavingForm}
                                     placeholder="Ej: Harina de Trigo"
                                     aria-describedby="supplyNameFeedback"
+                                    maxLength="30"
                                 />
                                 <FormFeedback id="supplyNameFeedback">
                                     {/* Mensaje dinámico basado en el error específico si lo tienes, o uno genérico */}
-                                    {formErrors.supplyName && (form.supplyName.trim() === '' ? "El nombre del insumo es requerido." : "El nombre debe tener entre 2 y 100 caracteres y ser válido.")}
+                                    {formErrors.supplyName && (form.supplyName.trim() === '' ? "El nombre del insumo es requerido." : "El nombre debe tener entre 2 y 30 caracteres y ser válido.")}
                                 </FormFeedback>
                             </FormGroup>
                         </Col>
