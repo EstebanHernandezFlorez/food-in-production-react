@@ -5,7 +5,7 @@ import { Edit, Trash2 } from 'lucide-react';
 
 const InsumosTable = ({
     isLoading,
-    currentItems, // Array de objetos, cada objeto debe tener: idSupply, supplyName, unitOfMeasure, status, (opcionalmente description)
+    currentItems, // Este array ya viene ordenado y paginado desde el componente padre
     dataLength,
     tableSearchText,
     getUnitLabel,
@@ -14,16 +14,8 @@ const InsumosTable = ({
     requestDeleteConfirmation,
     isConfirmActionLoading,
 }) => {
-    const colSpanValue = 5; // Ajusta si añades/quitas columnas
-
-    // ==================================================================
-    // CAMBIO AÑADIDO AQUÍ
-    // 1. Se crea una copia del array para no mutar los props originales.
-    // 2. Se ordena la copia en orden ASCENDENTE basándose en el idSupply.
-    //    (a.idSupply - b.idSupply) asegura el orden ascendente (menor a mayor).
-    const sortedItems = [...currentItems].sort((a, b) => (a.idSupply || 0) - (b.idSupply || 0));
-    // ==================================================================
-
+    // Ya no necesitas la variable sortedItems. Trabajas directamente con currentItems.
+    const colSpanValue = 5;
 
     return (
         <div className="table-responsive shadow-sm custom-table-container mb-3">
@@ -32,10 +24,6 @@ const InsumosTable = ({
                     <tr>
                         <th scope="col" className="text-center" style={{ width: '10%' }}>ID</th>
                         <th scope="col" style={{ width: '40%' }}>Nombre Insumo</th>
-                        {/* Si añades descripción:
-                        <th scope="col" style={{ width: '25%' }}>Descripción</th> 
-                        Ajusta los widths de las otras columnas
-                        */}
                         <th scope="col" style={{ width: '20%' }}>Unidad Medida</th>
                         <th scope="col" className="text-center" style={{ width: '15%' }}>Estado</th>
                         <th scope="col" className="text-center" style={{ width: '15%' }}>Acciones</th>
@@ -44,19 +32,12 @@ const InsumosTable = ({
                 <tbody>
                     {isLoading && dataLength === 0 ? (
                         <tr><td colSpan={colSpanValue} className="text-center p-5"><Spinner color="primary" /> Cargando...</td></tr>
-                    // Se usa sortedItems en lugar de currentItems
-                    ) : sortedItems.length > 0 ? (
-                        // Se usa sortedItems.map()
-                        sortedItems.map((item) => (
-                            // Asegúrate que item.idSupply exista y sea único
-                            <tr key={item.idSupply || `item-${Math.random()}`}> 
-                                <th scope="row" className="text-center">{item.idSupply || '-'}</th>
-                                <td>{item.supplyName || '-'}</td>
-                                {/* Si añades descripción:
-                                <td title={item.description || ''}>
-                                    {item.description ? (item.description.length > 50 ? item.description.substring(0, 47) + "..." : item.description) : '-'}
-                                </td>
-                                */}
+                    ) : currentItems.length > 0 ? (
+                        // Mapeas directamente sobre currentItems
+                        currentItems.map((item) => (
+                            <tr key={item.idSupply}>
+                                <th scope="row" className="text-center">{item.idSupply}</th>
+                                <td>{item.supplyName}</td>
                                 <td>{getUnitLabel(item.unitOfMeasure)}</td>
                                 <td className="text-center">
                                     <Button
@@ -74,7 +55,7 @@ const InsumosTable = ({
                                         <Button
                                             disabled={isConfirmActionLoading}
                                             size="sm"
-                                            onClick={() => openEditModal(item)} // openEditModal recibe el 'item' completo
+                                            onClick={() => openEditModal(item)}
                                             title="Editar"
                                             className="action-button action-edit"
                                             color="info" outline
@@ -84,7 +65,7 @@ const InsumosTable = ({
                                         <Button
                                             disabled={isConfirmActionLoading}
                                             size="sm"
-                                            onClick={() => requestDeleteConfirmation(item)} // requestDeleteConfirmation recibe el 'item' completo
+                                            onClick={() => requestDeleteConfirmation(item)}
                                             title="Eliminar"
                                             className="action-button action-delete"
                                             color="danger" outline
