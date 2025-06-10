@@ -5,14 +5,13 @@ import {
     Table, Button, Container, Row, Col, Form, FormGroup, Input, Label,
     Modal, ModalHeader, ModalBody, ModalFooter, Spinner,
 } from "reactstrap";
-// Usaremos los mismos iconos que en Proveedores para consistencia
+
 import { Trash2, Edit, Plus, AlertTriangle, CheckCircle, XCircle, UserCheck, UserX } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import clientesService from '../../services/clientesService'; 
 import CustomPagination from '../../General/CustomPagination'; 
 import FondoForm from "../../../assets/login.jpg"; 
 
-// --- Confirmation Modal Component (igual que en Proveedores) ---
 const ConfirmationModal = ({ isOpen, toggle, title, children, onConfirm, confirmText = "Confirmar", confirmColor = "primary", isConfirming = false }) => (
     <Modal isOpen={isOpen} toggle={!isConfirming ? toggle : undefined} centered backdrop="static" keyboard={!isConfirming}>
         <ModalHeader toggle={!isConfirming ? toggle : undefined}>
@@ -39,8 +38,6 @@ const ConfirmationModal = ({ isOpen, toggle, title, children, onConfirm, confirm
     </Modal>
 );
 
-// --- Constants ---
-// Estado inicial adaptado para Clientes
 const INITIAL_FORM_STATE = {
     id: "", 
     NombreCompleto: "",
@@ -52,7 +49,7 @@ const INITIAL_FORM_STATE = {
     Estado: "Activo", 
 };
 
-// Errores iniciales adaptados para Clientes
+
 const INITIAL_FORM_ERRORS = {
     NombreCompleto: false,
     Distintivo: false,
@@ -70,7 +67,7 @@ const INITIAL_CONFIRM_PROPS = {
     itemDetails: null,
 };
 
-// Opciones para el select de Categoría Cliente
+
 const CATEGORIAS_CLIENTE = [
     { value: "Familiar", label: "Familiar" },
     { value: "Empresarial", label: "Empresarial" },
@@ -78,11 +75,11 @@ const CATEGORIAS_CLIENTE = [
     { value: "Nuevo", label: "Nuevo" },
 ];
 
-const ITEMS_PER_PAGE = 5; // Puedes ajustar esto
+const ITEMS_PER_PAGE = 5; 
 
-// --- Main Component ---
+
 const Clientes = () => {
-    // --- State ---
+
     const [data, setData] = useState([]);
     const [form, setForm] = useState(INITIAL_FORM_STATE);
     const [isEditing, setIsEditing] = useState(false);
@@ -95,33 +92,32 @@ const Clientes = () => {
     const [confirmModalProps, setConfirmModalProps] = useState(INITIAL_CONFIRM_PROPS);
     const [isConfirmActionLoading, setIsConfirmActionLoading] = useState(false);
 
-    // --- Refs ---
-    const confirmActionRef = useRef(null); // Almacena la función a ejecutar en confirmación
+   
+    const confirmActionRef = useRef(null); 
 
-    // --- Data Fetching ---
+    
     const fetchData = useCallback(async (showLoadingSpinner = true) => {
         if (showLoadingSpinner) setIsLoading(true);
         console.log("[FETCH] Fetching clients...");
         try {
-            // Usa el servicio de clientes y espera el formato frontend
+            
             const clientes = await clientesService.getAllClientes();
             setData(clientes || []);
             console.log("[FETCH] Clients loaded:", clientes);
         } catch (error) {
             console.error("[FETCH ERROR] Failed to load clients:", error);
             toast.error("Error al cargar clientes. Verifique la conexión.");
-            setData([]); // Asegura que data es un array incluso en error
+            setData([]); 
         } finally {
              if (showLoadingSpinner) setIsLoading(false);
              console.log("[FETCH] Fetching finished.");
         }
-    }, []); // No tiene dependencias externas que cambien
+    }, []); 
 
     useEffect(() => {
         fetchData();
     }, [fetchData]);
 
-    // --- Form Helper Functions ---
     const resetForm = useCallback(() => {
         setForm(INITIAL_FORM_STATE);
     }, []);
@@ -130,50 +126,45 @@ const Clientes = () => {
         setFormErrors(INITIAL_FORM_ERRORS);
     }, []);
 
-    // Validación adaptada para Clientes
+   
     const validateForm = useCallback(() => {
-        // 1. Asegurar que los valores sean strings antes de trim/validar (manejar null/undefined)
         const nombreCompletoString = String(form.NombreCompleto ?? '').trim();
         const distintivoString = String(form.Distintivo ?? '').trim();
         const celularString = String(form.Celular ?? '').trim();
         const correoString = String(form.Correo ?? '').trim();
-        const direccionString = String(form.Direccion ?? '').trim(); // Aunque opcional, validar si se ingresa
-
-        // 2. Realizar las validaciones
+        const direccionString = String(form.Direccion ?? '').trim(); 
         const errors = {
-            NombreCompleto: !nombreCompletoString, // Requerido
-            Distintivo: !distintivoString,         // Requerido
-            CategoriaCliente: !form.CategoriaCliente, // Requerido (Select)
-            // Validaciones opcionales pero con formato correcto si se ingresan
+            NombreCompleto: !nombreCompletoString, 
+            Distintivo: !distintivoString,        
+            CategoriaCliente: !form.CategoriaCliente, 
+            
             Celular: !/^\d{10,12}$/.test(celularString),
-            Correo: correoString && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoString), // Formato email si no está vacío
-            Direccion: false, // No marcamos error si está vacío, ya que es opcional
+            Correo: correoString && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoString), 
+            Direccion: false, 
         };
 
         setFormErrors(errors);
-        // Devuelve true si NO hay errores en los campos REQUERIDOS y
-        // si los campos opcionales INGRESADOS tienen formato válido.
         return !errors.NombreCompleto && !errors.Distintivo && !errors.CategoriaCliente &&
                !errors.Celular && !errors.Correo;
 
     }, [form]);
 
-    // --- Event Handlers ---
+
     const handleChange = useCallback((e) => {
         const { name, value } = e.target;
         setForm((prevForm) => ({ ...prevForm, [name]: value }));
-        // Limpia el error específico del campo al cambiarlo
+        
         if (formErrors[name]) {
             setFormErrors(prev => ({ ...prev, [name]: false }));
         }
-    }, [formErrors]); // Depende de formErrors para poder limpiarlo
+    }, [formErrors]); 
 
     const handleTableSearch = useCallback((e) => {
         setTableSearchText(e.target.value.toLowerCase());
-        setCurrentPage(1); // Reset page on new search
+        setCurrentPage(1); 
     }, []);
 
-    // --- Modal Toggles (igual que Proveedores) ---
+
     const toggleMainModal = useCallback(() => {
         const closing = modalOpen;
         setModalOpen(prev => !prev);
@@ -185,11 +176,11 @@ const Clientes = () => {
     }, [modalOpen, resetForm, clearFormErrors]);
 
     const toggleConfirmModal = useCallback(() => {
-        if (isConfirmActionLoading) return; // No permitir cerrar si está procesando
+        if (isConfirmActionLoading) return; 
         setConfirmModalOpen(prev => !prev);
     }, [isConfirmActionLoading]);
 
-    // --- Effect to Reset Confirmation Modal State When Closed (igual que Proveedores) ---
+   
      useEffect(() => {
         if (!confirmModalOpen && !isConfirmActionLoading) {
             setConfirmModalProps(INITIAL_CONFIRM_PROPS);
@@ -197,12 +188,12 @@ const Clientes = () => {
         }
     }, [confirmModalOpen, isConfirmActionLoading]);
 
-    // --- Confirmation Preparation (igual que Proveedores) ---
+  
     const prepareConfirmation = useCallback((actionFn, props) => {
         const detailsToPass = props.itemDetails;
         confirmActionRef.current = () => {
             if (actionFn) {
-                actionFn(detailsToPass); // Pasa los detalles a la función de ejecución
+                actionFn(detailsToPass); 
             } else {
                  console.error("[CONFIRM ACTION] actionFn is null or undefined in ref execution.");
                  toast.error("Error interno al intentar ejecutar la acción confirmada.");
@@ -211,9 +202,9 @@ const Clientes = () => {
         };
         setConfirmModalProps(props);
         setConfirmModalOpen(true);
-    }, [toggleConfirmModal]); // Incluye toggleConfirmModal por si se usa en el error
+    }, [toggleConfirmModal]); 
 
-    // --- CRUD Operations (adaptadas para Clientes) ---
+    
 
     // ADD CLIENT (Submit Handler)
     const handleSubmit = useCallback(async () => {
@@ -223,7 +214,6 @@ const Clientes = () => {
             return;
         }
 
-        // Opcional: Añadir validación de duplicados si es necesario (ej. por Correo o Celular si son únicos)
         const correoExistente = data.some(c => c.Correo && c.Correo.toLowerCase() === String(form.Correo ?? '').trim().toLowerCase());
         if (correoExistente) {
             toast.error("Ya existe un cliente con este correo electrónico.", { duration: 4000 });
@@ -240,29 +230,27 @@ const Clientes = () => {
         }
 
 
-
-
         const toastId = toast.loading('Agregando cliente...');
         try {
-            // El servicio espera el objeto con formato frontend ('Activo'/'Inactivo')
-            // Aseguramos que se cree como 'Activo' y excluimos el 'id'
+            
+          
             const { id, ...newClientData } = form;
-            const clientToSend = { ...newClientData, Estado: 'Activo' }; // Forzar estado Activo al crear
+            const clientToSend = { ...newClientData, Estado: 'Activo' }; 
 
             console.log("[ADD CLIENT] Calling service with:", clientToSend);
-            await clientesService.createCliente(clientToSend); // Llama al servicio de clientes
+            await clientesService.createCliente(clientToSend); 
 
             toast.success("Cliente agregado exitosamente!", { id: toastId });
-            toggleMainModal(); // Cierra modal principal
-            await fetchData(false); // Recarga datos sin spinner de pantalla completa
-            setCurrentPage(1); // Vuelve a la primera página
+            toggleMainModal(); 
+            await fetchData(false); 
+            setCurrentPage(1); 
 
         } catch (error) {
             console.error("[ADD CLIENT ERROR]", error);
             const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
             toast.error(`Error al agregar: ${errorMsg}`, { id: toastId, duration: 5000 });
         }
-    }, [form, data, validateForm, toggleMainModal, fetchData]); // Añadir 'data' si se hace validación de duplicados
+    }, [form, data, validateForm, toggleMainModal, fetchData]); 
 
     // EDIT CLIENT (Request Confirmation)
     const requestEditConfirmation = useCallback(() => {
@@ -297,44 +285,43 @@ const Clientes = () => {
             message: <p>¿Está seguro que desea guardar los cambios para <strong>{form.NombreCompleto || 'este cliente'}</strong>?</p>,
             confirmText: "Confirmar Cambios",
             confirmColor: "primary",
-            itemDetails: { ...form } // Pasa una copia de los datos actuales del formulario
+            itemDetails: { ...form } 
         });
-    }, [form, data, validateForm, prepareConfirmation]); // Añadir 'data' si se valida duplicidad
+    }, [form, data, validateForm, prepareConfirmation]); 
 
     // EDIT CLIENT (Execute Action)
     const executeEdit = useCallback(async (clientToUpdate) => {
         console.log("[EDIT CLIENT EXEC] Attempting execution with received data:", clientToUpdate);
 
-        // Valida el argumento recibido, no el estado
+    
         if (!clientToUpdate || !clientToUpdate.id) {
              console.error("[EDIT CLIENT EXEC ERROR] Missing client data or ID in received argument.", clientToUpdate);
              toast.error("Error interno: Datos para actualizar no encontrados.");
-             toggleConfirmModal(); // Cierra modal de confirmación
+             toggleConfirmModal(); 
              return;
         }
 
-        setIsConfirmActionLoading(true); // Inicia el estado de carga para la confirmación
+        setIsConfirmActionLoading(true); 
         const toastId = toast.loading('Actualizando cliente...');
 
         try {
             // El servicio de clientes espera el ID y el objeto con formato frontend
             console.log("[EDIT CLIENT EXEC] Calling service with ID:", clientToUpdate.id, "Data:", clientToUpdate);
-            await clientesService.updateCliente(clientToUpdate.id, clientToUpdate); // Llama al servicio de clientes
+            await clientesService.updateCliente(clientToUpdate.id, clientToUpdate); 
 
             toast.success("Cliente actualizado exitosamente!", { id: toastId });
-            toggleConfirmModal(); // Cierra modal de confirmación
-            toggleMainModal();    // Cierra modal de formulario principal
-            await fetchData(false); // Recarga datos
-
+            toggleConfirmModal(); 
+            toggleMainModal();    
+            await fetchData(false); 
         } catch (error) {
             console.error("[EDIT CLIENT EXEC ERROR]", error);
             const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
             toast.error(`Error al actualizar: ${errorMsg}`, { id: toastId, duration: 5000 });
-            toggleConfirmModal(); // Cierra modal de confirmación en caso de error
+            toggleConfirmModal(); 
         } finally {
-             setIsConfirmActionLoading(false); // Finaliza el estado de carga
+             setIsConfirmActionLoading(false); 
         }
-    }, [toggleConfirmModal, toggleMainModal, fetchData]); // No depende de confirmModalProps
+    }, [toggleConfirmModal, toggleMainModal, fetchData]);
 
     // CHANGE STATUS (Request Confirmation)
     const requestChangeStatusConfirmation = useCallback((idCliente, currentStatus, nombreCliente) => {
@@ -343,12 +330,12 @@ const Clientes = () => {
             return;
         }
         console.log(`[STATUS CLIENT REQ] Requesting change for ID: ${idCliente}, Current Status: ${currentStatus}`);
-        // Determina la acción y el color basado en el estado actual ('Activo'/'Inactivo')
+        
         const isCurrentlyActive = currentStatus === "Activo";
         const actionText = isCurrentlyActive ? "desactivar" : "activar";
         const futureStatusText = isCurrentlyActive ? "Inactivo" : "Activo";
-        const confirmColor = isCurrentlyActive ? "warning" : "success"; // warning para desactivar, success para activar
-        const IconComponent = isCurrentlyActive ? UserX : UserCheck; // Íconos apropiados
+        const confirmColor = isCurrentlyActive ? "warning" : "success"; 
+        const IconComponent = isCurrentlyActive ? UserX : UserCheck; 
 
         prepareConfirmation(executeChangeStatus, {
             title: "Confirmar Cambio de Estado",
@@ -362,7 +349,7 @@ const Clientes = () => {
                 </>
             ),
             confirmColor: confirmColor,
-            itemDetails: { idCliente, currentStatus, nombreCliente, futureStatusText } // Pasa los detalles necesarios
+            itemDetails: { idCliente, currentStatus, nombreCliente, futureStatusText } 
         });
     }, [prepareConfirmation]);
 
@@ -378,7 +365,6 @@ const Clientes = () => {
         }
 
         const { idCliente, currentStatus, nombreCliente, futureStatusText } = details;
-        // El servicio espera el nuevo estado en formato frontend ('Activo' o 'Inactivo')
         const newStatusFrontend = futureStatusText;
         const actionText = currentStatus === "Activo" ? "desactivar" : "activar";
 
@@ -388,24 +374,23 @@ const Clientes = () => {
 
         try {
             console.log("[STATUS CLIENT EXEC] Calling service changeStateCliente with ID:", idCliente, "New Status:", newStatusFrontend);
-            await clientesService.changeStateCliente(idCliente, newStatusFrontend); // Llama al servicio de clientes
-
+            await clientesService.changeStateCliente(idCliente, newStatusFrontend); 
             toast.success(`Cliente ${nombreCliente || ''} ${actionText === 'activar' ? 'activado' : 'desactivado'} correctamente.`, { id: toastId });
-            toggleConfirmModal(); // Cierra modal de confirmación
-            await fetchData(false); // Recarga datos
+            toggleConfirmModal(); 
+            await fetchData(false); 
 
         } catch (error) {
             console.error("[STATUS CLIENT EXEC ERROR]", error);
             const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
             toast.error(`Error al ${actionText}: ${errorMsg}`, { id: toastId, duration: 5000 });
-            toggleConfirmModal(); // Cierra modal de confirmación en error
+            toggleConfirmModal(); 
         } finally {
             setIsConfirmActionLoading(false);
             console.log("[STATUS CLIENT EXEC] Execution finished.");
         }
-    }, [toggleConfirmModal, fetchData]); // No depende de confirmModalProps
+    }, [toggleConfirmModal, fetchData]); 
 
-    // DELETE CLIENT (Request Confirmation)
+   
     const requestDeleteConfirmation = useCallback(async (cliente) => {
         if (!cliente || !cliente.id) {
             console.error("[DELETE CLIENT REQ ERROR] Invalid client data received:", cliente);
@@ -413,9 +398,8 @@ const Clientes = () => {
         }
         console.log("[DELETE CLIENT REQ] Requesting confirmation for client:", JSON.stringify(cliente));
 
-        // **Importante:** A diferencia de Proveedores, el código original de Clientes no verifica asociaciones antes de eliminar.
-        // Mantenemos ese comportamiento a menos que se requiera añadir la verificación.
-        // Si se necesitara, aquí iría la llamada a un `clientesService.isClienteAssociated...`
+
+       
 
         console.log("[DELETE CLIENT REQ] Proceeding with confirmation setup.");
         prepareConfirmation(executeDelete, {
@@ -428,12 +412,12 @@ const Clientes = () => {
             ),
             confirmText: "Eliminar Definitivamente",
             confirmColor: "danger",
-            itemDetails: { ...cliente } // Pasa una copia de los detalles del cliente
+            itemDetails: { ...cliente } 
         });
 
     }, [prepareConfirmation]);
 
-    // DELETE CLIENT (Execute Action)
+    // DELETE CLIENT 
     const executeDelete = useCallback(async (clienteToDelete) => {
         console.log("[DELETE CLIENT EXEC] Attempting execution with received data:", JSON.stringify(clienteToDelete));
 
@@ -450,13 +434,13 @@ const Clientes = () => {
 
         try {
             console.log("[DELETE CLIENT EXEC] Calling service deleteCliente with ID:", clienteToDelete.id);
-            await clientesService.deleteCliente(clienteToDelete.id); // Llama al servicio de clientes
+            await clientesService.deleteCliente(clienteToDelete.id); 
 
             toast.success(`Cliente "${clienteToDelete.NombreCompleto}" eliminado correctamente.`, {
                 id: toastId, icon: <CheckCircle className="text-success" />
             });
-            toggleConfirmModal(); // Cierra modal de confirmación
-            await fetchData(false); // Refresca datos
+            toggleConfirmModal(); 
+            await fetchData(false); 
 
         } catch (error) {
             console.error("[DELETE CLIENT EXEC ERROR] API call failed:", error);
@@ -464,11 +448,11 @@ const Clientes = () => {
             toast.error(`Error al eliminar: ${errorMsg}`, {
                 id: toastId, icon: <XCircle className="text-danger" />, duration: 5000
             });
-            toggleConfirmModal(); // Cierra modal de confirmación en error
+            toggleConfirmModal(); 
         } finally {
             setIsConfirmActionLoading(false);
         }
-    }, [toggleConfirmModal, fetchData]); // No depende de confirmModalProps
+    }, [toggleConfirmModal, fetchData]); 
 
     // --- Modal Opening Handlers ---
     const openAddModal = useCallback(() => {
@@ -479,24 +463,24 @@ const Clientes = () => {
     }, [resetForm, clearFormErrors]);
 
     const openEditModal = useCallback((cliente) => {
-        // Carga los datos del cliente en el formulario, asegurando que los opcionales sean string vacío si son null/undefined
+       
         setForm({
             id: String(cliente.id || ""),
             NombreCompleto: cliente.NombreCompleto || "",
             Distintivo: cliente.Distintivo || "",
             CategoriaCliente: cliente.CategoriaCliente || "",
-            Celular: String(cliente.Celular ?? ""), // Convertir a string o vacío
+            Celular: String(cliente.Celular ?? ""), 
             Correo: cliente.Correo || "",
             Direccion: cliente.Direccion || "",
-            Estado: cliente.Estado || "Activo", // Default a Activo si no viene
+            Estado: cliente.Estado || "Activo", 
         });
         setIsEditing(true);
-        clearFormErrors(); // Limpia errores de validaciones anteriores
+        clearFormErrors(); 
         setModalOpen(true);
     }, [clearFormErrors]);
 
 
-    // --- Filtering and Pagination Logic (igual que Proveedores) ---
+   
     const filteredData = useMemo(() => {
         if (!tableSearchText) return data;
         return data.filter(
@@ -504,30 +488,29 @@ const Clientes = () => {
                 (item?.NombreCompleto?.toLowerCase() ?? '').includes(tableSearchText) ||
                 (item?.Distintivo?.toLowerCase() ?? '').includes(tableSearchText) ||
                 (item?.CategoriaCliente?.toLowerCase() ?? '').includes(tableSearchText) ||
-                (String(item?.Celular ?? '').toLowerCase()).includes(tableSearchText) || // Busca también por celular
-                (item?.Correo?.toLowerCase() ?? '').includes(tableSearchText) // Busca también por correo
+                (String(item?.Celular ?? '').toLowerCase()).includes(tableSearchText) || 
+                (item?.Correo?.toLowerCase() ?? '').includes(tableSearchText) 
         );
     }, [data, tableSearchText]);
 
     const totalItems = useMemo(() => filteredData.length, [filteredData]);
     const totalPages = useMemo(() => Math.ceil(totalItems / ITEMS_PER_PAGE), [totalItems]);
-    // Asegura que currentPage sea válido
+  
     const validCurrentPage = useMemo(() => Math.max(1, Math.min(currentPage, totalPages || 1)), [currentPage, totalPages]);
 
-    // Calcula los items para la página actual
+    
     const currentItems = useMemo(() => {
         const startIndex = (validCurrentPage - 1) * ITEMS_PER_PAGE;
         const endIndex = startIndex + ITEMS_PER_PAGE;
-        // Asegúrate que filteredData es un array antes de slice
         return Array.isArray(filteredData) ? filteredData.slice(startIndex, endIndex) : [];
     }, [filteredData, validCurrentPage]);
 
-    // Ajusta la página actual si se elimina el último ítem de la última página
+    
     useEffect(() => {
         if (currentPage > totalPages && totalPages > 0) {
             setCurrentPage(totalPages);
         }
-        // Si estamos en página 1 y se vacía, nos quedamos en 1
+    
         else if (totalPages === 0 && currentPage !== 1) {
              setCurrentPage(1);
         }
@@ -550,10 +533,10 @@ const Clientes = () => {
                 }}
              />
 
-            {/* Header and Actions */}
+          
             <h2 className="mb-5">Gestión de Clientes</h2>
           <Row className="mb-4 align-items-center justify-content-between">
-    {/* Columna para el buscador, tomará el espacio que necesite */}
+    
     <Col md="auto">
         <Input
             type="text"
@@ -575,17 +558,17 @@ const Clientes = () => {
 
             {/* Data Table */}
             <div className="table-responsive shadow-sm custom-table-container mb-3">
-                 {/* Table con estilo de Proveedores */}
+                
                  <Table hover size="sm" className="mb-0 custom-table" aria-live="polite">
                      <thead>
                         <tr>
-                            {/* Columnas adaptadas para Clientes */}
+                            
                             <th scope="col">Nombre Completo</th>
                             <th scope="col">Distintivo</th>
                             <th scope="col">Categoría</th>
                             <th scope="col">Celular</th>
                             <th scope="col">Correo</th>
-                            {/* <th scope="col">Dirección</th> Podrías añadirla si es relevante en la tabla */}
+                            <th scope="col">Dirección</th>
                             <th scope="col" className="text-center">Estado</th>
                             <th scope="col" className="text-center">Acciones</th>
                         </tr>
@@ -594,7 +577,6 @@ const Clientes = () => {
                          {isLoading ? (
                             <tr><td colSpan="8" className="text-center p-5"><Spinner color="primary" /> Cargando...</td></tr>
                          ) : currentItems.length > 0 ? (
-                            // Mapea los 'currentItems' que ya están paginados y filtrados
                             currentItems.map((item) => (
                                 <tr key={item.id} style={{ verticalAlign: 'middle', backgroundColor: item.Estado === "Inactivo" ? "#f8f9fa" : undefined }}>
                                     <td>{item.NombreCompleto || '-'}</td>
@@ -602,9 +584,9 @@ const Clientes = () => {
                                     <td>{item.CategoriaCliente || '-'}</td>
                                     <td>{item.Celular || '-'}</td>
                                     <td>{item.Correo || '-'}</td>
-                                    {/* <td>{item.Direccion || '-'}</td> */}
+                                    <td>{item.Direccion || '-'}</td> 
                                     <td className="text-center">
-                                        {/* Status Button , adaptado a 'Activo'/'Inactivo' */}
+                                        
                                         <Button
                                             size="sm"
                                             className={`status-button ${item.Estado === 'Activo' ? 'status-active' : 'status-inactive'}`}
@@ -644,7 +626,7 @@ const Clientes = () => {
                                 </tr>
                             ))
                          ) : (
-                            // Mensaje si no hay datos (después de filtrar o si la tabla está vacía)
+                            
                             <tr><td colSpan="8" className="text-center fst-italic p-4">
                                 {tableSearchText ? "No se encontraron clientes que coincidan con la búsqueda." : "No hay clientes registrados."}
                             </td></tr>
@@ -669,11 +651,11 @@ const Clientes = () => {
                 </ModalHeader>
                 <ModalBody>
                      <Form id="clientForm" noValidate onSubmit={(e) => e.preventDefault()}>
-                         {/* La Row principal ahora solo contiene la columna de campos */}
+                       
                          <Row>
-                            {/* Columna ÚNICA para campos, ocupando todo el ancho */}
-                            <Col md={12}> {/* Cambiado de md={7} lg={8} a md={12} */}
-                                <Row className="g-3"> {/* g-3 añade espacio entre columnas */}
+                            
+                            <Col md={12}> 
+                                <Row className="g-3"> 
 
                                      {/* --- Fila 1: Nombre Completo --- */}
                                      <Col md={12}>
@@ -706,7 +688,7 @@ const Clientes = () => {
                                     {/* --- Fila 3: Celular y Correo --- */}
                                     <Col md={6}>
                                         <FormGroup>
-                                            <Label for="modalCelular" className="form-label fw-bold">Celular</Label> {/* Requerido */}
+                                            <Label for="modalCelular" className="form-label fw-bold">Celular</Label> 
                                             <Input id="modalCelular" 
                                             type="tel"
                                             inputMode="tel" 
@@ -723,7 +705,7 @@ const Clientes = () => {
                                     </Col>
                                     <Col md={6}>
                                         <FormGroup>
-                                            <Label for="modalCorreo" className="form-label fw-bold">Correo Electrónico</Label> {/* Opcional */}
+                                            <Label for="modalCorreo" className="form-label fw-bold">Correo Electrónico</Label> 
                                             <Input id="modalCorreo" type="email" inputMode="email" name="Correo" value={form.Correo} onChange={handleChange} invalid={formErrors.Correo} aria-describedby="correoError"/>
                                             {formErrors.Correo && <div id="correoError" className="invalid-feedback d-block">Ingrese una dirección de correo electrónico válida.</div>}
                                         </FormGroup>
@@ -732,20 +714,20 @@ const Clientes = () => {
                                     {/* --- Fila 4: Dirección --- */}
                                     <Col md={12}>
                                         <FormGroup>
-                                            <Label for="modalDireccion" className="form-label fw-bold">Dirección</Label> {/* Opcional */}
+                                            <Label for="modalDireccion" className="form-label fw-bold">Dirección</Label> 
                                             <Input id="modalDireccion" type="text" name="Direccion" value={form.Direccion} onChange={handleChange} invalid={formErrors.Direccion} />
-                                            {/* No se muestra error de formato específico aquí */}
+                                           
                                         </FormGroup>
                                     </Col>
 
-                                </Row> {/* Fin de Row g-3 */}
-                            </Col> {/* Fin de Col md={12} */}
+                                </Row> 
+                            </Col> 
 
-                        </Row> {/* Fin de Row principal */}
+                        </Row> 
                     </Form>
                 </ModalBody>
                 <ModalFooter>
-                    {/* Botones (sin cambios) */}
+                    
                      <Button color="secondary" outline onClick={toggleMainModal} disabled={isConfirmActionLoading}>Cancelar</Button>
                     <Button
                         type="button"
@@ -758,17 +740,16 @@ const Clientes = () => {
                 </ModalFooter>
             </Modal>
 
-            {/* Confirmation Modal (igual que Proveedores) */}
             <ConfirmationModal
                 isOpen={confirmModalOpen}
                 toggle={toggleConfirmModal}
                 title={confirmModalProps.title}
-                onConfirm={() => confirmActionRef.current && confirmActionRef.current()} // Ejecuta la acción guardada en el ref
+                onConfirm={() => confirmActionRef.current && confirmActionRef.current()} 
                 confirmText={confirmModalProps.confirmText}
                 confirmColor={confirmModalProps.confirmColor}
-                isConfirming={isConfirmActionLoading} // Pasa el estado de carga
+                isConfirming={isConfirmActionLoading} 
             >
-                {/* El contenido (mensaje) se establece en confirmModalProps */}
+                
                 {confirmModalProps.message}
             </ConfirmationModal>
 

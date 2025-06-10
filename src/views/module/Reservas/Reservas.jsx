@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback, useRef } from "react"
 import {
   Container,
@@ -29,6 +28,7 @@ import { FaFileExcel, FaTrashAlt, FaList } from "react-icons/fa"
 import Select from "react-select"
 import { AlertTriangle, CheckCircle, XCircle, Plus, Edit } from "lucide-react"
 import toast, { Toaster } from "react-hot-toast"
+import esLocale from '@fullcalendar/core/locales/es';
 
 // --- IMPORTAR SERVICIOS REALES ---
 import reservasService from "../../services/reservasService"
@@ -390,6 +390,7 @@ const Calendario = () => {
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 6
+  const [allClients, setAllClients] = useState([]); 
 
   // --- Estados para el modal de confirmación ---
   const [confirmModalOpen, setConfirmModalOpen] = useState(false)
@@ -479,7 +480,6 @@ const Calendario = () => {
         });
         break;
       }
-      // El paso 3 se valida con la función completa `requestSaveConfirmation`
       default:
         break;
     }
@@ -501,7 +501,6 @@ const Calendario = () => {
       // Intentar extraer los segundos del formato "00:00:02"
       const parts = timeStr.split(":")
       if (parts.length === 3) {
-        // Convertir a segundos totales
         const hours = Number.parseInt(parts[0], 10) || 0
         const minutes = Number.parseInt(parts[1], 10) || 0
         const seconds = Number.parseInt(parts[2], 10) || 0
@@ -521,13 +520,13 @@ const Calendario = () => {
     const people = Number(numPeople)
 
     if (people >= 2 && people <= 15) {
-      return "70000" // 70.000 para 2-15 personas
+      return "70000" 
     } else if (people >= 16 && people <= 40) {
-      return "90000" // 90.000 para 16-40 personas
+      return "90000" 
     } else if (people > 40) {
-      return "90000" // Mantener 90.000 para más de 40 personas
+      return "90000" 
     } else {
-      return "" // Para menos de 2 personas o valores inválidos
+      return "" 
     }
   }
 
@@ -540,12 +539,12 @@ const Calendario = () => {
   const serviceOptions = availableServices.map((service) => ({
     value: service.id,
     label: service.Nombre || service.name || service.Name || `Servicio ${service.id}`,
-    price: service.price || service.Price || service.precio || 0, // Añadimos el precio del servicio
+    price: service.price || service.Price || service.precio || 0, 
   }))
 
   // --- Funciones para el modal de confirmación ---
   const toggleConfirmModal = useCallback(() => {
-    if (isConfirmActionLoading) return // No permitir cerrar si está procesando
+    if (isConfirmActionLoading) return 
     setConfirmModalOpen((prev) => !prev)
   }, [isConfirmActionLoading])
 
@@ -582,32 +581,54 @@ const Calendario = () => {
     [toggleConfirmModal],
   )
 
-  // --- Carga de Datos ---
-  const loadInitialData = useCallback(async () => {
-    setLoading(true)
+// USA ESTA VERSIÓN PARA DEPURAR LOS SERVICIOS
+// REEMPLAZA TU FUNCIÓN ENTERA CON ESTA VERSIÓN FINAL
+const loadInitialData = useCallback(async () => {
+    setLoading(true);
+    console.log("--- INICIANDO CARGA INICIAL ---");
     try {
-      const [fetchedReservations, fetchedServices] = await Promise.all([
-        reservasService.getAllReservations(),
-        serviciosService.getAllServicios(),
-      ])
-      const normalizedServices = (fetchedServices || []).map((service) => ({
-        ...service,
-        id: service.idAditionalServices || service.id,
-        Nombre:
-          service.Nombre || service.name || service.Name || `Servicio ${service.idAditionalServices || service.id}`,
-        price: service.price || service.Price || service.precio || 0, // Normalizar el precio
-      }))
-      setData(fetchedReservations || [])
-      setAvailableServices(normalizedServices)
+        const [fetchedReservations, fetchedServices, fetchedClients] = await Promise.all([
+            reservasService.getAllReservations(),
+            serviciosService.getAllServicios(),
+            clientesService.getAllClientes(),
+        ]);
+
+        console.log("--- DATOS RECIBIDOS DE APIS ---");
+        console.log("SERVICIOS CRUDOS RECIBIDOS:", fetchedServices);
+        
+        // --- PROCESAMIENTO DE SERVICIOS (LÓGICA IGUAL A CLIENTES) ---
+        if (Array.isArray(fetchedServices)) {
+            // ELIMINAMOS EL FILTRO DE STATUS. Asumimos que la API ya devuelve solo los activos.
+            console.log(`PROCESANDO ${fetchedServices.length} servicios recibidos (sin filtro de estado).`);
+
+            const normalizedServices = fetchedServices.map(service => ({
+                id: service.idAditionalServices || service.id,
+                // 'label' y 'value' son los campos que react-select necesita
+                label: service.name || `Servicio #${service.idAditionalServices || service.id}`,
+                value: service.idAditionalServices || service.id,
+                price: service.price || 0,
+                ...service // Incluimos el resto de las propiedades del servicio
+            }));
+            
+            console.log("SERVICIOS NORMALIZADOS (para el selector):", normalizedServices);
+            setAvailableServices(normalizedServices);
+        } else {
+            console.error("ERROR: La respuesta de servicios NO es un array.");
+            setAvailableServices([]);
+        }
+
+        // --- PROCESAMIENTO DE CLIENTES Y RESERVAS ---
+        setAllClients(fetchedClients || []);
+        setData(fetchedReservations || []);
+
     } catch (error) {
-      console.error("Error fetching initial data:", error)
-      toast.error(`No se pudieron cargar los datos: ${error?.message || "Error desconocido"}`)
-      setData([])
-      setAvailableServices([])
+        console.error("ERROR CATASTRÓFICO en loadInitialData:", error);
+        toast.error("Fallo al cargar datos iniciales.");
     } finally {
-      setLoading(false)
+        setLoading(false);
+        console.log("--- CARGA INICIAL FINALIZADA ---");
     }
-  }, [])
+}, []);
 
   useEffect(() => {
     loadInitialData()
@@ -626,26 +647,23 @@ const Calendario = () => {
     },
   }))
 
-  // --- NUEVA FUNCIÓN: Verificar si ya existe una reserva para el mismo cliente en la misma fecha ---
+  
   const checkDuplicateReservation = useCallback(
     (clientId, dateTime, reservationId = null) => {
       if (!clientId || !dateTime) return false
 
       const reservationDate = new Date(dateTime)
-      const reservationDateString = reservationDate.toISOString().split("T")[0] // Solo la fecha YYYY-MM-DD
+      const reservationDateString = reservationDate.toISOString().split("T")[0] 
 
-      // Verificar si hay alguna reserva del mismo cliente en la misma fecha
       return data.some((reserva) => {
-        // Excluir la reserva actual si estamos editando
         if (reservationId && (reserva.idReservations === reservationId || reserva.id === reservationId)) {
           return false
         }
 
-        // Verificar si es el mismo cliente
         const sameClient = reserva.idCustomers === clientId
         if (!sameClient) return false
 
-        // Verificar si es la misma fecha
+       
         const reservaDate = new Date(reserva.dateTime)
         const reservaDateString = reservaDate.toISOString().split("T")[0]
 
@@ -655,31 +673,30 @@ const Calendario = () => {
     [data],
   )
 
-  // --- NUEVA FUNCIÓN: Verificar si ya existe una reserva en la misma hora ---
+ 
   const checkTimeConflict = useCallback(
     (dateTime, reservationId = null) => {
       if (!dateTime) return false
 
       const reservationDateTime = new Date(dateTime)
 
-      // Verificar si hay alguna reserva en la misma hora
+     
       return data.some((reserva) => {
-        // Excluir la reserva actual si estamos editando
         if (reservationId && (reserva.idReservations === reservationId || reserva.id === reservationId)) {
           return false
         }
 
-        // Verificar si es la misma hora
+      
         const reservaDateTime = new Date(reserva.dateTime)
 
-        // Comparar año, mes, día, hora y minutos
+       
         const sameYear = reservationDateTime.getFullYear() === reservaDateTime.getFullYear()
         const sameMonth = reservationDateTime.getMonth() === reservaDateTime.getMonth()
         const sameDay = reservationDateTime.getDate() === reservaDateTime.getDate()
         const sameHour = reservationDateTime.getHours() === reservaDateTime.getHours()
         const sameMinute = reservationDateTime.getMinutes() === reservaDateTime.getMinutes()
 
-        // Imprimir información de depuración
+        
         console.log("Comparando fechas:", {
           nueva: reservationDateTime.toLocaleString(),
           existente: reservaDateTime.toLocaleString(),
@@ -697,15 +714,15 @@ const Calendario = () => {
     [data],
   )
 
-  // --- NUEVA FUNCIÓN: Calcular precio basado en número de personas ---
+  
   const calculateServicePrice = (numPeople, selectedServices) => {
     if (!numPeople || !selectedServices || selectedServices.length === 0) return 0
 
-    // Convertir a número
+   
     const people = Number.parseInt(numPeople, 10)
     if (isNaN(people) || people <= 0) return 0
 
-    // Calcular precio base por persona para los servicios seleccionados
+    
     let totalPrice = 0
     selectedServices.forEach((service) => {
       if (service && service.price) {
@@ -716,20 +733,20 @@ const Calendario = () => {
     return totalPrice
   }
 
-  // --- MODIFICADO: handleDateClick para que la fecha y hora aparezcan vacías ---
+ 
   const handleDateClick = (arg) => {
     console.log("[handleDateClick] Iniciando. Argumento:", arg)
-    setCurrentStep(1); // Resetear al primer paso
+    setCurrentStep(1); 
 
     setSelectedReserva(null)
     setAdditionalAmountLabel("Monto Decoración")
     setShowDecorationAmountInput(false)
-    setShowAdditionalServiceAmountInput(false) // NUEVO: Resetear estado
+    setShowAdditionalServiceAmountInput(false) 
 
-    // MODIFICADO: Siempre inicializar con fecha y hora vacías
+    
     setForm({
       ...emptyForm,
-      dateTime: "", // Siempre vacío para nueva reserva
+      dateTime: "", 
       pass: [{ fecha: new Date().toISOString().split("T")[0], cantidad: "50000" }],
     })
 
@@ -748,12 +765,23 @@ const Calendario = () => {
       toast.error("ID de reserva inválido.")
       return
     }
-    setCurrentStep(1); // Resetear al primer paso
+    setCurrentStep(1); 
     setLoading(true)
     reservasService
       .getReservationById(idReservations)
       .then((detailedReservation) => {
         if (detailedReservation && !detailedReservation.error) {
+           // --- NUEVA LÓGICA AQUÍ ---
+                // Buscamos el cliente en nuestra lista completa (activos e inactivos)
+                const clienteAsociado = allClients.find(
+                  c => c.idCustomers === detailedReservation.idCustomers
+                );
+                
+                // Usamos el nombre del cliente encontrado, o el que viene en la reserva, o un valor por defecto.
+               const nombreClienteParaMostrar = clienteAsociado 
+    ? (clienteAsociado.FullName || clienteAsociado.fullName || clienteAsociado.nombre || 'Cliente no encontrado')
+    : (detailedReservation.fullName || 'Cliente no disponible');
+                // --- FIN DE LA NUEVA LÓGICA ---
           setSelectedReserva(detailedReservation)
           const selectedServiceValues = (
             Array.isArray(detailedReservation.AditionalServices) ? detailedReservation.AditionalServices : []
@@ -763,7 +791,7 @@ const Calendario = () => {
             price: service.price || service.Price || service.precio || 0,
           }))
 
-          // --- LÓGICA MODIFICADA PARA MONTO DECORACIÓN Y SERVICIOS ADICIONALES ---
+          // --- LÓGICA  PARA MONTO DECORACIÓN Y SERVICIOS ADICIONALES ---
           const tieneDecoracion = selectedServiceValues.some((s) => isDecorationService(s.label))
           const tieneOtrosServicios = selectedServiceValues.some((s) => !isDecorationService(s.label))
           const esCumpleanos =
@@ -779,7 +807,7 @@ const Calendario = () => {
               currentDecorationAmount = "0"
             } else {
               setShowDecorationAmountInput(true)
-              // Si no es cumpleaños y tiene decoración, el monto se mantiene o se calcula si es necesario
+            
               if (!currentDecorationAmount && detailedReservation.numberPeople) {
                 currentDecorationAmount = calculateDecorationAmount(detailedReservation.numberPeople)
               }
@@ -789,7 +817,7 @@ const Calendario = () => {
             currentDecorationAmount = "0"
           }
 
-          // NUEVO: Lógica para servicios adicionales no decoración
+         
           if (tieneOtrosServicios) {
             setShowAdditionalServiceAmountInput(true)
           } else {
@@ -800,7 +828,7 @@ const Calendario = () => {
           let formattedPass = []
           if (Array.isArray(detailedReservation.pass)) {
             formattedPass = detailedReservation.pass.map((abono) => ({
-              fecha: abono.fecha ? abono.fecha.split("T")[0] : "", // Formatear fecha
+              fecha: abono.fecha ? abono.fecha.split("T")[0] : "", 
               cantidad: abono.cantidad || 0,
             }))
           }
@@ -857,9 +885,7 @@ const Calendario = () => {
             ...detailedReservation,
             id: detailedReservation.idReservations,
             idCustomers: idCliente,
-            fullName:
-              detailedReservation.fullName ||
-              (detailedReservation.Customer ? detailedReservation.Customer.fullName : ""),
+            fullName: nombreClienteParaMostrar, // Usamos el nombre que encontramos,
             distintive:
               detailedReservation.distintive ||
               (detailedReservation.Customer ? detailedReservation.Customer.distintive : ""),
@@ -1005,43 +1031,58 @@ const Calendario = () => {
     setSearchText(e.target.value)
   }
 
-  const handleClientSearch = async (searchValue) => {
-    setClientSearchText(searchValue)
+// REEMPLAZA TODA TU FUNCIÓN con esta versión para depurar
+const handleClientSearch = async (searchValue) => {
+    setClientSearchText(searchValue);
     if (searchValue.length < 2) {
-      setClientSearchResults([])
-      setShowClientSearch(true)
-      return
+        setClientSearchResults([]);
+        setShowClientSearch(true);
+        return;
     }
-    setIsClientSearchLoading(true)
-    setShowClientSearch(true)
+    setIsClientSearchLoading(true);
+    setShowClientSearch(true);
     try {
-      const results = await clientesService.searchClientes(searchValue)
-      if (Array.isArray(results)) {
-        const normalizedResults = results.map((cliente) => ({
-          id: cliente.idCustomers || cliente.id,
-          idCustomers: Number(cliente.idCustomers || cliente.id),
-          FullName:
-            cliente.FullName ||
-            cliente.NombreCompleto ||
-            cliente.name ||
-            `Cliente ${cliente.idCustomers || cliente.id}`,
-          Distintive: cliente.Distintive || cliente.Distintivo || "Regular",
-          CustomerCategory: cliente.CustomerCategory || cliente.CategoriaCliente || "",
-          Email: cliente.Email || cliente.Correo || "",
-          Cellphone: cliente.Cellphone || cliente.Celular || "",
-          Address: cliente.Address || cliente.Direccion || "",
-        }))
-        setClientSearchResults(normalizedResults)
-      } else {
-        setClientSearchResults([])
-      }
+        // 1. Llamamos a la API
+        const results = await clientesService.searchClientes(searchValue);
+        console.log("API devolvió:", results); // Log para ver qué llega
+
+        if (Array.isArray(results)) {
+            // 2. Transformamos los datos SIN FILTRAR NADA
+            const normalizedResults = results.map((cliente) => {
+                // Verificamos explícitamente cada campo
+                const id = cliente.idCustomers || cliente.id;
+                const nombre = cliente.FullName || cliente.NombreCompleto || cliente.name || cliente.nombre;
+
+                console.log(`Mapeando cliente ID: ${id}, Nombre: ${nombre}`); // Log para cada cliente
+
+                return {
+                    id: id,
+                    idCustomers: Number(id),
+                    FullName: nombre || `Cliente ${id}`, // Aseguramos que siempre haya un nombre
+                    // Dejamos los otros campos por ahora para simplificar
+                    Distintive: cliente.Distintive || "Regular",
+                    CustomerCategory: cliente.CustomerCategory || "",
+                    Email: cliente.Email || cliente.email || "",
+                    Cellphone: cliente.Cellphone || cliente.cellphone || "",
+                    Address: cliente.Address || cliente.address || "",
+                };
+            });
+            
+            console.log("Resultados normalizados:", normalizedResults); // Log del resultado final
+            setClientSearchResults(normalizedResults);
+
+        } else {
+            console.log("API no devolvió un array. Vaciando resultados.");
+            setClientSearchResults([]);
+        }
     } catch (error) {
-      console.error("Error al buscar clientes:", error)
-      setClientSearchResults([])
+        console.error("Error catastrófico en handleClientSearch:", error);
+        setClientSearchResults([]);
     } finally {
-      setIsClientSearchLoading(false)
+        setIsClientSearchLoading(false);
     }
-  }
+};
+
 
   const selectClient = (cliente) => {
     if (!cliente || (!cliente.idCustomers && cliente.idCustomers !== 0)) {
@@ -1102,7 +1143,7 @@ const Calendario = () => {
     if (field === "cantidad") {
       updateRestante(form.totalPay, updatedAbonos)
     }
-    setErrors((prevErrors) => ({ ...prevErrors, [`pass-${index}-${field}`]: validateAbonoField(field, value) }))
+    setErrors((prevErrors) => ({ ...prevErrors, [`pass-${index}-${field}`]: validateAbonoField(field, value,form) }))
   }
 
   const addAbono = () => {
@@ -1177,24 +1218,49 @@ const Calendario = () => {
       setShowAdditionalServiceAmountInput(false)
       updatedForm.additionalServiceAmount = "0"
     }
-    // --- FIN LÓGICA MODIFICADA ---
+    
 
     // Calcular y actualizar el monto total si hay número de personas
     if (updatedForm.numberPeople) {
       const calculatedPrice = calculateServicePrice(updatedForm.numberPeople, currentServices)
       if (calculatedPrice >= 0) {
-        // Permitir precio 0 si es el caso
         updatedForm.totalPay = calculatedPrice.toString()
       }
     }
 
     setForm(updatedForm)
     setErrors((prevErrors) => ({ ...prevErrors, servicios: validateField("servicios", currentServices) }))
-    updateRestante(updatedForm.totalPay, updatedForm.pass) // Actualizar restante con el nuevo totalPay
+    updateRestante(updatedForm.totalPay, updatedForm.pass) 
   }
 
-  const validateAbonoField = useCallback((fieldName, value) => {
-    if (fieldName === "fecha" && !value) return "Fecha requerida."
+  const validateAbonoField = useCallback((fieldName, value,form) => {
+     if (fieldName === "fecha") {
+    if (!value) return "Fecha requerida.";
+
+   
+    const abonoDate = new Date(value);
+    abonoDate.setUTCHours(0, 0, 0, 0); 
+    
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    // 2. VALIDACIÓN: No puede ser una fecha futura
+    if (abonoDate > today) {
+      return "La fecha del abono no puede ser futura.";
+    }
+
+    // 3. VALIDACIÓN: No puede ser posterior a la fecha de la reserva
+    if (form && form.dateTime) {
+      const reservationDate = new Date(form.dateTime);
+      reservationDate.setUTCHours(0, 0, 0, 0);
+
+      if (abonoDate > reservationDate) {
+        return "El abono debe ser antes o el mismo día de la reserva.";
+      }
+    }
+    return "";
+  }
+    
     if (fieldName === "cantidad") {
       if (value === "" || value === null) return "Cantidad requerida."
       const numValue = Number.parseFloat(value)
@@ -1213,53 +1279,50 @@ const Calendario = () => {
         }
         return ""
       }
-      if (name === "servicios" && (!Array.isArray(value) || value.length === 0)) {
-        return "Seleccione al menos un servicio."
-      }
       switch (name) {
         case "fullName":
           return value?.trim() ? "" : "Nombre de cliente requerido (seleccione un cliente)."
 
-        // ======================= INICIO DE LA MODIFICACIÓN =======================
-        case "dateTime": {
-          if (!value) return "Fecha y hora requeridas."
+        
+        
+case "dateTime": {
+    if (!value) return "Fecha y hora requeridas.";
 
-          const selectedDate = new Date(value)
-          const now = new Date()
-          // Normalizamos 'now' para no comparar segundos/milisegundos, que pueden causar fallos
-          now.setSeconds(0, 0)
+    const selectedDate = new Date(value);
+    
+    
+    const selectedHour = selectedDate.getHours(); 
 
-          // Si la fecha seleccionada es en el pasado
-          if (selectedDate < now) {
-            // Si es una NUEVA reserva (no hay `selectedReserva`), siempre es un error.
-            if (!selectedReserva) {
-              return "La fecha y hora no pueden ser en el pasado."
-            }
+    
+    if (selectedHour < 12 || selectedHour > 21) {
+        return "El horario para reservas es únicamente de 12:00 PM a 9:00 PM.";
+    }
+    
 
-            // Si es una reserva EXISTENTE, permitimos guardar si la fecha no ha cambiado.
-            // Esto es para poder editar reservas pasadas (ej. cambiar estado a 'Terminada').
-            // Obtenemos la fecha original de la reserva que se está editando.
-            const originalDate = new Date(selectedReserva.dateTime)
+    const now = new Date();
+    now.setSeconds(0, 0);
 
-            // Comparamos los valores numéricos de las fechas. Si son diferentes, significa
-            // que el usuario intentó cambiar la fecha a otra fecha pasada, lo cual es un error.
-            if (selectedDate.getTime() !== originalDate.getTime()) {
-              return "No se puede cambiar la fecha a una fecha pasada."
-            }
-          }
-
-          // Las validaciones de conflicto siguen aplicando en todos los casos.
-          if (checkTimeConflict(value, selectedReserva?.idReservations)) {
-            return "Ya existe una reserva en esta hora. Por favor, seleccione otra hora."
-          }
-
-          if (form.idCustomers && checkDuplicateReservation(form.idCustomers, value, selectedReserva?.idReservations)) {
-            return "Este cliente ya tiene una reserva en esta fecha."
-          }
-
-          return "" // Si todas las validaciones pasan
+    if (selectedDate < now) {
+        if (!selectedReserva) {
+            return "La fecha y hora no pueden ser en el pasado.";
         }
-        // ======================= FIN DE LA MODIFICACIÓN =======================
+        const originalDate = new Date(selectedReserva.dateTime);
+        if (selectedDate.getTime() !== originalDate.getTime()) {
+            return "No se puede cambiar la fecha a una fecha pasada.";
+        }
+    }
+
+    if (checkTimeConflict(value, selectedReserva?.idReservations)) {
+        return "Ya existe una reserva en esta hora. Por favor, seleccione otra hora.";
+    }
+
+    if (form.idCustomers && checkDuplicateReservation(form.idCustomers, value, selectedReserva?.idReservations)) {
+        return "Este cliente ya tiene una reserva en esta fecha.";
+    }
+
+    return ""; 
+}
+        
 
         case "timeDurationR":
           return value ? "" : "Duración requerida."
@@ -1269,13 +1332,13 @@ const Calendario = () => {
           const numPeople = Number.parseInt(value)
           return !isNaN(numPeople) && numPeople > 0 ? "" : "Nro. Personas debe ser > 0."
         case "decorationAmount":
-          // La validación de decorationAmount ahora depende de si se muestra el input
+        
           if (showDecorationAmountInput) {
             const decorAmount = Number.parseFloat(value)
             return !isNaN(decorAmount) && decorAmount >= 0 ? "" : `${additionalAmountLabel} debe ser >= 0.`
           }
-          return "" // Si no se muestra el input, no hay error
-        case "additionalServiceAmount": // NUEVO: Validación para servicios adicionales
+          return "" 
+        case "additionalServiceAmount": 
           if (showAdditionalServiceAmountInput) {
             const additionalAmount = Number.parseFloat(value)
             return !isNaN(additionalAmount) && additionalAmount >= 0 ? "" : "Monto Servicio Adicional debe ser >= 0."
@@ -1283,7 +1346,7 @@ const Calendario = () => {
           return ""
         case "totalPay":
           const totalP = Number.parseFloat(value)
-          return !isNaN(totalP) && totalP >= 0 ? "" : "Total a Pagar debe ser >= 0." // Permitir 0
+          return !isNaN(totalP) && totalP >= 0 ? "" : "Total a Pagar debe ser >= 0." 
         case "cellphone":
           return !value || /^\d{7,15}$/.test(value) ? "" : "Celular inválido (7-15 dígitos)."
         case "email":
@@ -1297,7 +1360,7 @@ const Calendario = () => {
       checkTimeConflict,
       additionalAmountLabel,
       form.idCustomers,
-      selectedReserva, // AÑADIR `selectedReserva` completo a las dependencias
+      selectedReserva, 
       showDecorationAmountInput,
       showAdditionalServiceAmountInput,
     ],
@@ -1315,11 +1378,11 @@ const Calendario = () => {
       "totalPay",
       "servicios",
     ]
-    // Validar decorationAmount solo si se muestra el input
+    
     if (showDecorationAmountInput) {
       fieldsToValidate.push("decorationAmount")
     }
-    // NUEVO: Validar additionalServiceAmount solo si se muestra el input
+    
     if (showAdditionalServiceAmountInput) {
       fieldsToValidate.push("additionalServiceAmount")
     }
@@ -1340,8 +1403,8 @@ const Calendario = () => {
       isValid = false
     } else {
       form.pass.forEach((abono, i) => {
-        const fe = validateAbonoField("fecha", abono.fecha)
-        const ce = validateAbonoField("cantidad", abono.cantidad)
+         const fe = validateAbonoField("fecha", abono.fecha, form);
+         const ce = validateAbonoField("cantidad", abono.cantidad, form);
         if (fe) {
           newErrors[`pass-${i}-fecha`] = fe
           isValid = false
@@ -1364,13 +1427,13 @@ const Calendario = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    console.log(`Cambiando ${name} a: ${value}`) // Log para depuración
+    console.log(`Cambiando ${name} a: ${value}`) 
 
     const updatedForm = { ...form, [name]: value }
 
-    // Si cambia la fecha/hora, verificar conflictos
+    
     if (name === "dateTime") {
-      // Verificar si hay conflicto de hora
+      
       const hasTimeConflict = checkTimeConflict(value, selectedReserva?.idReservations)
       if (hasTimeConflict) {
         console.log("Conflicto de hora detectado:", value)
@@ -1379,7 +1442,7 @@ const Calendario = () => {
           [name]: "Ya existe una reserva en esta hora. Por favor, seleccione otra hora.",
         }))
       } else {
-        // Si no hay conflicto, eliminar el error
+        
         setErrors((prevErrors) => {
           const newErrors = { ...prevErrors }
           delete newErrors[name]
@@ -1387,7 +1450,7 @@ const Calendario = () => {
         })
       }
 
-      // Verificar si el cliente ya tiene una reserva en esta fecha
+     
       if (form.idCustomers && checkDuplicateReservation(form.idCustomers, value, selectedReserva?.idReservations)) {
         setErrors((prevErrors) => ({
           ...prevErrors,
@@ -1397,7 +1460,7 @@ const Calendario = () => {
       }
     }
 
-    // Lógica especial para el campo numberPeople y evenType (que afectan a decorationAmount y totalPay)
+    
     if (name === "numberPeople" || name === "evenType") {
       const numPeople = name === "numberPeople" ? value : updatedForm.numberPeople
       const currentEvenType = name === "evenType" ? value : updatedForm.evenType
@@ -1414,7 +1477,7 @@ const Calendario = () => {
       const tieneOtrosServicios = currentServices.some((s) => !isDecorationService(s.label))
       const esCumpleanos = currentEvenType && currentEvenType.toLowerCase().includes("cumpleaños")
 
-      // Lógica para decoración
+      
       if (tieneDecoracion) {
         setAdditionalAmountLabel("Monto Decoración")
         if (esCumpleanos) {
@@ -1431,7 +1494,7 @@ const Calendario = () => {
         updatedForm.decorationAmount = "0"
       }
 
-      // NUEVO: Lógica para servicios adicionales
+      
       if (tieneOtrosServicios) {
         setShowAdditionalServiceAmountInput(true)
       } else {
@@ -1458,7 +1521,6 @@ const Calendario = () => {
     }
   }
 
-  // NUEVO: Función para actualizar solo la duración
   const updateDurationOnly = useCallback(async (id, duration) => {
     try {
       setLoading(true)
@@ -1475,7 +1537,7 @@ const Calendario = () => {
     }
   }, [])
 
-  // NUEVO: Función para actualizar solo el estado
+  
   const updateStatusOnly = useCallback(async (id, status) => {
     try {
       setLoading(true)
@@ -1490,7 +1552,7 @@ const Calendario = () => {
     }
   }, [])
 
-  // Función para solicitar confirmación de guardar
+  
   const clearDateTimeError = () => {
     setErrors((prev) => {
       const newErrors = { ...prev }
@@ -1500,7 +1562,7 @@ const Calendario = () => {
   }
 
   const requestSaveConfirmation = useCallback(() => {
-    // Recalcular monto de decoración antes de validar, por si acaso.
+   
     const tieneDecoracion = form.servicios.some((s) => isDecorationService(s.label))
     const tieneOtrosServicios = form.servicios.some((s) => !isDecorationService(s.label))
     const esCumpleanos = form.evenType && form.evenType.toLowerCase().includes("cumpleaños")
@@ -1510,16 +1572,16 @@ const Calendario = () => {
     if (tieneDecoracion && esCumpleanos) {
       finalDecorationAmount = "0"
     } else if (tieneDecoracion) {
-      // No es cumpleaños pero tiene decoración
+      
       finalDecorationAmount = form.numberPeople
         ? calculateDecorationAmount(form.numberPeople)
         : form.decorationAmount || "0"
     } else {
-      // No tiene decoración
+      
       finalDecorationAmount = "0"
     }
 
-    // NUEVO: Lógica para servicios adicionales
+    
     if (!tieneOtrosServicios) {
       finalAdditionalServiceAmount = "0"
     }
@@ -1530,11 +1592,11 @@ const Calendario = () => {
       additionalServiceAmount: finalAdditionalServiceAmount,
     }
 
-    // Actualizar restante con el formulario que se va a validar
+    
     updateRestante(formToValidate.totalPay, formToValidate.pass)
-    const tempFormForValidation = { ...formToValidate, remaining: form.remaining } // Usar el 'remaining' del estado 'form' que acaba de ser actualizado por updateRestante
+    const tempFormForValidation = { ...formToValidate, remaining: form.remaining } 
 
-    // Crear una función de validación temporal que use el formulario actualizado
+    
     const tempValidateForm = () => {
       const newErrors = {}
       let isValid = true
@@ -1547,17 +1609,17 @@ const Calendario = () => {
         "totalPay",
         "servicios",
       ]
-      // Validar decorationAmount solo si debe mostrarse o si es decoración no gratuita
+     
       if (showDecorationAmountInput || (tieneDecoracion && !esCumpleanos)) {
         fieldsToValidate.push("decorationAmount")
       }
-      // NUEVO: Validar additionalServiceAmount solo si debe mostrarse
+     
       if (showAdditionalServiceAmountInput || tieneOtrosServicios) {
         fieldsToValidate.push("additionalServiceAmount")
       }
 
       fieldsToValidate.forEach((key) => {
-        const error = validateField(key, tempFormForValidation[key]) // Usar tempFormForValidation
+        const error = validateField(key, tempFormForValidation[key]) 
         if (error) {
           console.log(`Error en campo ${key}:`, error)
           newErrors[key] = error
@@ -1594,7 +1656,7 @@ const Calendario = () => {
         newErrors.remaining = "El total de abonos no puede superar el Total a Pagar."
         isValid = false
       }
-      setErrors(newErrors) // Actualizar errores en el estado global
+      setErrors(newErrors)
       return isValid
     }
 
@@ -1603,10 +1665,10 @@ const Calendario = () => {
       return
     }
 
-    // Usar el formulario actualizado (tempFormForValidation) para la confirmación
+   
     const isEditing = selectedReserva !== null
     prepareConfirmation(() => executeSaveReserva({ isEditing, formData: tempFormForValidation }), {
-      // Pasar formData
+      
       title: isEditing ? "¿Guardar Cambios?" : "¿Crear Reserva?",
       message: (
         <p>
@@ -1621,7 +1683,7 @@ const Calendario = () => {
         </>
       ),
       confirmColor: "primary",
-      itemDetails: { isEditing, formData: tempFormForValidation }, // Pasar formData aquí también si es necesario
+      itemDetails: { isEditing, formData: tempFormForValidation }, 
     })
   }, [
     form,
@@ -1638,7 +1700,7 @@ const Calendario = () => {
   const executeSaveReserva = useCallback(
     async (details) => {
       const isEditing = details?.isEditing || false
-      const formDataToSave = details?.formData || form // Usar formData si se pasó
+      const formDataToSave = details?.formData || form 
 
       setIsConfirmActionLoading(true)
       const toastId = toast.loading(isEditing ? "Actualizando reserva..." : "Creando reserva...")
@@ -1658,13 +1720,13 @@ const Calendario = () => {
         }
 
         const dataToSend = {
-          ...formDataToSave, // Usar formDataToSave
+          ...formDataToSave, 
           idCustomers: idCustomersNum,
           idAditionalServices: idAditionalServices,
           pass: abonosToSend,
           numberPeople: Number.parseInt(formDataToSave.numberPeople || 0),
           decorationAmount: Number.parseFloat(formDataToSave.decorationAmount || 0),
-          additionalServiceAmount: Number.parseFloat(formDataToSave.additionalServiceAmount || 0), // NUEVO: Campo para servicios adicionales
+          additionalServiceAmount: Number.parseFloat(formDataToSave.additionalServiceAmount || 0), 
           totalPay: Number.parseFloat(formDataToSave.totalPay || 0),
           remaining: Number.parseFloat(formDataToSave.remaining || 0),
           status: formDataToSave.status,
@@ -1887,13 +1949,13 @@ const Calendario = () => {
       overflow: "hidden",
     },
     calendarHeader: {
-      marginBottom: "0.5rem", // Reducido
+      marginBottom: "0.5rem", 
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
       flexWrap: "wrap",
       gap: "0.75rem",
-      padding: "0.5rem 1rem", // Vertical padding reducido
+      padding: "0.5rem 1rem", 
       borderBottom: "1px solid #f3f4f6",
       flexShrink: 0,
     },
@@ -1930,13 +1992,13 @@ const Calendario = () => {
     calendarWrapper: {
       backgroundColor: "#fff",
       borderRadius: "8px",
-      padding: "0.5rem", // Reducido
+      padding: "0.5rem", 
       position: "relative",
       flex: "1 1 auto",
       overflow: "hidden",
       display: "flex",
       flexDirection: "column",
-      margin: "0 0.5rem 0.5rem 0.5rem", // Reducido
+      margin: "0 0.5rem 0.5rem 0.5rem", 
     },
     modalHeader: {
       backgroundColor: "#9e3535",
@@ -1946,8 +2008,8 @@ const Calendario = () => {
     modalFieldset: {
       border: "1px solid #e5e7eb",
       borderRadius: "6px",
-      padding: "0.75rem 1rem 1rem 1rem", // Reducido
-      marginBottom: "0.75rem", // Reducido
+      padding: "0.75rem 1rem 1rem 1rem", 
+      marginBottom: "0.75rem", 
     },
     modalLegend: {
       fontSize: "0.875rem",
@@ -1957,7 +2019,7 @@ const Calendario = () => {
       width: "auto",
       marginLeft: "0.5rem",
       float: "none",
-      marginBottom: "0.25rem", // Reducido
+      marginBottom: "0.25rem", 
     },
     clientDisplay: {
       backgroundColor: "#e9ecef",
@@ -2021,28 +2083,28 @@ const Calendario = () => {
       backgroundColor: "#fff",
     },
     statusBadge: (status) => {
-      // Usar los colores del colorMap (que ahora son más vivos y transparentes)
+      
       const baseColor = colorMap[status] || colorMap["default"]
-      // Determinar el color del texto para buen contraste
-      let textColor = "#ffffff" // Default blanco para la mayoría
+      
+      let textColor = "#ffffff" 
       if (status === "en_proceso" || status === "pendiente") {
-        // Amarillo o Naranja
+        
         const rgb = baseColor.match(/\d+/g)
         if (rgb && rgb.length >= 3) {
-          // Fórmula simple de luminancia para decidir el color del texto
+          
           const luminance =
             0.299 * Number.parseInt(rgb[0]) + 0.587 * Number.parseInt(rgb[1]) + 0.114 * Number.parseInt(rgb[2])
           if (luminance > 186) {
-            // Si el fondo es claro
-            textColor = "#333333" // Texto oscuro
+           
+            textColor = "#333333"
           }
         }
       } else if (status === "terminada") {
-        textColor = "#1B5E20" // Verde oscuro para fondo verde claro
+        textColor = "#1B5E20" 
       } else if (status === "confirmada") {
-        textColor = "#0D47A1" // Azul oscuro para fondo azul claro
+        textColor = "#0D47A1" 
       } else if (status === "anulada") {
-        textColor = "#B71C1C" // Rojo oscuro para fondo rojo claro
+        textColor = "#B71C1C" 
       }
 
       return {
@@ -2052,7 +2114,7 @@ const Calendario = () => {
         fontWeight: 500,
         backgroundColor: baseColor,
         color: textColor,
-        border: `1px solid ${textColor === "#ffffff" ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.2)"}`, // Borde sutil
+        border: `1px solid ${textColor === "#ffffff" ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.2)"}`, 
       }
     },
     actionEdit: {
@@ -2099,7 +2161,7 @@ const Calendario = () => {
   // --- RENDERIZADO DEL COMPONENTE ---
   return (
     <Container fluid className="p-0" style={styles.calendarContainer}>
-      {/* Estilos CSS personalizados */}
+     
       <style>{customCalendarStyles}</style>
 
       {/* Toaster para notificaciones */}
@@ -2191,6 +2253,7 @@ const Calendario = () => {
                 center: "title",
                 right: "dayGridMonth,timeGridWeek,timeGridDay",
               }}
+              locales={[esLocale]}
               locale="es"
               events={events.filter((event) => {
                 if (!searchText) return true
@@ -2315,7 +2378,7 @@ const Calendario = () => {
                           style={{ cursor: "pointer" }}
                           onClick={() => selectClient(cliente)}
                         >
-                          {cliente.FullName} ({cliente.Cellphone})
+                          {cliente.FullName} {cliente.Cellphone && `(${cliente.Cellphone})`}
                         </div>
                       ))
                     )}
@@ -2506,7 +2569,15 @@ const Calendario = () => {
 
               <fieldset style={{ ...styles.modalFieldset, marginBottom: "1rem" }}>
                 <legend style={styles.modalLegend}>Abonos</legend>
-                {(form.pass || []).map((abono, index) => (
+              {(form.pass || []).map((abono, index) => {
+        
+              const today = new Date();
+              const reservationDate = form.dateTime ? new Date(form.dateTime) : null;
+              const maxDateForPayment = (reservationDate && reservationDate < today) 
+                 ? reservationDate.toISOString().split("T")[0] 
+                : today.toISOString().split("T")[0];
+       
+        return (  
                   <Row key={index} className="mb-2 align-items-end">
                     <Col md={5}>
                       <FormGroup className="mb-0">
@@ -2517,6 +2588,7 @@ const Calendario = () => {
                           type="date"
                           id={`fecha-${index}`}
                           value={abono.fecha || ""}
+                          max={maxDateForPayment}
                           onChange={(e) => handleAbonoChange(index, "fecha", e.target.value)}
                           invalid={!!errors[`pass-${index}-fecha`]}
                           style={{ borderColor: "#9e3535" }}
@@ -2524,6 +2596,7 @@ const Calendario = () => {
                         {errors[`pass-${index}-fecha`] && <FormFeedback>{errors[`pass-${index}-fecha`]}</FormFeedback>}
                       </FormGroup>
                     </Col>
+
                     <Col md={5}>
                       <FormGroup className="mb-0">
                         <Label for={`cantidad-${index}`} className="mb-1" style={{ fontWeight: "bold" }}>
@@ -2549,7 +2622,8 @@ const Calendario = () => {
                       </Button>
                     </Col>
                   </Row>
-                ))}
+                    );
+})}
                 <Button color="primary" outline onClick={addAbono} className="mt-2">
                   Agregar Abono
                 </Button>
