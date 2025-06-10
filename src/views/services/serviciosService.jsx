@@ -1,6 +1,7 @@
 import axios from 'axios';
 import {apiurl} from '../../enviroments/local';
-const API_URL = `${apiurl}/api/aditionalServices`;
+
+const API_URL = `${apiurl}/aditionalServices`;
 
 /**
  * @param {object} backendService 

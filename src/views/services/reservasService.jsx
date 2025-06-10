@@ -1,6 +1,6 @@
 import axios from "axios";
 import { apiurl } from '../../enviroments/local';
-const API_URL = `${apiurl}/api/reservations`; 
+const API_URL = `${apiurl}/reservations`; 
 
 const mapUIStateToAPI = (uiState) => {
   if (

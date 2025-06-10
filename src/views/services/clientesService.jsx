@@ -1,6 +1,6 @@
 import axios from "axios"
 import { apiurl } from '../../enviroments/local';
-const API_URL = `${apiurl}/api/customers`; 
+const API_URL = `${apiurl}/customers`; 
 
 /**
  * @param {object} backendCustomer 
