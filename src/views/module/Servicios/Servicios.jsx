@@ -112,9 +112,10 @@ const Servicios = () => {
 
     const validateForm = useCallback(() => {
         const serviceName = String(form.Nombre ?? '').trim();
+        const hasNumbers = /\d/.test(serviceName); 
         const errors = {
-            Nombre: !serviceName,
-        };
+  Nombre: !serviceName || hasNumbers
+};
         setFormErrors(errors);
         return !errors.Nombre; 
     }, [form]);
@@ -179,13 +180,23 @@ const Servicios = () => {
 
     // --- CRUD Operations ---
 
-    // ADD SERVICE (Submit Handler)
-    const handleSubmit = useCallback(async () => {
-        console.log("[ADD] Attempting submit:", form);
-        if (!validateForm()) {
-            toast.error("Por favor, ingrese el nombre del servicio.", { duration: 4000 });
-            return;
-        }
+    
+const handleSubmit = useCallback(async () => {
+    console.log("[ADD] Attempting submit:", form);
+    const serviceName = String(form.Nombre ?? '').trim();
+
+  
+    if (!serviceName) {
+        setFormErrors({ Nombre: true });
+        toast.error("Por favor, ingrese el nombre del servicio.");
+        return;
+    }
+    if (/\d/.test(serviceName)) {
+        setFormErrors({ Nombre: true });
+        toast.error("El nombre del servicio no debe contener números.");
+        return;
+    }
+    clearFormErrors();
 
         // Optional: Check for duplicate service name (case-insensitive)
         const nameToCompare = String(form.Nombre || '').trim().toLowerCase();
@@ -234,11 +245,20 @@ const Servicios = () => {
 
     // EDIT SERVICE (Request Confirmation)
     const requestEditConfirmation = useCallback(() => {
-        console.log("[EDIT REQ] Requesting confirmation for:", form);
-        if (!validateForm()) {
-           toast.error("Por favor, ingrese el nombre del servicio.", { duration: 4000 });
-           return;
-        }
+    console.log("[EDIT REQ] Requesting confirmation for:", form);
+    const serviceName = String(form.Nombre ?? '').trim();
+
+    if (!serviceName) {
+        setFormErrors({ Nombre: true });
+        toast.error("Por favor, ingrese el nombre del servicio.");
+        return;
+    }
+    if (/\d/.test(serviceName)) {
+        setFormErrors({ Nombre: true });
+        toast.error("El nombre del servicio no debe contener números.");
+        return;
+    }
+    clearFormErrors();
 
         // Optional: Check if the new name duplicates another existing service
         const currentName = String(form.Nombre || '').trim().toLowerCase();
@@ -670,7 +690,7 @@ const Servicios = () => {
                                 placeholder="Ingrese el nombre del servicio"
                             />
                             {/* Display error message */}
-                            {formErrors.Nombre && <div id="nombreError" className="invalid-feedback d-block">El nombre del servicio es obligatorio.</div>}
+                            {formErrors.Nombre && <div id="nombreError" className="invalid-feedback d-block">El nombre es obligatorio y no debe contener números.</div>}
                         </FormGroup>
                         {/* No image or other fields needed for services based on original code */}
                     </Form>

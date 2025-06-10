@@ -1,13 +1,7 @@
-// RUTA: src/services/reservasService.js
-
 import axios from "axios";
+import { apiurl } from '../../enviroments/local';
+const API_URL = `${apiurl}/api/reservations`; 
 
-// Usar la URL directamente para evitar problemas con variables de entorno
-const API_URL = "http://localhost:3000/reservations";
-
-/**
- * Mapeo de estados entre la UI y la API
- */
 const mapUIStateToAPI = (uiState) => {
   if (
     typeof uiState === "string" &&
@@ -30,15 +24,11 @@ const mapAPIStateToUI = (apiStatus) => {
   return "pendiente";
 };
 
-/**
- * Servicio para gestionar las reservas
- */
+
 const reservasService = {
-  /**
-   * Obtiene todas las reservas
-   */
+ 
   getAllReservations: async () => {
-    try { // <<< INICIO DEL BLOQUE TRY
+    try { 
       console.log("[reservasService] Solicitando todas las reservas a:", API_URL);
       const response = await axios.get(API_URL);
 
@@ -54,7 +44,7 @@ const reservasService = {
       
       return reservationsWithUIStates;
 
-    } catch (error) { // <<< CORRECCIÓN: SE AÑADE EL BLOQUE CATCH QUE FALTABA
+    } catch (error) { 
       console.error("[reservasService] Error al obtener las reservas:", error);
       if (error.response) {
         console.error("[reservasService] Detalles del error (getAllReservations) - Status:", error.response.status);
@@ -62,13 +52,12 @@ const reservasService = {
       } else {
         console.error("[reservasService] Detalles del error (getAllReservations) - Mensaje:", error.message);
       }
-      return []; // Devolver array vacío en caso de error
+      return []; 
     }
   },
 
   /**
-   * Crea una nueva reserva
-   * @param {Object} reserva - Datos de la reserva
+   * @param {Object} reserva 
    */
   createReservation: async (reserva) => {
     try {
@@ -131,8 +120,7 @@ const reservasService = {
   },
 
   /**
-   * Obtiene una reserva por ID
-   * @param {number} id - ID de la reserva
+   * @param {number} id 
    */
   getReservationById: async (id) => {
     try {
@@ -160,9 +148,9 @@ const reservasService = {
   },
 
   /**
-   * Actualiza una reserva existente
-   * @param {number} id - ID de la reserva
-   * @param {Object} reserva - Datos actualizados de la reserva
+
+   * @param {number} id 
+   * @param {Object} reserva 
    */
   updateReservation: async (id, reserva) => {
     try {
@@ -205,8 +193,7 @@ const reservasService = {
   },
 
   /**
-   * Elimina una reserva por ID
-   * @param {number} id - ID de la reserva
+   * @param {number} id 
    */
   deleteReservation: async (id) => {
     try {
@@ -219,9 +206,8 @@ const reservasService = {
   },
 
   /**
-   * Cambia el estado de una reserva (usando PATCH)
-   * @param {number} id - ID de la reserva
-   * @param {string} uiStatus - Estado en formato UI
+   * @param {number} id 
+   * @param {string} uiStatus 
    */
   changeReservationStatus: async (id, uiStatus) => {
     try {
@@ -235,9 +221,9 @@ const reservasService = {
   },
 
   /**
-   * Actualiza solo la duración de una reserva (usando PATCH)
-   * @param {number} id - ID de la reserva
-   * @param {number|string} duration - Nueva duración
+  
+   * @param {number} id 
+   * @param {number|string} duration 
    */
   updateDuration: async (id, duration) => {
     try {
