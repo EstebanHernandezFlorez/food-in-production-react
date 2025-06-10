@@ -2,7 +2,7 @@ import axios from 'axios';
 import { authService } from './authService';
 
 // LEE LA URL BASE DESDE LAS VARIABLES DE ENTORNO DE VITE
-const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const baseURL = import.meta.env.VITE_API_URL;
 
 console.log(`[axiosConfig] La API está configurada para apuntar a: ${baseURL}`);
 
