@@ -1,64 +1,57 @@
-// src/services/specSheetSupplyService.js
-import axios from 'axios';
-import { apiurl } from '../../enviroments/local'; // CORREGIDO
+import axiosInstance from './axiosConfig'; // <- CAMBIO
 
-const SPEC_SHEET_SUPPLY_API_URL = `${apiurl}/spec-sheet-supplies`; // CORREGIDO
+const API_ENDPOINT = '/spec-sheet-supplies'; // <- CAMBIO
 
-// ... resto del código del servicio (sin cambios en la lógica interna) ...
 const specSheetSupplyService = {
     addSupplyToSpecSheet: async (supplyData) => {
         try {
-            const response = await axios.post(SPEC_SHEET_SUPPLY_API_URL, supplyData);
+            const response = await axiosInstance.post(API_ENDPOINT, supplyData); // <- CAMBIO
             return response.data;
         } catch (error) {
             console.error('Error adding supply to spec sheet:', error.response?.data || error.message);
             throw error.response?.data || error;
         }
     },
-
+    // ... (el resto de funciones sigue el mismo patrón) ...
     getSuppliesBySpecSheetId: async (idSpecSheet) => {
         try {
-            const response = await axios.get(`${SPEC_SHEET_SUPPLY_API_URL}/by-spec-sheet/${idSpecSheet}`);
+            const response = await axiosInstance.get(`${API_ENDPOINT}/by-spec-sheet/${idSpecSheet}`);
             return response.data;
         } catch (error) {
             console.error(`Error fetching supplies for spec sheet ID ${idSpecSheet}:`, error.response?.data || error.message);
             throw error.response?.data || error;
         }
     },
-
     getSpecSheetSupplyById: async (idSpecSheetSupply) => {
         try {
-            const response = await axios.get(`${SPEC_SHEET_SUPPLY_API_URL}/${idSpecSheetSupply}`);
+            const response = await axiosInstance.get(`${API_ENDPOINT}/${idSpecSheetSupply}`);
             return response.data;
         } catch (error) {
             console.error(`Error fetching spec sheet supply ID ${idSpecSheetSupply}:`, error.response?.data || error.message);
             throw error.response?.data || error;
         }
     },
-
     updateSupplyInSpecSheet: async (idSpecSheetSupply, supplyUpdateData) => {
         try {
-            const response = await axios.put(`${SPEC_SHEET_SUPPLY_API_URL}/${idSpecSheetSupply}`, supplyUpdateData);
+            const response = await axiosInstance.put(`${API_ENDPOINT}/${idSpecSheetSupply}`, supplyUpdateData);
             return response.data;
         } catch (error) {
             console.error(`Error updating supply in spec sheet (ID: ${idSpecSheetSupply}):`, error.response?.data || error.message);
             throw error.response?.data || error;
         }
     },
-
     removeSupplyFromSpecSheet: async (idSpecSheetSupply) => {
         try {
-            await axios.delete(`${SPEC_SHEET_SUPPLY_API_URL}/${idSpecSheetSupply}`);
+            await axiosInstance.delete(`${API_ENDPOINT}/${idSpecSheetSupply}`);
             return { message: "Insumo eliminado de la ficha técnica exitosamente." };
         } catch (error) {
             console.error(`Error removing supply from spec sheet (ID: ${idSpecSheetSupply}):`, error.response?.data || error.message);
             throw error.response?.data || error;
         }
     },
-
     getSpecSheetsBySupplyId: async (idSupply) => {
         try {
-            const response = await axios.get(`${SPEC_SHEET_SUPPLY_API_URL}/by-supply/${idSupply}`);
+            const response = await axiosInstance.get(`${API_ENDPOINT}/by-supply/${idSupply}`);
             return response.data;
         } catch (error) {
             console.error(`Error fetching spec sheets using supply ID ${idSupply}:`, error.response?.data || error.message);
