@@ -1,14 +1,15 @@
-// src/services/masterProcessService.js
-import axios from 'axios';
-import { apiurl } from '../../enviroments/local'; // CORREGIDO
+// CORREGIDO: Importamos la instancia centralizada.
+import axiosInstance from './axiosConfig'; 
 
-const MASTER_PROCESS_API_URL = `${apiurl}/process`; // CORREGIDO (o /master-processes si cambiaste)
+// CORREGIDO: Ya no importamos 'apiurl' de un archivo de entorno.
+// Solo definimos el path del endpoint.
+const MASTER_PROCESS_API_ENDPOINT = '/process'; 
 
-// ... resto del código del servicio (sin cambios en la lógica interna) ...
 const masterProcessService = {
     createMasterProcess: async (processData) => {
         try {
-            const response = await axios.post(MASTER_PROCESS_API_URL, processData);
+            // CORREGIDO: Usar axiosInstance
+            const response = await axiosInstance.post(MASTER_PROCESS_API_ENDPOINT, processData);
             return response.data;
         } catch (error) {
             console.error("Error creating master process:", error.response?.data || error.message);
@@ -18,7 +19,8 @@ const masterProcessService = {
 
     getAllMasterProcesses: async (params = {}) => {
         try {
-            const response = await axios.get(MASTER_PROCESS_API_URL, { params });
+            // CORREGIDO: Usar axiosInstance
+            const response = await axiosInstance.get(MASTER_PROCESS_API_ENDPOINT, { params });
             return response.data;
         } catch (error) {
             console.error("Error fetching master processes:", error.response?.data || error.message);
@@ -28,7 +30,8 @@ const masterProcessService = {
 
     getMasterProcessById: async (idProcess) => {
         try {
-            const response = await axios.get(`${MASTER_PROCESS_API_URL}/${idProcess}`);
+            // CORREGIDO: Usar axiosInstance y el endpoint relativo
+            const response = await axiosInstance.get(`${MASTER_PROCESS_API_ENDPOINT}/${idProcess}`);
             return response.data;
         } catch (error) {
             console.error(`Error fetching master process ID ${idProcess}:`, error.response?.data || error.message);
@@ -36,9 +39,12 @@ const masterProcessService = {
         }
     },
 
+    // ... y así sucesivamente para el resto de métodos (update, delete, etc.)
+    // Simplemente reemplaza `axios` por `axiosInstance` y la URL completa por el endpoint.
+    
     updateMasterProcess: async (idProcess, processData) => {
         try {
-            const response = await axios.put(`${MASTER_PROCESS_API_URL}/${idProcess}`, processData);
+            const response = await axiosInstance.put(`${MASTER_PROCESS_API_ENDPOINT}/${idProcess}`, processData);
             return response.data;
         } catch (error) {
             console.error(`Error updating master process ID ${idProcess}:`, error.response?.data || error.message);
@@ -48,7 +54,7 @@ const masterProcessService = {
 
     deleteMasterProcess: async (idProcess) => {
         try {
-            await axios.delete(`${MASTER_PROCESS_API_URL}/${idProcess}`);
+            await axiosInstance.delete(`${MASTER_PROCESS_API_ENDPOINT}/${idProcess}`);
             return { message: "Proceso maestro eliminado exitosamente." };
         } catch (error) {
             console.error(`Error deleting master process ID ${idProcess}:`, error.response?.data || error.message);
@@ -58,8 +64,7 @@ const masterProcessService = {
 
     changeMasterProcessStatus: async (idProcess, status) => {
         try {
-            // Ruta del backend /process/:idProcess/status
-            const response = await axios.patch(`${MASTER_PROCESS_API_URL}/${idProcess}/status`, { status });
+            const response = await axiosInstance.patch(`${MASTER_PROCESS_API_ENDPOINT}/${idProcess}/status`, { status });
             return response.data;
         } catch (error) {
             console.error(`Error changing status for master process ID ${idProcess}:`, error.response?.data || error.message);
@@ -67,9 +72,9 @@ const masterProcessService = {
         }
     },
 
-    searchMasterProcesses: async (searchTerm) => { // Si tienes esta funcionalidad
+    searchMasterProcesses: async (searchTerm) => {
         try {
-            const response = await axios.get(`${MASTER_PROCESS_API_URL}/search`, { params: { term: searchTerm } });
+            const response = await axiosInstance.get(`${MASTER_PROCESS_API_ENDPOINT}/search`, { params: { term: searchTerm } });
             return response.data;
         } catch (error) {
             console.error(`Error searching master processes:`, error.response?.data || error.message);

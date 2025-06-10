@@ -1,23 +1,21 @@
-// src/services/proveedorService.js
-import axios from 'axios';
+import axiosInstance from './axiosConfig'; // <- CAMBIO
 
-// Ajusta esta URL si es diferente.
-const API_URL = 'http://localhost:3000/provider';
+const API_ENDPOINT = '/provider'; // <- CAMBIO
 
 const proveedorService = {
     getAllProveedores: async () => {
         try {
-            const response = await axios.get(API_URL);
+            const response = await axiosInstance.get(API_ENDPOINT); // <- CAMBIO
             return Array.isArray(response.data.rows) ? response.data.rows : (Array.isArray(response.data) ? response.data : []);
         } catch (error) {
             console.error("[Service Error] Fetching all providers failed:", error.response?.data || error.message);
-            return []; // Devolver array vacío en caso de error
+            return [];
         }
     },
 
     createProveedor: async (proveedorData) => {
         try {
-            const response = await axios.post(API_URL, proveedorData);
+            const response = await axiosInstance.post(API_ENDPOINT, proveedorData);
             return response.data;
         } catch (error) {
             console.error("[Service Error] Creating provider failed:", error.response?.data || error.message);
@@ -26,9 +24,8 @@ const proveedorService = {
     },
 
     getProveedorById: async (idProvider) => {
-        const url = `${API_URL}/${idProvider}`;
         try {
-            const response = await axios.get(url);
+            const response = await axiosInstance.get(`${API_ENDPOINT}/${idProvider}`);
             return response.data;
         } catch (error) {
             console.error(`[Service Error] Fetching provider ID ${idProvider} failed:`, error.response?.data || error.message);
@@ -37,9 +34,8 @@ const proveedorService = {
     },
 
     updateProveedor: async (idProvider, proveedorData) => {
-        const url = `${API_URL}/${idProvider}`;
         try {
-            const response = await axios.put(url, proveedorData);
+            const response = await axiosInstance.put(`${API_ENDPOINT}/${idProvider}`, proveedorData);
             return response.data;
         } catch (error) {
             console.error(`[Service Error] Updating provider ID ${idProvider} failed:`, error.response?.data || error.message);
@@ -48,9 +44,8 @@ const proveedorService = {
     },
 
     deleteProveedor: async (idProvider) => {
-        const url = `${API_URL}/${idProvider}`;
         try {
-            await axios.delete(url);
+            await axiosInstance.delete(`${API_ENDPOINT}/${idProvider}`);
         } catch (error) {
             console.error(`[Service Error] Deleting provider ID ${idProvider} failed:`, error.response?.data || error.message);
             throw error;
@@ -58,9 +53,8 @@ const proveedorService = {
     },
 
     changeStateProveedor: async (idProvider, status) => {
-        const url = `${API_URL}/${idProvider}`;
         try {
-            const response = await axios.patch(url, { status });
+            const response = await axiosInstance.patch(`${API_ENDPOINT}/${idProvider}`, { status });
             return response.data;
         } catch (error) {
             console.error(`[Service Error] Changing status for provider ID ${idProvider} failed:`, error.response?.data || error.message);
@@ -69,13 +63,11 @@ const proveedorService = {
     },
 
     isProviderAssociatedWithPurchases: async (idProvider) => {
-        const checkUrl = `${API_URL}/${idProvider}/is-associated`;
         try {
-            const response = await axios.get(checkUrl);
+            const response = await axiosInstance.get(`${API_ENDPOINT}/${idProvider}/is-associated`);
             if (response.data && typeof response.data.isAssociated === 'boolean') {
                 return response.data.isAssociated;
             }
-            console.warn(`[Service Warn] Unexpected association check response format for ID ${idProvider}:`, response.data);
             return false;
         } catch (error) {
             if (error.response && error.response.status === 404) {

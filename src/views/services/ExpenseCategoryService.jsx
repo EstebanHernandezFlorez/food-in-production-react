@@ -1,15 +1,13 @@
-// services/ExpenseCategoryService.js (NUEVO NOMBRE DE ARCHIVO)
-import axios from 'axios';
+import axiosInstance from './axiosConfig'; // <- CAMBIO 1: Importar la instancia configurada
 
-// Endpoint para las Categorías de Gasto
-// Asegúrate que esta API_URL coincida con la ruta base que definiste para expenseCategoryRoutes en tu app.js del backend
-// Por ejemplo, si es 'http://localhost:3000/api/expense-categories'
-const API_URL = 'http://localhost:3000/conceptSpent'; // <<--- AJUSTA ESTA RUTA BASE
+// CAMBIO 2: Definir solo el endpoint relativo
+const EXPENSE_CATEGORY_ENDPOINT = '/conceptSpent'; 
 
 const ExpenseCategoryService = {
-  getAllExpenseCategories: async () => { // <<--- Nombre de método actualizado
+  getAllExpenseCategories: async () => {
     try {
-      const response = await axios.get(API_URL);
+      // CAMBIO 3: Usar axiosInstance y el endpoint
+      const response = await axiosInstance.get(EXPENSE_CATEGORY_ENDPOINT);
       return response.data;
     } catch (error) {
       console.error("Error fetching expense categories:", error);
@@ -20,9 +18,9 @@ const ExpenseCategoryService = {
     }
   },
 
-  getExpenseCategoryById: async (idExpenseCategory) => { // <<--- Nombre de param actualizado
+  getExpenseCategoryById: async (idExpenseCategory) => {
     try {
-      const response = await axios.get(`${API_URL}/${idExpenseCategory}`);
+      const response = await axiosInstance.get(`${EXPENSE_CATEGORY_ENDPOINT}/${idExpenseCategory}`);
       return response.data;
     } catch (error) {
       console.error("Error fetching expense category by ID:", error);
@@ -33,13 +31,12 @@ const ExpenseCategoryService = {
     }
   },
 
-  createExpenseCategory: async (categoryData) => { // <<--- Nombre de método y param actualizados
+  createExpenseCategory: async (categoryData) => {
     try {
-      const response = await axios.post(API_URL, categoryData);
+      const response = await axiosInstance.post(EXPENSE_CATEGORY_ENDPOINT, categoryData);
       return response.data;
     } catch (error) {
       console.error("Error creating expense category:", error);
-      // Manejo de errores de validación del backend si vienen en un array 'errors'
       const errors = error.response?.data?.errors;
       let detailedMessage = "Error al crear la categoría de gasto";
       if (errors && Array.isArray(errors) && errors.length > 0) {
@@ -47,17 +44,14 @@ const ExpenseCategoryService = {
       } else if (error.response?.data?.message) {
           detailedMessage = error.response.data.message;
       }
-      throw {
-        message: detailedMessage,
-        status: error.response?.status || 500
-      };
+      throw { message: detailedMessage, status: error.response?.status || 500 };
     }
   },
 
-  updateExpenseCategory: async (idExpenseCategory, categoryData) => { // <<--- Nombres actualizados
+  updateExpenseCategory: async (idExpenseCategory, categoryData) => {
     try {
-      const response = await axios.put(`${API_URL}/${idExpenseCategory}`, categoryData);
-      return response.data; // Asumiendo que el backend devuelve el objeto actualizado
+      const response = await axiosInstance.put(`${EXPENSE_CATEGORY_ENDPOINT}/${idExpenseCategory}`, categoryData);
+      return response.data;
     } catch (error) {
       console.error("Error updating expense category:", error);
       const errors = error.response?.data?.errors;
@@ -67,17 +61,13 @@ const ExpenseCategoryService = {
       } else if (error.response?.data?.message) {
           detailedMessage = error.response.data.message;
       }
-      throw {
-        message: detailedMessage,
-        status: error.response?.status || 500
-      };
+      throw { message: detailedMessage, status: error.response?.status || 500 };
     }
   },
 
-  deleteExpenseCategory: async (idExpenseCategory) => { // <<--- Nombre actualizado
+  deleteExpenseCategory: async (idExpenseCategory) => {
     try {
-      await axios.delete(`${API_URL}/${idExpenseCategory}`);
-      // Delete no devuelve contenido, así que no hay response.data
+      await axiosInstance.delete(`${EXPENSE_CATEGORY_ENDPOINT}/${idExpenseCategory}`);
     } catch (error) {
       console.error("Error deleting expense category:", error);
       throw {
@@ -87,11 +77,10 @@ const ExpenseCategoryService = {
     }
   },
 
-  changeStateExpenseCategory: async (idExpenseCategory, status) => { // <<--- Nombres actualizados
+  changeStateExpenseCategory: async (idExpenseCategory, status) => {
     try {
-      // La ruta en tu backend para cambiar estado es PATCH /:idExpenseCategory/status
-      const response = await axios.patch(`${API_URL}/${idExpenseCategory}/status`, { status });
-      return response.data; // Asumiendo que el backend devuelve el objeto actualizado
+      const response = await axiosInstance.patch(`${EXPENSE_CATEGORY_ENDPOINT}/${idExpenseCategory}/status`, { status });
+      return response.data;
     } catch (error) {
       console.error(`Error changing status for expense category ${idExpenseCategory}:`, error);
       throw {
