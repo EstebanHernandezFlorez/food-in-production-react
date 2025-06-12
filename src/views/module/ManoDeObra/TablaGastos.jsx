@@ -21,7 +21,7 @@ import { ConfirmationModal } from '../../General/ConfirmationModal';
 const INITIAL_FORM_STATE = { idExpenseCategory: null, name: '', description: '', status: true };
 const INITIAL_FORM_ERRORS = { name: null, description: null };
 const INITIAL_CONFIRM_PROPS = { title: "", message: null, confirmText: "Confirmar", confirmColor: "primary", itemDetails: null, isOpen: false, isConfirming: false };
-const ITEMS_PER_PAGE = 7;
+const ITEMS_PER_PAGE = 3;
 
 const TablaGastos = () => {
     // --- State, Refs y Hooks (sin cambios) ---

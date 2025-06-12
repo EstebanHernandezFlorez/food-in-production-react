@@ -1,12 +1,13 @@
 // src/components/tu/ruta/FichaTecnica.js
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import Select from 'react-select';
 import {
     Button, Container, Row, Col, Form, FormGroup, Input, Label,
     FormFeedback, Spinner, Alert,
-    Modal, ModalHeader, ModalBody, ModalFooter
+    Modal, ModalHeader, ModalBody, ModalFooter,
+    Pagination, PaginationItem, PaginationLink
 } from "reactstrap";
 import { Plus, Trash2, Save, X, AlertTriangle, Edit } from 'lucide-react';
 import toast, { Toaster } from "react-hot-toast";
@@ -20,7 +21,7 @@ import registerPurchaseService from "../../services/registroCompraService";
 import "../../../assets/css/App.css";
 import "../../../assets/css/produccion/FichaTecnicaStyles.css";
 
-// --- Constantes y Helpers (sin cambios) ---
+// --- Constantes y Helpers ---
 const getInitialFichaFormState = () => ({
     idProduct: '', dateEffective: new Date().toISOString().slice(0, 10), endDate: '',
     quantityBase: '', unitOfMeasure: '', status: true,
@@ -28,10 +29,7 @@ const getInitialFichaFormState = () => ({
 const getInitialIngredienteFormState = () => ({
     key: `ing-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
     selectedPurchaseDetailOption: null,
-    idPurchaseDetail: '',
-    idSupply: '',
-    quantity: '',
-    unitOfMeasure: '',
+    idPurchaseDetail: '', idSupply: '', quantity: '', unitOfMeasure: '',
 });
 const getInitialProcesoFormState = () => ({
     key: `proc-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
@@ -51,20 +49,17 @@ const unitOfMeasures = [
     { value: 'docena', label: 'Docena(s)' },
 ];
 
+const PROCESOS_PER_PAGE = 5;
+
 const ConfirmationModalComponent = ({ isOpen, toggle, title, children, onConfirm, confirmText = "Confirmar", confirmColor = "primary", isConfirming = false }) => (
     <Modal isOpen={isOpen} toggle={!isConfirming ? toggle : undefined} centered backdrop="static" keyboard={!isConfirming}>
         <ModalHeader toggle={!isConfirming ? toggle : undefined}>
-            <div className="d-flex align-items-center">
-                <AlertTriangle size={24} className={`text-${confirmColor === "danger" ? "danger" : "primary"} me-2`} />
-                <span className="fw-bold">{title}</span>
-            </div>
+            <div className="d-flex align-items-center"><AlertTriangle size={24} className={`text-${confirmColor === "danger" ? "danger" : "primary"} me-2`} /><span className="fw-bold">{title}</span></div>
         </ModalHeader>
         <ModalBody>{children}</ModalBody>
         <ModalFooter>
             <Button color="secondary" outline onClick={toggle} disabled={isConfirming}>Cancelar</Button>
-            <Button color={confirmColor} onClick={onConfirm} disabled={isConfirming}>
-                {isConfirming ? <Spinner size="sm" /> : confirmText}
-            </Button>
+            <Button color={confirmColor} onClick={onConfirm} disabled={isConfirming}>{isConfirming ? <Spinner size="sm" /> : confirmText}</Button>
         </ModalFooter>
     </Modal>
 );
@@ -77,23 +72,24 @@ const FichaTecnica = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [productOptions, setProductOptions] = useState([]);
     const [purchaseDetailOptions, setPurchaseDetailOptions] = useState([]);
-
     const [formFicha, setFormFicha] = useState(getInitialFichaFormState());
     const [formIngredientes, setFormIngredientes] = useState([getInitialIngredienteFormState()]);
     const [formProcesos, setFormProcesos] = useState([getInitialProcesoFormState()]);
     const [formErrors, setFormErrors] = useState(getInitialFormErrors());
-
     const [isLoadingPageData, setIsLoadingPageData] = useState(true);
     const [isLoadingFichaData, setIsLoadingFichaData] = useState(false);
     const [isDataInitialized, setIsDataInitialized] = useState(false);
-
     const [isSaving, setIsSaving] = useState(false);
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [confirmModalProps, setConfirmModalProps] = useState({});
     const [isConfirmActionLoading, setIsConfirmActionLoading] = useState(false);
+    
+    const [procesosCurrentPage, setProcesosCurrentPage] = useState(1);
+
     const confirmActionRef = useRef(null);
     const itemToRemoveRef = useRef({ type: null, keyToRemove: null });
     const [originalIdProductOnLoad, setOriginalIdProductOnLoad] = useState(null);
+    const ingredientesEndRef = useRef(null);
 
     const idProductoFromUrl = new URLSearchParams(location.search).get('idProducto');
 
@@ -115,39 +111,28 @@ const FichaTecnica = () => {
         }
     }, [idSpecsheetFromUrl, idProductoFromUrl]);
 
-    // <--- *** USE EFFECT DE CARGA DE DATOS *** --->
     useEffect(() => {
         let isMounted = true;
         setIsLoadingPageData(true);
-
         const fetchOptionsData = async () => {
             try {
                 const [productosRes, purchasesRes] = await Promise.all([
                     productService.getAllProducts({ status: true }),
                     registerPurchaseService.getAllRegisterPurchasesWithDetails()
                 ]);
-                
                 if (!isMounted) return;
-                
                 const mappedProducts = (productosRes || []).map(p => ({ value: p.idProduct, label: p.productName, unitOfMeasure: p.unitOfMeasure }));
                 setProductOptions(mappedProducts);
-                
                 if (!isEditing && idProductoFromUrl) {
                     const selectedProd = mappedProducts.find(p => p.value.toString() === idProductoFromUrl);
-                    if (selectedProd) {
-                        setFormFicha(prev => ({ ...prev, unitOfMeasure: selectedProd.unitOfMeasure || '' }));
-                    }
+                    if (selectedProd) setFormFicha(prev => ({ ...prev, unitOfMeasure: selectedProd.unitOfMeasure || '' }));
                 }
-
                 const purchaseOptions = [];
                 const purchasesArray = Array.isArray(purchasesRes) ? purchasesRes : [];
-                
                 purchasesArray.forEach((purchase) => {
                     const detailsArray = Array.isArray(purchase.details) ? purchase.details : [];
                     if (detailsArray.length === 0) return;
-
                     const providerName = purchase.provider?.company || 'No especificado';
-
                     detailsArray.forEach((detail) => {
                         if (detail && detail.supply && detail.idPurchaseDetail) {
                             purchaseOptions.push({
@@ -159,24 +144,17 @@ const FichaTecnica = () => {
                         }
                     });
                 });
-
                 setPurchaseDetailOptions(purchaseOptions);
-
             } catch (error) {
-                console.error("[FichaTecnica] ERROR en fetchOptionsData:", error);
                 if (isMounted) toast.error("Error cargando datos para la ficha.");
             } finally {
                 if (isMounted) setIsLoadingPageData(false);
             }
         };
-
         fetchOptionsData();
-
         return () => { isMounted = false; };
     }, [isEditing, idProductoFromUrl]);
 
-
-    // <--- *** USE EFFECT DE EDICIÓN MEJORADO *** --->
     useEffect(() => {
         let isMounted = true;
         if (isEditing && idSpecsheetFromUrl && !isLoadingPageData && !isDataInitialized) {
@@ -194,7 +172,6 @@ const FichaTecnica = () => {
                             unitOfMeasure: fichaFromApi.unitOfMeasure || '',
                             status: fichaFromApi.status !== undefined ? fichaFromApi.status : true,
                         });
-
                         const backendSupplies = Array.isArray(fichaFromApi.specSheetSupplies) ? fichaFromApi.specSheetSupplies : [];
                         const mappedIngredientes = backendSupplies.map(ing => {
                             const purchaseOpt = purchaseDetailOptions.find(opt => opt.value === ing.idPurchaseDetail);
@@ -208,7 +185,6 @@ const FichaTecnica = () => {
                             };
                         });
                         setFormIngredientes(mappedIngredientes.length > 0 ? mappedIngredientes : [getInitialIngredienteFormState()]);
-
                         const backendProcesses = Array.isArray(fichaFromApi.specSheetProcesses) ? fichaFromApi.specSheetProcesses : [];
                         const mappedProcesos = backendProcesses
                             .map((proc, index) => ({
@@ -219,9 +195,7 @@ const FichaTecnica = () => {
                             }))
                             .sort((a, b) => a.processOrder - b.processOrder);
                         setFormProcesos(mappedProcesos.length > 0 ? mappedProcesos : [getInitialProcesoFormState()]);
-                        
                         if(isMounted) setIsDataInitialized(true);
-
                     } else if (isMounted) {
                         toast.error(`Ficha ID: ${idSpecsheetFromUrl} no encontrada.`);
                         navigate('/home/fichas-tecnicas/lista');
@@ -235,11 +209,23 @@ const FichaTecnica = () => {
                     if (isMounted) setIsLoadingFichaData(false);
                 }
             };
-            
             fetchFichaData();
         }
     }, [isEditing, idSpecsheetFromUrl, isLoadingPageData, purchaseDetailOptions, navigate, isDataInitialized]);
 
+    useEffect(() => { if (formIngredientes.length > 1) { ingredientesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); } }, [formIngredientes.length]);
+    
+    const procesosTotalPages = useMemo(() => Math.ceil(formProcesos.length / PROCESOS_PER_PAGE), [formProcesos]);
+    const currentProcesos = useMemo(() => {
+        const startIndex = (procesosCurrentPage - 1) * PROCESOS_PER_PAGE;
+        const endIndex = startIndex + PROCESOS_PER_PAGE;
+        return formProcesos.slice(startIndex, endIndex);
+    }, [formProcesos, procesosCurrentPage]);
+    
+    const handleProcesoPageChange = useCallback((e, pageNumber) => {
+        e.preventDefault();
+        setProcesosCurrentPage(pageNumber);
+    }, []);
 
     const clearSpecificFormErrors = useCallback((fields) => {
         setFormErrors(prev => {
@@ -305,10 +291,16 @@ const FichaTecnica = () => {
     }, [clearSpecificFormErrors]);
 
     const addIngrediente = useCallback(() => setFormIngredientes(prev => [...prev, getInitialIngredienteFormState()]), []);
-    const addProceso = useCallback(() => setFormProcesos(prev => {
-        const nextOrder = prev.length > 0 ? Math.max(0, ...prev.map(p => p.processOrder || 0)) + 1 : 1;
-        return [...prev, { ...getInitialProcesoFormState(), processOrder: nextOrder }];
-    }), []);
+
+    const addProceso = useCallback(() => {
+        setFormProcesos(prev => {
+            const nextOrder = prev.length > 0 ? Math.max(0, ...prev.map(p => p.processOrder || 0)) + 1 : 1;
+            const newProcesos = [...prev, { ...getInitialProcesoFormState(), processOrder: nextOrder }];
+            const newTotalPages = Math.ceil(newProcesos.length / PROCESOS_PER_PAGE);
+            setProcesosCurrentPage(newTotalPages);
+            return newProcesos;
+        });
+    }, []);
 
     const validateFichaTecnicaForm = useCallback(() => {
         const errors = { ...getInitialFormErrors() }; let isValid = true;
@@ -345,15 +337,22 @@ const FichaTecnica = () => {
     }, [formFicha, formIngredientes, formProcesos]);
 
     const toggleConfirmModal = useCallback(() => { if (!isConfirmActionLoading) setConfirmModalOpen(p => !p); }, [isConfirmActionLoading]);
+    
     const prepareActionConfirmation = useCallback((actionFn, props) => { confirmActionRef.current = actionFn; setConfirmModalProps(props); setConfirmModalOpen(true); }, []);
     
     const executeRemoveItem = useCallback(() => {
         const { type, keyToRemove } = itemToRemoveRef.current;
-        if (type === 'ingrediente') setFormIngredientes(prev => prev.filter(item => item.key !== keyToRemove));
-        else if (type === 'proceso') setFormProcesos(prev => prev.filter(item => item.key !== keyToRemove).map((p, idx) => ({ ...p, processOrder: idx + 1 })));
+        if (type === 'ingrediente') {
+            setFormIngredientes(prev => prev.filter(item => item.key !== keyToRemove));
+        } else if (type === 'proceso') {
+            if (currentProcesos.length === 1 && procesosCurrentPage > 1) {
+                setProcesosCurrentPage(p => p - 1);
+            }
+            setFormProcesos(prev => prev.filter(item => item.key !== keyToRemove).map((p, idx) => ({ ...p, processOrder: idx + 1 })));
+        }
         toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} eliminado.`);
         toggleConfirmModal();
-    }, [toggleConfirmModal]);
+    }, [toggleConfirmModal, currentProcesos.length, procesosCurrentPage]);
 
     const requestRemoveItemConfirmation = useCallback((type, index, itemKey) => {
         itemToRemoveRef.current = { type, keyToRemove: itemKey };
@@ -368,7 +367,6 @@ const FichaTecnica = () => {
         setIsConfirmActionLoading(true);
         const actionText = isEditing ? "actualizando" : "creando";
         const toastId = toast.loading(`${actionText.charAt(0).toUpperCase() + actionText.slice(1)} ficha...`);
-
         const fichaDataPrincipal = {
             idProduct: parseInt(formFicha.idProduct, 10),
             startDate: formFicha.dateEffective,
@@ -377,7 +375,6 @@ const FichaTecnica = () => {
             unitOfMeasure: formFicha.unitOfMeasure,
             status: formFicha.status,
         };
-
         const suppliesPayload = formIngredientes
             .filter(ing => ing.idPurchaseDetail && ing.quantity)
             .map(ing => ({
@@ -386,7 +383,6 @@ const FichaTecnica = () => {
                 quantity: parseFloat(ing.quantity),
                 unitOfMeasure: ing.unitOfMeasure,
             }));
-
         const processesPayload = formProcesos
             .filter(proc => proc.processNameOverride?.trim())
             .map((proc, index) => ({
@@ -394,9 +390,7 @@ const FichaTecnica = () => {
                 processNameOverride: proc.processNameOverride.trim(),
                 processDescriptionOverride: proc.processDescriptionOverride?.trim() || null,
             }));
-
         const fichaPayload = { ...fichaDataPrincipal, supplies: suppliesPayload, processes: processesPayload };
-
         try {
             if (isEditing && idSpecsheetFromUrl) {
                 await fichaTecnicaService.updateSpecSheet(idSpecsheetFromUrl, fichaPayload);
@@ -405,26 +399,15 @@ const FichaTecnica = () => {
             }
             toast.success(`Ficha ${isEditing ? 'actualizada' : 'creada'} con éxito.`, { id: toastId });
             toggleConfirmModal();
-            
-            // --- INICIO DE LA CORRECCIÓN DE REDIRECCIÓN ---
             setTimeout(() => {
-                // Por defecto, si no sabemos a dónde ir, volvemos a la lista principal de productos.
-                // Asegúrate que esta ruta '/home/produccion/producto-insumo' es correcta.
                 let destination = '/home/produccion/producto-insumo';
-
-                // Si se estaba editando, volvemos a la lista de fichas de ese producto.
                 if (isEditing) {
                     destination = `/home/producto/${formFicha.idProduct}/fichas`;
-                } 
-                // Si se estaba creando, pero veníamos de un producto específico, volvemos a él.
-                else if (idProductoFromUrl) {
+                } else if (idProductoFromUrl) {
                     destination = `/home/producto/${idProductoFromUrl}/fichas`;
                 }
-
                 navigate(destination);
             }, 1200);
-            // --- FIN DE LA CORRECCIÓN DE REDIRECCIÓN ---
-
         } catch (error) {
             const errorMsg = error.response?.data?.message || error.message || `Error al ${actionText} la ficha técnica.`;
             setFormErrors(prev => ({ ...prev, general: errorMsg }));
@@ -446,19 +429,12 @@ const FichaTecnica = () => {
         });
     }, [validateFichaTecnicaForm, isEditing, executeSave, prepareActionConfirmation]);
 
-    // --- CORRECCIÓN EN EL BOTÓN DE CANCELAR ---
     const handleCancel = () => {
-        // La lógica es la misma que la de la redirección al guardar.
-        // Si estamos editando, volvemos a la lista del producto original.
         if (isEditing && originalIdProductOnLoad) {
             navigate(`/home/producto/${originalIdProductOnLoad}/fichas`);
-        } 
-        // Si estamos creando desde un producto, volvemos a su lista.
-        else if (idProductoFromUrl) {
+        } else if (idProductoFromUrl) {
             navigate(`/home/producto/${idProductoFromUrl}/fichas`);
-        } 
-        // Si no, volvemos a la lista general de productos.
-        else {
+        } else {
             navigate('/home/produccion/producto-insumo');
         }
     };
@@ -545,6 +521,18 @@ const FichaTecnica = () => {
                             </Col>
                         </Row>
                     ))}
+
+                    <div ref={ingredientesEndRef} />
+                    {formIngredientes.length >= 3 && (
+                        <Row className="mt-3">
+                            <Col className="text-end">
+                                <Button color="success" outline size="sm" onClick={addIngrediente} disabled={isSaving}>
+                                    <Plus size={16}/> Añadir Otro Ingrediente
+                                </Button>
+                            </Col>
+                        </Row>
+                    )}
+
                     {purchaseDetailOptions.length === 0 && !isLoadingPageData && (
                         <Alert color="info" className="mt-3">
                             No hay compras de insumos disponibles para agregar. Por favor, registre una nueva compra primero.
@@ -555,28 +543,36 @@ const FichaTecnica = () => {
                 <section className="ficha-tecnica-card">
                     <Row className="align-items-center mb-3"><Col><h4 className="mb-0 section-title">Pasos de Elaboración</h4></Col><Col className="text-end"><Button color="info" outline size="sm" onClick={addProceso} disabled={isSaving}><Plus size={16}/> Añadir Paso</Button></Col></Row>
                     {formErrors.procesos && <Alert color="warning" className="py-1 px-2 x-small mb-2"><small>{formErrors.procesos}</small></Alert>}
-                    {formProcesos.map((proc, index) => (
-                        <Row key={proc.key} className="g-2 align-items-start dynamic-item-row">
-                            <Col xs="auto" className="d-flex align-items-center pt-md-2 pe-2">
-                                <Input type="number" bsSize="sm" name="processOrder" style={{width:"70px"}} value={proc.processOrder} onChange={e=>handleProcesoChange(index,e)} invalid={!!formErrors[`proceso_${index}_processOrder`]} disabled={isSaving} min="1" title="Orden"/>
-                                {formErrors[`proceso_${index}_processOrder`] && (<FormFeedback className="x-small d-block ms-1 text-start">{formErrors[`proceso_${index}_processOrder`]}</FormFeedback>)}
-                            </Col>
-                            <Col>
-                                <FormGroup className="mb-2 mb-md-0">
-                                    <Input type="text" bsSize="sm" name="processNameOverride" value={proc.processNameOverride} onChange={e=>handleProcesoChange(index,e)} invalid={!!formErrors[`proceso_${index}_processNameOverride`]} disabled={isSaving} placeholder={`Paso ${proc.processOrder}: Ej: Mezclar ingredientes secos`}/>
-                                    <FormFeedback className="x-small">{formErrors[`proceso_${index}_processNameOverride`]}</FormFeedback>
-                                </FormGroup>
-                            </Col>
-                            <Col xs={12} md={5}>
-                                <FormGroup className="mb-2 mb-md-0">
-                                    <Input type="textarea" bsSize="sm" rows="1" name="processDescriptionOverride" value={proc.processDescriptionOverride} onChange={e=>handleProcesoChange(index,e)} disabled={isSaving} placeholder="Describa el paso (opcional)..." style={{minHeight:'31px',resize:'vertical'}}/>
-                                </FormGroup>
-                            </Col>
-                            <Col xs={12} md="auto" className="text-end">
-                                <Button color="danger" outline size="sm" onClick={() => requestRemoveItemConfirmation('proceso', index, proc.key)} disabled={isSaving || formProcesos.length <= 1} title="Eliminar Paso"><Trash2 size={16}/></Button>
-                            </Col>
-                        </Row>
-                    ))}
+                    
+                    {currentProcesos.map((proc, localIndex) => {
+                        const originalIndex = ((procesosCurrentPage - 1) * PROCESOS_PER_PAGE) + localIndex;
+                        return (
+                            <Row key={proc.key} className="g-2 align-items-start dynamic-item-row">
+                                <Col xs="auto" className="d-flex align-items-center pt-md-2 pe-2"><Input type="number" bsSize="sm" name="processOrder" style={{width:"70px"}} value={proc.processOrder} onChange={e=>handleProcesoChange(originalIndex,e)} invalid={!!formErrors[`proceso_${originalIndex}_processOrder`]} disabled={isSaving} min="1" title="Orden"/>{formErrors[`proceso_${originalIndex}_processOrder`] && (<FormFeedback className="x-small d-block ms-1 text-start">{formErrors[`proceso_${originalIndex}_processOrder`]}</FormFeedback>)}</Col>
+                                <Col><FormGroup className="mb-2 mb-md-0"><Input type="text" bsSize="sm" name="processNameOverride" value={proc.processNameOverride} onChange={e=>handleProcesoChange(originalIndex,e)} invalid={!!formErrors[`proceso_${originalIndex}_processNameOverride`]} disabled={isSaving} placeholder={`Paso ${proc.processOrder}: Ej: Mezclar ingredientes secos`}/><FormFeedback className="x-small">{formErrors[`proceso_${originalIndex}_processNameOverride`]}</FormFeedback></FormGroup></Col>
+                                <Col xs={12} md={5}><FormGroup className="mb-2 mb-md-0"><Input type="textarea" bsSize="sm" rows="1" name="processDescriptionOverride" value={proc.processDescriptionOverride} onChange={e=>handleProcesoChange(originalIndex,e)} disabled={isSaving} placeholder="Describa el paso (opcional)..." style={{minHeight:'31px',resize:'vertical'}}/></FormGroup></Col>
+                                <Col xs={12} md="auto" className="text-end"><Button color="danger" outline size="sm" onClick={() => requestRemoveItemConfirmation('proceso', originalIndex, proc.key)} disabled={isSaving || formProcesos.length <= 1} title="Eliminar Paso"><Trash2 size={16}/></Button></Col>
+                            </Row>
+                        );
+                    })}
+
+                    {procesosTotalPages > 1 && (
+                        <div className="d-flex justify-content-center mt-3">
+                            <Pagination size="sm">
+                                <PaginationItem disabled={procesosCurrentPage <= 1}><PaginationLink first onClick={(e) => handleProcesoPageChange(e, 1)} /></PaginationItem>
+                                <PaginationItem disabled={procesosCurrentPage <= 1}><PaginationLink previous onClick={(e) => handleProcesoPageChange(e, procesosCurrentPage - 1)} /></PaginationItem>
+                                {Array.from({ length: procesosTotalPages }, (_, i) => i + 1).map(page => (
+                                    <PaginationItem active={page === procesosCurrentPage} key={page}>
+                                        <PaginationLink onClick={(e) => handleProcesoPageChange(e, page)}>
+                                            {page}
+                                        </PaginationLink>
+                                    </PaginationItem>
+                                ))}
+                                <PaginationItem disabled={procesosCurrentPage >= procesosTotalPages}><PaginationLink next onClick={(e) => handleProcesoPageChange(e, procesosCurrentPage + 1)} /></PaginationItem>
+                                <PaginationItem disabled={procesosCurrentPage >= procesosTotalPages}><PaginationLink last onClick={(e) => handleProcesoPageChange(e, procesosTotalPages)} /></PaginationItem>
+                            </Pagination>
+                        </div>
+                    )}
                 </section>
                 
                 <div className="d-flex justify-content-end mt-4 mb-5 ficha-tecnica-actions">
@@ -585,15 +581,7 @@ const FichaTecnica = () => {
                 </div>
             </Form>
 
-            <ConfirmationModalComponent 
-                isOpen={confirmModalOpen} 
-                toggle={toggleConfirmModal} 
-                title={confirmModalProps.title} 
-                onConfirm={() => confirmActionRef.current && confirmActionRef.current()} 
-                confirmText={confirmModalProps.confirmText} 
-                confirmColor={confirmModalProps.confirmColor} 
-                isConfirming={isConfirmActionLoading}
-            >
+            <ConfirmationModalComponent isOpen={confirmModalOpen} toggle={toggleConfirmModal} title={confirmModalProps.title} onConfirm={() => confirmActionRef.current && confirmActionRef.current()} confirmText={confirmModalProps.confirmText} confirmColor={confirmModalProps.confirmColor} isConfirming={isConfirmActionLoading}>
                 {confirmModalProps.message}
             </ConfirmationModalComponent>
         </Container>

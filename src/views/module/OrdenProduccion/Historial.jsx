@@ -8,7 +8,7 @@ import {
 } from 'reactstrap';
 import { 
     Eye, Plus, Search, CheckCircle, XCircle, Package, Calendar, User, Hash, 
-    Clock, Timer, MessageSquare, AlertCircle, FileDown 
+    Clock, Timer, MessageSquare, AlertCircle, FileDown, Trash2 
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import toast, { Toaster } from 'react-hot-toast';
@@ -18,6 +18,21 @@ import { ActiveOrdersContext } from './ActiveOrdersContext';
 import productionOrderService from '../../services/productionOrderService';
 
 const ITEMS_PER_PAGE = 10;
+const STEPS_PER_PAGE_MODAL = 5;
+
+const formatDateTime = (dateTimeString) => {
+    if (!dateTimeString) return '-';
+    try {
+        const date = new Date(dateTimeString);
+        if (isNaN(date.getTime())) return '-';
+        return new Intl.DateTimeFormat('es-ES', {
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit'
+        }).format(date);
+    } catch (e) {
+        return '-';
+    }
+};
 
 const DetailItem = ({ icon, label, value }) => (
     <Col md={4} className="mb-2">
@@ -72,24 +87,37 @@ const HistorialProduccion = () => {
     const [viewModalOpen, setViewModalOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [statusFilter, setStatusFilter] = useState('ALL');
+    const [detailModalPage, setDetailModalPage] = useState(1);
+    const [showCleanupAlert, setShowCleanupAlert] = useState(false);
+    
     const { addOrFocusOrder } = useContext(ActiveOrdersContext);
     const navigate = useNavigate();
-
-    const formatDateTime = (dateTimeString) => {
-        if (!dateTimeString) return '-';
-        return new Date(dateTimeString).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    };
 
     const fetchOrdersData = useCallback(async (showLoadingSpinner = true) => {
         if (showLoadingSpinner) setIsLoading(true);
         try {
             const response = await productionOrderService.getAllProductionOrders();
-            if (response && Array.isArray(response.rows)) {
-                const sortedResponse = response.rows.sort((a, b) => b.idProductionOrder - a.idProductionOrder);
-                setAllOrders(sortedResponse);
-            } else { 
-                console.warn("La respuesta del servicio no tiene el formato esperado { count, rows }:", response);
-                setAllOrders([]); 
+            let ordersData = [];
+            if (Array.isArray(response)) {
+                ordersData = response;
+            } else if (response && Array.isArray(response.rows)) {
+                ordersData = response.rows;
+            } else {
+                console.warn("La respuesta del servicio no tiene un formato reconocible. Respuesta:", response);
+            }
+            const sortedOrders = ordersData.sort((a, b) => new Date(b.dateTimeCreation || b.createdAt) - new Date(a.dateTimeCreation || a.createdAt));
+            setAllOrders(sortedOrders);
+
+            if (sortedOrders.length > 0) {
+                const oldestOrder = sortedOrders[sortedOrders.length - 1];
+                const oldestDate = new Date(oldestOrder.dateTimeCreation || oldestOrder.createdAt);
+                const oneWeekAgo = new Date();
+                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+                if (oldestDate < oneWeekAgo) {
+                    setShowCleanupAlert(true);
+                } else {
+                    setShowCleanupAlert(false);
+                }
             }
         } catch (error) {
             toast.error("Error al cargar el historial de órdenes.");
@@ -127,46 +155,44 @@ const HistorialProduccion = () => {
         }
         return filtered;
     }, [allOrders, tableSearchText, statusFilter]);
-
+    
     const handleDownloadExcel = useCallback(() => {
         if (filteredOrdersData.length === 0) {
-            toast.error('No hay datos para exportar.');
+            toast.error("No hay datos para exportar.");
             return;
         }
-        const toastId = toast.loading('Generando archivo Excel...');
+        const toastId = toast.loading("Generando archivo Excel...");
+
+        const dataToExport = filteredOrdersData.map(order => ({
+            'ID Orden': order.idProductionOrder,
+            'Producto': order.productNameSnapshot || order.Product?.productName || 'N/A',
+            'Cantidad Inicial': order.initialAmount,
+            'Cantidad Final': order.finalQuantityProduct,
+            'Estado': getOrderStatusBadgeInfo(order.status).text,
+            'Fecha Creación': formatDateTime(order.dateTimeCreation || order.createdAt),
+            'Fecha Finalización': formatDateTime(order.dateTimeCompleted),
+            'Registrado por': order.employeeRegistered?.fullName || 'N/A',
+            'Observaciones': order.observations,
+            // ---> AÑADIDO MOTIVO DE CANCELACIÓN EN EXCEL <---
+            'Motivo Cancelación': order.status === 'CANCELLED' ? order.cancellationReason : 'N/A',
+        }));
+
         try {
-            const mappedData = filteredOrdersData.map(order => {
-                const employeeNames = order.productionOrderDetails && order.productionOrderDetails.length > 0
-                    ? [...new Set(order.productionOrderDetails.map(d => d.employeeAssigned?.fullName).filter(Boolean))].join(', ')
-                    : 'No Asignado';
-                return {
-                    'ID Orden': order.idProductionOrder,
-                    'Producto': order.productNameSnapshot || order.Product?.productName || 'N/A',
-                    'Cantidad Inicial': order.initialAmount,
-                    'Estado': getOrderStatusBadgeInfo(order.status).text,
-                    'Fecha de Creación': formatDateTime(order.dateTimeCreation || order.createdAt),
-                    'Fecha de Finalización': formatDateTime(order.dateTimeCompletion),
-                    'Duración Total': calculateDuration(order.dateTimeCreation, order.dateTimeCompletion) || 'N/A',
-                    'Empleado(s) Asignado(s)': employeeNames,
-                    'Observaciones': order.observations || ''
-                };
-            });
-            const worksheet = XLSX.utils.json_to_sheet(mappedData);
+            const worksheet = XLSX.utils.json_to_sheet(dataToExport);
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, 'HistorialProduccion');
-            const columnWidths = [
-                { wch: 10 }, { wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, 
-                { wch: 20 }, { wch: 15 }, { wch: 35 }, { wch: 50 }
-            ];
-            worksheet['!cols'] = columnWidths;
-            const fileName = `Historial_Ordenes_Produccion_${new Date().toISOString().slice(0, 10)}.xlsx`;
-            XLSX.writeFile(workbook, fileName);
-            toast.success('¡Archivo Excel generado exitosamente!', { id: toastId });
+            XLSX.utils.book_append_sheet(workbook, worksheet, "HistorialProduccion");
+            XLSX.writeFile(workbook, "Historial_Produccion.xlsx");
+            toast.success("¡Excel generado exitosamente!", { id: toastId });
         } catch (error) {
-            console.error("Error al generar el archivo Excel:", error);
-            toast.error('No se pudo generar el archivo.', { id: toastId });
+            console.error("Error al generar Excel:", error);
+            toast.error("Error al generar el archivo Excel.", { id: toastId });
         }
-    }, [filteredOrdersData, formatDateTime]);
+    }, [filteredOrdersData]);
+    
+    const handleCreateNewOrder = () => {
+        addOrFocusOrder(null, true, { navigateIfNeeded: false }); 
+        navigate('/home/produccion/orden-produccion');
+    };
     
     const handleTableSearch = (e) => setTableSearchText(e.target.value);
     useEffect(() => { setCurrentPage(1); }, [tableSearchText, statusFilter]);
@@ -179,61 +205,45 @@ const HistorialProduccion = () => {
     }, [filteredOrdersData, validCurrentPage]);
     const handlePageChange = (pageNumber) => setCurrentPage(pageNumber);
     
-    const handleCreateNewOrder = () => {
-        addOrFocusOrder(null, true, { navigateIfNeeded: false }); 
-        navigate('/home/produccion/orden-produccion?action=crear');
+    const handleViewOrder = (order) => {
+        setSelectedOrder(order);
+        setDetailModalPage(1);
+        setViewModalOpen(true);
     };
-    
-    const handleViewOrder = (order) => { setSelectedOrder(order); setViewModalOpen(true); };
     const toggleViewModal = () => setViewModalOpen(prev => !prev);
-    useEffect(() => { if (!viewModalOpen) setSelectedOrder(null); }, [viewModalOpen]);
+    useEffect(() => {
+        if (!viewModalOpen) {
+            setSelectedOrder(null);
+            setDetailModalPage(1);
+        }
+    }, [viewModalOpen]);
+
+    const paginatedSteps = useMemo(() => {
+        if (!selectedOrder || !selectedOrder.productionOrderDetails || selectedOrder.productionOrderDetails.length === 0) {
+            return { items: [], totalPages: 0 };
+        }
+        const allSteps = selectedOrder.productionOrderDetails.sort((a, b) => a.processOrder - b.processOrder);
+        const totalPages = Math.ceil(allSteps.length / STEPS_PER_PAGE_MODAL);
+        const startIndex = (detailModalPage - 1) * STEPS_PER_PAGE_MODAL;
+        const currentItems = allSteps.slice(startIndex, startIndex + STEPS_PER_PAGE_MODAL);
+        return { items: currentItems, totalPages: totalPages };
+    }, [selectedOrder, detailModalPage]);
+
+    const handleDetailModalPageChange = useCallback((page) => {
+        setDetailModalPage(page);
+    }, []);
 
     return (
         <>
-            {/* <<< --- ESTILOS DE LOS BOTONES DE FILTRO --- >>> */}
-            {/* Este es el bloque que probablemente faltaba. Asegúrate de que esté aquí. */}
+            {/* ---> ESTILOS CORREGIDOS <--- */}
             <style>
                 {`
-                    .filter-controls {
-                      display: flex;
-                      gap: 0.5rem;
-                      flex-wrap: wrap; /* Para que no se desborde en pantallas pequeñas */
-                    }
-                    .filter-button {
-                      background-color: transparent;
-                      border: 1px solid #dee2e6;
-                      color: #495057;
-                      padding: 0.375rem 0.85rem;
-                      font-size: 0.875rem;
-                      font-weight: 500;
-                      border-radius: 50px;
-                      cursor: pointer;
-                      transition: all 0.2s ease-in-out;
-                      position: relative;
-                      overflow: hidden;
-                    }
-                    .filter-button:hover {
-                      background-color: #e9ecef;
-                      color: #0d6efd;
-                    }
-                    .filter-button.active {
-                      background-color: #0d6efd;
-                      color: white;
-                      border-color: #0d6efd;
-                      font-weight: 600;
-                      box-shadow: 0 2px 5px rgba(13, 110, 253, 0.3);
-                    }
-                    .action-button.action-view {
-                        background-color: transparent;
-                        border: none;
-                        color: #212529;
-                        padding: 0.25rem 0.5rem;
-                        transition: color 0.2s ease-in-out;
-                    }
-                    .action-button.action-view:hover {
-                        color: #0d6efd;
-                        background-color: #e9ecef;
-                    }
+                    .filter-controls { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+                    .filter-button { background-color: transparent; border: 1px solid #dee2e6; color: #495057; padding: 0.375rem 0.85rem; font-size: 0.875rem; font-weight: 500; border-radius: 50px; cursor: pointer; transition: all 0.2s ease-in-out; position: relative; overflow: hidden; }
+                    .filter-button:hover { background-color: #e9ecef; color: #0d6efd; }
+                    .filter-button.active { background-color: #0d6efd; color: white; border-color: #0d6efd; font-weight: 600; box-shadow: 0 2px 5px rgba(13, 110, 253, 0.3); }
+                    .action-button.action-view { background-color: transparent; border: none; color: #212529; padding: 0.25rem 0.5rem; transition: color 0.2s ease-in-out; }
+                    .action-button.action-view:hover { color: #0d6efd; background-color: #e9ecef; }
                 `}
             </style>
         
@@ -241,6 +251,15 @@ const HistorialProduccion = () => {
                 <Toaster position="top-center" toastOptions={{ duration: 3500 }} />
                 <h2 className="mb-4 text-center">Historial de Órdenes de Producción</h2>
                 
+                {showCleanupAlert && (
+                    <Alert color="info" className="d-flex align-items-center mb-3">
+                        <AlertCircle size={20} className="me-2 flex-shrink-0" />
+                        <div>
+                            Hay registros con más de una semana de antigüedad. Considere <strong>exportar a Excel</strong> y limpiar el historial para mejorar el rendimiento.
+                        </div>
+                    </Alert>
+                )}
+
                 <Row className="mb-3 align-items-center">
                     <Col md={5} lg={4}>
                         <Input type="text" bsSize="sm" placeholder="Buscar por ID, producto, empleado..." value={tableSearchText} onChange={handleTableSearch} />
@@ -262,7 +281,7 @@ const HistorialProduccion = () => {
                         </div>
                     </Col>
                 </Row>
-
+                
                 <div className="table-responsive shadow-sm custom-table-container mb-3">
                     <Table hover size="sm" className="mb-0 custom-table">
                         <thead>
@@ -322,53 +341,53 @@ const HistorialProduccion = () => {
                                     <DetailItem icon={<Hash />} label="Cantidad Inicial" value={selectedOrder.initialAmount} />
                                 </Row>
                                 
+                                {/* ---> MOTIVO DE CANCELACIÓN CORREGIDO EN EL MODAL <--- */}
                                 {selectedOrder.status === 'CANCELLED' && (
                                     <Alert color="danger" className="mb-3">
-                                        <h6 className="alert-heading d-flex align-items-center"><AlertCircle className="me-2"/>Orden Cancelada</h6>
-                                        <hr/>
-                                        <div className="d-flex align-items-start mb-2">
-                                            <MessageSquare size={16} className="me-2 mt-1 flex-shrink-0" />
-                                            <div>
-                                                <strong>Motivo:</strong>
-                                                <p className="mb-0 fst-italic">{selectedOrder.observations || 'No se especificó un motivo.'}</p>
-                                            </div>
-                                        </div>
-                                        <div className="d-flex align-items-center">
-                                            <User size={16} className="me-2 flex-shrink-0" />
-                                            <span><strong>Gestionada por:</strong> {selectedOrder.employeeCancelled?.fullName || selectedOrder.employeeRegistered?.fullName || 'No especificado'}</span>
-                                        </div>
+                                        <h6 className="alert-heading d-flex align-items-center"><XCircle size={20} className="me-2"/>Orden Cancelada</h6>
+                                        <p className="mb-0"><strong>Motivo:</strong> {selectedOrder.cancellationReason || 'No se especificó un motivo.'}</p>
                                     </Alert>
                                 )}
 
                                 <h6 className="mb-3">Registro de Pasos y Empleados</h6>
-                                {selectedOrder.productionOrderDetails && selectedOrder.productionOrderDetails.length > 0 ? (
-                                    <ListGroup flush>
-                                        {selectedOrder.productionOrderDetails
-                                            .sort((a,b) => a.processOrder - b.processOrder)
-                                            .map(detail => {
-                                            const duration = calculateDuration(detail.startDate, detail.endDate);
-                                            return (
-                                                <ListGroupItem key={detail.idProductionOrderDetail} className="px-0 py-2">
-                                                    <div className="d-flex justify-content-between align-items-center">
-                                                        <div className="fw-bold">Paso {detail.processOrder}: {detail.processNameSnapshot}</div>
-                                                        <Badge color={getOrderStatusBadgeInfo(detail.status).color} pill>{getOrderStatusBadgeInfo(detail.status).text}</Badge>
-                                                    </div>
-                                                    <div className="d-flex flex-column flex-sm-row justify-content-between mt-1 small">
-                                                        <div className="d-flex align-items-center text-muted">
-                                                            <User size={14} className="me-2" />
-                                                            <span>Empleado: <strong>{detail.employeeAssigned?.fullName || 'No Asignado'}</strong></span>
+                                {paginatedSteps.items && paginatedSteps.items.length > 0 ? (
+                                    <>
+                                        <ListGroup flush>
+                                            {paginatedSteps.items.map(detail => {
+                                                const duration = calculateDuration(detail.startDate, detail.endDate);
+                                                return (
+                                                    <ListGroupItem key={detail.idProductionOrderDetail} className="px-0 py-2">
+                                                        <div className="d-flex justify-content-between align-items-center">
+                                                            <div className="fw-bold">Paso {detail.processOrder}: {detail.processNameSnapshot}</div>
+                                                            <Badge color={getOrderStatusBadgeInfo(detail.status).color} pill>{getOrderStatusBadgeInfo(detail.status).text}</Badge>
                                                         </div>
-                                                        {duration && (
-                                                            <div className="d-flex align-items-center text-muted mt-1 mt-sm-0">
-                                                                <Timer size={14} className="me-2" />
-                                                                <span>Duración: <strong>{duration}</strong></span>
+                                                        <div className="d-flex flex-column flex-sm-row justify-content-between mt-1 small">
+                                                            <div className="d-flex align-items-center text-muted">
+                                                                <User size={14} className="me-2" />
+                                                                <span>Empleado: <strong>{detail.employeeAssigned?.fullName || 'No Asignado'}</strong></span>
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                </ListGroupItem>
-                                            );
-                                        })}
-                                    </ListGroup>
+                                                            {duration && (
+                                                                <div className="d-flex align-items-center text-muted mt-1 mt-sm-0">
+                                                                    <Timer size={14} className="me-2" />
+                                                                    <span>Duración: <strong>{duration}</strong></span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </ListGroupItem>
+                                                );
+                                            })}
+                                        </ListGroup>
+                                        
+                                        {paginatedSteps.totalPages > 1 && (
+                                            <CustomPagination
+                                                currentPage={detailModalPage}
+                                                totalPages={paginatedSteps.totalPages}
+                                                onPageChange={handleDetailModalPageChange}
+                                                size="sm"
+                                                className="mt-3 justify-content-center"
+                                            />
+                                        )}
+                                    </>
                                 ) : (
                                     <Alert color="secondary" className="text-center">Esta orden no tiene pasos detallados registrados.</Alert>
                                 )}
