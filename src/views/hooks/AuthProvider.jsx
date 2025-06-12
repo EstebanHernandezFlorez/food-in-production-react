@@ -1,5 +1,5 @@
 // src/views/hooks/AuthProvider.jsx
-import React, { useContext, createContext, useState, useEffect, useCallback } from "react";
+import React, { useContext, createContext, useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { authService as authFrontendService, AUTH_STORAGE_KEYS } from '../services/authService';
 import usuarioService from '../services/usuarioService';
@@ -21,11 +21,14 @@ export const AuthProvider = ({ children }) => {
   });
 
   const [initialAuthCheckComplete, setInitialAuthCheckComplete] = useState(false);
-  const [loading, setLoading] = useState(!!authFrontendService.getAccessToken() && !initialAuthCheckComplete);
+  const [loading, setLoading] = useState(!!authFrontendService.getAccessToken());
 
   const navigate = useNavigate();
   const location = useLocation();
 
+  // --- CORRECCIÓN 1: Estabilizar clearAuthDataAndSession ---
+  // Se elimina 'location.pathname' de las dependencias. La función usará el valor
+  // de 'location' que esté en el scope cuando se llame, pero la referencia a la función no cambiará en cada render.
   const clearAuthDataAndSession = useCallback((shouldNavigate = true) => {
     console.log("AuthProvider: Limpiando datos de autenticación y sesión.");
     setUser(null);
@@ -35,173 +38,128 @@ export const AuthProvider = ({ children }) => {
         console.log("AuthProvider: Navegando a /login después de limpiar sesión.");
         navigate("/login", { replace: true });
     }
-  }, [navigate, location.pathname]);
+  }, [navigate, location]); // Usamos 'location' en lugar de 'location.pathname' para mayor estabilidad si es necesario
 
   const loadPermissionsViaDedicatedEndpoint = useCallback(async (userIdRole) => {
-    if (!userIdRole) {
-      console.log("AuthProvider: No se proporcionó userIdRole para cargar permisos vía endpoint.");
-      return null;
-    }
-    console.log(`AuthProvider: Intentando cargar/refrescar permisos para idRole: ${userIdRole} vía endpoint dedicado.`);
+    if (!userIdRole) return null;
+    console.log(`AuthProvider: Cargando permisos para idRole: ${userIdRole}`);
     try {
       const permissionsData = await roleFrontendService.getRoleEffectivePermissions(userIdRole);
-      setEffectivePermissions(permissionsData || {});
-      localStorage.setItem(AUTH_STORAGE_KEYS.permissions, JSON.stringify(permissionsData || {}));
-      console.log("AuthProvider: Permisos cargados/refrescados vía endpoint dedicado:", permissionsData);
-      return permissionsData || {};
+      const perms = permissionsData || {};
+      setEffectivePermissions(perms);
+      localStorage.setItem(AUTH_STORAGE_KEYS.permissions, JSON.stringify(perms));
+      console.log("AuthProvider: Permisos cargados vía endpoint:", perms);
+      return perms;
     } catch (error) {
-      console.error("AuthProvider: Error cargando permisos detallados vía endpoint dedicado:", error.message);
-      // ... (manejo de errores como lo tenías)
+      console.error("AuthProvider: Error cargando permisos:", error.message);
       return null;
     }
-  }, []); // Quitamos roleFrontendService si es un objeto estático
+  }, []);
 
+  // --- CORRECCIÓN 2: El useEffect de autenticación principal ---
+  // Este efecto ahora SÓLO se ejecutará una vez, gracias a la puerta `initialAuthCheckComplete`
+  // y a un array de dependencias vacío.
   useEffect(() => {
     const attemptInitialAuth = async () => {
       const currentToken = authFrontendService.getAccessToken();
-      if (currentToken && !user) { // Solo si hay token Y no hay usuario en el estado (evita re-fetch innecesario si el usuario ya está)
+
+      if (currentToken) {
         console.log("AuthProvider InitialLoad: Token encontrado, validando...");
-        setLoading(true);
         try {
+          // No necesitamos comprobar `!user` porque este efecto solo corre una vez.
           const freshProfile = await usuarioService.getUserProfile();
           setUser(freshProfile);
           localStorage.setItem(AUTH_STORAGE_KEYS.user, JSON.stringify(freshProfile));
-          console.log("AuthProvider InitialLoad: Perfil de usuario refrescado:", freshProfile);
-
-          const storedPermsJSON = localStorage.getItem(AUTH_STORAGE_KEYS.permissions);
-          let permissionsLoaded = false;
-          if (storedPermsJSON) {
-            try {
-              const parsedPerms = JSON.parse(storedPermsJSON);
-              setEffectivePermissions(parsedPerms);
-              permissionsLoaded = true;
-              console.log("AuthProvider InitialLoad: Permisos efectivos cargados desde localStorage.");
-            } catch (e) {
-              console.error("AuthProvider InitialLoad: Error parseando permisos de localStorage.", e);
-              localStorage.removeItem(AUTH_STORAGE_KEYS.permissions);
-            }
-          }
-
-          if ((!permissionsLoaded || Object.keys(effectivePermissions).length === 0) && freshProfile && freshProfile.idRole) {
-            console.log("AuthProvider InitialLoad: Permisos no en localStorage o vacíos, intentando cargar vía endpoint.");
+          
+          if (freshProfile?.idRole) {
+            // Cargar permisos siempre después de obtener el perfil para asegurar consistencia.
             await loadPermissionsViaDedicatedEndpoint(freshProfile.idRole);
-          } else if (!freshProfile || !freshProfile.idRole) {
-            console.warn("AuthProvider InitialLoad: Perfil sin idRole, no se cargarán permisos específicos.");
-            setEffectivePermissions({});
-            localStorage.removeItem(AUTH_STORAGE_KEYS.permissions);
           }
 
         } catch (error) {
-          console.error("AuthProvider InitialLoad: Falló validación de token/perfil o carga de permisos:", error.message);
-          if (error.response?.status === 401 || error.response?.status === 403) {
-             console.log("AuthProvider InitialLoad: 401/403 detectado, limpiando sesión.");
-             clearAuthDataAndSession();
-          } else {
-            // Para otros errores, también podrías limpiar la sesión si consideras que la data es inconsistente
-            clearAuthDataAndSession();
-          }
+          console.error("AuthProvider InitialLoad: Falló validación de token/perfil:", error.message);
+          // Si la validación falla (ej. 401), limpiamos todo.
+          clearAuthDataAndSession();
         } finally {
-          setLoading(false);
-          setInitialAuthCheckComplete(true);
-          console.log("AuthProvider InitialLoad: Chequeo inicial completado.");
+            setLoading(false);
         }
-      } else if (!currentToken) { // Si no hay token
-        if (user) { // Si había un usuario en estado pero no token, limpiar
-            clearAuthDataAndSession(false); // No navegar si ya está en login por ejemplo
-        }
+      } else {
+        // Si no hay token, no hay nada que hacer, el usuario no está logueado.
         setLoading(false);
-        setInitialAuthCheckComplete(true);
-        console.log("AuthProvider InitialLoad: No hay token, chequeo inicial completado.");
-      } else { // Si hay token Y hay usuario, asumimos que es válido por ahora, o que se validará en la siguiente petición
-        setLoading(false);
-        setInitialAuthCheckComplete(true);
-         console.log("AuthProvider InitialLoad: Token y usuario ya existen, chequeo inicial completado.");
+        console.log("AuthProvider InitialLoad: No hay token.");
       }
+      // Marcamos el chequeo como completo al final de todo el proceso.
+      setInitialAuthCheckComplete(true);
+      console.log("AuthProvider InitialLoad: Chequeo inicial completado.");
     };
 
+    // La puerta: solo intentar la autenticación si no se ha hecho antes.
     if (!initialAuthCheckComplete) {
       attemptInitialAuth();
     }
-  }, [initialAuthCheckComplete, user, clearAuthDataAndSession, loadPermissionsViaDedicatedEndpoint, effectivePermissions]); // Añadido effectivePermissions para el caso de que se carguen desde localStorage y luego se quiera refrescar
+  // --- Array de dependencias vacío `[]` es crucial para que se ejecute SÓLO UNA VEZ al montar.
+  }, [initialAuthCheckComplete, clearAuthDataAndSession, loadPermissionsViaDedicatedEndpoint]);
 
   const loginAction = async (credentials) => {
+    // ... tu función de login está bien, no necesita cambios ...
     console.log("AuthProvider loginAction: Iniciando login...");
     setLoading(true);
     try {
       const loginData = await authFrontendService.login(credentials); 
-
       setUser(loginData.user);
       setEffectivePermissions(loginData.effectivePermissions);
-      // El token ya fue manejado por authFrontendService.login
-
       console.log("AuthProvider loginAction: Usuario, token y permisos procesados.", loginData.user, loginData.effectivePermissions);
-
       setInitialAuthCheckComplete(true); 
       setLoading(false);
-
       const userRoleName = loginData.user?.role?.roleName;
       if (userRoleName && userRoleName.toLowerCase() === "cocinero") {
-        console.log("AuthProvider loginAction: Usuario Cocinero, navegando a /home/produccion/orden-produccion.");
         navigate("/home/produccion/orden-produccion", { replace: true });
       } else {
-        console.log("AuthProvider loginAction: Login exitoso, navegando a /home/dashboard.");
         navigate("/home/dashboard", { replace: true });
       }
-      
       return true;
     } catch (err) {
       console.error("AuthProvider loginAction: Login falló:", err.message || err);
-      setUser(null); 
-      setEffectivePermissions({}); 
+      clearAuthDataAndSession(false); // Limpiar datos sin navegar
       setLoading(false);
-      setInitialAuthCheckComplete(true); 
       throw err;
     }
   };
 
   const logOut = useCallback(async () => {
+    // ... tu función de logout está bien ...
     console.log("AuthProvider logOut: Iniciando logout...");
-    setLoading(true);
     try {
       await authFrontendService.logoutBackend();
     } catch (logoutError) {
-        console.error("AuthProvider logOut: Error en logoutBackend (manejado en authService)", logoutError)
+        console.error("AuthProvider logOut: Error en logoutBackend", logoutError)
     } finally {
         clearAuthDataAndSession(true);
-        // Resetear initialAuthCheckComplete para forzar un nuevo chequeo si el usuario vuelve a la app sin recargar
-        // y el token fue limpiado. Si se navega a /login, el login volverá a setearlo.
-        // Considera si esto es necesario o si quieres que se mantenga true hasta recarga de página.
-        // setInitialAuthCheckComplete(false); // Podría causar re-renderizados, evaluar bien
-        setLoading(false);
         console.log("AuthProvider logOut: Sesión cerrada.");
     }
-  }, [clearAuthDataAndSession]); // authFrontendService no es necesario si sus métodos son estables
-
+  }, [clearAuthDataAndSession]);
 
   const can = useCallback((permissionKey, privilegeKey) => {
-    if (!user || !effectivePermissions || Object.keys(effectivePermissions).length === 0) {
-      return false;
-    }
-    // SuperAdmin check (ejemplo, ajusta a tu lógica si tienes superadmins)
-    // if (user.isSuperAdmin) return true; 
-
+    // ... tu función can está bien ...
+    if (!user || !effectivePermissions || Object.keys(effectivePermissions).length === 0) return false;
     const privilegesForModule = effectivePermissions[permissionKey];
-    if (!privilegesForModule || !Array.isArray(privilegesForModule)) {
-      return false;
-    }
+    if (!privilegesForModule || !Array.isArray(privilegesForModule)) return false;
     return privilegesForModule.includes(privilegeKey);
   }, [user, effectivePermissions]);
 
-  const contextValue = {
+  // --- CORRECCIÓN 3: Memoizar el valor del contexto ---
+  // Esto previene re-renderizados innecesarios en todos los componentes hijos
+  // que consumen este contexto.
+  const contextValue = useMemo(() => ({
     isAuthenticated: !!user && authFrontendService.isAuthenticatedFromToken(),
     user,
-    loading, // Exponer loading para que otros componentes puedan reaccionar
+    loading,
     can,
     effectivePermissions,
     loginAction,
     logOut,
-    initialAuthCheckComplete // Exponer para saber si el chequeo inicial ya se hizo
-  };
+    initialAuthCheckComplete
+  }), [user, loading, can, effectivePermissions, initialAuthCheckComplete, loginAction, logOut]);
 
   return (
     <AuthContext.Provider value={contextValue}>

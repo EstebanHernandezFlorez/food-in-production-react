@@ -1,34 +1,29 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     Row, Col, Card, CardHeader, CardBody, ListGroup, ListGroupItem,
-    Collapse, Input, Button, FormGroup, Label, Spinner, Alert
+    Input, Button, FormGroup, Label, Spinner, Alert
 } from 'reactstrap';
 import {
-    Edit, PlayCircle, CheckCircle, FileText, Info, ChevronLeft,
-    ChevronRight, Menu as MenuIcon, X as XIcon, UserCheck, PauseCircle
+    Edit, PlayCircle, CheckCircle, Info, ChevronLeft,
+    ChevronRight, PauseCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import '../../../../assets/css/produccion/ProduccionStyles.css';
 
-// Componente para el estado de un paso, ahora más visual
+// Componente para el estado de un paso (sin cambios)
 const StepStatusBadge = ({ status, getStatusInfo }) => {
     if (!getStatusInfo) {
-        return <span className="badge bg-secondary">{status}</span>;
+        return <span className="badge bg-secondary">{status || 'Desconocido'}</span>;
     }
-    
     const { text, icon, color } = getStatusInfo(status);
-    
     const statusClassMap = {
         secondary: 'status-pending',
         warning: 'status-in-progress',
         success: 'status-completed',
-        // --- CORRECCIÓN: Añadir el color 'info' para que 'PAUSED' y 'SKIPPED' tengan el estilo correcto
-        info: 'status-paused' 
+        info: 'status-paused'
     };
-    
     const pillClass = statusClassMap[color] || 'status-default';
-
     return (
         <div className={`step-status-pill ${pillClass}`}>
             {icon}
@@ -36,7 +31,6 @@ const StepStatusBadge = ({ status, getStatusInfo }) => {
         </div>
     );
 };
-
 
 const ProcessManagementSection = ({
     currentOrderData,
@@ -48,7 +42,7 @@ const ProcessManagementSection = ({
     handleCompleteCurrentStep,
     isSaving,
     isProcessingAction,
-    isOrderViewOnly: isOrderViewOnlyProp, // Esta prop ahora encapsula todas las reglas de solo lectura
+    isOrderViewOnly: isOrderViewOnlyProp,
     isLoadingFichas,
     processViewMode,
     getStatusInfo 
@@ -60,10 +54,7 @@ const ProcessManagementSection = ({
         processSteps = [],
         activeStepIndex: contextActiveStepIndex = null,
         localOrderStatus = 'PENDING',
-        selectedSpecSheetData = null,
-        formOrder = {},
-        id: orderId = null,
-        isNewForForm: isOrderNewInFormContext = true
+        id: orderId = null
     } = currentOrderData || {};
 
     useEffect(() => {
@@ -73,55 +64,30 @@ const ProcessManagementSection = ({
                 newFocusIndex = processSteps.length - 1;
             } else if (contextActiveStepIndex !== null && contextActiveStepIndex >= 0 && contextActiveStepIndex < processSteps.length) {
                 newFocusIndex = contextActiveStepIndex;
-            } else if (processSteps.length > 0) {
+            } else {
                 newFocusIndex = 0;
             }
         }
-        if (newFocusIndex !== focusedStepIndex || (focusedStepIndex !== null && newFocusIndex !== null && focusedStepIndex >= processSteps.length)) {
-            setFocusedStepIndex(newFocusIndex);
-        } else if (focusedStepIndex === null && newFocusIndex !== null) {
+        if (newFocusIndex !== focusedStepIndex) {
             setFocusedStepIndex(newFocusIndex);
         }
-    }, [contextActiveStepIndex, processSteps, localOrderStatus, orderId]);
+    }, [contextActiveStepIndex, processSteps, localOrderStatus, orderId, focusedStepIndex]);
 
-    const focusedStepData = (focusedStepIndex !== null && processSteps && processSteps[focusedStepIndex])
-        ? processSteps[focusedStepIndex]
-        : null;
-
-    const assignedEmployee = useMemo(() => {
-        if (!focusedStepData?.idEmployee || !empleadosList?.length) return null;
-        return empleadosList.find(emp => String(emp.idEmployee) === String(focusedStepData.idEmployee));
-    }, [focusedStepData?.idEmployee, empleadosList]);
-
+    const focusedStepData = useMemo(() => (
+        (focusedStepIndex !== null && processSteps[focusedStepIndex]) ? processSteps[focusedStepIndex] : null
+    ), [focusedStepIndex, processSteps]);
 
     const handleStepSelect = (index) => {
-        if (isOrderViewOnlyProp) {
-            toast.error("La orden está en modo de solo lectura.", { icon: "🔒" });
-            return;
-        }
         if (!processSteps || index < 0 || index >= processSteps.length) return;
         setFocusedStepIndex(index);
     };
-
-    // --- CORRECCIÓN: La lógica de deshabilitación ahora es más simple y depende de isOrderViewOnlyProp ---
-    const canAssignEmployeesToSteps = !isOrderViewOnlyProp && localOrderStatus === 'IN_PROGRESS';
-    const canEditGeneralStepFields = focusedStepData && !isOrderViewOnlyProp && !isSaving && focusedStepData.status === 'IN_PROGRESS' && localOrderStatus === 'IN_PROGRESS' && focusedStepIndex === contextActiveStepIndex;
-
-    // --- Renderizados condicionales iniciales (sin cambios) ---
-    if (isLoadingFichas && (!processSteps || processSteps.length === 0) && !selectedSpecSheetData) {
-        return (<Col md={12}><Card className="shadow-sm"><CardHeader className="py-2 px-3 bg-light"><Edit size={16} className="me-2 text-muted" /> Gestión de Procesos</CardHeader><CardBody className="text-center p-4"><Spinner size="sm" /> Cargando procesos...</CardBody></Card></Col>);
+    
+    if (isLoadingFichas && !processSteps.length) {
+        return <Col md={12}><Card className="shadow-sm"><CardHeader>Gestión de Procesos</CardHeader><CardBody className="text-center p-4"><Spinner size="sm" /> Cargando...</CardBody></Card></Col>;
     }
-    if (!formOrder?.idProduct && (!processSteps || processSteps.length === 0)) {
-        return (<Col md={12}><Card className="shadow-sm"><CardHeader className="py-2 px-3 bg-light"><Edit size={16} className="me-2 text-muted" /> Gestión de Procesos</CardHeader><CardBody><Alert color="secondary" className="m-3 text-center small">Seleccione un producto y guarde para cargar los procesos.</Alert></CardBody></Card></Col>);
+    if (!processSteps.length && !isLoadingFichas) {
+        return <Col md={12}><Card className="shadow-sm"><CardHeader>Gestión de Procesos</CardHeader><CardBody><Alert color="info" className="m-3 text-center small">Guarde el borrador para cargar los procesos.</Alert></CardBody></Card></Col>;
     }
-    if ((!processSteps || processSteps.length === 0) && !isLoadingFichas) {
-        let message = <p className="text-muted p-4 text-center">No hay procesos definidos para esta orden.</p>;
-        if (localOrderStatus === 'PENDING' && isOrderNewInFormContext) {
-            message = <Alert color="info" className="m-3 text-center small">Guarde el borrador para poder iniciar la orden y gestionar los procesos.</Alert>;
-        }
-        return (<Col md={12}><Card className="shadow-sm"><CardHeader className="py-2 px-3 bg-light"><Edit size={16} className="me-2 text-muted" /> Gestión de Procesos</CardHeader><CardBody>{message}</CardBody></Card></Col>);
-    }
-
 
     if (processViewMode === "sidebarWithFocus") {
         return (
@@ -129,114 +95,98 @@ const ProcessManagementSection = ({
                 <Card className="shadow-sm">
                     <CardHeader className="py-2 px-3 bg-light d-flex justify-content-between align-items-center">
                         <div><Edit size={16} className="me-2 text-muted" /> Gestión de Procesos</div>
-                        <Button size="sm" outline color="secondary" onClick={() => setIsStepSidebarOpen(prev => !prev)} className="d-none d-md-inline-flex align-items-center" title={isStepSidebarOpen ? "Ocultar lista" : "Mostrar lista"}>
-                            {isStepSidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-                            <span className="ms-1">{isStepSidebarOpen ? "Ocultar" : "Mostrar"}</span>
+                        <Button size="sm" outline color="secondary" onClick={() => setIsStepSidebarOpen(p => !p)} className="d-none d-md-inline-flex align-items-center">
+                            {isStepSidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}<span className="ms-1">{isStepSidebarOpen ? "Ocultar" : "Mostrar"}</span>
                         </Button>
                     </CardHeader>
                     <CardBody className="p-0">
-                         {/* --- ALERTA INFORMATIVA CUANDO ESTÁ EN PAUSA Y NO SE TIENEN PERMISOS --- */}
                         {isOrderViewOnlyProp && localOrderStatus === 'PAUSED' && (
-                            <Alert color="info" className="m-3 text-center">
-                                <PauseCircle className="me-2" />
-                                La orden está en pausa. Solo un Administrador o Jefe de Cocina puede reanudarla.
-                            </Alert>
+                            <Alert color="info" className="m-3 text-center"><PauseCircle className="me-2" />La orden está en pausa.</Alert>
                         )}
                         <Row className="g-0">
                             <Col md={isStepSidebarOpen ? 4 : 0} lg={isStepSidebarOpen ? 3 : 0} className={`process-sidebar ${isStepSidebarOpen ? '' : 'd-none'}`}>
-                                <div style={{ maxHeight: 'calc(100vh - 250px)', overflowY: 'auto' }}>
+                                <div style={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto' }}>
                                     <ListGroup flush>
-                                        {processSteps.map((step, idx) => {
-                                            return (
-                                                <ListGroupItem
-                                                    key={step.idProductionOrderDetail || `step-${idx}-${orderId}`}
-                                                    action
-                                                    active={idx === focusedStepIndex}
-                                                    onClick={() => handleStepSelect(idx)}
-                                                    disabled={isSaving || isOrderViewOnlyProp}
-                                                    className="py-2 px-3"
-                                                    style={{ cursor: (isSaving || isOrderViewOnlyProp) ? 'not-allowed' : 'pointer' }}
-                                                >
-                                                    <div>
-                                                        <div className={`step-name-container small ${idx === focusedStepIndex ? 'fw-bold' : ''}`}>
-                                                            <span className="step-number">{step.processOrder || (idx + 1)}.</span>
-                                                            <span className="step-name">{step.processName}</span>
-                                                        </div>
-                                                        <div className="mt-1">
-                                                            <StepStatusBadge status={step.status} getStatusInfo={getStatusInfo} />
-                                                        </div>
-                                                    </div>
-                                                </ListGroupItem>
-                                            );
-                                        })}
+                                        {processSteps.map((step, idx) => (
+                                            <ListGroupItem key={step.idProductionOrderDetail || `step-${idx}`} action active={idx === focusedStepIndex} onClick={() => handleStepSelect(idx)} disabled={isSaving} className="py-2 px-3">
+                                                <div className={`step-name-container small ${idx === focusedStepIndex ? 'fw-bold' : ''}`}>
+                                                    <span className="step-number">{step.processOrder || (idx + 1)}.</span>
+                                                    <span className="step-name">{step.processName}</span>
+                                                </div>
+                                                <div className="mt-1"><StepStatusBadge status={step.status} getStatusInfo={getStatusInfo} /></div>
+                                            </ListGroupItem>
+                                        ))}
                                     </ListGroup>
                                 </div>
                             </Col>
-
-                            <Col md={isStepSidebarOpen ? 8 : 12} lg={isStepSidebarOpen ? 9 : 12} className="p-3">
+                            <Col md={isStepSidebarOpen ? 8 : 12} lg={isStepSidebarOpen ? 9 : 12} className="p-3 border-start">
                                 {focusedStepData ? (
                                     <div>
                                         <h6 className="mb-1">Paso {focusedStepData.processOrder}: {focusedStepData.processName}</h6>
                                         <p className="small text-muted mb-2">{focusedStepData.processDescription || "Sin descripción."}</p>
                                         <hr className="my-2" />
-                                        <Row className="g-2">
+                                        <Row className="g-3">
                                             <Col sm={6}>
                                                 <FormGroup className="mb-2">
-                                                    <Label className="small fw-semibold">Empleado Asignado:</Label>
+                                                    <Label className="small fw-semibold" htmlFor={`employee-select-${focusedStepIndex}`}>Empleado Asignado:</Label>
                                                     <Input
+                                                        id={`employee-select-${focusedStepIndex}`}
                                                         type="select"
                                                         bsSize="sm"
                                                         value={focusedStepData.idEmployee || ''}
                                                         onChange={(e) => handleEmployeeSelectionForStep(focusedStepIndex, e.target.value)}
-                                                        // --- CORRECCIÓN: Simplificamos la condición de deshabilitado
-                                                        disabled={isOrderViewOnlyProp || isSaving || focusedStepData.status !== 'PENDING' || focusedStepIndex !== contextActiveStepIndex}
+                                                        disabled={isOrderViewOnlyProp || isSaving || focusedStepData.status === 'COMPLETED'}
                                                     >
-                                                        <option value="">{isLoadingEmpleados ? "Cargando..." : "Seleccionar..."}</option>
-                                                        {empleadosList.map(emp => (<option key={emp.idEmployee} value={emp.idEmployee}>{emp.firstName} {emp.lastName}</option>))}
+                                                        <option value="">{isLoadingEmpleados ? "Cargando..." : "-- Seleccionar --"}</option>
+                                                        {empleadosList && empleadosList.length > 0 && empleadosList.map(emp => (
+                                                            // =========== CORRECCIÓN PRINCIPAL AQUÍ ===========
+                                                            // Ahora, este selector también usará la propiedad `emp.fullName` 
+                                                            // para ser consistente con el otro selector.
+                                                            <option key={emp.idEmployee} value={emp.idEmployee}>
+                                                                {emp.fullName}
+                                                            </option>
+                                                            // ===============================================
+                                                        ))}
                                                     </Input>
                                                 </FormGroup>
                                             </Col>
                                             <Col sm={6}>
                                                 <FormGroup className="mb-2">
                                                     <Label className="small fw-semibold">Estado del Paso:</Label>
-                                                    <div className="mt-1">
-                                                       <StepStatusBadge status={focusedStepData.status} getStatusInfo={getStatusInfo} />
-                                                    </div>
+                                                    <div className="mt-1"><StepStatusBadge status={focusedStepData.status} getStatusInfo={getStatusInfo} /></div>
                                                 </FormGroup>
                                             </Col>
                                         </Row>
                                         <FormGroup className="mb-2">
-                                            <Label className="small fw-semibold">Observaciones:</Label>
+                                            <Label className="small fw-semibold" htmlFor={`observations-text-${focusedStepIndex}`}>Observaciones:</Label>
                                             <Input
+                                                id={`observations-text-${focusedStepIndex}`}
                                                 type="textarea"
                                                 bsSize="sm"
                                                 rows={2}
                                                 value={focusedStepData.observations || ''}
                                                 onChange={(e) => handleStepFieldChange(focusedStepIndex, 'observations', e.target.value)}
-                                                // --- CORRECCIÓN: Usamos la prop directamente
                                                 disabled={isOrderViewOnlyProp || isSaving || localOrderStatus !== 'IN_PROGRESS' || focusedStepIndex !== contextActiveStepIndex}
                                                 placeholder="Añadir notas sobre el paso..."
                                             />
                                         </FormGroup>
-
-                                        {/* --- CORRECCIÓN: Botones de acción de los pasos --- */}
                                         {focusedStepIndex === contextActiveStepIndex && !isOrderViewOnlyProp && (
-                                            <div className="mt-2 text-end">
+                                            <div className="mt-3 text-end">
                                                 {focusedStepData.status === 'PENDING' && (
-                                                    <Button color="success" size="sm" onClick={handleStartCurrentStep} disabled={!focusedStepData.idEmployee || isProcessingAction}>
+                                                    <Button color="success" size="sm" onClick={handleStartCurrentStep} disabled={!focusedStepData.idEmployee || isProcessingAction || isSaving}>
                                                         <PlayCircle size={16} className="me-1" /> Iniciar Paso
                                                     </Button>
                                                 )}
                                                 {focusedStepData.status === 'IN_PROGRESS' && (
-                                                    <Button color="primary" size="sm" onClick={handleCompleteCurrentStep} disabled={isProcessingAction}>
+                                                    <Button color="primary" size="sm" onClick={handleCompleteCurrentStep} disabled={isProcessingAction || isSaving}>
                                                         <CheckCircle size={16} className="me-1" /> Completar Paso
                                                     </Button>
                                                 )}
                                             </div>
                                         )}
-                                        {focusedStepData.status === 'COMPLETED' && (<Alert color="success" className="mt-2 py-1 px-2 small">Paso completado.</Alert>)}
+                                        {focusedStepData.status === 'COMPLETED' && (<Alert color="success" className="mt-2 py-1 px-2 small text-center">Paso completado.</Alert>)}
                                     </div>
-                                ) : (<div className="text-center text-muted py-5"><Info size={32} className="mb-2" /><p>Seleccione un paso.</p></div>)}
+                                ) : (<div className="text-center text-muted py-5"><Info size={32} className="mb-2" /><p>Seleccione un paso de la lista.</p></div>)}
                             </Col>
                         </Row>
                     </CardBody>
@@ -244,7 +194,7 @@ const ProcessManagementSection = ({
             </Col>
         );
     }
-    return <Col md={12}><Card><CardHeader>Gestión de Procesos</CardHeader><CardBody><Alert color="danger">Error: Modo de vista no válido.</Alert></CardBody></Card></Col>;
+    return null;
 };
 
 export default ProcessManagementSection;
