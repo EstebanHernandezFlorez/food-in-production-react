@@ -211,7 +211,7 @@ const RegistrarCompraPage = () => {
         <Container fluid className="p-4 main-content">
             <Toaster position="top-center" />
             <Row className="mb-3 align-items-center">
-                <Col xs="auto"><Button color="secondary" outline size="sm" onClick={() => navigate('/home/gestion-compras')} disabled={isSubmitting}><ArrowLeft size={18} /> Volver</Button></Col>
+                <Col xs="auto"><Button color="secondary" outline size="sm" onClick={() => navigate('/home/produccion/gestion-de-compra')} disabled={isSubmitting}><ArrowLeft size={18} /> Volver</Button></Col>
                 <Col><h2 className="mb-0 text-center">Registrar Nueva Compra</h2></Col>
                 <Col xs="auto" style={{ visibility: 'hidden' }}><Button>Volver</Button></Col>
             </Row>
@@ -282,7 +282,7 @@ const RegistrarCompraPage = () => {
                     )}
                 </CardBody>
                 <CardHeader className="bg-light d-flex justify-content-end gap-2 border-top py-3">
-                    <Button color="secondary" outline onClick={() => navigate('/home/gestion-compras')} disabled={isSubmitting}>Cancelar</Button>
+                    <Button color="secondary" outline onClick={() => navigate('/home/produccion/gestion-de-compra')} disabled={isSubmitting}>Cancelar</Button>
                     <Button color="primary" type="submit" form="registerPurchaseForm" disabled={isLoadingFormData || isSubmitting || !form.category || form.details.length === 0}><Save size={18} className="me-1" />{isSubmitting ? 'Guardando...' : 'Guardar Compra'}</Button>
                 </CardHeader>
             </Card>

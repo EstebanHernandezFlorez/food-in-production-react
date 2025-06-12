@@ -49,7 +49,7 @@ import React, {
   // MODIFICADO: Añadimos los errores para los nuevos campos
   const INITIAL_FORM_ERRORS = { productName: false, minStock: false, maxStock: false, general: "" };
   const INITIAL_CONFIRM_PROPS = { title: "", message: null, confirmText: "Confirmar", confirmColor: "primary", itemDetails: null };
-  const ITEMS_PER_PAGE = 7;
+  const ITEMS_PER_PAGE = 5;
 
   // --- Main Component ---
   const ProductoInsumo = () => {

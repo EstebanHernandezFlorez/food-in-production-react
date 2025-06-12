@@ -24,7 +24,7 @@ import SpecificConceptSpentService from "../../services/SpecificConceptSpentServ
 import ExpenseCategoryService from "../../services/ExpenseCategoryService";
 
 // --- Constants ---
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 5;
 const INITIAL_DYNAMIC_CONCEPT_ITEM = { name: '', isBimonthly: false, error: null };
 const INITIAL_FORM_STATE_CREATE_MODE = { idExpenseCategory: '', dynamicConcepts: [INITIAL_DYNAMIC_CONCEPT_ITEM], description: '', requiresEmployeeCalculation: false, status: true, };
 const INITIAL_FORM_STATE_EDIT_MODE = { name: '', idExpenseCategory: '', description: '', requiresEmployeeCalculation: false, isBimonthly: false, status: true, };
