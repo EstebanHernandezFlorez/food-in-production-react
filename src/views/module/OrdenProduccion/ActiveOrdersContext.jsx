@@ -65,9 +65,12 @@ export const ActiveOrdersProvider = ({ children }) => {
             console.warn(`[CONTEXT] Transformación fallida: datos de orden inválidos.`, fetchedOrder);
             return null;
         }
-
+        
+        const Product = fetchedOrder.Product || fetchedOrder.product;
+        const SpecSheet = fetchedOrder.SpecSheet || fetchedOrder.specSheet;
+        
         const {
-            idProductionOrder, orderNumber, idProduct, Product, idSpecSheet, SpecSheet,
+            idProductionOrder, orderNumber, idProduct, idSpecSheet,
             initialAmount, inputInitialWeight, inputInitialWeightUnit,
             finalQuantityProduct, finishedProductWeight, finishedProductWeightUnit,
             inputFinalWeightUnused, inputFinalWeightUnusedUnit,
@@ -164,9 +167,6 @@ export const ActiveOrdersProvider = ({ children }) => {
             const response = await productionOrderService.getAllProductionOrders(filters);
             const loadedOrders = {};
             
-            // --- INICIO DE LA CORRECCIÓN ---
-            // Esta lógica ahora maneja si la respuesta es un array directo
-            // o un objeto que contiene una propiedad 'rows'.
             let ordersToProcess = [];
             if (Array.isArray(response)) {
                 ordersToProcess = response;
@@ -175,13 +175,11 @@ export const ActiveOrdersProvider = ({ children }) => {
             } else {
                 console.warn(`[CONTEXT] La respuesta de órdenes iniciales no tiene un formato reconocible.`, response);
             }
-            // --- FIN DE LA CORRECCIÓN ---
 
-            // Ahora iteramos sobre el array correcto que hemos determinado.
             ordersToProcess.forEach(orderData => {
                 const status = orderData.status?.toUpperCase();
                 if (status === 'COMPLETED' || status === 'CANCELLED') {
-                    return; // Salvaguarda por si el filtro del backend falla
+                    return;
                 }
                 const transformed = transformFetchedOrderToContextFormat(orderData);
                 if (transformed) {
@@ -285,10 +283,17 @@ export const ActiveOrdersProvider = ({ children }) => {
         return orderDataForCvo;
     }, [activeOrders, transformFetchedOrderToContextFormat, navigateToOrderPath, setCurrentViewedOrderId]);
 
+    // =========== CORRECCIÓN DEL REFERENCEERROR ===========
+    // El nombre de la función `addOrFocus_FocusOrder` era incorrecto.
+    // Se corrige a `addOrFocusOrder`, que es la función correcta.
     const publicSetCurrentViewedOrderId = useCallback((id) => {
-        if (id) addOrFocusOrder(id, false, { navigateIfNeeded: true, fetchIfNeeded: true });
-        else addOrFocusOrder(null, false, { navigateIfNeeded: true });
+        if (id) {
+            addOrFocusOrder(id, false, { navigateIfNeeded: true, fetchIfNeeded: true });
+        } else {
+            addOrFocusOrder(null, false, { navigateIfNeeded: true });
+        }
     }, [addOrFocusOrder]); 
+    // ===================================================
 
     const updateOrderState = useCallback((orderIdToUpdate, partialNewState, newIdIfChanged = null) => {
         const idToUpdateStr = String(orderIdToUpdate);

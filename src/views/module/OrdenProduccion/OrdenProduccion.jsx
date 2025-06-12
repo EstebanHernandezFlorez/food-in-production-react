@@ -73,6 +73,7 @@ const OrdenProduccionForm = ({
     const prevProductIdRef = useRef();
     const [activeOrderWarning, setActiveOrderWarning] = useState(null);
     const [isVerifyingProduct, setIsVerifyingProduct] = useState(false);
+    const [confirmAction, setConfirmAction] = useState({ isOpen: false, title: '', body: '', onConfirm: null, toggle: null });
 
     const ordersContext = useContext(ActiveOrdersContext);
 
@@ -184,7 +185,11 @@ const OrdenProduccionForm = ({
             const transformed = transformFetchedOrderToContextFormat(res);
             if (transformed) {
                 updateOrderState(currentViewedOrderId, transformed);
-                toast.success("Orden actualizada.", { id: toastId });
+                 if (options.showToast !== false) {
+                    toast.success("Orden actualizada.", { id: toastId });
+                } else {
+                    toast.dismiss(toastId);
+                }
                 return transformed;
             } else { throw new Error("Respuesta inválida del servidor."); }
         } catch (err) {
@@ -217,15 +222,161 @@ const OrdenProduccionForm = ({
     }, [currentViewedOrderId, currentOrderData, isProcessingAction, transformFetchedOrderToContextFormat, updateOrderState]);
 
     const handleEmployeeSelectionForStep = useCallback((stepIndex, newEmployeeId) => { if (!currentViewedOrderId || !currentOrderData) return; const newSteps = currentOrderData.processSteps.map((s, i) => i === stepIndex ? { ...s, idEmployee: newEmployeeId || '' } : s); updateOrderState(currentViewedOrderId, { processSteps: newSteps }); }, [currentViewedOrderId, currentOrderData, updateOrderState]);
-    const handleStartCurrentStep = useCallback(async () => { if (!currentViewedOrderId || !currentOrderData || isProcessingAction) return; const orderToStart = currentOrderData; const stepToStart = orderToStart.processSteps?.[orderToStart.activeStepIndex]; if (!stepToStart) { return toast.error("No hay un paso activo para iniciar."); } if (!stepToStart.idEmployee) { return toast.error(`Asigne un empleado al paso "${stepToStart.processName}".`); } if (!stepToStart.idProductionOrderDetail) { const updatedOrder = await handleUpdateExistingOrder('IN_PROGRESS', { showToast: false }); if (!updatedOrder) { toast.error("No se pudo preparar la orden."); } return; } setIsProcessingAction(true); const toastIdStartStep = toast.loading(`Iniciando paso "${stepToStart.processName}"...`); try { const payload = { startDate: new Date().toISOString(), status: 'IN_PROGRESS', idEmployeeAssigned: stepToStart.idEmployee }; const res = await productionOrderService.updateProductionOrderStep(orderToStart.id, stepToStart.idProductionOrderDetail, payload); const transformed = transformFetchedOrderToContextFormat(res); if (transformed) { updateOrderState(orderToStart.id, transformed); toast.success(`Paso "${stepToStart.processName}" iniciado.`, { id: toastIdStartStep }); } else { throw new Error("Respuesta inválida del servidor."); } } catch (err) { toast.error(err.response?.data?.message || `Error iniciando el paso.`, { id: toastIdStartStep }); } finally { setIsProcessingAction(false); } }, [currentViewedOrderId, currentOrderData, isProcessingAction, handleUpdateExistingOrder, updateOrderState, transformFetchedOrderToContextFormat]);
+    
+    // =========== FUNCIÓN DE INICIAR PASO CORREGIDA Y ROBUSTA ===========
+    const handleStartCurrentStep = useCallback(async () => {
+        if (!currentViewedOrderId || !currentOrderData) return;
+
+        const orderToStart = currentOrderData;
+        const stepToStart = orderToStart.processSteps?.[orderToStart.activeStepIndex];
+
+        // 1. CAPTURAR el ID del empleado desde el estado actual ANTES de cualquier operación asíncrona.
+        const employeeIdToAssign = stepToStart?.idEmployee;
+
+        // 2. VALIDAR el valor capturado.
+        if (!employeeIdToAssign) {
+            toast.error(`Por favor, asigne un empleado al paso "${stepToStart?.processName || 'actual'}".`);
+            return;
+        }
+
+        const assignedEmployee = empleadosList.find(e => String(e.idEmployee) === String(employeeIdToAssign));
+        const employeeName = assignedEmployee?.fullName || `ID ${employeeIdToAssign}`;
+
+        const executeStart = async () => {
+            if (isProcessingAction) return;
+            setIsProcessingAction(true);
+            setConfirmAction({ isOpen: false });
+
+            let orderForStepStart = orderToStart;
+
+            if (!stepToStart.idProductionOrderDetail) {
+                const updatedOrderResult = await handleUpdateExistingOrder('IN_PROGRESS', { showToast: false });
+                if (!updatedOrderResult) {
+                    toast.error("No se pudo preparar la orden para iniciar la producción.");
+                    setIsProcessingAction(false);
+                    return;
+                }
+                orderForStepStart = updatedOrderResult;
+            }
+
+            const toastIdStartStep = toast.loading(`Iniciando paso "${stepToStart.processName}"...`);
+            try {
+                const stepDataForApi = orderForStepStart.processSteps[orderForStepStart.activeStepIndex];
+                const stepId = stepDataForApi.idProductionOrderDetail;
+
+                if (!stepId) {
+                    toast.error("Error crítico: No se pudo obtener el ID del paso para iniciar. Por favor, recargue e intente de nuevo.", { id: toastIdStartStep });
+                    setIsProcessingAction(false);
+                    return;
+                }
+                
+                // 3. USAR el ID del empleado capturado al principio en el payload final.
+                const payload = {
+                    startDate: new Date().toISOString(),
+                    status: 'IN_PROGRESS',
+                    idEmployeeAssigned: employeeIdToAssign 
+                };
+                
+                const res = await productionOrderService.updateProductionOrderStep(orderForStepStart.id, stepId, payload);
+                const transformed = transformFetchedOrderToContextFormat(res);
+                
+                if (transformed) {
+                    updateOrderState(orderForStepStart.id, transformed);
+                    toast.success(`Paso "${stepToStart.processName}" iniciado.`, { id: toastIdStartStep });
+                } else {
+                    throw new Error("Respuesta inválida del servidor.");
+                }
+            } catch (err) {
+                const errorMsg = err.response?.data?.message || err.message || `Error iniciando el paso.`;
+                toast.error(errorMsg, { id: toastIdStartStep });
+            } finally {
+                setIsProcessingAction(false);
+            }
+        };
+
+        setConfirmAction({
+            isOpen: true,
+            title: "Confirmar Inicio de Paso",
+            body: `¿Está seguro de que desea iniciar el paso "${stepToStart.processName}" con el empleado: ${employeeName}?`,
+            confirmText: "Sí, Iniciar",
+            confirmColor: "success",
+            onConfirm: executeStart,
+            toggle: () => setConfirmAction({ isOpen: false })
+        });
+    }, [currentViewedOrderId, currentOrderData, isProcessingAction, handleUpdateExistingOrder, updateOrderState, transformFetchedOrderToContextFormat, empleadosList]);
+    
     const handleCompleteCurrentStep = useCallback(async () => { if (!currentViewedOrderId || !currentOrderData || isProcessingAction) return; const orderToComplete = currentOrderData; const step = orderToComplete.processSteps?.[orderToComplete.activeStepIndex]; if (!step || !step.idProductionOrderDetail) { return toast.error("No se puede completar un paso no guardado."); } if (step.status !== 'IN_PROGRESS') { return toast.error(`El paso no está en progreso.`); } setIsProcessingAction(true); const tId = toast.loading(`Completando "${step.processName}"...`); try { const res = await productionOrderService.updateProductionOrderStep(orderToComplete.id, step.idProductionOrderDetail, { endDate: new Date().toISOString(), status: 'COMPLETED', observations: step.observations || null }); const transformed = transformFetchedOrderToContextFormat(res); if (transformed) { updateOrderState(currentViewedOrderId, transformed); toast.success(`Paso completado.`, { id: tId, icon: "✔️" }); } else { throw new Error("Respuesta inválida del servidor."); } } catch (err) { toast.error(err.response?.data?.message || `Error completando el paso.`, { id: tId }); } finally { setIsProcessingAction(false); } }, [currentViewedOrderId, currentOrderData, isProcessingAction, updateOrderState, transformFetchedOrderToContextFormat]);
+    
     const handlePrepareFinalization = useCallback(() => { if (!currentViewedOrderId || !currentOrderData) return; setShowFinalizationFields(true); toast("Ingrese los datos de finalización.", { icon: "✍️" }); }, [currentViewedOrderId, currentOrderData]);
-    const handleFinalizeAndSaveOrder = useCallback(async () => { if (!currentViewedOrderId || !currentOrderData) return; setIsProcessingAction(true); const tId = toast.loading("Finalizando orden..."); try { const { formOrder } = currentOrderData; const payload = { finalQuantityProduct: parseFloat(formOrder.finalQuantityProduct), finishedProductWeight: formOrder.finishedProductWeight ? parseFloat(formOrder.finishedProductWeight) : null, finishedProductWeightUnit: (formOrder.finishedProductWeight && parseFloat(formOrder.finishedProductWeight) > 0) ? (formOrder.finishedProductWeightUnit || 'kg') : null, inputFinalWeightUnused: formOrder.inputFinalWeightUnused ? parseFloat(formOrder.inputFinalWeightUnused) : null, inputFinalWeightUnusedUnit: (formOrder.inputFinalWeightUnused && parseFloat(formOrder.inputFinalWeightUnused) > 0) ? (formOrder.inputFinalWeightUnusedUnit || 'kg') : null, observations: formOrder.observations || null, }; const finalizedOrder = await productionOrderService.finalizeProductionOrder(currentOrderData.id, payload); const trans = transformFetchedOrderToContextFormat(finalizedOrder); if (trans) { updateOrderState(currentViewedOrderId, trans); setShowFinalizationFields(false); toast.success(`¡Orden finalizada!`, { id: tId, icon: "🏆" }); } else { throw new Error("Respuesta inválida del servidor."); } } catch (err) { toast.error(err.response?.data?.message || "Error al finalizar.", { id: tId }); } finally { setIsProcessingAction(false); } }, [currentViewedOrderId, currentOrderData, isProcessingAction, transformFetchedOrderToContextFormat, updateOrderState]);
+    
+    const handleFinalizeAndSaveOrder = useCallback(async () => {
+        if (!currentViewedOrderId || !currentOrderData || isProcessingAction) return;
+
+        const { formOrder } = currentOrderData;
+        const newErrors = {};
+
+        if (!formOrder.finalQuantityProduct || parseFloat(formOrder.finalQuantityProduct) < 0) {
+            newErrors.finalQuantityProduct = 'La cantidad producida es requerida y debe ser un número positivo.';
+        }
+
+        if (Object.keys(newErrors).length > 0) {
+            updateOrderState(currentViewedOrderId, { formErrors: newErrors });
+            toast.error('Por favor, corrija los errores en el formulario de finalización.');
+            return;
+        }
+
+        setIsProcessingAction(true);
+        const tId = toast.loading("Finalizando orden...");
+
+        try {
+            const finalQuantityProduct = formOrder.finalQuantityProduct ? parseFloat(formOrder.finalQuantityProduct) : null;
+            const finishedProductWeight = formOrder.finishedProductWeight ? parseFloat(formOrder.finishedProductWeight) : null;
+            const inputFinalWeightUnused = formOrder.inputFinalWeightUnused ? parseFloat(formOrder.inputFinalWeightUnused) : null;
+            
+            const payload = {
+                finalQuantityProduct: finalQuantityProduct,
+                finishedProductWeight: finishedProductWeight,
+                finishedProductWeightUnit: finishedProductWeight ? (formOrder.finishedProductWeightUnit || 'kg') : null,
+                inputFinalWeightUnused: inputFinalWeightUnused,
+                inputFinalWeightUnusedUnit: inputFinalWeightUnused ? (formOrder.inputFinalWeightUnusedUnit || 'kg') : null,
+                observations: formOrder.observations || null,
+            };
+
+            const finalizedOrder = await productionOrderService.finalizeProductionOrder(currentOrderData.id, payload);
+            const trans = transformFetchedOrderToContextFormat(finalizedOrder);
+            
+            if (trans) {
+                updateOrderState(currentViewedOrderId, trans);
+                setShowFinalizationFields(false);
+                toast.success(`¡Orden finalizada!`, { id: tId, icon: "🏆" });
+            } else {
+                throw new Error("Respuesta inválida del servidor.");
+            }
+        } catch (err) {
+            const errorMsg = err.response?.data?.message || err.message || "Error al finalizar la orden.";
+            toast.error(errorMsg, { id: tId });
+            if (err.response?.data?.errors) {
+                 const backendErrors = err.response.data.errors.reduce((acc, e) => {
+                    acc[e.path] = e.msg;
+                    return acc;
+                }, {});
+                updateOrderState(currentViewedOrderId, { formErrors: backendErrors });
+            }
+        } finally {
+            setIsProcessingAction(false);
+        }
+    }, [currentViewedOrderId, currentOrderData, isProcessingAction, transformFetchedOrderToContextFormat, updateOrderState]);
+    
     const handleCancelFinalization = useCallback(() => { setShowFinalizationFields(false); toast.info("Finalización cancelada."); }, []);
+    
     const handleStepFieldChange = useCallback((stepIndex, fieldName, value) => { if (!currentViewedOrderId || !currentOrderData) return; const newSteps = currentOrderData.processSteps.map((s, i) => i === stepIndex ? { ...s, [fieldName]: value } : s); updateOrderState(currentViewedOrderId, { processSteps: newSteps }); }, [currentViewedOrderId, currentOrderData, updateOrderState]);
+    
     const toggleViewSpecSheetModal = useCallback(() => setViewSpecSheetModalOpen(p => !p), []);
+    
     const toggleSuppliesCallback = useCallback(() => setIsSuppliesOpen(prev => !prev), []);
+    
     const openCancelModal = useCallback(() => { if (!currentViewedOrderId || !currentOrderData) return; setOrderToCancelInfo({ id: currentOrderData.id, displayName: currentOrderData.orderNumberDisplay || "Nuevo Borrador" }); setIsCancelModalOpen(true); }, [currentViewedOrderId, currentOrderData]);
+    
     const handleConfirmCancelOrder = useCallback(async (reason) => { if (!orderToCancelInfo?.id) return; setIsProcessingAction(true); const tId = toast.loading(`Cancelando orden...`); try { if (String(orderToCancelInfo.id).startsWith('NEW_')) { removeOrder(orderToCancelInfo.id); toast.success("Borrador descartado.", { id: tId }); } else { const updatedOrder = await productionOrderService.changeProductionOrderStatus(orderToCancelInfo.id, 'CANCELLED', reason); const trans = transformFetchedOrderToContextFormat(updatedOrder); if (trans) { updateOrderState(orderToCancelInfo.id, trans); toast.success(`Orden cancelada.`, { id: tId }); } else { throw new Error("Respuesta inválida."); } } setIsCancelModalOpen(false); } catch (error) { toast.error(error.response?.data?.message || "Error al cancelar.", { id: tId }); } finally { setIsProcessingAction(false); } }, [orderToCancelInfo, removeOrder, transformFetchedOrderToContextFormat, updateOrderState]);
     
     useEffect(() => { const order = currentOrderData; if (!order || !masterDataFullyLoaded || isSaving) return; const productId = order.formOrder?.idProduct; if (productId && productId !== prevProductIdRef.current) { const verifyProduct = async () => { setIsVerifyingProduct(true); setActiveOrderWarning(null); try { const verificationResult = await productionOrderService.checkActiveOrderForProduct(productId); if (verificationResult.hasActiveOrder) { const conflictingOrder = verificationResult.activeOrder; if (String(conflictingOrder.idProductionOrder) !== String(order.id)) { setActiveOrderWarning({ message: `Este producto ya tiene una orden activa (ID: ${conflictingOrder.idProductionOrder}, Estado: ${conflictingOrder.status}). No podrá guardar o iniciar esta orden.`, orderId: conflictingOrder.idProductionOrder }); } } await updateSpecSheetAndProcesses(productId, order.formOrder.idSpecSheet || null); } catch (error) { console.error("Error al verificar el producto:", error); toast.error("No se pudo verificar el estado del producto."); } finally { setIsVerifyingProduct(false); } }; verifyProduct(); } else if (!productId) { setActiveOrderWarning(null); } prevProductIdRef.current = productId; }, [currentOrderData, masterDataFullyLoaded, isSaving, updateSpecSheetAndProcesses]);
@@ -243,75 +394,60 @@ const OrdenProduccionForm = ({
     
     const ordenTitulo = (isNewForForm && localOrderStatus === 'PENDING') ? "Nuevo Borrador de Orden" : `Orden: ${currentOrderData.orderNumberDisplay || `ID ${orderId}`} (${currentOrderData.localOrderStatusDisplay || localOrderStatus})`;
 
-    // En OrdenProduccionForm.jsx
+    const isBaseDataLocked = !isNewForForm && !['PENDING', 'SETUP'].includes(localOrderStatus);
 
-const renderActionButtons = () => {
-    // Si la orden está completada, cancelada o en proceso de finalización, no mostrar nada.
-    if (isOrderSystemReadOnly || showFinalizationFields) {
-        return null;
-    }
-
-    const isBusy = isSaving || isProcessingAction;
-    const disabledByWarning = !!activeOrderWarning;
-
-    // Caso 1: Orden en configuración, lista para iniciar
-    if (['PENDING', 'SETUP', 'SETUP_COMPLETED'].includes(localOrderStatus) && !isNewForForm) {
-        return (
-            <Button color="success" onClick={() => handleUpdateExistingOrder('IN_PROGRESS')} disabled={isBusy || disabledByWarning} size="sm">
-                <PlayCircle size={16} className="me-1"/> Iniciar Producción
-            </Button>
-        );
-    }
-
-    // Caso 2: Orden en progreso o pausada
-    if (['IN_PROGRESS', 'PAUSED'].includes(localOrderStatus)) {
-        // Si está en pausa Y el usuario NO tiene permisos para reanudar, no mostrar NINGÚN botón.
-        if (localOrderStatus === 'PAUSED' && !canPauseOrResume) {
+    const renderActionButtons = () => {
+        if (isOrderSystemReadOnly || showFinalizationFields) {
             return null;
         }
 
-        // Si llegamos aquí, o está en progreso, o está en pausa y el usuario SÍ tiene permisos.
-        return (
-            <div className="d-flex gap-2">
-                {/* El botón de Pausa/Reanudar solo aparece para roles permitidos. */}
-                {canPauseOrResume && (
-                    <Button
-                        color={localOrderStatus === 'PAUSED' ? 'success' : 'warning'}
-                        outline
-                        onClick={handleTogglePauseOrder}
-                        disabled={isBusy}
-                        size="sm"
-                    >
-                        {localOrderStatus === 'PAUSED' ? <><PlayCircle size={16} className="me-1"/> Reanudar</> : <><PauseCircle size={16} className="me-1"/> Pausar</>}
+        const isBusy = isSaving || isProcessingAction;
+        const disabledByWarning = !!activeOrderWarning;
+
+        if (['PENDING', 'SETUP', 'SETUP_COMPLETED'].includes(localOrderStatus) && !isNewForForm) {
+            return (
+                <Button color="success" onClick={() => handleUpdateExistingOrder('IN_PROGRESS')} disabled={isBusy || disabledByWarning} size="sm">
+                    <PlayCircle size={16} className="me-1"/> Iniciar Producción
+                </Button>
+            );
+        }
+
+        if (['IN_PROGRESS', 'PAUSED'].includes(localOrderStatus)) {
+            if (localOrderStatus === 'PAUSED' && !canPauseOrResume) {
+                return null;
+            }
+            return (
+                <div className="d-flex gap-2">
+                    {canPauseOrResume && (
+                        <Button color={localOrderStatus === 'PAUSED' ? 'success' : 'warning'} outline onClick={handleTogglePauseOrder} disabled={isBusy} size="sm">
+                            {localOrderStatus === 'PAUSED' ? <><PlayCircle size={16} className="me-1"/> Reanudar</> : <><PauseCircle size={16} className="me-1"/> Pausar</>}
+                        </Button>
+                    )}
+                    <Button color="danger" outline onClick={openCancelModal} disabled={isBusy} size="sm">
+                        <XCircle size={16} className="me-1"/> Cancelar
                     </Button>
-                )}
-                {/* Los botones de Cancelar y Guardar siempre se muestran en este bloque (a menos que se oculte todo antes) */}
-                <Button color="danger" outline onClick={openCancelModal} disabled={isBusy} size="sm">
-                    <XCircle size={16} className="me-1"/> Cancelar
-                </Button>
-                <Button color="primary" onClick={() => handleUpdateExistingOrder(null, { skipValidation: true })} disabled={isBusy} size="sm">
-                    <Save size={16} className="me-1"/> Guardar Progreso
-                </Button>
-            </div>
-        );
-    }
+                    <Button color="primary" onClick={() => handleUpdateExistingOrder(null, { skipValidation: true })} disabled={isBusy} size="sm">
+                        <Save size={16} className="me-1"/> Guardar Progreso
+                    </Button>
+                </div>
+            );
+        }
 
-    // Caso 3: Todos los pasos completados, lista para finalizar
-    if (localOrderStatus === 'ALL_STEPS_COMPLETED') {
-         return (
-            <div className="d-flex gap-2">
-                <Button color="danger" outline onClick={openCancelModal} disabled={isBusy} size="sm">
-                    <XCircle size={16} className="me-1"/> Cancelar
-                </Button>
-                <Button color="warning" onClick={handlePrepareFinalization} disabled={isBusy} size="sm">
-                    <ChefHat size={16} className="me-1"/> Ingresar Datos Finales
-                </Button>
-            </div>
-         );
-    }
+        if (localOrderStatus === 'ALL_STEPS_COMPLETED') {
+             return (
+                <div className="d-flex gap-2">
+                    <Button color="danger" outline onClick={openCancelModal} disabled={isBusy} size="sm">
+                        <XCircle size={16} className="me-1"/> Cancelar
+                    </Button>
+                    <Button color="warning" onClick={handlePrepareFinalization} disabled={isBusy} size="sm">
+                        <ChefHat size={16} className="me-1"/> Ingresar Datos Finales
+                    </Button>
+                </div>
+             );
+        }
 
-    return null;
-};
+        return null;
+    };
     
     return (
         <Container fluid className="p-0 order-production-form-main-container production-module">
@@ -333,6 +469,8 @@ const renderActionButtons = () => {
                     employeeFieldLabel="Registrada por"
                     availableSpecSheets={availableSpecSheets}
                     masterDataFullyLoaded={masterDataFullyLoaded}
+                    isBaseDataLocked={isBaseDataLocked}
+                    isVerifyingProduct={isVerifyingProduct}
                 />
                 {activeOrderWarning && <Alert color="warning" className="d-flex align-items-center mt-2 mx-3 small py-2"><AlertTriangle size={20} className="me-2 flex-shrink-0" /><div>{activeOrderWarning.message}</div></Alert>}
                 {isNewForForm && localOrderStatus === 'PENDING' && ( <CardFooter className="text-end py-2 px-3 bg-light border-top-0 mb-3 shadow-sm"><Button color="success" onClick={handleSaveNewDraft} disabled={isSaving || isProcessingAction || !masterDataFullyLoaded || !!activeOrderWarning} size="sm"><Save size={16} className="me-1"/>Guardar Borrador</Button><Button color="secondary" outline onClick={openCancelModal} disabled={isSaving || isProcessingAction} size="sm" className="ms-2"><XCircle size={16} className="me-1"/>Descartar</Button></CardFooter> )}
@@ -356,8 +494,8 @@ const renderActionButtons = () => {
                             isProcessingAction={isProcessingAction}
                             isLoadingFichas={isLoadingFichas}
                             processViewMode="sidebarWithFocus"
-                            masterDataFullyLoaded={masterDataFullyLoaded}
                             getStatusInfo={getStatusInfoInSpanish}
+                            isLoadingEmpleados={!masterDataFullyLoaded} 
                         />
                         <Row className="mt-3 g-2 justify-content-end align-items-center">
                             <Col xs="auto">
@@ -366,9 +504,22 @@ const renderActionButtons = () => {
                         </Row>
                     </div>
                 )}
-                {showFinalizationFields && !isOrderViewOnlyFromData && ( <OrderFinalizationSection formOrder={formOrder} formErrors={currentOrderData.formErrors} handleChangeOrderForm={handleChangeOrderForm} isSaving={isSaving||isProcessingAction} onCancelFinalization={handleCancelFinalization} onConfirmFinalize={handleFinalizeAndSaveOrder} /> )}
+                {showFinalizationFields && ( <OrderFinalizationSection formOrder={formOrder} formErrors={currentOrderData.formErrors} handleChangeOrderForm={handleChangeOrderForm} isSaving={isSaving||isProcessingAction} onCancelFinalization={handleCancelFinalization} onConfirmFinalize={handleFinalizeAndSaveOrder} /> )}
                 {isOrderSystemReadOnly && ( <div className="mt-4 p-3 border-top text-end"> <Alert color={localOrderStatus === 'COMPLETED' ? 'success' : 'danger'} className="text-center small py-2">Orden <strong>{currentOrderData.localOrderStatusDisplay}</strong>. No más cambios.</Alert> <Button color="secondary" outline onClick={() => addOrFocusOrder(null, false, { navigateIfNeeded: true })} size="sm" className="mt-2"><Eye size={16} className="me-1"/> Ver Lista</Button> </div> )}
             </Form>
+            
+            <ConfirmationModal
+                isOpen={confirmAction.isOpen}
+                toggle={confirmAction.toggle}
+                title={confirmAction.title}
+                onConfirm={confirmAction.onConfirm}
+                confirmText={confirmAction.confirmText}
+                confirmColor={confirmAction.confirmColor}
+                isConfirming={isProcessingAction}
+            >
+                {confirmAction.body}
+            </ConfirmationModal>
+
             <ViewSpecSheetModal isOpen={viewSpecSheetModalOpen} toggle={toggleViewSpecSheetModal} specSheetData={selectedSpecSheetData} isLoading={isLoadingFichas} />
             <CancelOrderModal isOpen={isCancelModalOpen} toggle={() => setIsCancelModalOpen(false)} onConfirmCancel={handleConfirmCancelOrder} orderDisplayName={orderToCancelInfo?.displayName} isCancelling={isProcessingAction} />
         </Container>
