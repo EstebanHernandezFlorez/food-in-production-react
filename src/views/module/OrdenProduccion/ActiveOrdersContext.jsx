@@ -61,10 +61,8 @@ export const ActiveOrdersProvider = ({ children }) => {
     }, []);
 
     const transformFetchedOrderToContextFormat = useCallback((fetchedOrder) => {
-        console.log(`%c[CONTEXT ${instanceId.current}] transformFetchedOrderToContextFormat: fetchedOrder RAW:`, "color: blue", JSON.stringify(fetchedOrder, null, 2));
-
         if (!fetchedOrder || !fetchedOrder.idProductionOrder) {
-            console.warn(`%c[CONTEXT ${instanceId.current}] transformFetchedOrderToContextFormat: Datos de orden inválidos.`, "color: orange", fetchedOrder);
+            console.warn(`[CONTEXT] Transformación fallida: datos de orden inválidos.`, fetchedOrder);
             return null;
         }
 
@@ -160,45 +158,50 @@ export const ActiveOrdersProvider = ({ children }) => {
     }, []);
 
     const loadInitialActiveOrders = useCallback(async () => {
-        console.log(`%c[CONTEXT ${instanceId.current}] loadInitialActiveOrders: Iniciando...`, "color: brown");
         setIsLoadingOrderContext(true);
         try {
             const filters = { status_not_in: ['COMPLETED', 'CANCELLED'].join(',') };
             const response = await productionOrderService.getAllProductionOrders(filters);
             const loadedOrders = {};
             
-            if (response && Array.isArray(response.rows)) {
-                response.rows.forEach(orderData => {
-                    const status = orderData.status?.toUpperCase();
-                    if (status === 'COMPLETED' || status === 'CANCELLED') {
-                        console.warn(`%c[CONTEXT ${instanceId.current}] loadInitialActiveOrders: Ignorando orden ID ${orderData.idProductionOrder} porque su estado es '${status}'.`, "color: orange");
-                        return;
-                    }
-
-                    const transformed = transformFetchedOrderToContextFormat(orderData);
-                    if (transformed) {
-                        loadedOrders[transformed.id] = transformed;
-                    }
-                });
+            // --- INICIO DE LA CORRECCIÓN ---
+            // Esta lógica ahora maneja si la respuesta es un array directo
+            // o un objeto que contiene una propiedad 'rows'.
+            let ordersToProcess = [];
+            if (Array.isArray(response)) {
+                ordersToProcess = response;
+            } else if (response && Array.isArray(response.rows)) {
+                ordersToProcess = response.rows;
             } else {
-                 console.warn(`%c[CONTEXT ${instanceId.current}] loadInitialActiveOrders: La respuesta no es un array o no tiene la propiedad 'rows'.`, "color: orange", response);
+                console.warn(`[CONTEXT] La respuesta de órdenes iniciales no tiene un formato reconocible.`, response);
             }
+            // --- FIN DE LA CORRECCIÓN ---
+
+            // Ahora iteramos sobre el array correcto que hemos determinado.
+            ordersToProcess.forEach(orderData => {
+                const status = orderData.status?.toUpperCase();
+                if (status === 'COMPLETED' || status === 'CANCELLED') {
+                    return; // Salvaguarda por si el filtro del backend falla
+                }
+                const transformed = transformFetchedOrderToContextFormat(orderData);
+                if (transformed) {
+                    loadedOrders[transformed.id] = transformed;
+                }
+            });
+
             setActiveOrders(loadedOrders);
         } catch (error) {
-            console.error(`[CONTEXT ${instanceId.current}] Error cargando órdenes iniciales:`, error);
+            console.error(`[CONTEXT] Error cargando órdenes iniciales:`, error);
             toast.error("Error al cargar órdenes activas.");
             setActiveOrders({});
         } finally {
             setIsLoadingOrderContext(false);
             setInitialLoadComplete(true);
-            console.log(`%c[CONTEXT ${instanceId.current}] loadInitialActiveOrders: Finalizado.`, "color: brown");
         }
     }, [transformFetchedOrderToContextFormat]); 
 
     useEffect(() => {
-        console.log(`%c[CONTEXT ${instanceId.current}] Provider: MONTADO`, "color: green; font-weight: bold;");
         loadInitialActiveOrders();
-        return () => console.log(`%c[CONTEXT ${instanceId.current}] Provider: DESMONTÁNDOSE`, "color: red; font-weight: bold;");
     }, [loadInitialActiveOrders]);
 
     const navigateToOrderPath = useCallback((orderIdOrNew) => {
@@ -294,7 +297,6 @@ export const ActiveOrdersProvider = ({ children }) => {
         setActiveOrders(prevActiveOrders => {
             const orderToUpdate = prevActiveOrders[idToUpdateStr];
             if (!orderToUpdate) {
-                console.warn(`%c[CONTEXT] updateOrderState: Orden ${idToUpdateStr} no encontrada.`, "color: orange");
                 return prevActiveOrders;
             }
             
@@ -311,9 +313,6 @@ export const ActiveOrdersProvider = ({ children }) => {
                     ? { ...orderToUpdate.formErrors, idProduct: null, ...(partialNewState.formErrors || {}) }
                     : { ...orderToUpdate.formErrors, ...(partialNewState.formErrors || {}) }
             };
-    
-            // <<<--- LÓGICA DE VALIDACIÓN DE DUPLICADOS HA SIDO ELIMINADA DE AQUÍ --- >>>
-            // La validación ahora es responsabilidad exclusiva del backend.
 
             let updatedOrder;
             if (isReplacingDraft) {

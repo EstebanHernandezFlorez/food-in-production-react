@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import '../../../assets/css/produccion/ProduccionStyles.css'; 
 
 import ActiveOrdersSidebar from './ActiveOrdersSidebar';
-import { ActiveOrdersContext } from './ActiveOrdersContext'; // No es necesario importar ActiveOrdersProvider aquí
+import { ActiveOrdersContext, ActiveOrdersProvider } from './ActiveOrdersContext';
 import OrdenProduccionForm from './OrdenProduccion';
 
 const NAVBAR_HEIGHT = '56px'; 
@@ -40,7 +40,6 @@ const ProduccionPageContent = () => {
     const [masterDataErrorPage, setMasterDataErrorPage] = useState(null);
 
     const loadMasterDataForPage = useCallback(async () => {
-        console.log("ProduccionPageContent: Iniciando carga de datos maestros a nivel de página...");
         setIsLoadingMasterDataPage(true);
         setMasterDataErrorPage(null);
         let success = false;
@@ -58,7 +57,6 @@ const ProduccionPageContent = () => {
             if (pRes.error || eRes.error || provRes.error) {
                 const errors = [pRes, eRes, provRes].filter(r => r.error).map(r => r.source).join(', ');
                 const errorMsg = `Error cargando: ${errors}`;
-                console.error("ProduccionPageContent: Error en carga de datos maestros:", errorMsg);
                 setMasterDataErrorPage(errorMsg);
                 toast.error(errorMsg, {id: 'master-data-page-error', duration: 5000});
             } else {
@@ -79,15 +77,12 @@ const ProduccionPageContent = () => {
                 success = true;
             }
         } catch (error) {
-            console.error("ProduccionPageContent: Error crítico en carga de datos maestros:", error);
             setMasterDataErrorPage("Error crítico al cargar datos.");
             toast.error("Error crítico al cargar datos.", {id: 'master-data-page-critical-error'});
         } finally {
             setIsLoadingMasterDataPage(false);
             if (success) {
                 setMasterDataLoadedPage(true);
-            } else {
-                 console.warn("ProduccionPageContent: La carga de datos maestros a nivel de página no fue completamente exitosa.");
             }
         }
     }, []);
@@ -125,30 +120,22 @@ const ProduccionPageContent = () => {
             await addOrFocusOrder(null, true, { navigateIfNeeded: true });
         } catch (error) { 
             toast.error(`Error al iniciar nueva orden: ${error.message || "Error desconocido"}`);
-            console.error("Error en handleInitiateNewOrder:", error);
         } finally { 
             setIsInitiatingNewOrder(false); 
         }
     };
     
-    // <<<--- INICIO DE LA CORRECCIÓN DE LA KEY --- >>>
-    // Esta función crea una key estable para el formulario.
     const getFormKey = () => {
         if (!currentViewedOrderId) {
-            // Key estática para cuando no hay ninguna orden seleccionada.
             return 'no-order-selected';
         }
         if (String(currentViewedOrderId).startsWith('NEW_')) {
-            // Usamos una key estática para TODOS los borradores.
-            // Esto evita que el formulario se remonte cada vez que se crea un nuevo borrador.
             return 'new-order-draft';
         }
-        // Para órdenes existentes, su ID es la key perfecta y estable.
         return currentViewedOrderId;
     };
     
     const formKey = getFormKey();
-    // <<<--- FIN DE LA CORRECCIÓN DE LA KEY --- >>>
     
     if (isLoadingMasterDataPage) {
         return (
@@ -174,7 +161,6 @@ const ProduccionPageContent = () => {
         );
     }
 
-
     return (
         <Container fluid className="vh-100 d-flex flex-column p-0 production-module">
             <Row className="g-0 flex-grow-1" style={{ maxHeight: `calc(100vh - ${NAVBAR_HEIGHT})`, overflow: 'hidden' }}>
@@ -191,7 +177,7 @@ const ProduccionPageContent = () => {
                 >
                     {shouldShowForm ? (
                         <OrdenProduccionForm
-                            key={formKey} // Usamos la key estable
+                            key={formKey}
                             productosMaestrosProps={productosMaestros}
                             empleadosMaestrosProps={empleadosMaestros}
                             proveedoresMaestrosProps={proveedoresMaestros}
@@ -231,10 +217,10 @@ const ProduccionPageContent = () => {
     );
 };
 
-// Se asume que ActiveOrdersProvider ya envuelve esta página en un nivel superior,
-// por lo que no es necesario volver a ponerlo aquí.
 const ProduccionPage = () => (
-    <ProduccionPageContent />
+    <ActiveOrdersProvider>
+        <ProduccionPageContent />
+    </ActiveOrdersProvider>
 );
 
 export default ProduccionPage;

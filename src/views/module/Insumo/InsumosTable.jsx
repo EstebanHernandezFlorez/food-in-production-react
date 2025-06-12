@@ -1,11 +1,10 @@
-// src/views/module/Insumos/components/InsumosTable.jsx
 import React from 'react';
 import { Table, Button, Spinner } from 'reactstrap';
 import { Edit, Trash2 } from 'lucide-react';
 
 const InsumosTable = ({
     isLoading,
-    currentItems, // Este array ya viene ordenado y paginado desde el componente padre
+    currentItems,
     dataLength,
     tableSearchText,
     getUnitLabel,
@@ -14,7 +13,6 @@ const InsumosTable = ({
     requestDeleteConfirmation,
     isConfirmActionLoading,
 }) => {
-    // Ya no necesitas la variable sortedItems. Trabajas directamente con currentItems.
     const colSpanValue = 5;
 
     return (
@@ -33,7 +31,6 @@ const InsumosTable = ({
                     {isLoading && dataLength === 0 ? (
                         <tr><td colSpan={colSpanValue} className="text-center p-5"><Spinner color="primary" /> Cargando...</td></tr>
                     ) : currentItems.length > 0 ? (
-                        // Mapeas directamente sobre currentItems
                         currentItems.map((item) => (
                             <tr key={item.idSupply}>
                                 <th scope="row" className="text-center">{item.idSupply}</th>
