@@ -23,6 +23,7 @@ const MenuList = ({ collapsed }) => {
         }
     };
 
+    // Esta función está bien como está, la dejamos igual.
     const filterAndBuildRoutes = useCallback((routesToFilter) => {
         if (!user || typeof can !== 'function') {
             return [];
@@ -35,7 +36,6 @@ const MenuList = ({ collapsed }) => {
             const isUserAdmin = user.idRole === ADMIN_ROLE_ID;
 
             if (isAdminOnlyRoute && !isUserAdmin) {
-                console.log(`[MenuList] Ocultando la ruta '${route.path}' para el usuario con roleId: ${user.idRole}`);
                 return allowed; 
             }
 
@@ -63,6 +63,7 @@ const MenuList = ({ collapsed }) => {
         }, []);
     }, [can, user]);
 
+    // Este useEffect está bien, no causa el bucle.
     useEffect(() => {
         if (!initialAuthCheckComplete || !user) {
             setFilteredRoutes([]);
@@ -71,12 +72,15 @@ const MenuList = ({ collapsed }) => {
         setFilteredRoutes(filterAndBuildRoutes(allRoutesConfig));
     }, [user, can, initialAuthCheckComplete, filterAndBuildRoutes]);
     
+    // *** CORRECCIÓN APLICADA AQUÍ ***
     useEffect(() => {
         const currentPath = location.pathname;
         setSelectedKeys([currentPath]);
 
+        // Si el menú está colapsado, usamos la forma funcional para asegurarnos
+        // de que solo actualizamos si es necesario y rompemos el bucle.
         if (collapsed) {
-            setOpenKeys([]);
+            setOpenKeys(prevKeys => (prevKeys.length > 0 ? [] : prevKeys));
             return;
         }
 
@@ -86,12 +90,19 @@ const MenuList = ({ collapsed }) => {
 
         if (parentRoute) {
             const parentKey = `/home/${parentRoute.path}`;
-            if (!openKeys.includes(parentKey)) {
-                setOpenKeys([parentKey]);
-            }
+            // Usamos la forma funcional de setState. Obtenemos los `prevKeys`
+            // y solo devolvemos un nuevo array si la clave no está incluida.
+            setOpenKeys(prevKeys => {
+                if (!prevKeys.includes(parentKey)) {
+                    return [parentKey];
+                }
+                return prevKeys; // Si ya existe, devolvemos el estado anterior para no re-renderizar.
+            });
         }
-    }, [location.pathname, filteredRoutes, collapsed, openKeys]);
+        // Hemos eliminado 'openKeys' del array de dependencias para romper el bucle infinito.
+    }, [location.pathname, filteredRoutes, collapsed]);
 
+    // Esta función memoizada está bien.
     const generateMenuItems = useCallback((routes, basePath = '/home') => {
         return routes.map(item => {
             const itemPath = `${basePath}/${item.path}`.replace(/\/+/g, '/');
@@ -110,10 +121,12 @@ const MenuList = ({ collapsed }) => {
         }).filter(item => item !== null);
     }, []);
 
+    // Esta memoización está bien.
     const menuItems = useMemo(() => {
         return generateMenuItems(filteredRoutes);
     }, [filteredRoutes, generateMenuItems]);
 
+    // El resto del componente está bien...
     if (!initialAuthCheckComplete || !user) {
         return null;
     }

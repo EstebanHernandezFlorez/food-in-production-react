@@ -10,27 +10,31 @@ const OrderBaseFormSection = ({
     handleChangeOrderForm,
     toggleViewSpecSheetModal,
     productos, 
-    // isLoadingProductos ya no se necesita si se carga en el padre
     empleadosList, 
-    // isLoadingEmpleados ya no se necesita
     providersList, 
-    // isLoadingProviders ya no se necesita
     isSaving,
     isLoadingFichas,
     isOrderViewOnly,
     ordenTitulo,
     employeeFieldLabel,
     isSimplifiedView,
-    availableSpecSheets, // Prop necesaria para la lógica de la ficha
-    masterDataFullyLoaded, // Para saber si las listas están listas
-    isVerifyingProduct // <- NUEVA PROP para el spinner de verificación
+    availableSpecSheets,
+    masterDataFullyLoaded,
+    isVerifyingProduct,
+    isBaseDataLocked // <-- Prop recibida desde el componente padre
 }) => {
     if (!currentOrderData) return <Card><CardBody>Cargando datos...</CardBody></Card>;
 
     const { formOrder, selectedSpecSheetData, formErrors } = currentOrderData;
 
-    const canEditBaseFields = !isOrderViewOnly && !isSaving &&
-        (currentOrderData.isNewForForm || currentOrderData.localOrderStatus === 'PENDING' || currentOrderData.localOrderStatus === 'SETUP' || currentOrderData.localOrderStatus === 'SETUP_COMPLETED');
+    // =========== LÓGICA DE BLOQUEO CENTRALIZADA Y CORREGIDA ===========
+    // Esta variable ahora controla si los campos base son editables.
+    // No se pueden editar si:
+    // - La orden es de solo lectura (completada, cancelada, pausada por otro rol).
+    // - Se está guardando/procesando algo.
+    // - Los datos base ya están "bloqueados" porque la producción ha comenzado.
+    const canEditBaseFields = !isOrderViewOnly && !isSaving && !isBaseDataLocked;
+    // =================================================================
 
     return (
         <Card className="mb-3 shadow-sm">
@@ -78,7 +82,6 @@ const OrderBaseFormSection = ({
                         <Col md={6}>
                             <FormGroup>
                                 <Label for="idProduct" className="small fw-bold">Producto <span className="text-danger">*</span></Label>
-                                {/* --- INICIO DE LA MODIFICACIÓN --- */}
                                 <div className="d-flex align-items-center">
                                     <Input 
                                         type="select" 
@@ -87,6 +90,7 @@ const OrderBaseFormSection = ({
                                         bsSize="sm" 
                                         value={formOrder.idProduct || ''} 
                                         onChange={handleChangeOrderForm} 
+                                        // Aplicamos la nueva lógica de bloqueo
                                         disabled={!canEditBaseFields || !masterDataFullyLoaded || isVerifyingProduct} 
                                         invalid={!!formErrors?.idProduct}
                                     >
@@ -96,7 +100,6 @@ const OrderBaseFormSection = ({
                                     {isVerifyingProduct && <Spinner size="sm" className="ms-2" color="primary" title="Verificando producto..." />}
                                 </div>
                                 <FormFeedback>{formErrors?.idProduct}</FormFeedback>
-                                {/* --- FIN DE LA MODIFICACIÓN --- */}
                             </FormGroup>
                         </Col>
                         <Col md={6}>
@@ -110,6 +113,7 @@ const OrderBaseFormSection = ({
                                         bsSize="sm"
                                         value={formOrder.idSpecSheet || ''}
                                         onChange={handleChangeOrderForm}
+                                        // Aplicamos la nueva lógica de bloqueo
                                         disabled={!canEditBaseFields || isLoadingFichas || availableSpecSheets.length === 0}
                                         invalid={!!formErrors?.idSpecSheet}
                                     >
@@ -140,7 +144,11 @@ const OrderBaseFormSection = ({
                                 <Label for="idEmployeeRegistered" className="small fw-bold">{employeeFieldLabel} <span className="text-danger">*</span></Label>
                                 <Input type="select" name="idEmployeeRegistered" id="idEmployeeRegistered" bsSize="sm" value={formOrder.idEmployeeRegistered || ''} onChange={handleChangeOrderForm} disabled={!canEditBaseFields || !masterDataFullyLoaded} invalid={!!formErrors?.idEmployeeRegistered}>
                                     <option value="">{!masterDataFullyLoaded ? "Cargando..." : "Seleccione..."}</option>
-                                    {empleadosList.map(e=><option key={e.idEmployee} value={e.idEmployee}>{e.fullName}</option>)}
+                                    {empleadosList.map(e => {
+                                        // Para evitar el error de "undefined undefined", usamos el fullName que parece que ya tienes
+                                        const fullName = e.fullName || `${e.firstName || ''} ${e.lastName || ''}`.trim();
+                                        return <option key={e.idEmployee} value={e.idEmployee}>{fullName}</option>
+                                    })}
                                 </Input>
                                 <FormFeedback>{formErrors?.idEmployeeRegistered}</FormFeedback>
                             </FormGroup>
@@ -158,7 +166,6 @@ const OrderBaseFormSection = ({
                         </Col>
                          <Col md={6}>
                             <FormGroup>
-                                {/* --- REQUISITO: Etiqueta de Proveedor actualizada --- */}
                                 <Label for="idProvider" className="small fw-bold">Proveedor <span className="text-danger">*</span></Label>
                                 <Input 
                                     type="select" 
@@ -179,6 +186,8 @@ const OrderBaseFormSection = ({
                        <Col md={12}>
                            <FormGroup>
                                <Label for="observations" className="small fw-bold">Observaciones Generales</Label>
+                               {/* El campo de observaciones tiene su propia lógica de deshabilitado, lo que está bien.
+                                   Se puede querer editar las observaciones incluso si la orden está en proceso. */}
                                <Input type="textarea" name="observations" id="observations" bsSize="sm" rows={2} value={formOrder.observations || ''} onChange={handleChangeOrderForm} disabled={isSaving || isOrderViewOnly} placeholder="Notas generales sobre la orden de producción..." />
                            </FormGroup>
                        </Col>
