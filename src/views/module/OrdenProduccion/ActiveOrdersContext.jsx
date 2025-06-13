@@ -1,3 +1,5 @@
+// src/views/module/OrdenProduccion/ActiveOrdersContext.jsx
+
 import React, { createContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -283,9 +285,6 @@ export const ActiveOrdersProvider = ({ children }) => {
         return orderDataForCvo;
     }, [activeOrders, transformFetchedOrderToContextFormat, navigateToOrderPath, setCurrentViewedOrderId]);
 
-    // =========== CORRECCIÓN DEL REFERENCEERROR ===========
-    // El nombre de la función `addOrFocus_FocusOrder` era incorrecto.
-    // Se corrige a `addOrFocusOrder`, que es la función correcta.
     const publicSetCurrentViewedOrderId = useCallback((id) => {
         if (id) {
             addOrFocusOrder(id, false, { navigateIfNeeded: true, fetchIfNeeded: true });
@@ -293,7 +292,6 @@ export const ActiveOrdersProvider = ({ children }) => {
             addOrFocusOrder(null, false, { navigateIfNeeded: true });
         }
     }, [addOrFocusOrder]); 
-    // ===================================================
 
     const updateOrderState = useCallback((orderIdToUpdate, partialNewState, newIdIfChanged = null) => {
         const idToUpdateStr = String(orderIdToUpdate);
