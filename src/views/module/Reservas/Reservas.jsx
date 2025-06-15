@@ -26,14 +26,14 @@ import { utils, writeFile } from "xlsx"
 import "sweetalert2/dist/sweetalert2.min.css"
 import { FaFileExcel, FaTrashAlt, FaList } from "react-icons/fa"
 import Select from "react-select"
-import { AlertTriangle, CheckCircle, XCircle, Plus, Edit } from "lucide-react"
+import { AlertTriangle, CheckCircle, XCircle, Plus, Edit, Users,User,Tag,DollarSign,Calendar } from "lucide-react"
 import toast, { Toaster } from "react-hot-toast"
 import esLocale from '@fullcalendar/core/locales/es';
-
-// --- IMPORTAR SERVICIOS REALES ---
+import {Popover, PopoverHeader, PopoverBody} from "reactstrap";
 import reservasService from "../../services/reservasService"
 import clientesService from "../../services/clientesService"
 import serviciosService from "../../services/serviciosService"
+
 
 // --- Componente de Modal de Confirmación (copiado del componente de clientes) ---
 const ConfirmationModal = ({
@@ -104,8 +104,6 @@ const emptyForm = {
   status: "pendiente",
 }
 
-// Modificar el mapeo de colores para usar colores pastel más suaves
-// ESTE colorMap ES PARA LA LISTA, NO PARA EL CALENDARIO DIRECTAMENTE
 const colorMap = {
   terminada: "rgba(76, 175, 80, 0.7)",
   anulada: "rgba(244, 67, 54, 0.7)",
@@ -114,7 +112,23 @@ const colorMap = {
   confirmada: "rgba(33, 150, 243, 0.7)",
   default: "rgba(158, 158, 158, 0.7)",
 }
+const headerColorMap = {
+  terminada: '#E8F5E9',
+  anulada: '#FFEBEE',
+  pendiente: '#FFF8E1',
+  en_proceso: '#FFFDE7',
+  confirmada: '#E3F2FD',
+  default: '#F5F5F5',
+};
 
+const headerTextColorMap = {
+  terminada: '#1B5E20',
+  anulada: '#B71C1C',
+  pendiente: '#E65100',
+  en_proceso: '#827717',
+  confirmada: '#0D47A1',
+  default: '#424242',
+};
 // Modificar los estilos CSS personalizados para el calendario
 const customCalendarStyles = `
   /* Estilos generales para el calendario */
@@ -369,12 +383,135 @@ const customCalendarStyles = `
     color: #495057;
   }
   /* --- FIN: ESTILOS PARA EL FORMULARIO POR PASOS --- */
+  .google-calendar-popover .popover-header {
+    background-color: white !important;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 12px 16px;
+    font-size: 1.1rem;
+    font-weight: 500;
+    display: flex; /* Asegura que el botón de cierre esté bien alineado */
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .google-calendar-popover .popover-body {
+    padding: 16px;
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: #3c4043;
+  }
+
+  .google-calendar-popover.popover { /* Aumenta la especificidad para anular estilos de reactstrap */
+    border: none !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+    max-width: 350px;
+    min-width: 320px;
+  }
+
+  .detail-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 16px;
+    gap: 16px;
+  }
+
+  .detail-item-icon {
+    flex-shrink: 0;
+    color: #5f6368;
+    margin-top: 2px; /* Pequeño ajuste para alinear mejor con el texto */
+  }
+
+  .detail-item-content {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* Para que ocupe el espacio restante */
+  }
+
+  .detail-item-content strong {
+    font-weight: 500;
+    font-size: 0.9rem;
+    line-height: 1.3;
+  }
+
+  .detail-item-content small {
+    font-size: 0.8rem;
+    color: #5f6368;
+  }
+
+  .popover-actions {
+    display: flex;
+    justify-content: flex-end;
+    border-top: 1px solid #e0e0e0;
+    padding-top: 12px;
+    margin-top: 8px;
+
+      /* Estilo para el header de CUALQUIER modal de reserva */
+  .modal-reserva .modal-header {
+    background-color: #9e3535 !important; /* El color vinotinto */
+    color: white !important; /* Texto blanco */
+    border-bottom: none !important; /* Quita el borde inferior si lo hubiera */
+  }
+
+  /* Estilo para el título dentro del header */
+  .modal-reserva .modal-title {
+    color: white !important;
+    font-weight: bold;
+  }
+
+  /* Estilo para el botón de cierre (la 'X') */
+  .modal-reserva .modal-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%); /* Invierte el color del SVG del botón a blanco */
+  }
+  }
+
+  .modal-reserva .modal-header {
+    background-color: #9e3535 !important;
+    color: white !important;
+    border-bottom: none;
+  }
+
+  .modal-reserva .modal-header .modal-title {
+    color: white !important;
+    font-weight: bold;
+  }
+
+  .modal-reserva .modal-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+  }
 
 `
+const calculateTotalAndRemaining = (currentForm) => {
+  let servicePrice = 0;
+  if (currentForm.numberPeople && currentForm.servicios && currentForm.servicios.length > 0) {
+    const people = Number.parseInt(currentForm.numberPeople, 10);
+    if (!isNaN(people) && people > 0) {
+      currentForm.servicios.forEach((service) => {
+        if (service && service.price) {
+          servicePrice += Number.parseFloat(service.price) * people;
+        }
+      });
+    }
+  }
 
-// --- COMPONENTE PRINCIPAL ---
+  const decorationPrice = Number.parseFloat(currentForm.decorationAmount || 0);
+  const additionalPrice = Number.parseFloat(currentForm.additionalServiceAmount || 0);
+  const total = servicePrice + decorationPrice + additionalPrice;
+  const totalAbonos = (currentForm.pass || []).reduce(
+    (sum, abono) => sum + Number.parseFloat(abono.cantidad || 0),
+    0
+  );
+
+  const restante = total - totalAbonos;
+
+  return {
+    ...currentForm,
+    totalPay: total.toString(),
+    remaining: restante.toFixed(0),
+  };
+};
+
+
 const Calendario = () => {
-  // --- Estados del Componente ---
   const [data, setData] = useState([])
   const [availableServices, setAvailableServices] = useState([])
   const [selectedReserva, setSelectedReserva] = useState(null)
@@ -391,9 +528,16 @@ const Calendario = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 6
   const [allClients, setAllClients] = useState([]); 
-
-  // --- Estados para el modal de confirmación ---
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [popoverTarget, setPopoverTarget] = useState(null);
+  const [popoverReserva, setPopoverReserva] = useState(null); 
   const [confirmModalOpen, setConfirmModalOpen] = useState(false)
+  // --- INICIO: Estado para el modal de reprogramación ---
+const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
+const [rescheduleData, setRescheduleData] = useState({ id: null, dateTime: '' });
+const [rescheduleErrors, setRescheduleErrors] = useState({});
+const [isRescheduling, setIsRescheduling] = useState(false);
+// --- FIN: Estado para el modal de reprogramación ---
   const [confirmModalProps, setConfirmModalProps] = useState({
     title: "",
     message: null,
@@ -403,15 +547,9 @@ const Calendario = () => {
   })
   const [isConfirmActionLoading, setIsConfirmActionLoading] = useState(false)
   const confirmActionRef = useRef(null)
-
-  // --- NUEVO: Estado para el nombre del campo de monto adicional ---
   const [additionalAmountLabel, setAdditionalAmountLabel] = useState("Monto Decoración")
-  // --- NUEVO: Estado para controlar la visibilidad del input Monto Decoración ---
   const [showDecorationAmountInput, setShowDecorationAmountInput] = useState(false)
-  // --- NUEVO: Estado para controlar la visibilidad del input de servicios adicionales ---
   const [showAdditionalServiceAmountInput, setShowAdditionalServiceAmountInput] = useState(false)
-  
-  // --- INICIO: ESTADO Y LÓGICA PARA FORMULARIO POR PASOS ---
   const [currentStep, setCurrentStep] = useState(1)
   const totalSteps = 3
 
@@ -488,17 +626,14 @@ const Calendario = () => {
     return isValid;
   };
 
-  // --- FIN: ESTADO Y LÓGICA PARA FORMULARIO POR PASOS ---
 
-  // --- NUEVA FUNCIÓN: Convertir formato de tiempo a número ---
   const convertTimeFormatToNumber = (timeStr) => {
     if (!timeStr) return ""
 
-    // Si ya es un número, devolverlo directamente
+    
     if (!isNaN(Number(timeStr))) return timeStr
 
     try {
-      // Intentar extraer los segundos del formato "00:00:02"
       const parts = timeStr.split(":")
       if (parts.length === 3) {
         const hours = Number.parseInt(parts[0], 10) || 0
@@ -513,7 +648,7 @@ const Calendario = () => {
     }
   }
 
-  // --- NUEVA FUNCIÓN: Calcular monto de decoración según número de personas ---
+
   const calculateDecorationAmount = (numPeople) => {
     if (!numPeople || isNaN(Number(numPeople))) return ""
 
@@ -530,12 +665,11 @@ const Calendario = () => {
     }
   }
 
-  // --- NUEVA FUNCIÓN: Verificar si un servicio es de decoración ---
   const isDecorationService = (serviceName) => {
     return serviceName && serviceName.toLowerCase().includes("decoracion")
   }
 
-  // --- Opciones formateadas para react-select ---
+
   const serviceOptions = availableServices.map((service) => ({
     value: service.id,
     label: service.Nombre || service.name || service.Name || `Servicio ${service.id}`,
@@ -581,11 +715,9 @@ const Calendario = () => {
     [toggleConfirmModal],
   )
 
-// USA ESTA VERSIÓN PARA DEPURAR LOS SERVICIOS
-// REEMPLAZA TU FUNCIÓN ENTERA CON ESTA VERSIÓN FINAL
 const loadInitialData = useCallback(async () => {
     setLoading(true);
-    console.log("--- INICIANDO CARGA INICIAL ---");
+    console.log("--- INICIANDO CARGA INICIAL (VERSIÓN DEPURACIÓN) ---");
     try {
         const [fetchedReservations, fetchedServices, fetchedClients] = await Promise.all([
             reservasService.getAllReservations(),
@@ -593,40 +725,77 @@ const loadInitialData = useCallback(async () => {
             clientesService.getAllClientes(),
         ]);
 
-        console.log("--- DATOS RECIBIDOS DE APIS ---");
-        console.log("SERVICIOS CRUDOS RECIBIDOS:", fetchedServices);
-        
-        // --- PROCESAMIENTO DE SERVICIOS (LÓGICA IGUAL A CLIENTES) ---
-        if (Array.isArray(fetchedServices)) {
-            // ELIMINAMOS EL FILTRO DE STATUS. Asumimos que la API ya devuelve solo los activos.
-            console.log(`PROCESANDO ${fetchedServices.length} servicios recibidos (sin filtro de estado).`);
+        console.log("Reservas crudas recibidas:", fetchedReservations);
+        console.log("Clientes crudos recibidos:", fetchedClients);
 
+        const allClientsData = fetchedClients || [];
+        setAllClients(allClientsData);
+
+        // --- DEPURACIÓN: Creación del Mapa de Clientes ---
+        const clientMap = new Map();
+        if (Array.isArray(allClientsData)) {
+            allClientsData.forEach(client => {
+             
+                const clientId = Number(client.idCustomers || client.id);
+                const clientName = client.FullName || client.fullName || client.name || client.NombreCompleto;
+
+                if (!isNaN(clientId) && clientName) {
+                    clientMap.set(clientId, clientName);
+                } else {
+                    console.warn("Cliente omitido del mapa por datos inválidos:", client);
+                }
+            });
+            console.log("Mapa de clientes creado con éxito:", clientMap);
+        } else {
+            console.error("ERROR: `fetchedClients` no es un array. No se pudo crear el mapa.");
+        }
+        
+        // --- DEPURACIÓN: Enriquecimiento de Reservas ---
+        const enrichedReservations = (fetchedReservations || []).map(reserva => {
+            // 3. Aseguramos que el ID de la reserva a buscar sea un número
+            const reservationClientId = Number(reserva.idCustomers);
+            let fullName = "Cliente Desconocido"; // Valor por defecto
+
+            if (!isNaN(reservationClientId)) {
+                // 4. Buscamos en el mapa
+                if (clientMap.has(reservationClientId)) {
+                    fullName = clientMap.get(reservationClientId);
+                } else {
+                    // Si no lo encuentra, lo registramos para saber por qué
+                    console.warn(`ADVERTENCIA: No se encontró el cliente con ID ${reservationClientId} en el mapa.`);
+                }
+            } else {
+                 console.error(`ERROR: La reserva con ID ${reserva.idReservations} tiene un idCustomers inválido:`, reserva.idCustomers);
+            }
+            
+            return {
+                ...reserva,
+                fullName: fullName 
+            };
+        });
+        
+        console.log("Reservas ENRIQUECIDAS (resultado final):", enrichedReservations);
+        setData(enrichedReservations);
+        
+        // La lógica de servicios sigue igual
+        if (Array.isArray(fetchedServices)) {
             const normalizedServices = fetchedServices.map(service => ({
                 id: service.idAditionalServices || service.id,
-                // 'label' y 'value' son los campos que react-select necesita
                 label: service.name || `Servicio #${service.idAditionalServices || service.id}`,
                 value: service.idAditionalServices || service.id,
                 price: service.price || 0,
-                ...service // Incluimos el resto de las propiedades del servicio
+                ...service
             }));
-            
-            console.log("SERVICIOS NORMALIZADOS (para el selector):", normalizedServices);
             setAvailableServices(normalizedServices);
         } else {
-            console.error("ERROR: La respuesta de servicios NO es un array.");
             setAvailableServices([]);
         }
-
-        // --- PROCESAMIENTO DE CLIENTES Y RESERVAS ---
-        setAllClients(fetchedClients || []);
-        setData(fetchedReservations || []);
 
     } catch (error) {
         console.error("ERROR CATASTRÓFICO en loadInitialData:", error);
         toast.error("Fallo al cargar datos iniciales.");
     } finally {
         setLoading(false);
-        console.log("--- CARGA INICIAL FINALIZADA ---");
     }
 }, []);
 
@@ -634,18 +803,24 @@ const loadInitialData = useCallback(async () => {
     loadInitialData()
   }, [loadInitialData])
 
-  // --- Mapeo de eventos para FullCalendar (MODIFICADO para usar eventContent) ---
-  const events = data.map((reserva) => ({
-    id: reserva.idReservations?.toString() || reserva.id?.toString(),
-    title: reserva.fullName || reserva.evento || `Reserva ${reserva.idReservations || reserva.id}`,
-    start: reserva.dateTime,
-    extendedProps: {
-      // Pasamos datos extra al evento
-      status: reserva.status || "default",
-      evenType: reserva.evenType || "",
-      numberPeople: reserva.numberPeople || "",
-    },
-  }))
+ 
+  const events = data.map((reserva) => {
+    const reservationId = reserva.idReservations || reserva.id;
+    const clientName = reserva.fullName || 'Cliente no asignado';
+
+    return {
+        id: reservationId?.toString(),
+     
+        title: `Reserva ${reservationId}: ${clientName}`, 
+        start: reserva.dateTime,
+        extendedProps: {
+            status: reserva.status || "default",
+            evenType: reserva.evenType || "",
+            numberPeople: reserva.numberPeople || "",
+            originalClientName: clientName, 
+        },
+    };
+});
 
   
   const checkDuplicateReservation = useCallback(
@@ -758,189 +933,150 @@ const loadInitialData = useCallback(async () => {
     setModalOpen(true)
   }
 
-  const handleEventClick = (info) => {
-    const idReservations = Number.parseInt(info.event.id, 10)
-    if (isNaN(idReservations)) {
-      console.error("ID de reserva inválido:", info.event.id)
-      toast.error("ID de reserva inválido.")
-      return
-    }
-    setCurrentStep(1); 
-    setLoading(true)
-    reservasService
-      .getReservationById(idReservations)
-      .then((detailedReservation) => {
-        if (detailedReservation && !detailedReservation.error) {
-           // --- NUEVA LÓGICA AQUÍ ---
-                // Buscamos el cliente en nuestra lista completa (activos e inactivos)
-                const clienteAsociado = allClients.find(
-                  c => c.idCustomers === detailedReservation.idCustomers
-                );
-                
-                // Usamos el nombre del cliente encontrado, o el que viene en la reserva, o un valor por defecto.
-               const nombreClienteParaMostrar = clienteAsociado 
-    ? (clienteAsociado.FullName || clienteAsociado.fullName || clienteAsociado.nombre || 'Cliente no encontrado')
-    : (detailedReservation.fullName || 'Cliente no disponible');
-                // --- FIN DE LA NUEVA LÓGICA ---
-          setSelectedReserva(detailedReservation)
-          const selectedServiceValues = (
-            Array.isArray(detailedReservation.AditionalServices) ? detailedReservation.AditionalServices : []
-          ).map((service) => ({
-            value: service.idAditionalServices,
-            label: service.name || `Servicio ${service.idAditionalServices}`,
-            price: service.price || service.Price || service.precio || 0,
-          }))
 
-          // --- LÓGICA  PARA MONTO DECORACIÓN Y SERVICIOS ADICIONALES ---
-          const tieneDecoracion = selectedServiceValues.some((s) => isDecorationService(s.label))
-          const tieneOtrosServicios = selectedServiceValues.some((s) => !isDecorationService(s.label))
-          const esCumpleanos =
-            detailedReservation.evenType && detailedReservation.evenType.toLowerCase().includes("cumpleaños")
 
-          let currentDecorationAmount = detailedReservation.decorationAmount || "0"
-          let currentAdditionalServiceAmount = detailedReservation.additionalServiceAmount || "0"
-
-          if (tieneDecoracion) {
-            setAdditionalAmountLabel("Monto Decoración")
-            if (esCumpleanos) {
-              setShowDecorationAmountInput(false)
-              currentDecorationAmount = "0"
-            } else {
-              setShowDecorationAmountInput(true)
-            
-              if (!currentDecorationAmount && detailedReservation.numberPeople) {
-                currentDecorationAmount = calculateDecorationAmount(detailedReservation.numberPeople)
-              }
-            }
-          } else {
-            setShowDecorationAmountInput(false)
-            currentDecorationAmount = "0"
-          }
-
-         
-          if (tieneOtrosServicios) {
-            setShowAdditionalServiceAmountInput(true)
-          } else {
-            setShowAdditionalServiceAmountInput(false)
-            currentAdditionalServiceAmount = "0"
-          }
-
-          let formattedPass = []
-          if (Array.isArray(detailedReservation.pass)) {
-            formattedPass = detailedReservation.pass.map((abono) => ({
-              fecha: abono.fecha ? abono.fecha.split("T")[0] : "", 
-              cantidad: abono.cantidad || 0,
-            }))
-          }
-          const idCliente =
-            detailedReservation.idCustomers ||
-            (detailedReservation.Customer ? detailedReservation.Customer.idCustomers : null)
-
-          // Asegurarse de que la duración se establece correctamente
-          const duration = detailedReservation.timeDurationR || detailedReservation.duration || ""
-          console.log("Duración cargada del evento:", duration, "tipo:", typeof duration)
-
-          // Convertir el formato de tiempo a número
-          const durationAsNumber = convertTimeFormatToNumber(duration)
-
-          // Asegurarse de que el estado se establece correctamente
-          let statusToUse = detailedReservation.status
-          console.log("Estado recibido:", statusToUse, "tipo:", typeof statusToUse)
-
-          // Si el estado es booleano, convertirlo a string
-          if (typeof statusToUse === "boolean") {
-            statusToUse = statusToUse === true ? "confirmada" : "pendiente"
-          }
-          // Si el estado es string pero no es uno de los valores válidos, establecer un valor por defecto
-          else if (
-            typeof statusToUse === "string" &&
-            !["pendiente", "confirmada", "en_proceso", "terminada", "anulada"].includes(statusToUse)
-          ) {
-            statusToUse = "pendiente"
-          }
-
-          console.log("Estado a usar:", statusToUse)
-          // --- AQUÍ ES DONDE AJUSTAMOS EL dateTime ---
-          let dateTimeForInput = ""
-          if (detailedReservation.dateTime) {
-            // <--- ESTE ES EL IF QUE DEBES ASEGURARTE DE TENER
-            const dateObj = new Date(detailedReservation.dateTime) // Interpreta la cadena UTC
-
-            // Formatear para el input datetime-local (YYYY-MM-DDTHH:MM en hora local del navegador)
-            const year = dateObj.getFullYear()
-            const month = (dateObj.getMonth() + 1).toString().padStart(2, "0")
-            const day = dateObj.getDate().toString().padStart(2, "0")
-            const hours = dateObj.getHours().toString().padStart(2, "0")
-            const minutes = dateObj.getMinutes().toString().padStart(2, "0")
-
-            dateTimeForInput = `${year}-${month}-${day}T${hours}:${minutes}`
-            console.log("[handleEventClick] Fecha UTC original:", detailedReservation.dateTime)
-            console.log("[handleEventClick] Fecha formateada para input (local):", dateTimeForInput)
-          } else {
-            console.warn("[handleEventClick] detailedReservation.dateTime está vacío o no definido.")
-          }
-          // Modificar el objeto form para incluir el estado correcto
-          setForm({
-            ...emptyForm,
-            ...detailedReservation,
-            id: detailedReservation.idReservations,
-            idCustomers: idCliente,
-            fullName: nombreClienteParaMostrar, // Usamos el nombre que encontramos,
-            distintive:
-              detailedReservation.distintive ||
-              (detailedReservation.Customer ? detailedReservation.Customer.distintive : ""),
-            customerCategory:
-              detailedReservation.customerCategory ||
-              (detailedReservation.Customer ? detailedReservation.customerCategory : ""),
-            email:
-              detailedReservation.email || (detailedReservation.Customer ? detailedReservation.Customer.email : ""),
-            cellphone:
-              detailedReservation.cellphone ||
-              (detailedReservation.Customer ? detailedReservation.Customer.cellphone : ""),
-            address:
-              detailedReservation.address || (detailedReservation.Customer ? detailedReservation.Customer.address : ""),
-            dateTime: dateTimeForInput,
-            servicios: selectedServiceValues,
-            pass:
-              formattedPass.length > 0
-                ? formattedPass
-                : [{ fecha: new Date().toISOString().split("T")[0], cantidad: "50000" }], // Asegurar al menos un abono con fecha y monto mínimo
-            timeDurationR: durationAsNumber, // Usar el valor convertido
-            status: statusToUse,
-            decorationAmount: currentDecorationAmount, // Asegurarse de que se usa el monto de decoración actualizado
-            additionalServiceAmount: currentAdditionalServiceAmount, // NUEVO: Campo para servicios adicionales
-          })
-          console.log(
-            "Duración cargada:",
-            durationAsNumber,
-            detailedReservation.timeDurationR,
-            "tipo:",
-            typeof detailedReservation.timeDurationR,
-          )
-          updateRestante(detailedReservation.totalPay, formattedPass)
-          setErrors({})
-          setClientSearchText("")
-          setClientSearchResults([])
-          setShowClientSearch(false)
-          setModalOpen(true)
-        } else {
-          console.error(
-            "Reserva no encontrada o error al cargar. ID:",
-            idReservations,
-            "Respuesta:",
-            detailedReservation,
-          )
-          toast.error(detailedReservation?.errorMessage || "No se pudo encontrar la reserva seleccionada.")
-        }
-      })
-      .catch((error) => {
-        console.error("Error fetching reservation details:", error)
-        toast.error(`No se pudo cargar los detalles de la reserva: ${error.message}`)
-      })
-      .finally(() => {
-        setLoading(false)
-      })
+const handleEventClick = (info) => {
+  if (popoverOpen) {
+    setPopoverOpen(false);
   }
+
+  const idReservations = Number.parseInt(info.event.id, 10);
+  if (isNaN(idReservations)) return;
+
+  const reservaSeleccionada = data.find(r => r.idReservations === idReservations);
+  if (!reservaSeleccionada) {
+    toast.error("No se encontraron los detalles de la reserva.");
+    return;
+  }
+
+  setPopoverReserva(reservaSeleccionada);
+  setPopoverTarget(info.el);
+  setPopoverOpen(true);
+};
+
+
+// 2. La función "puente" que se llama desde el popover
+const openEditModalFromPopover = () => {
+  if (!popoverReserva) return;
+  
+  setPopoverOpen(false);
+  
+  const eventInfo = { event: { id: String(popoverReserva.idReservations) } };
+  
+  openEditModal(eventInfo); 
+};
+
+
+// 3. Tu antigua handleEventClick, ahora RENOMBRADA a openEditModal (larga, para abrir el modal de edición)
+const openEditModal = (info) => {
+  const idReservations = Number.parseInt(info.event.id, 10);
+  if (isNaN(idReservations)) {
+    console.error("ID de reserva inválido:", info.event.id);
+    toast.error("ID de reserva inválido.");
+    return;
+  }
+
+  setCurrentStep(1);
+  setLoading(true);
+
+  const reservationFromState = data.find(
+    (r) => Number(r.idReservations) === idReservations
+  );
+  
+  if (!reservationFromState) {
+      toast.error("Error interno: No se encontró la reserva en la lista local.");
+      setLoading(false);
+      return;
+  }
+
+  reservasService
+    .getReservationById(idReservations)
+    .then((detailedReservation) => {
+      if (detailedReservation && !detailedReservation.error) {
+        
+        setSelectedReserva(detailedReservation);
+
+        const selectedServiceValues = (
+          Array.isArray(detailedReservation.AditionalServices) ? detailedReservation.AditionalServices : []
+        ).map((service) => ({
+          value: service.idAditionalServices,
+          label: service.name || `Servicio ${service.idAditionalServices}`,
+          price: service.price || service.Price || service.precio || 0,
+        }));
+        
+        const formattedPass = (Array.isArray(detailedReservation.pass) ? detailedReservation.pass : []).map((abono) => ({
+            fecha: abono.fecha ? abono.fecha.split("T")[0] : "",
+            cantidad: abono.cantidad || 0,
+        }));
+        
+        let dateTimeForInput = "";
+        if (detailedReservation.dateTime) {
+          const dateObj = new Date(detailedReservation.dateTime);
+          const year = dateObj.getFullYear();
+          const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+          const day = dateObj.getDate().toString().padStart(2, "0");
+          const hours = dateObj.getHours().toString().padStart(2, "0");
+          const minutes = dateObj.getMinutes().toString().padStart(2, "0");
+          dateTimeForInput = `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+        
+        const cleanFormData = {
+          id: detailedReservation.idReservations,
+          idCustomers: detailedReservation.idCustomers,
+          fullName: reservationFromState.fullName,
+          distintive: detailedReservation.distintive || "",
+          customerCategory: detailedReservation.customerCategory || "",
+          email: detailedReservation.email || "",
+          cellphone: detailedReservation.cellphone || "",
+          address: detailedReservation.address || "",
+          dateTime: dateTimeForInput,
+          timeDurationR: convertTimeFormatToNumber(detailedReservation.timeDurationR || ""),
+          evenType: detailedReservation.evenType || "",
+          numberPeople: detailedReservation.numberPeople || "",
+          matter: detailedReservation.matter || "",
+          status: detailedReservation.status || "pendiente",
+          servicios: selectedServiceValues,
+          pass: formattedPass.length > 0 ? formattedPass : [{ fecha: new Date().toISOString().split("T")[0], cantidad: "50000" }],
+          decorationAmount: detailedReservation.decorationAmount || "0",
+          additionalServiceAmount: detailedReservation.additionalServiceAmount || "0",
+          totalPay: detailedReservation.totalPay || "0",
+          remaining: detailedReservation.remaining || "0",
+        };
+        
+        setForm(cleanFormData);
+        
+        const tieneDecoracion = selectedServiceValues.some((s) => isDecorationService(s.label));
+        const tieneOtrosServicios = selectedServiceValues.some((s) => !isDecorationService(s.label));
+        const esCumpleanos = cleanFormData.evenType && cleanFormData.evenType.toLowerCase().includes("cumpleaños");
+        
+        if (tieneDecoracion) {
+          setAdditionalAmountLabel("Monto Decoración");
+          setShowDecorationAmountInput(!esCumpleanos);
+        } else {
+          setShowDecorationAmountInput(false);
+        }
+        setShowAdditionalServiceAmountInput(tieneOtrosServicios);
+
+        updateRestante(cleanFormData.totalPay, cleanFormData.pass);
+        
+        setErrors({});
+        setClientSearchText("");
+        setClientSearchResults([]);
+        setShowClientSearch(false);
+        setModalOpen(true);
+        
+      } else {
+        toast.error(detailedReservation?.errorMessage || "No se pudo cargar la reserva.");
+      }
+    })
+    .catch((error) => {
+      console.error("Error fetching reservation details:", error);
+      toast.error(`Error al cargar detalles: ${error.message}`);
+    })
+    .finally(() => {
+      setLoading(false);
+    });
+};
 
   const handleEventDrop = async (info) => {
     const { event } = info
@@ -993,7 +1129,7 @@ const loadInitialData = useCallback(async () => {
       pass: (fullReservaData.pass || []).map((p) => ({
         fecha: p.fecha ? p.fecha.split("T")[0] : "",
         cantidad: p.cantidad,
-      })), // Asegurar formato fecha
+      })), 
     }
     delete updatedReservaData.AditionalServices
     delete updatedReservaData.Customer
@@ -1031,7 +1167,7 @@ const loadInitialData = useCallback(async () => {
     setSearchText(e.target.value)
   }
 
-// REEMPLAZA TODA TU FUNCIÓN con esta versión para depurar
+
 const handleClientSearch = async (searchValue) => {
     setClientSearchText(searchValue);
     if (searchValue.length < 2) {
@@ -1044,7 +1180,7 @@ const handleClientSearch = async (searchValue) => {
     try {
         // 1. Llamamos a la API
         const results = await clientesService.searchClientes(searchValue);
-        console.log("API devolvió:", results); // Log para ver qué llega
+        console.log("API devolvió:", results); 
 
         if (Array.isArray(results)) {
             // 2. Transformamos los datos SIN FILTRAR NADA
@@ -1053,13 +1189,12 @@ const handleClientSearch = async (searchValue) => {
                 const id = cliente.idCustomers || cliente.id;
                 const nombre = cliente.FullName || cliente.NombreCompleto || cliente.name || cliente.nombre;
 
-                console.log(`Mapeando cliente ID: ${id}, Nombre: ${nombre}`); // Log para cada cliente
+                console.log(`Mapeando cliente ID: ${id}, Nombre: ${nombre}`); 
 
                 return {
                     id: id,
                     idCustomers: Number(id),
-                    FullName: nombre || `Cliente ${id}`, // Aseguramos que siempre haya un nombre
-                    // Dejamos los otros campos por ahora para simplificar
+                    FullName: nombre || `Cliente ${id}`, 
                     Distintive: cliente.Distintive || "Regular",
                     CustomerCategory: cliente.CustomerCategory || "",
                     Email: cliente.Email || cliente.email || "",
@@ -1068,7 +1203,7 @@ const handleClientSearch = async (searchValue) => {
                 };
             });
             
-            console.log("Resultados normalizados:", normalizedResults); // Log del resultado final
+            console.log("Resultados normalizados:", normalizedResults); 
             setClientSearchResults(normalizedResults);
 
         } else {
@@ -1095,7 +1230,7 @@ const handleClientSearch = async (searchValue) => {
       return
     }
 
-    // Verificar si el cliente ya tiene una reserva en la fecha seleccionada
+  
     if (form.dateTime && checkDuplicateReservation(idCustomersNum, form.dateTime, selectedReserva?.idReservations)) {
       toast.error(
         "Este cliente ya tiene una reserva en esta fecha. No se permiten múltiples reservas para el mismo cliente en un día.",
@@ -1176,7 +1311,7 @@ const handleClientSearch = async (searchValue) => {
     const totalPagoNum = Number.parseFloat(totalPay || 0)
     const restanteNum = totalPagoNum - totalAbonosNum
     const restanteFormatted = isNaN(restanteNum) ? "" : restanteNum.toFixed(0)
-    setForm((prevForm) => ({ ...prevForm, remaining: restanteFormatted }))
+    setForm(prevForm => calculateTotalAndRemaining(prevForm));
   }, [])
 
   // --- MODIFICADO: handleMultiServiceChange para manejar servicios adicionales ---
@@ -1207,10 +1342,8 @@ const handleClientSearch = async (searchValue) => {
       updatedForm.decorationAmount = "0"
     }
 
-    // NUEVO: Lógica para servicios adicionales no decoración
     if (tieneOtrosServicios) {
       setShowAdditionalServiceAmountInput(true)
-      // Si no hay monto previo, inicializar vacío para que el usuario lo complete
       if (!updatedForm.additionalServiceAmount) {
         updatedForm.additionalServiceAmount = ""
       }
@@ -1220,14 +1353,8 @@ const handleClientSearch = async (searchValue) => {
     }
     
 
-    // Calcular y actualizar el monto total si hay número de personas
-    if (updatedForm.numberPeople) {
-      const calculatedPrice = calculateServicePrice(updatedForm.numberPeople, currentServices)
-      if (calculatedPrice >= 0) {
-        updatedForm.totalPay = calculatedPrice.toString()
-      }
-    }
-
+    const finalForm = calculateTotalAndRemaining(updatedForm);
+    setForm(finalForm)
     setForm(updatedForm)
     setErrors((prevErrors) => ({ ...prevErrors, servicios: validateField("servicios", currentServices) }))
     updateRestante(updatedForm.totalPay, updatedForm.pass) 
@@ -1271,8 +1398,14 @@ const handleClientSearch = async (searchValue) => {
     return ""
   }, [])
 
-   const validateField = useCallback(
-    (name, value) => {
+     const validateField = useCallback(
+    (name, value, overrideContext = {}) => {
+      // Determina qué valores usar: los que se pasan explícitamente o los del estado del componente.
+      // Esto mantiene la compatibilidad con el formulario principal y añade flexibilidad.
+      const reservationIdForCheck = overrideContext.reservationId || selectedReserva?.idReservations;
+      const customerIdForCheck = overrideContext.customerId || form.idCustomers;
+      const originalDateTimeForCheck = overrideContext.originalDateTime || selectedReserva?.dateTime;
+
       if (name === "idCustomers") {
         if (value === null || value === undefined || value === "" || value <= 0 || isNaN(Number(value))) {
           return "Debe buscar y seleccionar un cliente válido."
@@ -1283,46 +1416,45 @@ const handleClientSearch = async (searchValue) => {
         case "fullName":
           return value?.trim() ? "" : "Nombre de cliente requerido (seleccione un cliente)."
 
-        
-        
-case "dateTime": {
-    if (!value) return "Fecha y hora requeridas.";
+        case "dateTime": {
+            if (!value) return "Fecha y hora requeridas.";
 
-    const selectedDate = new Date(value);
-    
-    
-    const selectedHour = selectedDate.getHours(); 
+            const selectedDate = new Date(value);
+            const selectedHour = selectedDate.getHours(); 
 
-    
-    if (selectedHour < 12 || selectedHour > 21) {
-        return "El horario para reservas es únicamente de 12:00 PM a 9:00 PM.";
-    }
-    
+            if (selectedHour < 12 || selectedHour > 21) {
+                return "El horario para reservas es únicamente de 12:00 PM a 9:00 PM.";
+            }
 
-    const now = new Date();
-    now.setSeconds(0, 0);
+            const now = new Date();
+            now.setSeconds(0, 0);
 
-    if (selectedDate < now) {
-        if (!selectedReserva) {
-            return "La fecha y hora no pueden ser en el pasado.";
+            // La lógica original para fechas pasadas se conserva intacta.
+            // Utiliza la ID y la fecha original determinadas dinámicamente.
+            if (selectedDate < now) {
+                // Si NO hay una ID de reserva, es una reserva nueva. No puede ser en el pasado.
+                if (!reservationIdForCheck) {
+                    return "La fecha y hora no pueden ser en el pasado.";
+                }
+                // Si ES una reserva existente, verifica si se está cambiando a una FECHA PASADA DIFERENTE.
+                const originalDate = new Date(originalDateTimeForCheck);
+                if (selectedDate.getTime() !== originalDate.getTime()) {
+                    return "No se puede cambiar la fecha a una fecha pasada.";
+                }
+            }
+
+            // Usa la ID correcta para ignorar la propia reserva en la comprobación de conflictos.
+            if (checkTimeConflict(value, reservationIdForCheck)) {
+                return "Ya existe una reserva en esta hora. Por favor, seleccione otra hora.";
+            }
+
+            // Usa el ID de cliente correcto para la comprobación de duplicados.
+            if (customerIdForCheck && checkDuplicateReservation(customerIdForCheck, value, reservationIdForCheck)) {
+                return "Este cliente ya tiene una reserva en esta fecha.";
+            }
+
+            return ""; 
         }
-        const originalDate = new Date(selectedReserva.dateTime);
-        if (selectedDate.getTime() !== originalDate.getTime()) {
-            return "No se puede cambiar la fecha a una fecha pasada.";
-        }
-    }
-
-    if (checkTimeConflict(value, selectedReserva?.idReservations)) {
-        return "Ya existe una reserva en esta hora. Por favor, seleccione otra hora.";
-    }
-
-    if (form.idCustomers && checkDuplicateReservation(form.idCustomers, value, selectedReserva?.idReservations)) {
-        return "Este cliente ya tiene una reserva en esta fecha.";
-    }
-
-    return ""; 
-}
-        
 
         case "timeDurationR":
           return value ? "" : "Duración requerida."
@@ -1332,7 +1464,6 @@ case "dateTime": {
           const numPeople = Number.parseInt(value)
           return !isNaN(numPeople) && numPeople > 0 ? "" : "Nro. Personas debe ser > 0."
         case "decorationAmount":
-        
           if (showDecorationAmountInput) {
             const decorAmount = Number.parseFloat(value)
             return !isNaN(decorAmount) && decorAmount >= 0 ? "" : `${additionalAmountLabel} debe ser >= 0.`
@@ -1355,6 +1486,7 @@ case "dateTime": {
           return ""
       }
     },
+    // Las dependencias se mantienen, ya que la función todavía necesita acceso a ellas para su lógica de fallback.
     [
       checkDuplicateReservation,
       checkTimeConflict,
@@ -1429,7 +1561,7 @@ case "dateTime": {
     const { name, value } = e.target
     console.log(`Cambiando ${name} a: ${value}`) 
 
-    const updatedForm = { ...form, [name]: value }
+    let updatedForm = { ...form, [name]: value };
 
     
     if (name === "dateTime") {
@@ -1461,47 +1593,23 @@ case "dateTime": {
     }
 
     
-    if (name === "numberPeople" || name === "evenType") {
-      const numPeople = name === "numberPeople" ? value : updatedForm.numberPeople
-      const currentEvenType = name === "evenType" ? value : updatedForm.evenType
-      const currentServices = updatedForm.servicios
-
-      if (numPeople && currentServices && currentServices.length > 0) {
-        const calculatedPrice = calculateServicePrice(numPeople, currentServices)
-        if (calculatedPrice >= 0) {
-          updatedForm.totalPay = calculatedPrice.toString()
-        }
-      }
-
-      const tieneDecoracion = currentServices.some((s) => isDecorationService(s.label))
-      const tieneOtrosServicios = currentServices.some((s) => !isDecorationService(s.label))
-      const esCumpleanos = currentEvenType && currentEvenType.toLowerCase().includes("cumpleaños")
-
-      
+ if (["numberPeople", "evenType", "decorationAmount", "additionalServiceAmount"].includes(name)) {
+    
+    // Si cambia el tipo de evento, ajustamos la visibilidad del monto de decoración
+    if (name === "evenType") {
+      const tieneDecoracion = updatedForm.servicios.some((s) => isDecorationService(s.label));
+      const esCumpleanos = value && value.toLowerCase().includes("cumpleaños");
       if (tieneDecoracion) {
-        setAdditionalAmountLabel("Monto Decoración")
+        setShowDecorationAmountInput(!esCumpleanos);
         if (esCumpleanos) {
-          setShowDecorationAmountInput(false)
-          updatedForm.decorationAmount = "0"
-        } else {
-          setShowDecorationAmountInput(true)
-          updatedForm.decorationAmount = numPeople
-            ? calculateDecorationAmount(numPeople)
-            : updatedForm.decorationAmount || ""
+          updatedForm.decorationAmount = "0"; 
         }
-      } else {
-        setShowDecorationAmountInput(false)
-        updatedForm.decorationAmount = "0"
-      }
-
-      
-      if (tieneOtrosServicios) {
-        setShowAdditionalServiceAmountInput(true)
-      } else {
-        setShowAdditionalServiceAmountInput(false)
-        updatedForm.additionalServiceAmount = "0"
       }
     }
+    
+    // Llamamos a la función central para que actualice totalPay y remaining
+    updatedForm = calculateTotalAndRemaining(updatedForm);
+  }
 
     setForm(updatedForm)
 
@@ -1696,100 +1804,75 @@ case "dateTime": {
     showAdditionalServiceAmountInput,
   ])
 
-  // Función para ejecutar el guardado
-  const executeSaveReserva = useCallback(
-    async (details) => {
-      const isEditing = details?.isEditing || false
-      const formDataToSave = details?.formData || form 
 
-      setIsConfirmActionLoading(true)
-      const toastId = toast.loading(isEditing ? "Actualizando reserva..." : "Creando reserva...")
+const executeSaveReserva = useCallback(
+  async (details) => {
+    const isEditing = details?.isEditing || false;
+    const formDataToSave = details?.formData || form;
 
-      try {
-        const idAditionalServices = (formDataToSave.servicios || []).map((option) => option.value)
-        const abonosToSend = (formDataToSave.pass || []).map((ab) => ({
-          fecha: ab.fecha,
-          cantidad: Number.parseFloat(ab.cantidad || 0),
-        }))
-        const idCustomersNum = Number(formDataToSave.idCustomers)
-        if (isNaN(idCustomersNum)) throw new Error("ID de cliente inválido al guardar.")
+    setIsConfirmActionLoading(true);
+    const toastId = toast.loading(isEditing ? "Actualizando reserva..." : "Creando reserva...");
 
-        if (isEditing) {
-          const reservationId = selectedReserva.idReservations || formDataToSave.id
-          if (!reservationId) throw new Error("No se pudo identificar la reserva a actualizar.")
-        }
+    try {
+     
+      const dataToSend = {
+        idCustomers: formDataToSave.idCustomers,
+        dateTime: formDataToSave.dateTime,
+        numberPeople: formDataToSave.numberPeople,
+        matter: formDataToSave.matter,
+        timeDurationR: formDataToSave.timeDurationR,
+        pass: formDataToSave.pass,
+        decorationAmount: formDataToSave.decorationAmount,
+        remaining: formDataToSave.remaining,
+        evenType: formDataToSave.evenType,
+        totalPay: formDataToSave.totalPay,
+        status: formDataToSave.status,
+        idAditionalServices: (formDataToSave.servicios || []).map(s => s.value),
+      };
+      
+      console.log("[executeSaveReserva] Datos que se enviarán al servicio:", dataToSend);
+    
 
-        const dataToSend = {
-          ...formDataToSave, 
-          idCustomers: idCustomersNum,
-          idAditionalServices: idAditionalServices,
-          pass: abonosToSend,
-          numberPeople: Number.parseInt(formDataToSave.numberPeople || 0),
-          decorationAmount: Number.parseFloat(formDataToSave.decorationAmount || 0),
-          additionalServiceAmount: Number.parseFloat(formDataToSave.additionalServiceAmount || 0), 
-          totalPay: Number.parseFloat(formDataToSave.totalPay || 0),
-          remaining: Number.parseFloat(formDataToSave.remaining || 0),
-          status: formDataToSave.status,
-        }
-        dataToSend.timeDurationR = Number(formDataToSave.timeDurationR) || 0
-        dataToSend.timeDurationR = dataToSend.timeDurationR
-
-        delete dataToSend.servicios
-        delete dataToSend.fullName
-        delete dataToSend.distintive
-        delete dataToSend.customerCategory
-        delete dataToSend.email
-        delete dataToSend.cellphone
-        delete dataToSend.address
-
-        if (isEditing) {
-          const reservationId = selectedReserva.idReservations || formDataToSave.id
-          if (!reservationId) throw new Error("No se pudo identificar la reserva a actualizar.")
-          await reservasService.updateReservation(reservationId, dataToSend)
-          setData((prevData) =>
-            prevData.map((r) =>
-              r.idReservations === reservationId
-                ? { ...formDataToSave, idReservations: reservationId, remaining: dataToSend.remaining }
-                : r,
-            ),
+      if (isEditing) {
+        const reservationId = selectedReserva.idReservations || formDataToSave.id;
+        if (!reservationId) throw new Error("No se pudo identificar la reserva a actualizar.");
+        
+        await reservasService.updateReservation(reservationId, dataToSend);
+        
+     
+        setData((prevData) =>
+          prevData.map((r) =>
+            r.idReservations === reservationId
+              ? { ...formDataToSave, idReservations: reservationId }
+              : r
           )
-          toast.success("Reserva actualizada correctamente.", {
-            id: toastId,
-            icon: <CheckCircle className="text-success" />,
-          })
-        } else {
-          const newReservationResponse = await reservasService.createReservation(dataToSend)
-          const newReservationForState = {
-            ...formDataToSave,
-            ...newReservationResponse,
-            idReservations: newReservationResponse.idReservations || newReservationResponse.id,
-            remaining: dataToSend.remaining,
-          }
-          setData((prevData) => [...prevData, newReservationForState])
-          toast.success("Reserva creada correctamente.", {
-            id: toastId,
-            icon: <CheckCircle className="text-success" />,
-          })
-        }
-        toggleConfirmModal()
-        setModalOpen(false)
-      } catch (error) {
-        console.error("Error saving reservation:", error)
-        const errorMessage = error.response?.data?.message || error.message || "No se pudo guardar la reserva."
-        toast.error(`Error: ${errorMessage}`, {
-          id: toastId,
-          icon: <XCircle className="text-danger" />,
-          duration: 5000,
-        })
-        toggleConfirmModal()
-      } finally {
-        setIsConfirmActionLoading(false)
-      }
-    },
-    [form, selectedReserva, toggleConfirmModal],
-  )
+        );
+        toast.success("Reserva actualizada correctamente.", { id: toastId });
 
-  // Función para solicitar confirmación de eliminación (esta función aún existe, aunque el botón del modal se oculte)
+      } else {
+        await reservasService.createReservation(dataToSend);
+        
+        loadInitialData(); 
+        toast.success("Reserva creada correctamente.", { id: toastId });
+      }
+      
+      toggleConfirmModal();
+      setModalOpen(false);
+
+    } catch (error) {
+      console.error("Error guardando la reserva:", error);
+      const errorMessage = error.message || "No se pudo guardar la reserva.";
+      toast.error(`Error: ${errorMessage}`, { id: toastId, duration: 5000 });
+    } finally {
+      setIsConfirmActionLoading(false);
+      if (confirmModalOpen) {
+         toggleConfirmModal();
+      }
+    }
+  },
+  [form, selectedReserva, toggleConfirmModal, loadInitialData, data] 
+);
+  
   const requestDeleteConfirmation = useCallback(
     (id) => {
       if (!id) {
@@ -1824,7 +1907,7 @@ case "dateTime": {
     [data, prepareConfirmation],
   )
 
-  // Función para ejecutar la eliminación (esta función aún existe, aunque el botón del modal se oculte)
+  
   const executeDelete = useCallback(
     async (details) => {
       if (!details || !details.id) {
@@ -1925,6 +2008,93 @@ case "dateTime": {
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber)
   }
+  // --- INICIO: Funciones para reprogramar ---
+const handleOpenRescheduleModal = () => {
+  if (!popoverReserva) return;
+  
+  let currentDateTimeForInput = "";
+  if (popoverReserva.dateTime) {
+      const dateObj = new Date(popoverReserva.dateTime);
+      const year = dateObj.getFullYear();
+      const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+      const day = dateObj.getDate().toString().padStart(2, "0");
+      const hours = dateObj.getHours().toString().padStart(2, "0");
+      const minutes = dateObj.getMinutes().toString().padStart(2, "0");
+      currentDateTimeForInput = `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+
+  setRescheduleData({
+      id: popoverReserva.idReservations,
+      dateTime: currentDateTimeForInput,
+  });
+
+  setRescheduleErrors({});
+  setPopoverOpen(false); // Cierra el popover
+  setRescheduleModalOpen(true); // Abre el nuevo modal
+};
+
+const handleRescheduleSubmit = async () => {
+    if (!rescheduleData.id) return;
+
+    // 1. Validar la fecha y hora
+    const validationError = validateField('dateTime', rescheduleData.dateTime, rescheduleData.id);
+    if (validationError) {
+        setRescheduleErrors({ dateTime: validationError });
+        toast.error('Por favor, corrige los errores.');
+        return;
+    }
+    
+    const reservaOriginal = data.find(res => res.idReservations === rescheduleData.id);
+    if (checkDuplicateReservation(reservaOriginal.idCustomers, rescheduleData.dateTime, rescheduleData.id)) {
+        const errorMsg = "Este cliente ya tiene una reserva en esta fecha.";
+        setRescheduleErrors({ dateTime: errorMsg });
+        toast.error(errorMsg);
+        return;
+    }
+    
+    // 2. Iniciar proceso de actualización
+    setIsRescheduling(true);
+    const toastId = toast.loading("Reprogramando reserva...");
+
+    try {
+        // Obtenemos todos los datos de la reserva para no perder información
+        const fullReservaData = await reservasService.getReservationById(rescheduleData.id);
+        if (!fullReservaData || fullReservaData.error) {
+            throw new Error(fullReservaData.errorMessage || "No se pudieron obtener los detalles completos.");
+        }
+        
+        // Creamos el payload de actualización
+        const updatedReservaData = {
+            ...fullReservaData,
+            dateTime: rescheduleData.dateTime, // La única propiedad que realmente cambia
+            idAditionalServices: (fullReservaData.AditionalServices || []).map(s => s.idAditionalServices),
+            pass: (fullReservaData.pass || []).map(p => ({
+                fecha: p.fecha ? p.fecha.split('T')[0] : '',
+                cantidad: p.cantidad
+            }))
+        };
+        // Limpiamos datos que no deben enviarse en la actualización
+        delete updatedReservaData.AditionalServices;
+        delete updatedReservaData.Customer;
+        delete updatedReservaData.error;
+        delete updatedReservaData.errorMessage;
+
+        await reservasService.updateReservation(rescheduleData.id, updatedReservaData);
+        
+        // 3. Actualizar la UI
+        loadInitialData(); // La forma más segura de reflejar todos los cambios
+        
+        toast.success("Reserva reprogramada con éxito.", { id: toastId });
+        setRescheduleModalOpen(false);
+
+    } catch (error) {
+        console.error("Error al reprogramar:", error);
+        toast.error(error.message || "No se pudo reprogramar la reserva.", { id: toastId, duration: 4000 });
+    } finally {
+        setIsRescheduling(false);
+    }
+};
+// --- FIN: Funciones para reprogramar ---
 
   const totalItems = data.length
   const totalPages = Math.ceil(totalItems / itemsPerPage)
@@ -2081,6 +2251,11 @@ case "dateTime": {
       borderRight: "none",
       padding: "0.75rem 1rem",
       backgroundColor: "#fff",
+      modalHeader: {
+      backgroundColor: "#9e3535",
+      color: "white",
+      fontWeight: "bold",
+    },
     },
     statusBadge: (status) => {
       
@@ -2310,7 +2485,111 @@ case "dateTime": {
                 )
               }}
               dayCellContent={(arg) => <div style={{ padding: "2px" }}>{arg.dayNumberText}</div>}
+
             />
+
+{popoverReserva && (
+  <Popover
+    placement="auto"
+    isOpen={popoverOpen}
+    target={popoverTarget}
+    toggle={() => setPopoverOpen(false)}
+    trigger="legacy"
+    fade
+    className="google-calendar-popover" 
+  >
+    <PopoverHeader 
+      style={{ 
+        backgroundColor: headerColorMap[popoverReserva.status] || headerColorMap['default'],
+        color: headerTextColorMap[popoverReserva.status] || headerTextColorMap['default'],
+        borderBottom: '1px solid rgba(0,0,0,0.08)',
+      }}
+      className="d-flex justify-content-between align-items-center"
+    >
+      {/* Contenido del encabezado */}
+      <div className="d-flex align-items-center">
+          <Tag 
+            size={22} 
+            className="me-3" 
+            style={{ color: headerTextColorMap[popoverReserva.status] || headerTextColorMap['default'] }}
+          />
+          <span className="fs-5 fw-bold">{popoverReserva.evenType}</span>
+      </div>
+      
+      {/* Botón de cierre */}
+      <Button close onClick={() => setPopoverOpen(false)} />
+    </PopoverHeader>
+
+    <PopoverBody>
+      {/* Detalle de Fecha y Hora */}
+      <div className="detail-item">
+        <Calendar size={20} className="detail-item-icon mt-1" />
+        <div className="detail-item-content">
+          <strong>{new Date(popoverReserva.dateTime).toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong>
+          <small>{new Date(popoverReserva.dateTime).toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit', hour12: true })}</small>
+        </div>
+      </div>
+
+      {/* Detalle del Cliente */}
+      <div className="detail-item">
+        <User size={20} className="detail-item-icon mt-1" />
+        <div className="detail-item-content">
+          <small>Cliente</small>
+          <strong>{popoverReserva.fullName}</strong>
+        </div>
+      </div>
+
+      {/* Detalle de Personas */}
+      <div className="detail-item">
+        <Users size={20} className="detail-item-icon mt-1" />
+        <div className="detail-item-content">
+          <small>Personas</small>
+          <strong>{popoverReserva.numberPeople}</strong>
+        </div>
+      </div>
+
+      {/* Detalle del Estado */}
+      <div className="detail-item">
+         <div style={styles.statusBadge(popoverReserva.status)}>
+            {popoverReserva.status?.replace("_", " ")}
+          </div>
+      </div>
+
+      {/* Detalle de Pagos */}
+      <div className="detail-item">
+        <DollarSign size={20} className="detail-item-icon mt-1" />
+        <div className="detail-item-content">
+          <small>Pagos</small>
+          <strong>Total: {formatCurrency(popoverReserva.totalPay)} / <span className="text-success">Restan: {formatCurrency(popoverReserva.remaining)}</span></strong>
+        </div>
+      </div>
+      
+      {/* Botones de Acción */}
+<div className="popover-actions">
+  <Button 
+    style={{
+        backgroundColor: headerTextColorMap[popoverReserva.status] || headerTextColorMap['default'],
+      
+        border: 'none'
+    }}
+    onClick={openEditModalFromPopover}
+  >
+    <Edit size={16} className="me-2" /> Editar
+  </Button>
+   <Button 
+    color="secondary"
+    outline
+    className="ms-2"
+    onClick={handleOpenRescheduleModal}
+  >
+    <Calendar size={16} className="me-2" /> Reprogramar
+  </Button>
+  
+</div>
+    </PopoverBody>
+  </Popover>
+)}
+
           </div>
         </Col>
       </Row>
@@ -2319,7 +2598,7 @@ case "dateTime": {
       <Modal 
         isOpen={modalOpen} 
         toggle={() => setModalOpen(!modalOpen)} 
-        onClosed={() => setCurrentStep(1)} // Resetear al cerrar
+        onClosed={() => setCurrentStep(1)} 
         size="lg" 
         centered 
         backdrop="static"
@@ -2829,6 +3108,46 @@ case "dateTime": {
           )}
         </ModalBody>
       </Modal>
+      {/* --- INICIO: Modal de Reprogramación --- */}
+<Modal isOpen={rescheduleModalOpen} toggle={() => setRescheduleModalOpen(false)} centered backdrop="static" className="modal-reserva">
+  <ModalHeader toggle={() => !isRescheduling && setRescheduleModalOpen(false)}>Reprogramar Reserva</ModalHeader>
+  <ModalBody>
+      <p>Seleccione la nueva fecha y hora para la reserva.</p>
+      <FormGroup>
+          <Label for="rescheduleDateTime" className="fw-bold">Nueva Fecha y Hora</Label>
+          <Input
+              type="datetime-local"
+              id="rescheduleDateTime"
+              name="rescheduleDateTime"
+              value={rescheduleData.dateTime}
+              onChange={(e) => {
+                  setRescheduleData({ ...rescheduleData, dateTime: e.target.value });
+                  if (rescheduleErrors.dateTime) {
+                      setRescheduleErrors({});
+                  }
+              }}
+              invalid={!!rescheduleErrors.dateTime}
+              style={{ borderColor: "#9e3535" }}
+          />
+          {rescheduleErrors.dateTime && <FormFeedback>{rescheduleErrors.dateTime}</FormFeedback>}
+      </FormGroup>
+  </ModalBody>
+  <ModalFooter>
+      <Button color="secondary" outline onClick={() => setRescheduleModalOpen(false)} disabled={isRescheduling}>
+          Cancelar
+      </Button>
+      <Button color="primary" onClick={handleRescheduleSubmit} disabled={isRescheduling}>
+          {isRescheduling ? (
+              <>
+                  <Spinner size="sm" className="me-1" /> Reprogramando...
+              </>
+          ) : (
+              "Confirmar Reprogramación"
+          )}
+      </Button>
+  </ModalFooter>
+</Modal>
+{/* --- FIN: Modal de Reprogramación --- */}
 
       {/* --- Modal de Confirmación --- */}
       <ConfirmationModal
@@ -2850,6 +3169,10 @@ case "dateTime": {
         isConfirming={isConfirmActionLoading}
       >
         {confirmModalProps.message}
+
+
+
+        
       </ConfirmationModal>
     </Container>
   )
