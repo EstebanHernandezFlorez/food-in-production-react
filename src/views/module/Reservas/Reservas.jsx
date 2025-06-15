@@ -3108,7 +3108,7 @@ const handleRescheduleSubmit = async () => {
           )}
         </ModalBody>
       </Modal>
-      {/* --- INICIO: Modal de Reprogramación --- */}
+      
 <Modal isOpen={rescheduleModalOpen} toggle={() => setRescheduleModalOpen(false)} centered backdrop="static" className="modal-reserva">
   <ModalHeader toggle={() => !isRescheduling && setRescheduleModalOpen(false)}>Reprogramar Reserva</ModalHeader>
   <ModalBody>
@@ -3147,7 +3147,6 @@ const handleRescheduleSubmit = async () => {
       </Button>
   </ModalFooter>
 </Modal>
-{/* --- FIN: Modal de Reprogramación --- */}
 
       {/* --- Modal de Confirmación --- */}
       <ConfirmationModal
