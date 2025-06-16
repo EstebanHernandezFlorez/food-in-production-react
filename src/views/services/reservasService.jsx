@@ -157,7 +157,7 @@ const reservasService = {
       const idToUpdate = id || reserva.idReservations;
       if (!idToUpdate) throw new Error("No se proporcionó un ID de reserva válido para actualizar.");
       
-      const apiStatus = mapAPIStateToAPI(reserva.status);
+      const apiStatus = (typeof reserva.status === "string") ? reserva.status.toLowerCase() : "pendiente";
 
       const dataToSend = {
         idCustomers: Number(reserva.idCustomers),

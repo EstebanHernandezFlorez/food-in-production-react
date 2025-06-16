@@ -127,37 +127,46 @@ const Clientes = () => {
     }, []);
 
    
-    const validateForm = useCallback(() => {
-        const nombreCompletoString = String(form.NombreCompleto ?? '').trim();
-        const distintivoString = String(form.Distintivo ?? '').trim();
-        const celularString = String(form.Celular ?? '').trim();
-        const correoString = String(form.Correo ?? '').trim();
-        const direccionString = String(form.Direccion ?? '').trim(); 
-        const errors = {
-            NombreCompleto: !nombreCompletoString, 
-            Distintivo: !distintivoString,        
-            CategoriaCliente: !form.CategoriaCliente, 
-            
-            Celular: !/^\d{10,12}$/.test(celularString),
-            Correo: correoString && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoString), 
-            Direccion: false, 
-        };
+ 
+const validateForm = useCallback(() => {
+    const nombreCompletoString = String(form.NombreCompleto ?? '').trim();
+    const distintivoString = String(form.Distintivo ?? '').trim();
+    const celularString = String(form.Celular ?? '').trim();
+    const correoString = String(form.Correo ?? '').trim();
+    const direccionString = String(form.Direccion ?? '').trim();
+    const hasNumbers = /\d/; 
 
-        setFormErrors(errors);
-        return !errors.NombreCompleto && !errors.Distintivo && !errors.CategoriaCliente &&
-               !errors.Celular && !errors.Correo;
+    const errors = {
+        NombreCompleto: !nombreCompletoString || hasNumbers.test(nombreCompletoString), 
+        Distintivo: !distintivoString,        
+        CategoriaCliente: !form.CategoriaCliente, 
+        Celular: !/^\d{10,12}$/.test(celularString),
+        Correo: correoString && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoString), 
+        Direccion: false, 
+    };
 
-    }, [form]);
+    setFormErrors(errors);
+    return !Object.values(errors).some(error => error === true); 
+
+}, [form]);
 
 
-    const handleChange = useCallback((e) => {
-        const { name, value } = e.target;
-        setForm((prevForm) => ({ ...prevForm, [name]: value }));
-        
-        if (formErrors[name]) {
-            setFormErrors(prev => ({ ...prev, [name]: false }));
-        }
-    }, [formErrors]); 
+const handleChange = useCallback((e) => {
+    const { name, value } = e.target;
+
+    let processedValue = value;
+    if (name === "NombreCompleto") {
+
+        processedValue = value.replace(/[0-9]/g, '');
+    }
+
+
+    setForm((prevForm) => ({ ...prevForm, [name]: processedValue })); // Usamos el valor procesado
+    
+    if (formErrors[name]) {
+        setFormErrors(prev => ({ ...prev, [name]: false }));
+    }
+}, [formErrors]);
 
     const handleTableSearch = useCallback((e) => {
         setTableSearchText(e.target.value.toLowerCase());
@@ -661,8 +670,22 @@ const Clientes = () => {
                                      <Col md={12}>
                                         <FormGroup>
                                             <Label for="modalNombreCompleto" className="form-label fw-bold">Nombre Completo <span className="text-danger">*</span></Label>
-                                            <Input id="modalNombreCompleto" type="text" name="NombreCompleto" value={form.NombreCompleto} onChange={handleChange} invalid={formErrors.NombreCompleto} required aria-required="true" aria-describedby="nombreError"/>
-                                            {formErrors.NombreCompleto && <div id="nombreError" className="invalid-feedback d-block">El nombre completo es obligatorio.</div>}
+                                                        <Input 
+                                                            id="modalNombreCompleto" 
+                                                            type="text" 
+                                                            name="NombreCompleto" 
+                                                            value={form.NombreCompleto} 
+                                                            onChange={handleChange} 
+                                                            invalid={formErrors.NombreCompleto} 
+                                                            required 
+                                                            aria-required="true" 
+                                                            aria-describedby="nombreError"
+                                                        />
+                                                        {formErrors.NombreCompleto && (
+                                                            <div id="nombreError" className="invalid-feedback d-block">
+                                                                El nombre es obligatorio y no puede contener números.
+                                                            </div>
+                                                        )}
                                         </FormGroup>
                                     </Col>
 
