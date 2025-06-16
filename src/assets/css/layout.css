@@ -1,0 +1,117 @@
+/* menu.css */
+
+/* Color de texto e icono base (¡Buen contraste con #F8D5A3!) */
+.ant-menu-light .ant-menu-item a, /* Estilo para el texto dentro del Link */
+.ant-menu-light .ant-menu-item,
+.ant-menu-light .ant-menu-submenu-title {
+  color: #5C4033 !important; /* Marrón oscuro */
+  /* Elimina el subrayado del Link si lo hubiera */
+  text-decoration: none;
+}
+/* Color del icono base */
+.ant-menu-light .ant-menu-item .ant-menu-item-icon,
+.ant-menu-light .ant-menu-submenu-title .ant-menu-item-icon,
+/* Aplica también a los iconos de Lucide (que son SVG) */
+.ant-menu-light .ant-menu-item .ant-menu-item-icon svg,
+.ant-menu-light .ant-menu-submenu-title .ant-menu-item-icon svg {
+    color: #5C4033 !important; /* Mismo marrón oscuro */
+    /* stroke: #5C4033;  Si 'color' no funciona para SVG, usa 'stroke' */
+}
+
+/* --- HOVER Y SELECCIÓN CON VINO TINTO --- */
+/* Estilos cuando el mouse pasa por encima (hover) */
+.ant-menu-light .ant-menu-item:hover,
+.ant-menu-light .ant-menu-submenu-title:hover {
+  background-color: #7e2d2d !important; /* Fondo Vino Tinto */
+}
+
+/* Texto en estado hover */
+.ant-menu-light .ant-menu-item:hover a,
+.ant-menu-light .ant-menu-item:hover,
+.ant-menu-light .ant-menu-submenu-title:hover {
+    color: #FFFFFF !important; /* Texto Blanco */
+}
+
+/* Iconos en estado hover */
+.ant-menu-light .ant-menu-item:hover .ant-menu-item-icon,
+.ant-menu-light .ant-menu-submenu-title:hover .ant-menu-item-icon,
+.ant-menu-light .ant-menu-item:hover .ant-menu-item-icon svg,
+.ant-menu-light .ant-menu-submenu-title:hover .ant-menu-item-icon svg {
+    color: #FFFFFF !important; /* Icono Blanco */
+    /* stroke: #FFFFFF !important; Si 'color' no funciona para SVG, usa 'stroke' */
+}
+
+
+/* Estilos para el item seleccionado actualmente */
+.ant-menu-light .ant-menu-item-selected,
+.ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title {
+  background-color: #7e2d2d !important; /* Fondo Vino Tinto */
+}
+
+/* Texto en estado seleccionado */
+.ant-menu-light .ant-menu-item-selected a,
+.ant-menu-light .ant-menu-item-selected,
+.ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title {
+   color: #FFFFFF !important; /* Texto Blanco */
+}
+
+/* Iconos en estado seleccionado */
+.ant-menu-light .ant-menu-item-selected .ant-menu-item-icon,
+.ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title .ant-menu-item-icon,
+.ant-menu-light .ant-menu-item-selected .ant-menu-item-icon svg,
+.ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title .ant-menu-item-icon svg {
+    color: #FFFFFF !important; /* Icono Blanco */
+    /* stroke: #FFFFFF !important; Si 'color' no funciona para SVG, usa 'stroke' */
+}
+
+/* Quitar el borde derecho/izquierdo azul por defecto de Ant Design en selección */
+.ant-menu-light .ant-menu-item-selected::after {
+    border-right: none !important;
+}
+.ant-menu-inline.ant-menu-root .ant-menu-item::after,
+.ant-menu-vertical.ant-menu-root .ant-menu-item::after {
+    border-right: none !important;
+}
+
+
+/* Asegurar que el contenedor del menú no tenga fondo propio ni borde derecho */
+.menu-list-container.ant-menu-light {
+  background-color: transparent !important;
+  border-right: none !important;
+}
+
+/* Espaciado y centrado (ya lo tenías bien) */
+.ant-menu-item .ant-menu-item-icon,
+.ant-menu-submenu-title .ant-menu-item-icon {
+  margin-right: 10px; /* Espacio entre icono y texto */
+  /* Centrado vertical del icono con el texto */
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Centrado de iconos cuando el menú está colapsado */
+.ant-menu-inline-collapsed > .ant-menu-item .ant-menu-item-icon,
+.ant-menu-inline-collapsed > .ant-menu-submenu > .ant-menu-submenu-title .ant-menu-item-icon {
+    margin-right: 0;
+    line-height: inherit;
+    /* Asegura el centrado horizontal */
+    flex-shrink: 0;
+}
+.ant-menu-inline-collapsed > .ant-menu-item,
+.ant-menu-inline-collapsed > .ant-menu-submenu > .ant-menu-submenu-title {
+    padding: 0 calc(50% - (18px / 2)) !important; /* 18px es el ICON_SIZE */
+    text-align: center;
+    display: flex; /* Usa flexbox para centrar */
+    justify-content: center; /* Centra el contenido (el icono) */
+    align-items: center;
+}
+
+/* Estilos específicos para submenús si necesitas */
+.submenu-item .ant-menu-item {
+    padding-left: 48px !important; /* Indentación para subitems */
+    /* Puedes añadir un icono por defecto o espaciado si no tienen icono propio */
+}
+/* Iconos dentro de los subitems (si los añades) */
+.submenu-item .ant-menu-item .ant-menu-item-icon {
+    margin-right: 8px; /* Menor margen para subitems */
+}

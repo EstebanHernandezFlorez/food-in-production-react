@@ -1,0 +1,39 @@
+/* logo.css */
+
+.logo-container {
+    text-align: center;
+    /* Aumentar padding general, especialmente vertical */
+    padding: 20px 15px;
+    background-color: transparent; /* El Sider ya tiene el color */
+    transition: padding 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Ajustar altura si es necesario, 'auto' es flexible */
+    height: auto;
+    min-height: 80px; /* Altura mínima para asegurar espacio */
+    box-sizing: border-box; /* Incluir padding en la altura/ancho */
+}
+
+.logo-container.collapsed {
+    /* Padding ajustado para estado colapsado */
+    padding: 15px 0;
+    min-height: 70px; /* Altura mínima colapsado */
+}
+
+.logo-image {
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    /* Tamaño original/expandido, ajusta según tu logo */
+    width: 150px;
+    height: 120px; /* O la altura que corresponda a 120px de ancho */
+    transition: width 0.3s, height 0.3s;
+    display: inline-block;
+}
+
+/* Logo cuando está colapsado - MÁS GRANDE */
+.logo-container.collapsed .logo-image {
+    width: 50px;  /* Ancho aumentado para estado colapsado */
+    height: 50px; /* Altura aumentada para estado colapsado */
+}

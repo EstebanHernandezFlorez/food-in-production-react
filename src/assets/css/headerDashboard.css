@@ -1,0 +1,68 @@
+/* assets/css/header.css */
+
+.app-header {
+  height: var(--header-height-finance);
+  background-color: var(--bg-header-finance);
+  border-bottom: 1px solid var(--border-color-finance);
+  padding: 0 var(--content-padding-finance);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky; /* Para que se quede fijo arriba */
+  top: 0;
+  z-index: 1000; /* Alto z-index */
+  box-shadow: var(--shadow-header-finance);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem; /* Espacio entre logo/icono y título opcional */
+}
+.header-left .app-logo-icon { /* Si usas un icono específico para el logo */
+ color: var(--accent-blue-finance);
+}
+.header-left .app-title { /* Si quieres un título en el header */
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary-finance);
+}
+
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem; /* Espacio entre filtros y otros elementos del header (ej. perfil) */
+}
+
+.date-filters select {
+  background-color: var(--button-bg-finance);
+  border: 1px solid var(--button-border-finance); /* Usar variable de borde de botón */
+  border-radius: 0.375rem; /* Bootstrap md rounded */
+  padding: 0.4rem 0.75rem; /* Ajustar padding */
+  font-size: 0.875rem;
+  color: var(--text-secondary-finance);
+  transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.date-filters select:focus {
+  outline: none;
+  border-color: var(--accent-blue-finance);
+  box-shadow: 0 0 0 3px rgba(var(--accent-blue-finance), 0.2); /* Sombra de foco más estándar */
+}
+
+/* Si tienes un dropdown de perfil o notificaciones */
+.user-profile-dropdown .dropdown-toggle {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+.user-profile-dropdown .dropdown-toggle::after {
+  display: none; /* Ocultar flecha de Bootstrap si usas icono personalizado */
+}
+.user-profile-dropdown .user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border-color-finance);
+}

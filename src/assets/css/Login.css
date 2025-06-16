@@ -1,0 +1,200 @@
+/* ================================================= */
+/* --- ESTILOS LOGIN CON COLLAGE COMO FONDO PÁGINA --- */
+/* ================================================= */
+
+/* --- A. Contenedor Principal de la Página --- */
+.login-page-wrapper {
+  position: relative;
+  overflow: hidden;
+  /* Fondo oscuro que se verá en gaps y padding de items */
+  background-color: #1a1a1a; /* Un gris aún más oscuro */
+}
+
+/* --- B. Contenedor del Collage de Fondo de Página --- */
+.page-background-collage-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+
+  /* --- Filtro para el fondo: Más Oscuro Y Más Difuminado --- */
+  filter: brightness(0.55) blur(8px); /* Ajusta: 0.55 (más oscuro), 8px (más blur) */
+
+  /* Escalar un poco más si el blur es mayor */
+  transform: scale(1.05);
+}
+
+/* --- C. Layout del Collage (CON GAP Y PADDING INTERNO) --- */
+.page-background-collage-container .collage-grid {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100%;
+  gap: 10px; /* Espacio entre columnas (un poco más grande) */
+}
+
+.page-background-collage-container .collage-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px; /* Espacio entre filas (mismo gap) */
+}
+
+.page-background-collage-container .main-column {
+  flex: 3;
+}
+
+.page-background-collage-container .secondary-column {
+  flex: 2;
+}
+
+.page-background-collage-container .collage-item {
+  width: 100%;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  /* <<< NUEVO: Padding interno para crear borde visible >>> */
+  padding: 5px; /* Espacio alrededor de la imagen dentro de la celda */
+  /* Opcional: redondear esquinas del item (afecta al área del padding) */
+  /* border-radius: 6px; */
+}
+
+.page-background-collage-container .collage-item img {
+  display: block;
+  width: 100%; /* Llena el área restante DESPUÉS del padding */
+  height: 100%;/* Llena el área restante DESPUÉS del padding */
+  object-fit: cover;
+  /* <<< NUEVO (Opcional): Redondear esquinas de la imagen misma >>> */
+  border-radius: 3px; /* Bordes suaves para la imagen */
+}
+
+/* --- D. Card del Formulario (Con más Enfoque) --- */
+.login-form-card {
+  position: relative;
+  z-index: 1;
+  border-radius: 1rem;
+  border: none;
+  /* <<< Fondo COMPLETAMENTE OPACO para máximo enfoque >>> */
+  background-color: #ffffff;
+  /* <<< Sombra MÁS INTENSA para "levantar" el card >>> */
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.35); /* Más desplazamiento, blur y oscuridad */
+}
+
+/* --- E. Estilos Internos del Formulario (sin cambios funcionales) --- */
+
+.login-form-card .card-body {
+    /* Padding estándar */
+}
+
+.login-form-card .form-label {
+  color: #212529;
+  font-weight: 600;
+}
+
+.login-form-card .border-black {
+  border: 2px solid #000 !important;
+  background-color: #fff; /* Asegurar fondo blanco */
+}
+
+.login-form-card .form-control {
+  background-color: #fff;
+}
+
+.login-form-card .form-control:focus {
+  border-color: #8C1616;
+  box-shadow: 0 0 0 0.25rem rgba(140, 22, 22, 0.25);
+}
+
+.login-form-card .border-black.form-control:focus {
+  border-color: #000 !important;
+  box-shadow: 0 0 0 0.25rem rgba(140, 22, 22, 0.25);
+}
+
+.login-form-card .form-control.is-invalid {
+    border-color: #dc3545 !important;
+    background-color: #fff;
+}
+.invalid-feedback.d-block {
+    color: #dc3545;
+}
+
+.login-form-card .text-body {
+  color: #495057 !important;
+  font-weight: 500;
+}
+.login-form-card .text-body:hover {
+  color: #8C1616 !important;
+}
+
+.btn-login-custom {
+  background-color: #8C1616;
+  color: white;
+  font-weight: bold;
+  border: none;
+  padding: 0.75rem 1.25rem;
+  transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.btn-login-custom:hover:not(:disabled) {
+  background-color: #6d1111;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+.btn-login-custom:disabled {
+  background-color: #b35b5b;
+  cursor: not-allowed;
+}
+
+.login-form-card .alert-danger {
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
+}
+
+/* Estilo base para el botón del icono */
+.password-toggle-icon {
+  cursor: pointer;
+  display: flex; /* Para centrar el icono dentro */
+  align-items: center;
+  justify-content: center;
+  background-color: #fff; /* Fondo blanco igual al input */
+  color: #495057; /* Color grisáceo para el icono */
+  /* El borde ya se hereda/aplica en línea/clase */
+}
+
+/* Ajuste visual para el borde cuando el input es inválido */
+.password-toggle-icon.border-danger {
+    border-color: #dc3545 !important; /* Asegura que el borde del botón también sea rojo */
+}
+
+
+/* Hover y Focus para el botón del icono */
+.password-toggle-icon:hover {
+  background-color: #e9ecef; /* Fondo gris claro al pasar el ratón */
+  color: #212529; /* Icono más oscuro */
+}
+
+.password-toggle-icon:focus {
+  outline: none;
+   /* Sombra de foco similar a los inputs */
+  box-shadow: 0 0 0 0.25rem rgba(140, 22, 22, 0.25);
+  /* Asegurar que el borde no cambie al hacer foco si no es inválido */
+  border-color: #000 !important; /* Mantiene el borde negro normal */
+}
+.password-toggle-icon.border-danger:focus {
+   border-color: #dc3545 !important; /* Mantiene el borde rojo de error al hacer foco */
+}
+
+
+/* Asegura que el feedback inválido se muestre correctamente después del input-group */
+.input-group + .invalid-feedback {
+  display: block !important;
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+/* =============================================== */
+/* --- FIN ESTILOS LOGIN FONDO COLLAGE PÁGINA --- */
+/* =============================================== */

@@ -1,0 +1,20 @@
+/* Reseteo básico */
+* {
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+/* Fuente Comfortaa */
+body {
+  font-family: "Comfortaa", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+}
+
+#root { /* Aplica el fondo al contenedor principal de tu aplicación */
+  background-color: #fff9e6e1;
+  min-height: 100vh; /* Asegura que el fondo cubra toda la altura de la pantalla */
+}
+

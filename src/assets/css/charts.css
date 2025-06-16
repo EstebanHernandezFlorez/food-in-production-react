@@ -1,0 +1,36 @@
+/* assets/css/charts.css */
+
+.chart-placeholder-finance {
+  width: 100%;
+  min-height: 150px; /* Un poco más de alto por defecto */
+  background-color: #F9FAFB; 
+  border-radius: var(--card-border-radius-finance); 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary-finance);
+  font-size: 0.875rem; /* Ligeramente más grande */
+  font-style: italic;
+  border: 1px dashed var(--border-color-finance);
+  padding: 1rem;
+}
+
+.chart-legend-finance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem; /* Más espacio en la leyenda */
+  margin-top: 1rem;
+  font-size: 0.8rem; /* Un poco más legible */
+  color: var(--text-secondary-finance);
+}
+.chart-legend-item { 
+  display: flex; 
+  align-items: center; 
+  cursor: default; /* O pointer si son interactivos */
+}
+.legend-dot {
+  width: 10px; /* Un poco más grande */
+  height: 10px; 
+  border-radius: 50%; 
+  margin-right: 0.4rem;
+}
