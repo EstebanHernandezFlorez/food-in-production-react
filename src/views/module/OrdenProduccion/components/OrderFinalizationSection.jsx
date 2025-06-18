@@ -1,7 +1,10 @@
 // src/views/module/OrdenProduccion/components/OrderFinalizationSection.jsx
+// ESTE ARCHIVO YA ESTÁ BIEN, EL PROBLEMA ESTÁ EN CÓMO SE LE LLAMA
+
 import React from 'react';
 import { Row, Col, FormGroup, Label, Input, FormFeedback, Card, CardBody, CardHeader, Button, Spinner } from 'reactstrap';
-import { Package, Scale, CheckCircle, X } from 'lucide-react';
+// Los iconos se importan aquí para que el componente sea autocontenido
+import { Package, Scale, CheckCircle, XCircle } from 'lucide-react';
 
 const OrderFinalizationSection = ({
     formOrder,
@@ -9,9 +12,10 @@ const OrderFinalizationSection = ({
     handleChangeOrderForm,
     isSaving,
     onCancelFinalization,
-    onConfirmFinalize
+    onConfirmFinalize,
+    onHideSection,
+    // La prop 'icons' ya no es necesaria si importas los iconos directamente
 }) => {
-    // Determina si los campos de unidad deben estar habilitados
     const isFinishedWeightUnitDisabled = isSaving || !formOrder.finishedProductWeight || parseFloat(formOrder.finishedProductWeight) <= 0;
     const isUnusedWeightUnitDisabled = isSaving || !formOrder.inputFinalWeightUnused || parseFloat(formOrder.inputFinalWeightUnused) <= 0;
 
@@ -21,9 +25,10 @@ const OrderFinalizationSection = ({
                 <h6 className="mb-0 d-flex align-items-center">
                     <Package size={18} className="me-2"/> Datos de Finalización de Orden
                 </h6>
-                <Button close color="white" onClick={onCancelFinalization} disabled={isSaving} title="Cancelar finalización" />
+                <Button close color="white" onClick={onHideSection} disabled={isSaving} title="Ocultar finalización" />
             </CardHeader>
             <CardBody>
+                {/* ... (Todo tu formulario de inputs aquí) ... */}
                 <Row>
                     <Col md={4} className="mb-3">
                         <FormGroup>
@@ -68,7 +73,6 @@ const OrderFinalizationSection = ({
                     <Col md={4} className="mb-3">
                         <FormGroup>
                             <Label for="finishedProductWeightUnit" className="fw-semibold small">Unidad Peso Terminado</Label>
-                            {/* --- INICIO DE LA MODIFICACIÓN --- */}
                             <Input
                                 type="select"
                                 name="finishedProductWeightUnit"
@@ -85,7 +89,6 @@ const OrderFinalizationSection = ({
                                 <option value="oz">oz (Onzas)</option>
                             </Input>
                             <FormFeedback>{formErrors?.finishedProductWeightUnit}</FormFeedback>
-                            {/* --- FIN DE LA MODIFICACIÓN --- */}
                         </FormGroup>
                     </Col>
                 </Row>
@@ -113,7 +116,6 @@ const OrderFinalizationSection = ({
                      <Col md={4} className="mb-3">
                         <FormGroup>
                             <Label for="inputFinalWeightUnusedUnit" className="fw-semibold small">Unidad Peso No Usado</Label>
-                            {/* --- INICIO DE LA MODIFICACIÓN --- */}
                             <Input
                                 type="select"
                                 name="inputFinalWeightUnusedUnit"
@@ -130,7 +132,6 @@ const OrderFinalizationSection = ({
                                 <option value="oz">oz (Onzas)</option>
                             </Input>
                             <FormFeedback>{formErrors?.inputFinalWeightUnusedUnit}</FormFeedback>
-                            {/* --- FIN DE LA MODIFICACIÓN --- */}
                         </FormGroup>
                     </Col>
                 </Row>
@@ -153,8 +154,8 @@ const OrderFinalizationSection = ({
                     </Col>
                 </Row>
                 <div className="text-end mt-3">
-                    <Button color="secondary" outline onClick={onCancelFinalization} disabled={isSaving} className="me-2">
-                        <X size={16} className="me-1"/> Cancelar
+                    <Button color="danger" outline onClick={onCancelFinalization} disabled={isSaving} className="me-2">
+                        <XCircle size={16} className="me-1"/> Cancelar Orden
                     </Button>
                     <Button color="success" onClick={onConfirmFinalize} disabled={isSaving}>
                         {isSaving ? <Spinner size="sm" className="me-1"/> : <CheckCircle size={16} className="me-1"/>}
