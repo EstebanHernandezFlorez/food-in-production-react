@@ -6,54 +6,7 @@ import {
     Input, Button, FormGroup, Label, Spinner, Alert
 } from 'reactstrap';
 
-// Se han eliminado las importaciones directas de lucide-react, ya que vendrán por props.
-
 import '../../../../assets/css/produccion/ProduccionStyles.css';
-
-// --- Funciones Helper para el tiempo (sin cambios) ---
-const formatDuration = (seconds) => {
-    if (isNaN(seconds) || seconds < 0) return '0s';
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = Math.floor(seconds % 60);
-    let result = '';
-    if (h > 0) result += `${h}h `;
-    if (m > 0) result += `${m}m `;
-    result += `${s}s`;
-    return result.trim();
-};
-
-const calculateTotalDuration = (start, end) => {
-    if (!start || !end) return null;
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return null;
-    return formatDuration((endDate - startDate) / 1000);
-};
-
-// --- Componente para el Cronómetro en Vivo (Modificado para usar el ícono de las props) ---
-const StepTimer = ({ startDate, TimerIcon }) => {
-    const [elapsedSeconds, setElapsedSeconds] = useState(0);
-
-    useEffect(() => {
-        if (!startDate) return;
-        const startTimestamp = new Date(startDate).getTime();
-        const intervalId = setInterval(() => {
-            const now = Date.now();
-            setElapsedSeconds((now - startTimestamp) / 1000);
-        }, 1000);
-        return () => clearInterval(intervalId);
-    }, [startDate]);
-
-    if (!TimerIcon) return null; // Guarda contra el ícono faltante
-
-    return (
-        <div className="d-flex align-items-center text-warning fw-bold">
-            <TimerIcon size={16} className="me-2" />
-            <span>{formatDuration(elapsedSeconds)}</span>
-        </div>
-    );
-};
 
 // --- Componente para el estado de un paso (sin cambios) ---
 const StepStatusBadge = ({ status, getStatusInfo }) => {
@@ -91,12 +44,12 @@ const ProcessManagementSection = ({
     isLoadingFichas,
     processViewMode,
     getStatusInfo,
-    icons // <-- Aceptamos el prop 'icons'
+    icons
 }) => {
     // Desestructuramos los iconos que necesitamos del prop 'icons'
     const { 
         EditIcon, ChevronLeftIcon, ChevronRightIcon, PauseCircleIcon, 
-        PlayCircleIcon, CheckCircleIcon, InfoIcon, TimerIcon 
+        PlayCircleIcon, CheckCircleIcon, InfoIcon,
     } = icons;
 
     const [focusedStepIndex, setFocusedStepIndex] = useState(null);
@@ -141,8 +94,7 @@ const ProcessManagementSection = ({
         return <Card className="shadow-sm"><CardHeader>Gestión de Procesos</CardHeader><CardBody><Alert color="info" className="m-3 text-center small">Guarde el borrador para cargar los procesos.</Alert></CardBody></Card>;
     }
     
-    // Verificamos que los iconos existan antes de renderizar para evitar errores
-    if (!EditIcon || !ChevronLeftIcon || !ChevronRightIcon || !PauseCircleIcon || !PlayCircleIcon || !CheckCircleIcon || !InfoIcon || !TimerIcon) {
+    if (!EditIcon || !ChevronLeftIcon || !ChevronRightIcon || !PauseCircleIcon || !PlayCircleIcon || !CheckCircleIcon || !InfoIcon) {
         console.error("Faltan uno o más componentes de iconos en las props.");
         return <Alert color="danger">Error: Faltan componentes de UI.</Alert>;
     }
@@ -183,7 +135,7 @@ const ProcessManagementSection = ({
                                     <p className="small text-muted mb-2">{focusedStepData.processDescription || "Sin descripción."}</p>
                                     <hr className="my-2" />
                                     <Row className="g-3 align-items-center">
-                                        <Col sm={6}>
+                                        <Col sm={8}> {/* --- CAMBIO: La columna ahora ocupa más espacio --- */}
                                             <FormGroup className="mb-0">
                                                 <Label className="small fw-semibold" htmlFor={`employee-select-${focusedStepIndex}`}>Empleado Asignado:</Label>
                                                 <Input
@@ -192,7 +144,14 @@ const ProcessManagementSection = ({
                                                     bsSize="sm"
                                                     value={focusedStepData.idEmployee || ''}
                                                     onChange={(e) => handleEmployeeSelectionForStep(focusedStepIndex, e.target.value)}
-                                                    disabled={ isOrderViewOnlyProp || isSaving || focusedStepData.status === 'COMPLETED' || focusedStepData.status === 'IN_PROGRESS'}
+                                                    // --- CAMBIO: Nueva lógica de deshabilitado ---
+                                                    disabled={
+                                                        isOrderViewOnlyProp ||
+                                                        isSaving ||
+                                                        focusedStepData.status === 'COMPLETED' || 
+                                                        !['IN_PROGRESS', 'PAUSED'].includes(localOrderStatus)
+                                                    }
+                                                    title={!['IN_PROGRESS', 'PAUSED'].includes(localOrderStatus) ? 'Debe iniciar la producción para asignar empleados' : ''}
                                                 >
                                                     <option value="">{isLoadingEmpleados ? "Cargando..." : "-- Seleccionar --"}</option>
                                                     {empleadosList && empleadosList.map(emp => (
@@ -201,32 +160,15 @@ const ProcessManagementSection = ({
                                                 </Input>
                                             </FormGroup>
                                         </Col>
-                                        <Col sm={3}>
+                                        <Col sm={4}> {/* --- CAMBIO: La columna ahora ocupa más espacio --- */}
                                             <FormGroup className="mb-0">
                                                 <Label className="small fw-semibold">Estado:</Label>
                                                 <div className="mt-1"><StepStatusBadge status={focusedStepData.status} getStatusInfo={getStatusInfo} /></div>
                                             </FormGroup>
                                         </Col>
-                                        <Col sm={3}>
-                                            <FormGroup className="mb-0">
-                                                <Label className="small fw-semibold">Duración:</Label>
-                                                <div className="mt-1">
-                                                    {focusedStepData.status === 'IN_PROGRESS' && <StepTimer startDate={focusedStepData.startDate} TimerIcon={TimerIcon} />}
-                                                    {focusedStepData.status === 'COMPLETED' && (
-                                                        <div className="d-flex align-items-center text-success fw-bold">
-                                                            <TimerIcon size={16} className="me-2" />
-                                                            <span>{calculateTotalDuration(focusedStepData.startDate, focusedStepData.endDate) || '-'}</span>
-                                                        </div>
-                                                    )}
-                                                    {(focusedStepData.status === 'PENDING' || focusedStepData.status === 'PAUSED' || !focusedStepData.status) && (
-                                                        <div className="d-flex align-items-center text-muted">
-                                                            <TimerIcon size={16} className="me-2" />
-                                                            <span>-</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </FormGroup>
-                                        </Col>
+                                        
+                                        {/* --- CAMBIO: SE ELIMINÓ COMPLETAMENTE LA COLUMNA DE DURACIÓN --- */}
+
                                     </Row>
                                     <FormGroup className="mt-3 mb-2">
                                         <Label className="small fw-semibold" htmlFor={`observations-text-${focusedStepIndex}`}>Observaciones:</Label>
@@ -237,7 +179,7 @@ const ProcessManagementSection = ({
                                             rows={2}
                                             value={focusedStepData.observations || ''}
                                             onChange={(e) => handleStepFieldChange(focusedStepIndex, 'observations', e.target.value)}
-                                            disabled={isOrderViewOnlyProp || isSaving || localOrderStatus !== 'IN_PROGRESS' || focusedStepIndex !== contextActiveStepIndex}
+                                            disabled={isOrderViewOnlyProp || isSaving || !['IN_PROGRESS', 'PAUSED'].includes(localOrderStatus) || focusedStepIndex !== contextActiveStepIndex}
                                             placeholder="Añadir notas sobre el paso..."
                                         />
                                     </FormGroup>

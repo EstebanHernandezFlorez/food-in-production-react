@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useContext, useCallback, useMemo as
 import {
     Row, Col, Spinner, Button, Form, Container, Alert,
     Modal, ModalHeader, ModalBody, ModalFooter, ListGroup, ListGroupItem, CardFooter,
-    Collapse, Card, CardHeader, CardBody, CardTitle, Input, Label, FormGroup, Badge, FormFeedback
+    Collapse, Card, CardHeader, CardBody, CardTitle, Input, Label, FormGroup, Badge, FormFeedback,
+    InputGroup, FormText
 } from 'reactstrap';
 import toast, { Toaster } from 'react-hot-toast';
 import {
@@ -18,17 +19,13 @@ import productionOrderService from '../../services/productionOrderService';
 // Estilos
 import '../../../assets/css/produccion/ProduccionStyles.css';
 
-// Contexto
+// Contexto y Componentes
 import { ActiveOrdersContext } from './ActiveOrdersContext';
 import { useAuth } from '../../hooks/AuthProvider';
-
-// Componente externo para la gestión de procesos
-// <-- PUNTO CLAVE: Importamos el componente, no lo redefinimos aquí.
 import ProcessManagementSection from './components/ProcessManagementSection';
 
 // =========================================================================
 // INICIO: DEFINICIÓN DE COMPONENTES AUXILIARES Y FUNCIONES HELPER
-// (Esta sección no cambia su lógica)
 // =========================================================================
 
 export const getStatusInfoInSpanish = (status) => {
@@ -57,7 +54,7 @@ const validateAndPreparePayload = (formOrder, productos, validationType = 'DRAFT
 const CancelOrderModal = ({ isOpen, toggle, onConfirmCancel, orderDisplayName, isCancelling }) => { const [reason, setReason] = useState(''); const handleConfirm = () => { onConfirmCancel(reason); setReason(''); }; return ( <Modal isOpen={isOpen} toggle={() => !isCancelling && toggle()} centered><ModalHeader toggle={() => !isCancelling && toggle()}>Cancelar Orden: {orderDisplayName}</ModalHeader><ModalBody><p>¿Está seguro de que desea cancelar esta orden? Esta acción no se puede deshacer.</p><FormGroup><Label for="cancelReason">Motivo de la cancelación (opcional):</Label><Input id="cancelReason" type="textarea" value={reason} onChange={(e) => setReason(e.target.value)} disabled={isCancelling} /></FormGroup></ModalBody><ModalFooter><Button color="secondary" outline onClick={toggle} disabled={isCancelling}>Volver</Button><Button color="danger" onClick={handleConfirm} disabled={isCancelling}>{isCancelling ? <Spinner size="sm" /> : "Confirmar Cancelación"}</Button></ModalFooter></Modal> );};
 const EstimatedSuppliesSection = ({ isLoadingFichas, selectedSpecSheetData, initialAmount }) => { const supplies = selectedSpecSheetData?.specSheetSupplies || []; const baseQuantity = selectedSpecSheetData?.quantityBase || 1; const productionFactor = initialAmount > 0 && baseQuantity > 0 ? initialAmount / baseQuantity : 0; return (<CardBody>{isLoadingFichas && <div className="text-center p-3"><Spinner size="sm" /></div>}{!isLoadingFichas && supplies.length > 0 && (<ListGroup flush>{supplies.map((supply, index) => (<ListGroupItem key={index} className="d-flex justify-content-between align-items-center small"><span>{supply.supply?.supplyName || 'Insumo desconocido'}</span><strong>{(supply.quantity * productionFactor).toFixed(3)} {supply.unitOfMeasure}</strong></ListGroupItem>))}</ListGroup>)}{!isLoadingFichas && supplies.length === 0 && (<p className="text-muted fst-italic p-3 mb-0">No hay insumos definidos para la ficha seleccionada.</p>)}</CardBody>);};
 const SimplifiedOrderHeader = ({ orderData, onToggleSpecSheet, icons }) => { if (!orderData) return null; const { InfoIcon, PackageIcon, HashIcon, EyeIcon } = icons; return ( <Card className="mb-3 shadow-sm"><CardHeader className="py-2 px-3 bg-light d-flex justify-content-between align-items-center"><h6 className="mb-0 d-flex align-items-center small"><InfoIcon size={16} className="me-2 text-primary"/>Orden de Producción: {orderData.orderNumberDisplay}</h6><Badge color="warning" pill>{orderData.localOrderStatusDisplay}</Badge></CardHeader><CardBody><Row className="align-items-center"><Col md={6} className="mb-2 mb-md-0"><div className="d-flex align-items-center"><PackageIcon size={24} className="me-3 text-muted" /><div><Label className="small text-muted mb-0">Producto</Label><h5 className="mb-0 fw-bold">{orderData.formOrder.productNameSnapshot || 'N/A'}</h5></div></div></Col><Col md={3} className="mb-2 mb-md-0"><div className="d-flex align-items-center"><HashIcon size={24} className="me-3 text-muted" /><div><Label className="small text-muted mb-0">Cantidad a Producir</Label><h5 className="mb-0">{orderData.formOrder.initialAmount || 'N/A'}</h5></div></div></Col><Col md={3} className="text-md-end">{orderData.selectedSpecSheetData && (<Button color="info" outline size="sm" onClick={onToggleSpecSheet}><EyeIcon size={16} className="me-1"/> Ver Ficha</Button>)}</Col></Row></CardBody></Card> );};
-const OrderBaseFormSection = ({ currentOrderData, handleChangeOrderForm, toggleViewSpecSheetModal, productos, empleadosList, providersList, isSaving, isLoadingFichas, selectedSpecSheetData, isOrderViewOnly, ordenTitulo, employeeFieldLabel, availableSpecSheets, masterDataFullyLoaded, isBaseDataLocked, isVerifyingProduct, isSimplifiedView, icons}) => { const { EyeIcon } = icons; if (isSimplifiedView) { return <SimplifiedOrderHeader orderData={currentOrderData} onToggleSpecSheet={toggleViewSpecSheetModal} icons={icons} />; } const { formOrder, formErrors } = currentOrderData; return ( <Card className="mb-3 shadow-sm"><CardHeader className="py-2 px-3 bg-light"><h6 className="mb-0 d-flex align-items-center small">{ordenTitulo}</h6></CardHeader><CardBody><Row><Col md={6}><FormGroup><Label for="idProduct" className="fw-semibold small">Producto <span className="text-danger">*</span></Label><Input id="idProduct" name="idProduct" type="select" value={formOrder.idProduct} onChange={handleChangeOrderForm} invalid={!!formErrors?.idProduct} disabled={isBaseDataLocked || isOrderViewOnly || !masterDataFullyLoaded || isVerifyingProduct}><option value="">{isVerifyingProduct ? "Verificando..." : "Seleccione un producto..."}</option>{productos.map(p => <option key={p.idProduct} value={p.idProduct}>{p.productName}</option>)}</Input><FormFeedback>{formErrors?.idProduct}</FormFeedback></FormGroup></Col><Col md={4}><FormGroup><Label for="idSpecSheet" className="fw-semibold small">Ficha Técnica</Label><Input id="idSpecSheet" name="idSpecSheet" type="select" value={formOrder.idSpecSheet} onChange={handleChangeOrderForm} invalid={!!formErrors?.idSpecSheet} disabled={isBaseDataLocked || isOrderViewOnly || isLoadingFichas || availableSpecSheets.length === 0}>{isLoadingFichas && <option>Cargando fichas...</option>}{!isLoadingFichas && availableSpecSheets.length === 0 && <option>No hay fichas para este producto</option>}{!isLoadingFichas && availableSpecSheets.length > 0 && <option value="">Seleccione una ficha (opcional)</option>}{!isLoadingFichas && availableSpecSheets.map(s => <option key={s.idSpecSheet} value={s.idSpecSheet}>{`${s.versionName || `ID: ${s.idSpecSheet}`} (Estado: ${s.status ? 'Activa' : 'Inactiva'})`}</option>)}</Input><FormFeedback>{formErrors?.idSpecSheet}</FormFeedback></FormGroup></Col><Col md={2} className="d-flex align-items-end mb-3"><Button color="info" outline size="sm" className="w-100" onClick={toggleViewSpecSheetModal} disabled={!selectedSpecSheetData || isLoadingFichas}><EyeIcon size={16} className="me-1"/> Ver</Button></Col></Row><Row><Col md={4}><FormGroup><Label for="initialAmount" className="fw-semibold small">Cantidad a Producir <span className="text-danger">*</span></Label><Input id="initialAmount" name="initialAmount" type="number" min="1" value={formOrder.initialAmount} onChange={handleChangeOrderForm} invalid={!!formErrors?.initialAmount} disabled={isBaseDataLocked || isOrderViewOnly} /><FormFeedback>{formErrors?.initialAmount}</FormFeedback></FormGroup></Col><Col md={4}><FormGroup><Label for="idProvider" className="fw-semibold small">Proveedor <span className="text-danger">*</span></Label><Input id="idProvider" name="idProvider" type="select" value={formOrder.idProvider} onChange={handleChangeOrderForm} invalid={!!formErrors?.idProvider} disabled={isBaseDataLocked || isOrderViewOnly || !masterDataFullyLoaded}><option value="">Seleccione proveedor...</option>{providersList.map(p => <option key={p.idProvider} value={p.idProvider}>{p.providerName}</option>)}</Input><FormFeedback>{formErrors?.idProvider}</FormFeedback></FormGroup></Col><Col md={4}><FormGroup><Label for="idEmployeeRegistered" className="fw-semibold small">{employeeFieldLabel} <span className="text-danger">*</span></Label><Input id="idEmployeeRegistered" name="idEmployeeRegistered" type="select" value={formOrder.idEmployeeRegistered} onChange={handleChangeOrderForm} invalid={!!formErrors?.idEmployeeRegistered} disabled={isBaseDataLocked || isOrderViewOnly || !masterDataFullyLoaded}><option value="">Seleccione empleado...</option>{empleadosList.map(e => <option key={e.idEmployee} value={e.idEmployee}>{e.fullName}</option>)}</Input><FormFeedback>{formErrors?.idEmployeeRegistered}</FormFeedback></FormGroup></Col></Row></CardBody></Card> );};
+const OrderBaseFormSection = ({ currentOrderData, handleChangeOrderForm, toggleViewSpecSheetModal, productos, empleadosList, providersList, isSaving, isLoadingFichas, selectedSpecSheetData, isOrderViewOnly, ordenTitulo, employeeFieldLabel, availableSpecSheets, masterDataFullyLoaded, isBaseDataLocked, isVerifyingProduct, isSimplifiedView, icons}) => { if (isSimplifiedView) { return <SimplifiedOrderHeader orderData={currentOrderData} onToggleSpecSheet={toggleViewSpecSheetModal} icons={icons} />; } const { EyeIcon } = icons; const { formOrder, formErrors } = currentOrderData; return ( <Card className="mb-3 shadow-sm"><CardHeader className="py-2 px-3 bg-light"><h6 className="mb-0 d-flex align-items-center small">{ordenTitulo}</h6></CardHeader><CardBody><Row><Col md={6}><FormGroup><Label for="idProduct" className="fw-semibold small">Producto <span className="text-danger">*</span></Label><Input id="idProduct" name="idProduct" type="select" value={formOrder.idProduct || ''} onChange={handleChangeOrderForm} invalid={!!formErrors?.idProduct} disabled={isBaseDataLocked || isOrderViewOnly || !masterDataFullyLoaded || isVerifyingProduct}><option value="">{isVerifyingProduct ? "Verificando..." : "Seleccione un producto..."}</option>{productos.map(p => <option key={p.idProduct} value={p.idProduct}>{p.productName}</option>)}</Input><FormFeedback>{formErrors?.idProduct}</FormFeedback></FormGroup></Col><Col md={4}><FormGroup><Label for="idSpecSheet" className="fw-semibold small">Ficha Técnica</Label><Input id="idSpecSheet" name="idSpecSheet" type="select" value={formOrder.idSpecSheet || ''} onChange={handleChangeOrderForm} invalid={!!formErrors?.idSpecSheet} disabled={isBaseDataLocked || isOrderViewOnly || isLoadingFichas || availableSpecSheets.length === 0}>{isLoadingFichas && <option>Cargando fichas...</option>}{!isLoadingFichas && availableSpecSheets.length === 0 && <option>No hay fichas para este producto</option>}{!isLoadingFichas && availableSpecSheets.length > 0 && <option value="">Seleccione una ficha (opcional)</option>}{!isLoadingFichas && availableSpecSheets.map(s => <option key={s.idSpecSheet} value={s.idSpecSheet}>{`${s.versionName || `ID: ${s.idSpecSheet}`} (Estado: ${s.status ? 'Activa' : 'Inactiva'})`}</option>)}</Input><FormFeedback>{formErrors?.idSpecSheet}</FormFeedback></FormGroup></Col><Col md={2} className="d-flex align-items-end mb-3"><Button color="info" outline size="sm" className="w-100" onClick={toggleViewSpecSheetModal} disabled={!selectedSpecSheetData || isLoadingFichas}><EyeIcon size={16} className="me-1"/> Ver</Button></Col></Row><Row><Col md={4}><FormGroup><Label for="initialAmount" className="fw-semibold small">Cantidad a Producir <span className="text-danger">*</span></Label><Input id="initialAmount" name="initialAmount" type="number" min="1" value={formOrder.initialAmount || ''} onChange={handleChangeOrderForm} invalid={!!formErrors?.initialAmount} disabled={isBaseDataLocked || isOrderViewOnly} /><FormFeedback>{formErrors?.initialAmount}</FormFeedback></FormGroup></Col><Col md={4}><FormGroup><Label for="inputInitialWeight" className="fw-semibold small">Peso Materia Prima (Opcional)</Label><InputGroup><Input id="inputInitialWeight" name="inputInitialWeight" type="number" placeholder="Ej: 50.5" step="0.01" min="0" value={formOrder.inputInitialWeight || ''} onChange={handleChangeOrderForm} disabled={isBaseDataLocked || isOrderViewOnly} /><Input name="inputInitialWeightUnit" type="select" value={formOrder.inputInitialWeightUnit || 'kg'} onChange={handleChangeOrderForm} disabled={isBaseDataLocked || isOrderViewOnly || !formOrder.inputInitialWeight || parseFloat(formOrder.inputInitialWeight) <= 0} style={{ maxWidth: '80px', flex: '0 0 80px' }}><option value="kg">kg</option><option value="g">g</option><option value="lb">lb</option></Input></InputGroup></FormGroup></Col><Col md={4}><FormGroup><Label for="idProvider" className="fw-semibold small">Proveedor <span className="text-danger">*</span></Label><Input id="idProvider" name="idProvider" type="select" value={formOrder.idProvider || ''} onChange={handleChangeOrderForm} invalid={!!formErrors?.idProvider} disabled={isBaseDataLocked || isOrderViewOnly || !masterDataFullyLoaded}><option value="">Seleccione proveedor...</option>{providersList.map(p => <option key={p.idProvider} value={p.idProvider}>{p.providerName}</option>)}</Input><FormFeedback>{formErrors?.idProvider}</FormFeedback></FormGroup></Col></Row><Row><Col md={4}><FormGroup><Label for="idEmployeeRegistered" className="fw-semibold small">{employeeFieldLabel} <span className="text-danger">*</span></Label><Input id="idEmployeeRegistered" name="idEmployeeRegistered" type="select" value={formOrder.idEmployeeRegistered || ''} onChange={handleChangeOrderForm} invalid={!!formErrors?.idEmployeeRegistered} disabled={isBaseDataLocked || isOrderViewOnly || !masterDataFullyLoaded}><option value="">Seleccione empleado...</option>{empleadosList.map(e => <option key={e.idEmployee} value={e.idEmployee}>{e.fullName}</option>)}</Input><FormFeedback>{formErrors?.idEmployeeRegistered}</FormFeedback></FormGroup></Col><Col md={8}><FormGroup><Label for="observations" className="fw-semibold small">Observaciones Generales</Label><Input id="observations" name="observations" type="textarea" rows="1" value={formOrder.observations || ''} onChange={handleChangeOrderForm} disabled={isOrderViewOnly} placeholder="Añadir notas sobre la orden en general..."/></FormGroup></Col></Row></CardBody></Card> );};
 const OrderFinalizationSection = ({ formOrder, formErrors, handleChangeOrderForm, isSaving, onCancelFinalization, onConfirmFinalize, icons }) => { const { PackageIcon, ScaleIcon, CheckCircleIcon, XIcon } = icons; const isFinishedWeightUnitDisabled = isSaving || !formOrder.finishedProductWeight || parseFloat(formOrder.finishedProductWeight) <= 0; const isUnusedWeightUnitDisabled = isSaving || !formOrder.inputFinalWeightUnused || parseFloat(formOrder.inputFinalWeightUnused) <= 0; return ( <Card className="mb-4 shadow-sm border-success"><CardHeader className="py-2 px-3 bg-success text-white d-flex justify-content-between align-items-center"><h6 className="mb-0 d-flex align-items-center"><PackageIcon size={18} className="me-2"/> Datos de Finalización de Orden</h6><Button close color="white" onClick={onCancelFinalization} disabled={isSaving} title="Cancelar finalización" /></CardHeader><CardBody><Row><Col md={4} className="mb-3"><FormGroup><Label for="finalQuantityProduct" className="fw-semibold small">Cantidad Producida (Unidades) <span className="text-danger">*</span></Label><Input type="number" name="finalQuantityProduct" id="finalQuantityProduct" value={formOrder.finalQuantityProduct || ''} onChange={handleChangeOrderForm} invalid={!!formErrors?.finalQuantityProduct} disabled={isSaving} min="0" bsSize="sm" placeholder="Ej: 98" /><FormFeedback>{formErrors?.finalQuantityProduct}</FormFeedback></FormGroup></Col><Col md={4} className="mb-3"><FormGroup><Label for="finishedProductWeight" className="fw-semibold small"><ScaleIcon size={14} className="me-1"/>Peso Total Producto Terminado</Label><Input type="number" name="finishedProductWeight" id="finishedProductWeight" value={formOrder.finishedProductWeight || ''} onChange={handleChangeOrderForm} invalid={!!formErrors?.finishedProductWeight || !!formErrors?.finishedProductWeightUnit} disabled={isSaving} min="0" step="0.001" bsSize="sm" placeholder="Ej: 48.500" /><FormFeedback>{formErrors?.finishedProductWeight}</FormFeedback></FormGroup></Col><Col md={4} className="mb-3"><FormGroup><Label for="finishedProductWeightUnit" className="fw-semibold small">Unidad Peso Terminado</Label><Input type="select" name="finishedProductWeightUnit" id="finishedProductWeightUnit" value={formOrder.finishedProductWeightUnit || 'kg'} onChange={handleChangeOrderForm} disabled={isFinishedWeightUnitDisabled} bsSize="sm" invalid={!!formErrors?.finishedProductWeightUnit}><option value="kg">kg (Kilogramos)</option><option value="g">g (Gramos)</option><option value="lb">lb (Libras)</option><option value="oz">oz (Onzas)</option></Input><FormFeedback>{formErrors?.finishedProductWeightUnit}</FormFeedback></FormGroup></Col></Row><Row><Col md={4} className="mb-3"><FormGroup><Label for="inputFinalWeightUnused" className="fw-semibold small"><ScaleIcon size={14} className="me-1"/>Material Inicial No Usado (Merma)</Label><Input type="number" name="inputFinalWeightUnused" id="inputFinalWeightUnused" value={formOrder.inputFinalWeightUnused || ''} onChange={handleChangeOrderForm} invalid={!!formErrors?.inputFinalWeightUnused || !!formErrors?.inputFinalWeightUnusedUnit} disabled={isSaving} min="0" step="0.001" bsSize="sm" placeholder="Ej: 0.500" /><FormFeedback>{formErrors?.inputFinalWeightUnused}</FormFeedback></FormGroup></Col><Col md={4} className="mb-3"><FormGroup><Label for="inputFinalWeightUnusedUnit" className="fw-semibold small">Unidad Peso No Usado</Label><Input type="select" name="inputFinalWeightUnusedUnit" id="inputFinalWeightUnusedUnit" value={formOrder.inputFinalWeightUnusedUnit || 'kg'} onChange={handleChangeOrderForm} disabled={isUnusedWeightUnitDisabled} bsSize="sm" invalid={!!formErrors?.inputFinalWeightUnusedUnit}><option value="kg">kg (Kilogramos)</option><option value="g">g (Gramos)</option><option value="lb">lb (Libras)</option><option value="oz">oz (Onzas)</option></Input><FormFeedback>{formErrors?.inputFinalWeightUnusedUnit}</FormFeedback></FormGroup></Col></Row><Row><Col><FormGroup><Label for="observations" className="fw-semibold small">Observaciones de Finalización (Opcional)</Label><Input type="textarea" name="observations" id="observations" value={formOrder.observations || ''} onChange={handleChangeOrderForm} disabled={isSaving} rows="3" bsSize="sm" placeholder="Cualquier detalle relevante sobre la finalización..."/></FormGroup></Col></Row><div className="text-end mt-3"><Button color="secondary" outline onClick={onCancelFinalization} disabled={isSaving} className="me-2"><XIcon size={16} className="me-1"/> Cancelar</Button><Button color="success" onClick={onConfirmFinalize} disabled={isSaving}>{isSaving ? <Spinner size="sm" className="me-1"/> : <CheckCircleIcon size={16} className="me-1"/>}Confirmar y Finalizar Orden</Button></div></CardBody></Card> );};
 
 // =========================================================================
@@ -74,7 +71,7 @@ const OrdenProduccionForm = ({
     proveedoresMaestrosProps,
     masterDataLoadedPageProps,
 }) => {
-    // 1. Hooks
+    // 1. Hooks y Declaración de Estados
     const { user } = useAuth();
     const ordersContext = useContext(ActiveOrdersContext);
     const [productos, setProductos] = useState(productosMaestrosProps || []);
@@ -93,6 +90,7 @@ const OrdenProduccionForm = ({
     const [activeOrderWarning, setActiveOrderWarning] = useState(null);
     const [isVerifyingProduct, setIsVerifyingProduct] = useState(false);
     const [confirmAction, setConfirmAction] = useState({ isOpen: false, title: '', body: '', onConfirm: null, toggle: null });
+    const [confirmNextEmployee, setConfirmNextEmployee] = useState({ isOpen: false, employeeToCarryOver: null, nextStepIndex: null });
     const prevProductIdRef = useRef();
 
     // 2. Lógica Derivada y de Contexto
@@ -100,17 +98,9 @@ const OrdenProduccionForm = ({
     const currentUserRole = user?.idRole;
     const canPauseOrResume = useReactMemo(() => [1, 2].includes(Number(currentUserRole)), [currentUserRole]);
     const currentOrderData = useReactMemo(() => (!currentViewedOrderId || !activeOrders?.[currentViewedOrderId]) ? null : activeOrders[currentViewedOrderId], [activeOrders, currentViewedOrderId]);
+    const icons = { AlertTriangleIcon: AlertTriangle, ArrowRightCircle, CheckCircleIcon: CheckCircle, ChefHatIcon: ChefHat, ChevronDownIcon: ChevronDown, ChevronLeftIcon: ChevronLeft, ChevronRightIcon: ChevronRight, Clock, EditIcon: Edit, EyeIcon: Eye, FileTextIcon: FileText, HashIcon: Hash, InfoIcon: Info, Loader, PackageIcon: Package, PauseCircleIcon: PauseCircle, PlayCircleIcon: PlayCircle, RotateCcw, Save, ScaleIcon: Scale, TimerIcon, XIcon: X, XCircle };
 
-    // Objeto de iconos para pasar como props a los componentes hijos
-    const icons = {
-        AlertTriangleIcon: AlertTriangle, ArrowRightCircle, CheckCircleIcon: CheckCircle, ChefHatIcon: ChefHat,
-        ChevronDownIcon: ChevronDown, ChevronLeftIcon: ChevronLeft, ChevronRightIcon: ChevronRight, Clock,
-        EditIcon: Edit, EyeIcon: Eye, FileTextIcon: FileText, HashIcon: Hash, InfoIcon: Info, Loader,
-        PackageIcon: Package, PauseCircleIcon: PauseCircle, PlayCircleIcon: PlayCircle, RotateCcw, Save,
-        ScaleIcon: Scale, TimerIcon, XIcon: X, XCircle
-    };
-
-    // 3. Efectos y Callbacks
+    // 3. Callbacks y Efectos
     useEffect(() => { 
         if (masterDataLoadedPageProps) {
             setProductos(productosMaestrosProps || []);
@@ -121,36 +111,117 @@ const OrdenProduccionForm = ({
         }
     }, [masterDataLoadedPageProps, productosMaestrosProps, empleadosMaestrosProps, proveedoresMaestrosProps]);
     
-    const updateSpecSheetAndProcesses = useCallback(async (productIdParam, specSheetIdFromFormParams) => {
-        if (!currentViewedOrderId || !activeOrders?.[currentViewedOrderId] || !updateOrderState) return;
-        const orderForUpdate = activeOrders[currentViewedOrderId];
+    const updateSpecSheetAndProcesses = useCallback(async (productIdParam, specSheetIdFromFormParams, existingOrderData) => {
+    // El 'existingOrderData' es la orden actual ANTES de hacer cambios, para poder comparar.
+        if (!currentViewedOrderId || !updateOrderState) return;
+
         setIsLoadingFichas(true);
         try {
             const allSheetsForProduct = await specSheetService.getSpecSheetsByProductId(productIdParam);
             setAvailableSpecSheets(allSheetsForProduct || []);
-            let specSheetToUse = null; let errorMsg = null;
+
+            let specSheetToUse = null;
+            let errorMsg = null;
+
             if (allSheetsForProduct?.length > 0) {
-                if (specSheetIdFromFormParams) specSheetToUse = allSheetsForProduct.find(s => String(s.idSpecSheet) === String(specSheetIdFromFormParams));
-                if (!specSheetToUse) specSheetToUse = allSheetsForProduct.find(s => s.status === true) || allSheetsForProduct[0];
-            } else { errorMsg = "Este producto no tiene fichas técnicas asociadas."; }
-            const newSteps = specSheetToUse?.specSheetProcesses?.sort((a, b) => a.processOrder - b.processOrder).map(p => ({ idProductionOrderDetail: null, idProcess: String(p.idProcess || p.masterProcessData?.idProcess || ''), processOrder: p.processOrder, processName: p.processNameOverride || p.masterProcessData?.processName || 'Proceso Desconocido', processDescription: p.processDescriptionOverride || p.masterProcessData?.description || 'Sin descripción', estimatedTimeMinutes: p.estimatedTimeMinutes ?? p.masterProcessData?.estimatedTimeMinutes, status: 'PENDING', isNewStep: true })) || [];
-            updateOrderState(currentViewedOrderId, { formOrder: { ...orderForUpdate.formOrder, idProduct: productIdParam, idSpecSheet: specSheetToUse?.idSpecSheet.toString() || '' }, selectedSpecSheetData: specSheetToUse, processSteps: newSteps, activeStepIndex: newSteps.length > 0 ? 0 : null, formErrors: { ...orderForUpdate.formErrors, idSpecSheet: errorMsg } });
+                // Intenta encontrar la ficha que ya estaba seleccionada o la nueva que se seleccionó
+                if (specSheetIdFromFormParams) {
+                    specSheetToUse = allSheetsForProduct.find(s => String(s.idSpecSheet) === String(specSheetIdFromFormParams));
+                }
+                // Si no se encontró (o no se especificó), busca la activa por defecto
+                if (!specSheetToUse) {
+                    specSheetToUse = allSheetsForProduct.find(s => s.status === true) || allSheetsForProduct[0];
+                }
+            } else {
+                errorMsg = "Este producto no tiene fichas técnicas asociadas.";
+            }
+
+            // --- INICIO DE LA NUEVA LÓGICA INTELIGENTE DE FUSIÓN ---
+
+            // 1. Obtener los pasos de la plantilla de la ficha técnica
+            const templateSteps = specSheetToUse?.specSheetProcesses
+                ?.sort((a, b) => a.processOrder - b.processOrder)
+                .map(p => ({
+                    idProcess: String(p.idProcess || p.masterProcessData?.idProcess || ''),
+                    processOrder: p.processOrder,
+                    processName: p.processNameOverride || p.masterProcessData?.processName || 'Proceso Desconocido',
+                    processDescription: p.processDescriptionOverride || p.masterProcessData?.description || 'Sin descripción',
+                    estimatedTimeMinutes: p.estimatedTimeMinutes ?? p.masterProcessData?.estimatedTimeMinutes,
+                    // Estado por defecto, se sobrescribirá si hay progreso guardado
+                    idProductionOrderDetail: null, 
+                    idEmployee: '',
+                    startDate: '',
+                    endDate: '',
+                    status: 'PENDING',
+                    observations: '',
+                    isNewStep: true
+                })) || [];
+
+            // 2. Obtener los pasos que ya tienen progreso (los que vienen del backend)
+            const savedProgressSteps = existingOrderData?.processSteps?.filter(p => !p.isNewStep && p.idProductionOrderDetail) || [];
+
+            // 3. Fusionar la plantilla con el progreso guardado
+            const mergedSteps = templateSteps.map(templateStep => {
+                // Buscar si este paso ya tiene un progreso guardado, comparando por el ID del proceso maestro
+                const savedStep = savedProgressSteps.find(saved => 
+                    String(saved.idProcess) === String(templateStep.idProcess) &&
+                    saved.processOrder === templateStep.processOrder
+                );
+                
+                // Si se encuentra un paso guardado, se usa su estado. Si no, se usa el de la plantilla.
+                return savedStep ? { ...templateStep, ...savedStep, isNewStep: false } : templateStep;
+            });
+            
+            // --- FIN DE LA NUEVA LÓGICA INTELIGENTE DE FUSIÓN ---
+            
+            const finalSteps = mergedSteps.length > 0 ? mergedSteps : (savedProgressSteps.length > 0 ? savedProgressSteps : []);
+
+            updateOrderState(currentViewedOrderId, {
+                formOrder: {
+                    ...existingOrderData.formOrder,
+                    idProduct: productIdParam,
+                    idSpecSheet: specSheetToUse?.idSpecSheet.toString() || ''
+                },
+                selectedSpecSheetData: specSheetToUse,
+                processSteps: finalSteps, // Usamos los pasos fusionados
+                // El activeStepIndex se recalculará en el contexto basado en los estados de los pasos
+                formErrors: { ...existingOrderData.formErrors, idSpecSheet: errorMsg }
+            });
+            
             if (errorMsg) toast.error(errorMsg);
-        } catch (err) { toast.error("Error al cargar las fichas del producto."); } finally { setIsLoadingFichas(false); }
-    }, [currentViewedOrderId, activeOrders, updateOrderState]);
+
+        } catch (err) {
+            toast.error("Error al cargar las fichas del producto.");
+        } finally {
+            setIsLoadingFichas(false);
+        }
+    }, [currentViewedOrderId, updateOrderState]);
 
     const handleChangeOrderForm = useCallback((e) => {
         if (!currentViewedOrderId || !currentOrderData || !updateOrderState) return;
         const { name, value } = e.target;
-        let newForm = { ...currentOrderData.formOrder, [name]: value };
+
+        // Guardamos una copia de los datos actuales ANTES de hacer cambios
+        const orderBeforeChange = { ...currentOrderData };
+
+        let newForm = { ...orderBeforeChange.formOrder, [name]: value };
+
         if (name === 'idProduct') {
             setActiveOrderWarning(null);
             const p = productos.find(pr => String(pr.idProduct) === String(value));
             newForm.productNameSnapshot = p ? p.productName : '';
-            newForm.idSpecSheet = '';
-            updateOrderState(currentViewedOrderId, { formOrder: newForm, selectedSpecSheetData: null, processSteps: [], formErrors: { ...currentOrderData.formErrors, idProduct: null, idSpecSheet: null } });
+            newForm.idSpecSheet = ''; // Resetear la selección de ficha
+
+            // Actualizamos el estado del formulario, pero ¡NO borramos los pasos aún!
+            updateOrderState(currentViewedOrderId, { 
+                formOrder: newForm, 
+                selectedSpecSheetData: null,
+                // Los pasos se actualizarán en `useEffect` o en la llamada explícita a updateSpecSheetAndProcesses
+                formErrors: { ...orderBeforeChange.formErrors, idProduct: null, idSpecSheet: null }
+            });
         } else if (name === 'idSpecSheet') {
-            updateSpecSheetAndProcesses(currentOrderData.formOrder.idProduct, value);
+            // Le pasamos la orden actual para que pueda fusionar el progreso
+            updateSpecSheetAndProcesses(orderBeforeChange.formOrder.idProduct, value, orderBeforeChange);
         } else {
             updateOrderState(currentViewedOrderId, { formOrder: newForm });
         }
@@ -207,6 +278,45 @@ const OrdenProduccionForm = ({
         updateOrderState(currentViewedOrderId, { processSteps: newSteps });
     }, [currentViewedOrderId, currentOrderData, updateOrderState]);
     
+    const handleContinueWithSameEmployee = useCallback(() => {
+        if (!confirmNextEmployee.employeeToCarryOver || confirmNextEmployee.nextStepIndex === null) return;
+        handleEmployeeSelectionForStep(confirmNextEmployee.nextStepIndex, confirmNextEmployee.employeeToCarryOver.idEmployee);
+        toast.success(`${confirmNextEmployee.employeeToCarryOver.fullName} asignado al siguiente paso.`);
+        setConfirmNextEmployee({ isOpen: false, employeeToCarryOver: null, nextStepIndex: null });
+    }, [confirmNextEmployee, handleEmployeeSelectionForStep]);
+
+    const handleCloseEmployeeModal = useCallback(() => {
+        setConfirmNextEmployee({ isOpen: false, employeeToCarryOver: null, nextStepIndex: null });
+    }, []);
+
+    const handleCompleteCurrentStep = useCallback(async () => {
+        if (!currentViewedOrderId || !currentOrderData || isProcessingAction || !updateOrderState) return;
+        const orderToComplete = currentOrderData;
+        const step = orderToComplete.processSteps?.[orderToComplete.activeStepIndex];
+        if (!step || !step.idProductionOrderDetail) { return toast.error("No se puede completar un paso no guardado."); }
+        if (step.status !== 'IN_PROGRESS') { return toast.error(`El paso no está en progreso.`); }
+        
+        setIsProcessingAction(true);
+        const tId = toast.loading(`Completando "${step.processName}"...`);
+        
+        try {
+            const res = await productionOrderService.updateProductionOrderStep(orderToComplete.id, step.idProductionOrderDetail, { endDate: new Date().toISOString(), status: 'COMPLETED', observations: step.observations || null });
+            const transformed = transformFetchedOrderToContextFormat(res);
+            
+            if (transformed) {
+                updateOrderState(currentViewedOrderId, transformed);
+                toast.success(`Paso completado.`, { id: tId, icon: "✔️" });
+                const nextStepIndex = orderToComplete.activeStepIndex + 1;
+                const hasNextStep = nextStepIndex < (transformed.processSteps?.length || 0);
+                if (hasNextStep && step.idEmployee) {
+                    const employee = empleadosList.find(e => String(e.idEmployee) === String(step.idEmployee));
+                    setConfirmNextEmployee({ isOpen: true, employeeToCarryOver: employee, nextStepIndex: nextStepIndex });
+                }
+            } else { throw new Error("Respuesta inválida del servidor."); }
+        } catch (err) { toast.error(err.response?.data?.message || `Error completando el paso.`, { id: tId }); }
+        finally { setIsProcessingAction(false); }
+    }, [currentViewedOrderId, currentOrderData, isProcessingAction, updateOrderState, transformFetchedOrderToContextFormat, empleadosList]);
+
     const handleStartCurrentStep = useCallback(async () => {
         if (!currentViewedOrderId || !currentOrderData || isProcessingAction) return;
         const orderToStart = currentOrderData;
@@ -241,23 +351,6 @@ const OrdenProduccionForm = ({
         setConfirmAction({ isOpen: true, title: "Confirmar Inicio de Paso", body: `¿Está seguro de que desea iniciar el paso "${stepToStart.processName}" con el empleado: ${employeeName}?`, confirmText: "Sí, Iniciar", confirmColor: "success", onConfirm: executeStart, toggle: () => setConfirmAction({ isOpen: false }) });
     }, [currentViewedOrderId, currentOrderData, isProcessingAction, handleUpdateExistingOrder, updateOrderState, transformFetchedOrderToContextFormat, empleadosList]);
     
-    const handleCompleteCurrentStep = useCallback(async () => {
-        if (!currentViewedOrderId || !currentOrderData || isProcessingAction || !updateOrderState) return;
-        const orderToComplete = currentOrderData;
-        const step = orderToComplete.processSteps?.[orderToComplete.activeStepIndex];
-        if (!step || !step.idProductionOrderDetail) { return toast.error("No se puede completar un paso no guardado."); }
-        if (step.status !== 'IN_PROGRESS') { return toast.error(`El paso no está en progreso.`); }
-        setIsProcessingAction(true);
-        const tId = toast.loading(`Completando "${step.processName}"...`);
-        try {
-            const res = await productionOrderService.updateProductionOrderStep(orderToComplete.id, step.idProductionOrderDetail, { endDate: new Date().toISOString(), status: 'COMPLETED', observations: step.observations || null });
-            const transformed = transformFetchedOrderToContextFormat(res);
-            if (transformed) { updateOrderState(currentViewedOrderId, transformed); toast.success(`Paso completado.`, { id: tId, icon: "✔️" }); }
-            else { throw new Error("Respuesta inválida del servidor."); }
-        } catch (err) { toast.error(err.response?.data?.message || `Error completando el paso.`, { id: tId }); }
-        finally { setIsProcessingAction(false); }
-    }, [currentViewedOrderId, currentOrderData, isProcessingAction, updateOrderState, transformFetchedOrderToContextFormat]);
-    
     const handlePrepareFinalization = useCallback(() => {
         if (!currentViewedOrderId || !currentOrderData) return;
         setShowFinalizationFields(true);
@@ -289,8 +382,11 @@ const OrdenProduccionForm = ({
         } finally { setIsProcessingAction(false); }
     }, [currentViewedOrderId, currentOrderData, isProcessingAction, updateOrderState, removeOrder, addOrFocusOrder]);
     
-    const handleCancelFinalization = useCallback(() => { setShowFinalizationFields(false); toast.info("Finalización cancelada."); }, []);
-    
+    const handleCancelFinalization = useCallback(() => { 
+        setShowFinalizationFields(false); 
+        toast("Finalización cancelada.", { icon: "ℹ️" }); // Puedes usar cualquier emoji
+    }, []);    
+
     const handleStepFieldChange = useCallback((stepIndex, fieldName, value) => {
         if (!currentViewedOrderId || !currentOrderData || !updateOrderState) return;
         const newSteps = currentOrderData.processSteps.map((s, i) => i === stepIndex ? { ...s, [fieldName]: value } : s);
@@ -302,31 +398,52 @@ const OrdenProduccionForm = ({
     const openCancelModal = useCallback(() => { if (!currentViewedOrderId || !currentOrderData) return; setOrderToCancelInfo({ id: currentOrderData.id, displayName: currentOrderData.orderNumberDisplay || "Nuevo Borrador" }); setIsCancelModalOpen(true); }, [currentViewedOrderId, currentOrderData]);
     
     const handleConfirmCancelOrder = useCallback(async (reason) => {
-        if (!orderToCancelInfo?.id || !removeOrder || !updateOrderState) return;
-        setIsProcessingAction(true);
-        const tId = toast.loading(`Cancelando orden...`);
-        try {
-            if (String(orderToCancelInfo.id).startsWith('NEW_')) {
-                removeOrder(orderToCancelInfo.id);
-                toast.success("Borrador descartado.", { id: tId });
-            } else {
-                const updatedOrder = await productionOrderService.changeProductionOrderStatus(orderToCancelInfo.id, 'CANCELLED', reason);
-                const trans = transformFetchedOrderToContextFormat(updatedOrder);
-                if (trans) { updateOrderState(orderToCancelInfo.id, trans); toast.success(`Orden cancelada.`, { id: tId }); }
-                else { throw new Error("Respuesta inválida."); }
-            }
-            setIsCancelModalOpen(false);
-        } catch (error) {
-            toast.error(error.response?.data?.message || "Error al cancelar.", { id: tId });
-        } finally {
-            setIsProcessingAction(false);
+    // Si no hay información de la orden, no hacer nada.
+    if (!orderToCancelInfo?.id || !removeOrder) return;
+    
+    // El contexto de las órdenes debe tener la función addOrFocusOrder
+    if (!addOrFocusOrder) {
+        console.error("La función addOrFocusOrder no está disponible en el contexto.");
+        return;
+    }
+
+    setIsProcessingAction(true);
+    const tId = toast.loading(`Cancelando orden...`);
+    
+    try {
+        const orderIdToCancel = orderToCancelInfo.id;
+
+        // Si es un borrador nuevo (no guardado en BD)
+        if (String(orderIdToCancel).startsWith('NEW_')) {
+            removeOrder(orderIdToCancel);
+            toast.success("Borrador descartado.", { id: tId });
+        } else {
+            // Si es una orden existente en la BD
+            await productionOrderService.changeProductionOrderStatus(orderIdToCancel, 'CANCELLED', reason);
+            removeOrder(orderIdToCancel); // Elimina la orden del estado activo del contexto
+            toast.success(`Orden cancelada.`, { id: tId });
         }
-    }, [orderToCancelInfo, removeOrder, transformFetchedOrderToContextFormat, updateOrderState]);
+
+        setIsCancelModalOpen(false); // Cierra el modal de cancelación
+
+        // --- ¡LÍNEA CLAVE AÑADIDA! ---
+        // Navega fuera del formulario actual, volviendo a la vista por defecto (lista de órdenes).
+        addOrFocusOrder(null, false, { navigateIfNeeded: true });
+
+    } catch (error) {
+        toast.error(error.response?.data?.message || "Error al cancelar.", { id: tId });
+    } finally {
+        setIsProcessingAction(false);
+    }
+}, [orderToCancelInfo, removeOrder, addOrFocusOrder, transformFetchedOrderToContextFormat, updateOrderState]);
     
     useEffect(() => {
         const order = currentOrderData;
         if (!order || !masterDataFullyLoaded || isSaving) return;
+
         const productId = order.formOrder?.idProduct;
+
+        // Solo se ejecuta si el ID del producto ha cambiado
         if (productId && productId !== prevProductIdRef.current) {
             const verifyProduct = async () => {
                 setIsVerifyingProduct(true);
@@ -339,7 +456,8 @@ const OrdenProduccionForm = ({
                             setActiveOrderWarning({ message: `Este producto ya tiene una orden activa (ID: ${conflictingOrder.idProductionOrder}, Estado: ${conflictingOrder.status}). No podrá guardar o iniciar esta orden.`, orderId: conflictingOrder.idProductionOrder });
                         }
                     }
-                    await updateSpecSheetAndProcesses(productId, order.formOrder.idSpecSheet || null);
+                    // Llamamos a la función inteligente de actualización, pasándole la orden actual
+                    await updateSpecSheetAndProcesses(productId, order.formOrder.idSpecSheet || null, order);
                 } catch (error) {
                     console.error("Error al verificar el producto:", error);
                     toast.error("No se pudo verificar el estado del producto.");
@@ -352,20 +470,24 @@ const OrdenProduccionForm = ({
             setActiveOrderWarning(null);
         }
         prevProductIdRef.current = productId;
-    }, [currentOrderData, masterDataFullyLoaded, isSaving, updateSpecSheetAndProcesses]);
+    }, [currentOrderData, masterDataFullyLoaded, isSaving, updateSpecSheetAndProcesses]); // Asegúrate de incluir la dependencia
 
-    // =========================================================================
-    // 4. GUARD CLAUSES (RETORNOS TEMPRANOS)
-    // =========================================================================
+    useEffect(() => {
+        if (currentOrderData && !showFinalizationFields) {
+            if (currentOrderData.localOrderStatus === 'ALL_STEPS_COMPLETED') {
+                handlePrepareFinalization();
+            }
+        }
+    }, [currentOrderData, showFinalizationFields, handlePrepareFinalization]);
+
+    // 4. Guard Clauses (Retornos Tempranos)
     if (!ordersContext) { return <Container fluid className="p-4 text-center"><Alert color="danger">Error Crítico: Contexto de órdenes no disponible.</Alert></Container>; }
     if (!masterDataFullyLoaded || !user) { return <SpinnerL>Preparando formulario...</SpinnerL>; }
     if (!currentViewedOrderId && !isLoadingOrderContext) { return <InfoS>Seleccione o cree una orden.</InfoS>; }
     if (isLoadingOrderContext && (!currentOrderData || String(currentOrderData?.id).startsWith('NEW_'))) { return <SpinnerL>{currentViewedOrderId && !String(currentViewedOrderId).startsWith('NEW_') ? `Cargando orden ${currentViewedOrderId}...` : "Cargando..."}</SpinnerL>; }
     if (!currentOrderData) { return <Alert color="warning" className="m-3">No se pudieron cargar los datos de la orden (ID: {currentViewedOrderId || 'N/A'}).</Alert>; }
     
-    // =========================================================================
-    // 5. LÓGICA DE RENDERIZADO Y JSX FINAL
-    // =========================================================================
+    // 5. Lógica de Renderizado y JSX Final
     const { localOrderStatus, selectedSpecSheetData, isNewForForm, formOrder, id: orderId } = currentOrderData;
     const isOrderSystemReadOnly = ['COMPLETED', 'CANCELLED'].includes(localOrderStatus);
     const isPausedForCurrentUser = localOrderStatus === 'PAUSED' && !canPauseOrResume;
@@ -400,12 +522,38 @@ const OrdenProduccionForm = ({
                         <Row className="mt-3 g-2 justify-content-end align-items-center"><Col xs="auto">{renderActionButtons()}</Col></Row>
                     </div>
                 )}
-                {showFinalizationFields && ( <OrderFinalizationSection formOrder={formOrder} formErrors={currentOrderData.formErrors} handleChangeOrderForm={handleChangeOrderForm} isSaving={isSaving||isProcessingAction} onCancelFinalization={handleCancelFinalization} onConfirmFinalize={handleFinalizeAndSaveOrder} icons={icons} /> )}
+                {showFinalizationFields && ( 
+                    <OrderFinalizationSection 
+                        formOrder={formOrder} 
+                        formErrors={currentOrderData.formErrors} 
+                        handleChangeOrderForm={handleChangeOrderForm} 
+                        isSaving={isSaving||isProcessingAction} 
+                        
+                        // La prop para cancelar la ORDEN llama al modal
+                        onCancelFinalization={openCancelModal} 
+                        
+                        // La prop para OCULTAR EL FORMULARIO llama a la función que ya tenías
+                        onHideSection={handleCancelFinalization} 
+                        
+                        onConfirmFinalize={handleFinalizeAndSaveOrder}
+                        icons={icons}
+                    /> 
+                )}
                 {isOrderSystemReadOnly && ( <div className="mt-4 p-3 border-top text-end"> <Alert color={localOrderStatus === 'COMPLETED' ? 'success' : 'danger'} className="text-center small py-2">Orden <strong>{currentOrderData.localOrderStatusDisplay}</strong>. No más cambios.</Alert> <Button color="secondary" outline onClick={() => addOrFocusOrder(null, false, { navigateIfNeeded: true })} size="sm" className="mt-2"><icons.EyeIcon size={16} className="me-1"/> Ver Lista</Button> </div> )}
             </Form>
             <ConfirmationModal isOpen={confirmAction.isOpen} toggle={confirmAction.toggle} title={confirmAction.title} onConfirm={confirmAction.onConfirm} confirmText={confirmAction.confirmText} confirmColor={confirmAction.confirmColor} isConfirming={isProcessingAction} icons={icons}>{confirmAction.body}</ConfirmationModal>
             <ViewSpecSheetModal isOpen={viewSpecSheetModalOpen} toggle={toggleViewSpecSheetModal} specSheetData={selectedSpecSheetData} isLoading={isLoadingFichas} icons={icons} />
             <CancelOrderModal isOpen={isCancelModalOpen} toggle={() => setIsCancelModalOpen(false)} onConfirmCancel={handleConfirmCancelOrder} orderDisplayName={orderToCancelInfo?.displayName} isCancelling={isProcessingAction} />
+            <Modal isOpen={confirmNextEmployee.isOpen} toggle={handleCloseEmployeeModal} centered>
+                <ModalHeader toggle={handleCloseEmployeeModal}>Continuar con el Empleado</ModalHeader>
+                <ModalBody>
+                    <p>¿Desea que <strong>{confirmNextEmployee.employeeToCarryOver?.fullName}</strong> continúe con el siguiente paso?</p>
+                </ModalBody>
+                <ModalFooter>
+                    <Button color="secondary" outline onClick={handleCloseEmployeeModal}>No, cambiar empleado</Button>
+                    <Button color="primary" onClick={handleContinueWithSameEmployee}>Sí, continuar</Button>
+                </ModalFooter>
+            </Modal>
         </Container>
     );
 };

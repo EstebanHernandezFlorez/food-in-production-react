@@ -53,7 +53,19 @@ const productService = {
             throw error.response?.data || error;
         }
     },
-
+    // --- FUNCIÓN CORREGIDA ---
+    // Ahora acepta 'idProduct' y 'data' como dos argumentos separados.
+    adjustStock: async (idProduct, data) => {
+        try {
+            // La URL ahora se construye correctamente con el idProduct recibido.
+            const response = await axiosInstance.post(`${API_ENDPOINT}/${idProduct}/adjust-stock`, data);
+            return response.data;
+        } catch (error) {
+            // Este es el console.error que viste en tu log.
+            console.error(`Error adjusting stock for product ID ${idProduct}:`, error.response?.data || error.message);
+            throw error.response?.data || error;
+        }
+    },
     changeProductStatus: async (idProduct, status) => {
         try {
             const response = await axiosInstance.patch(`${API_ENDPOINT}/${idProduct}/status`, { status });

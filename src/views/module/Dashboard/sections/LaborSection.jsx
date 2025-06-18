@@ -1,126 +1,192 @@
-// RUTA: src/views/Dashboard/sections/LaborSection.jsx (o ExpensesSection.jsx si lo renombras)
+// RUTA: src/views/Dashboard/sections/LaborSection.jsx
 
 import React, { useCallback } from 'react';
-import { DollarSign, PieChart as PieChartIcon, BarChart2, Clock } from 'lucide-react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell } from 'recharts';
+import { DollarSign, BarChart2, TrendingUp, Layers, Clock, Users } from 'lucide-react';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, RadialBarChart, RadialBar, Cell } from 'recharts';
 
 import { useDashboardSection } from '../hooks/useDashboardSection';
 import StatCard from '../components/StatCard';
 import ChartPlaceholder from '../components/ChartPlaceholder';
-import { formatCurrency, formatPercentage, getRandomColor } from '../utils/formatters';
+import { formatCurrency, formatPercentage } from '../utils/formatters';
 import MonthlyOverallExpenseService from '../../../services/MonthlyOverallExpenseService';
+
+// --- Componente CustomTooltip (sin cambios) ---
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    const total = payload.reduce((sum, entry) => sum + entry.value, 0);
+    return (
+      <div className="custom-tooltip-finance">
+        <p className="label">{label}</p>
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+          {payload.map((entry, index) => (
+            <li key={`item-${index}`} style={{ color: entry.color }}>
+              {`${entry.name}: ${formatCurrency(entry.value)}`}
+            </li>
+          ))}
+        </ul>
+        <p className="total" style={{ fontWeight: 'bold', marginTop: '8px' }}>
+          Total: {formatCurrency(total)}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
 
 const LaborSection = ({ selectedYear, selectedMonth }) => {
   const fetchExpensesData = useCallback(async () => {
     const yearNum = parseInt(selectedYear);
     const monthNum = parseInt(selectedMonth);
 
-    // 1. Obtener todos los gastos del mes actual y del anterior para KPIs
+    // <-- ¡IMPORTANTE! CAMBIA ESTE NÚMERO POR EL ID REAL DE TU CATEGORÍA "MANO DE OBRA" -->
+    const ID_CATEGORIA_MANO_DE_OBRA = 1; 
+
+    // Función robusta para obtener datos de gastos por categoría
+    const getExpenses = async (filters) => {
+        const result = await MonthlyOverallExpenseService.getAllMonthlyOverallExpenses(filters);
+        return Array.isArray(result) ? result : (result?.rows || []);
+    };
+    
+    // 1. Obtener gastos de "Mano de Obra" del mes actual y del anterior
     const [currentMonthExpenses, previousMonthExpenses] = await Promise.all([
-        MonthlyOverallExpenseService.getAllMonthlyOverallExpenses({ year: yearNum, month: monthNum }),
-        MonthlyOverallExpenseService.getAllMonthlyOverallExpenses({ 
+        getExpenses({ year: yearNum, month: monthNum, idExpenseCategory: ID_CATEGORIA_MANO_DE_OBRA }),
+        getExpenses({ 
             year: monthNum === 1 ? yearNum - 1 : yearNum, 
-            month: monthNum === 1 ? 12 : monthNum - 1 
+            month: monthNum === 1 ? 12 : monthNum - 1,
+            idExpenseCategory: ID_CATEGORIA_MANO_DE_OBRA
         })
     ]);
 
-    // KPI 1: Gasto Mensual Actual
+    // KPI 1: Gasto Mensual Actual en Mano de Obra
     const totalGastoMesActual = currentMonthExpenses.reduce((sum, exp) => sum + (Number(exp.total) || 0), 0);
     
-    // KPI 2: Variación vs Mes Anterior
+    // KPI 2: Variación vs Mes Anterior (Lógica mejorada)
     const totalGastoMesAnterior = previousMonthExpenses.reduce((sum, exp) => sum + (Number(exp.total) || 0), 0);
-    const gastoChangePct = totalGastoMesAnterior > 0 
-        ? ((totalGastoMesActual - totalGastoMesAnterior) / totalGastoMesAnterior) * 100 
-        : (totalGastoMesActual > 0 ? 100 : 0);
-
-    // 2. Obtener gastos de los últimos 6 meses para el gráfico de tendencias
-    const trendPromises = [];
-    for (let i = 0; i < 6; i++) {
-        const d = new Date(yearNum, monthNum - 1 - i, 1);
-        trendPromises.push(MonthlyOverallExpenseService.getAllMonthlyOverallExpenses({ year: d.getFullYear(), month: d.getMonth() + 1 }));
+    let gastoChangePct = null; // Inicia como nulo
+    if (totalGastoMesAnterior > 0) {
+        gastoChangePct = ((totalGastoMesActual - totalGastoMesAnterior) / totalGastoMesAnterior) * 100;
+    } else if (totalGastoMesActual > 0) {
+        // Si no hay mes anterior pero sí mes actual, es un 100% de aumento "infinito"
+        gastoChangePct = 100; 
     }
+    // Si ambos son 0, gastoChangePct se queda como null.
+
+    // 2. Obtener gastos de los últimos 6 meses para la tendencia (solo de Mano de Obra)
+    const trendPromises = Array.from({ length: 6 }).map((_, i) => {
+        const d = new Date(yearNum, monthNum - 1 - i, 1);
+        return getExpenses({ year: d.getFullYear(), month: d.getMonth() + 1, idExpenseCategory: ID_CATEGORIA_MANO_DE_OBRA });
+    });
     const trendResults = await Promise.all(trendPromises);
 
-    // Gráfico 1: Variaciones de gastos en el tiempo
+    // Ahora los "conceptos" son los diferentes tipos de mano de obra (ej. Salario, Horas Extra)
+    const allConcepts = new Set();
+    trendResults.flat().forEach(exp => {
+        allConcepts.add(exp.specificConceptSpent?.name || 'Concepto Desconocido');
+    });
+
+    // Gráfico 1: Tendencia por concepto específico dentro de Mano de Obra
     const monthlyTrendData = trendResults.map((expenses, i) => {
         const d = new Date(yearNum, monthNum - 1 - i, 1);
         const monthName = d.toLocaleString('es-ES', { month: 'short' });
         const yearShort = d.getFullYear().toString().slice(-2);
+        const entry = { name: `${monthName.charAt(0).toUpperCase() + monthName.slice(1)}. '${yearShort}` };
+        
+        allConcepts.forEach(concept => { entry[concept] = 0; });
 
-        const totalsByCategory = expenses.reduce((acc, exp) => {
-            const categoryName = exp.expenseCategory?.name || 'Sin Categoría';
-            acc[categoryName] = (acc[categoryName] || 0) + (Number(exp.total) || 0);
-            return acc;
-        }, {});
+        expenses.forEach(exp => {
+            const conceptName = exp.specificConceptSpent?.name || 'Concepto Desconocido';
+            entry[conceptName] = (entry[conceptName] || 0) + (Number(exp.total) || 0);
+        });
+        return entry;
+    }).reverse();
 
-        return {
-            name: `${monthName.charAt(0).toUpperCase() + monthName.slice(1)}. '${yearShort}`,
-            ...totalsByCategory
-        };
-    }).reverse(); // Invertir para mostrar del más antiguo al más reciente
-
-    // Gráfico 2: Distribución de Gastos del Mes Actual
-    const categoryDistribution = currentMonthExpenses.reduce((acc, exp) => {
-        const categoryName = exp.expenseCategory?.name || 'Sin Categoría';
-        acc[categoryName] = (acc[categoryName] || 0) + (Number(exp.total) || 0);
+    // Gráfico 2: Distribución de Gastos por concepto específico
+    const conceptDistribution = currentMonthExpenses.reduce((acc, exp) => {
+        const conceptName = exp.specificConceptSpent?.name || 'Concepto Desconocido';
+        acc[conceptName] = (acc[conceptName] || 0) + (Number(exp.total) || 0);
         return acc;
     }, {});
-
-    const distributionChartData = Object.entries(categoryDistribution)
-        .map(([name, value]) => ({ name, value, fill: getRandomColor() }))
-        .sort((a,b) => b.value - a.value);
+    
+    const conceptColors = {};
+    Array.from(allConcepts).forEach((cat, index) => {
+      conceptColors[cat] = `hsl(${index * 60}, 70%, 60%)`;
+    });
+    
+    const distributionChartData = Object.entries(conceptDistribution)
+        .map(([name, value]) => ({ name, value, fill: conceptColors[name] || '#ccc' }))
+        .sort((a, b) => b.value - a.value);
 
     return {
-      totalGastoMesActual,
-      gastoChangePct,
+      kpiData: {
+        totalGastoMesActual,
+        gastoChangePct,
+        numConcepts: distributionChartData.length
+      },
       monthlyTrendData,
       distributionChartData,
+      conceptColors,
+      allConcepts: Array.from(allConcepts),
     };
   }, [selectedYear, selectedMonth]);
 
   const { data, isLoading, error } = useDashboardSection(fetchExpensesData, [selectedYear, selectedMonth]);
+  
+  const { 
+    kpiData = {}, 
+    monthlyTrendData = [], 
+    distributionChartData = [],
+    conceptColors = {},
+    allConcepts = [],
+  } = data || {};
 
-  if (isLoading) return <div className="loading-state-finance"><DollarSign size={32} className="lucide-spin" /><p>Cargando Análisis de Gastos...</p></div>;
-  if (error || !data) return <div className="error-state-finance">{error || "No hay datos de gastos disponibles."}</div>;
+  if (isLoading) return <div className="loading-state-finance"><DollarSign size={32} className="lucide-spin" /><p>Cargando Gastos de Mano de Obra...</p></div>;
+  if (error) return <div className="error-state-finance">{error.message || "No hay datos de gastos disponibles."}</div>;
 
   return (
     <div className="animate-fadeIn">
       <div className="kpi-grid-finance">
         <StatCard 
-            title="Gasto Total del Mes" 
-            value={formatCurrency(data.totalGastoMesActual)} 
+            title="Gasto en Mano de Obra (Mes)" 
+            value={formatCurrency(kpiData.totalGastoMesActual)} 
             icon={DollarSign} 
         />
         <StatCard 
             title="Variación vs. Mes Anterior" 
-            value={formatPercentage(data.gastoChangePct, true)} 
-            icon={BarChart2} 
+            // <-- Lógica mejorada en el componente para mostrar N/A -->
+            value={kpiData.gastoChangePct !== null ? formatPercentage(kpiData.gastoChangePct, true) : 'N/A'}
+            changeDirection={kpiData.gastoChangePct === null ? undefined : (kpiData.gastoChangePct >= 0 ? 'up' : 'down')}
+            icon={TrendingUp} 
+            children={kpiData.gastoChangePct === null && kpiData.totalGastoMesActual === 0 ? <small>Sin datos para comparar</small> : null}
         />
         <StatCard 
-            title="Categorías de Gasto" 
-            value={data.distributionChartData.length} 
-            icon={PieChartIcon} 
+            title="Conceptos de Gasto" 
+            value={kpiData.numConcepts} 
+            icon={Users} 
         />
       </div>
 
       <div className="content-card-finance" style={{marginBottom: '1.5rem'}}>
-        <h3 className="card-title-main">Tendencia de Gastos por Categoría (Últimos 6 Meses)</h3>
-        {data.monthlyTrendData && data.monthlyTrendData.length > 0 ? (
+        <h3 className="card-title-main">Tendencia de Gastos de Mano de Obra (Últimos 6 Meses)</h3>
+        {monthlyTrendData.length > 0 && monthlyTrendData.some(d => Object.values(d).some(v => typeof v === 'number' && v > 0)) ? (
              <ResponsiveContainer width="100%" height={350}>
-                <BarChart data={data.monthlyTrendData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false}/>
+                <AreaChart data={monthlyTrendData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.3}/>
                     <XAxis dataKey="name" tick={{ fontSize: 12 }}/>
-                    <YAxis tickFormatter={(value) => formatCurrency(value, 0).replace('$', '')} />
-                    <Tooltip formatter={(value, name) => [formatCurrency(value), name]}/>
+                    <YAxis tickFormatter={(value) => formatCurrency(value, 0)} tick={{ fontSize: 11 }} />
+                    <Tooltip content={<CustomTooltip />} />
                     <Legend />
-                    {/* Renderizar una barra por cada categoría encontrada */}
-                    {Object.keys(data.monthlyTrendData[0] || {})
-                        .filter(key => key !== 'name')
-                        .map(category => (
-                            <Bar key={category} dataKey={category} stackId="a" fill={getRandomColor()} />
-                        ))
-                    }
-                </BarChart>
+                    {allConcepts.map(concept => (
+                        <Area 
+                          key={concept} 
+                          type="monotone" 
+                          dataKey={concept} 
+                          stackId="1" 
+                          stroke={conceptColors[concept]} 
+                          fill={conceptColors[concept]} 
+                          fillOpacity={0.7}
+                        />
+                    ))}
+                </AreaChart>
             </ResponsiveContainer>
         ) : (
             <ChartPlaceholder text="No hay datos suficientes para mostrar la tendencia." icon={Clock} />
@@ -128,28 +194,25 @@ const LaborSection = ({ selectedYear, selectedMonth }) => {
       </div>
       
       <div className="content-card-finance">
-        <h3 className="card-title-main">Distribución de Gastos (Mes Actual)</h3>
-        {data.distributionChartData.length > 0 ? (
+        <h3 className="card-title-main">Distribución de Mano de Obra (Mes Actual)</h3>
+        {distributionChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={350}>
-                 <PieChart>
-                    <Pie
-                        data={data.distributionChartData}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={120}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    >
-                        {data.distributionChartData.map((entry) => (
-                            <Cell key={`cell-${entry.name}`} fill={entry.fill} />
-                        ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => formatCurrency(value)}/>
-                    <Legend />
-                </PieChart>
+                 <RadialBarChart 
+                    cx="50%" cy="50%" 
+                    innerRadius="10%" outerRadius="80%" 
+                    barSize={15} data={distributionChartData}
+                    startAngle={180} endAngle={-180}
+                 >
+                    <RadialBar minAngle={15} background clockWise dataKey="value">
+                      {distributionChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </RadialBar>
+                    <Legend iconSize={10} layout="vertical" verticalAlign="middle" align="right" />
+                    <Tooltip formatter={(value, name) => [formatCurrency(value), name]}/>
+                </RadialBarChart>
             </ResponsiveContainer>
-        ) : <ChartPlaceholder text="No hay gastos registrados este mes." />}
+        ) : <ChartPlaceholder text="No hay gastos de mano de obra este mes." icon={BarChart2} />}
       </div>
     </div>
   );
