@@ -16,6 +16,30 @@ const empleadoService = {
         }
     },
 
+    getActiveEmployeeCountByMonth: async (year, month) => {
+        try {
+          const response = await axiosInstance.get(`${EMPLOYEE_API_ENDPOINT}/count`, { 
+            params: { year, month } // El backend ya sabe que es para activos por defecto
+          });
+
+          // ✅ CAMBIO 1: Devolver el objeto completo que viene del backend
+          if (response.data && typeof response.data.count === 'number') {
+            return response.data; // Devuelve el objeto { count: 42 }
+          }
+          
+          console.warn("El endpoint /employee/count no devolvió un formato esperado.");
+          
+          // ✅ CAMBIO 2: Devolver un objeto por defecto
+          return { count: 0 }; 
+
+        } catch (error) {
+          console.error("[Service Error] Fetching active employee count failed:", error.response?.data || error.message);
+          
+          // ✅ CAMBIO 3: Devolver un objeto en caso de error
+          return { count: 0 };
+        }
+    },
+
     createEmpleado: async (empleadoData) => {
         try {
             // CORREGIDO: Usamos axiosInstance.
