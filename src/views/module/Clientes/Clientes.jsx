@@ -137,7 +137,7 @@ const validateForm = useCallback(() => {
     const hasNumbers = /\d/; 
 
     const errors = {
-        NombreCompleto: !nombreCompletoString || hasNumbers.test(nombreCompletoString), 
+        NombreCompleto: !nombreCompletoString || nombreCompletoString.length < 5 || hasNumbers.test(nombreCompletoString),
         Distintivo: !distintivoString,        
         CategoriaCliente: !form.CategoriaCliente, 
         Celular: !/^\d{10,12}$/.test(celularString),
@@ -241,14 +241,26 @@ const handleChange = useCallback((e) => {
 
         const toastId = toast.loading('Agregando cliente...');
         try {
+              const { id, ...clientData } = form;
+
+            const payload = {
+                NombreCompleto: clientData.NombreCompleto,
+                Distintivo: clientData.Distintivo,
+                CategoriaCliente: clientData.CategoriaCliente,
+                Celular: clientData.Celular,
+                Estado: clientData.Estado,
+            };
+
+            // Se añaden los campos opcionales SÓLO si tienen valor, para evitar enviar "".
+            if (clientData.Correo) {
+                payload.Correo = clientData.Correo;
+            }
+            if (clientData.Direccion) {
+                payload.Direccion = clientData.Direccion;
+            }
             
-          
-            const { id, ...newClientData } = form;
-            const clientToSend = { ...newClientData, Estado: 'Activo' }; 
-
-            console.log("[ADD CLIENT] Calling service with:", clientToSend);
-            await clientesService.createCliente(clientToSend); 
-
+            console.log("[ADD CLIENT] Calling service with:", payload);
+            await clientesService.createCliente(payload);
             toast.success("Cliente agregado exitosamente!", { id: toastId });
             toggleMainModal(); 
             await fetchData(false); 
@@ -256,8 +268,15 @@ const handleChange = useCallback((e) => {
 
         } catch (error) {
             console.error("[ADD CLIENT ERROR]", error);
-            const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
-            toast.error(`Error al agregar: ${errorMsg}`, { id: toastId, duration: 5000 });
+              let errorMsg = "Error desconocido.";
+            if (error.response && error.response.data) {
+                // Ideal si el backend envía un { message: '...' }
+                errorMsg = error.response.data.message || JSON.stringify(error.response.data);
+            } else {
+                // Para errores de red u otros
+                errorMsg = error.message;
+            }
+            toast.error(`Error al agregar: ${errorMsg}`, { id: toastId, duration: 6000 });
         }
     }, [form, data, validateForm, toggleMainModal, fetchData]); 
 
@@ -273,9 +292,9 @@ const handleChange = useCallback((e) => {
         const celularAValidar = String(form.Celular ?? '').trim();
 
         // Validar que el celular no pertenezca a OTRO cliente
-        const celularExistente = data.some(c => 
-            c.id !== currentId && c.Celular === celularAValidar
-        );
+       const celularExistente = data.some(c => 
+    String(c.id) !== currentId && c.Celular === celularAValidar
+);
         if (celularExistente) {
            toast.error("Este número de celular ya está registrado por otro cliente.", { duration: 4000 });
            setFormErrors(prev => ({ ...prev, Celular: true }));
@@ -314,9 +333,24 @@ const handleChange = useCallback((e) => {
         const toastId = toast.loading('Actualizando cliente...');
 
         try {
-            // El servicio de clientes espera el ID y el objeto con formato frontend
-            console.log("[EDIT CLIENT EXEC] Calling service with ID:", clientToUpdate.id, "Data:", clientToUpdate);
-            await clientesService.updateCliente(clientToUpdate.id, clientToUpdate); 
+                   const payload = {
+                NombreCompleto: clientToUpdate.NombreCompleto,
+                Distintivo: clientToUpdate.Distintivo,
+                CategoriaCliente: clientToUpdate.CategoriaCliente,
+                Celular: clientToUpdate.Celular,
+                Estado: clientToUpdate.Estado,
+            };
+
+            // Se añaden los campos opcionales SÓLO si tienen valor.
+            if (clientToUpdate.Correo) {
+                payload.Correo = clientToUpdate.Correo;
+            }
+            if (clientToUpdate.Direccion) {
+                payload.Direccion = clientToUpdate.Direccion;
+            }
+            
+            console.log("[EDIT CLIENT EXEC] Calling service with ID:", clientToUpdate.id, "Data:", payload);
+            await clientesService.updateCliente(clientToUpdate.id, payload); 
 
             toast.success("Cliente actualizado exitosamente!", { id: toastId });
             toggleConfirmModal(); 
@@ -324,8 +358,13 @@ const handleChange = useCallback((e) => {
             await fetchData(false); 
         } catch (error) {
             console.error("[EDIT CLIENT EXEC ERROR]", error);
-            const errorMsg = error.response?.data?.message || error.message || "Error desconocido";
-            toast.error(`Error al actualizar: ${errorMsg}`, { id: toastId, duration: 5000 });
+                 let errorMsg = "Error desconocido.";
+            if (error.response && error.response.data) {
+                errorMsg = error.response.data.message || JSON.stringify(error.response.data);
+            } else {
+                errorMsg = error.message;
+            }
+            toast.error(`Error al actualizar: ${errorMsg}`, { id: toastId, duration: 6000 });
             toggleConfirmModal(); 
         } finally {
              setIsConfirmActionLoading(false); 
@@ -674,6 +713,7 @@ const handleChange = useCallback((e) => {
                                                             id="modalNombreCompleto" 
                                                             type="text" 
                                                             name="NombreCompleto" 
+
                                                             value={form.NombreCompleto} 
                                                             onChange={handleChange} 
                                                             invalid={formErrors.NombreCompleto} 
@@ -683,7 +723,7 @@ const handleChange = useCallback((e) => {
                                                         />
                                                         {formErrors.NombreCompleto && (
                                                             <div id="nombreError" className="invalid-feedback d-block">
-                                                                El nombre es obligatorio y no puede contener números.
+                                                                El nombre es obligatorio, debe tener al menos 5 caracteres y no puede contener números.
                                                             </div>
                                                         )}
                                         </FormGroup>
