@@ -910,6 +910,17 @@ const loadInitialData = useCallback(async () => {
 
  
   const handleDateClick = (arg) => {
+        if (arg && arg.date) {
+        const clickedDate = new Date(arg.date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); 
+
+        if (clickedDate < today) {
+            toast.error("No se pueden agregar reservas en fechas pasadas.");
+            return; 
+        }
+    }
+
     console.log("[handleDateClick] Iniciando. Argumento:", arg)
     setCurrentStep(1); 
 
