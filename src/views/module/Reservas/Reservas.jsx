@@ -969,6 +969,9 @@ const openEditModalFromPopover = () => {
 
 // 3. Tu antigua handleEventClick, ahora RENOMBRADA a openEditModal (larga, para abrir el modal de edición)
 const openEditModal = (info) => {
+    if (popoverOpen) {
+        setPopoverOpen(false);
+    }
   const idReservations = Number.parseInt(info.event.id, 10);
   if (isNaN(idReservations)) {
     console.error("ID de reserva inválido:", info.event.id);
@@ -1261,25 +1264,20 @@ const handleClientSearch = async (searchValue) => {
     }
   }
 
-  const handleAbonoChange = (index, field, value) => {
-    // Validar monto mínimo para abonos
-    if (field === "cantidad") {
-      const numValue = Number.parseFloat(value)
-      if (!isNaN(numValue) && numValue < 50000) {
-        setErrors((prevErrors) => ({
-          ...prevErrors,
-          [`pass-${index}-${field}`]: "El monto mínimo debe ser de $50.000",
-        }))
-      }
-    }
-
-    const updatedAbonos = form.pass.map((abono, i) => (i === index ? { ...abono, [field]: value } : abono))
-    setForm((prevForm) => ({ ...prevForm, pass: updatedAbonos }))
-    if (field === "cantidad") {
-      updateRestante(form.totalPay, updatedAbonos)
-    }
-    setErrors((prevErrors) => ({ ...prevErrors, [`pass-${index}-${field}`]: validateAbonoField(field, value,form) }))
-  }
+    const handleAbonoChange = (index, field, value) => {
+    const updatedAbonos = form.pass.map((abono, i) => (i === index ? { ...abono, [field]: value } : abono));
+    
+    const totalAbonos = updatedAbonos.reduce((sum, abono) => sum + Number.parseFloat(abono.cantidad || 0), 0);
+    const totalPagoNum = Number.parseFloat(form.totalPay || 0);
+    
+    setForm(prevForm => ({
+        ...prevForm,
+        pass: updatedAbonos,
+        remaining: (totalPagoNum - totalAbonos).toFixed(0)
+    }));
+    
+    setErrors((prevErrors) => ({ ...prevErrors, [`pass-${index}-${field}`]: validateAbonoField(field, value,form) }));
+  };
 
   const addAbono = () => {
     // Añadir abono con fecha actual por defecto y monto mínimo
@@ -1558,76 +1556,71 @@ const handleClientSearch = async (searchValue) => {
   }, [form, validateAbonoField, validateField, showDecorationAmountInput, showAdditionalServiceAmountInput])
 
   const handleChange = (e) => {
-    const { name, value } = e.target
-    console.log(`Cambiando ${name} a: ${value}`) 
-
+    const { name, value } = e.target;
     let updatedForm = { ...form, [name]: value };
 
-    
     if (name === "dateTime") {
-      
-      const hasTimeConflict = checkTimeConflict(value, selectedReserva?.idReservations)
+      const hasTimeConflict = checkTimeConflict(value, selectedReserva?.idReservations);
       if (hasTimeConflict) {
-        console.log("Conflicto de hora detectado:", value)
-        setErrors((prevErrors) => ({
-          ...prevErrors,
-          [name]: "Ya existe una reserva en esta hora. Por favor, seleccione otra hora.",
-        }))
+        setErrors((prevErrors) => ({ ...prevErrors, [name]: "Ya existe una reserva en esta hora." }));
       } else {
-        
         setErrors((prevErrors) => {
-          const newErrors = { ...prevErrors }
-          delete newErrors[name]
-          return newErrors
-        })
+          const newErrors = { ...prevErrors };
+          delete newErrors[name];
+          return newErrors;
+        });
       }
-
-     
       if (form.idCustomers && checkDuplicateReservation(form.idCustomers, value, selectedReserva?.idReservations)) {
-        setErrors((prevErrors) => ({
-          ...prevErrors,
-          [name]:
-            "Este cliente ya tiene una reserva en esta fecha. No se permiten múltiples reservas para el mismo cliente en un día.",
-        }))
+        setErrors((prevErrors) => ({ ...prevErrors, [name]: "Este cliente ya tiene una reserva en esta fecha." }));
       }
     }
 
-    
- if (["numberPeople", "evenType", "decorationAmount", "additionalServiceAmount"].includes(name)) {
-    
-    // Si cambia el tipo de evento, ajustamos la visibilidad del monto de decoración
-    if (name === "evenType") {
-      const tieneDecoracion = updatedForm.servicios.some((s) => isDecorationService(s.label));
-      const esCumpleanos = value && value.toLowerCase().includes("cumpleaños");
-      if (tieneDecoracion) {
-        setShowDecorationAmountInput(!esCumpleanos);
-        if (esCumpleanos) {
-          updatedForm.decorationAmount = "0"; 
-        }
+    if (['numberPeople', 'evenType', 'decorationAmount', 'additionalServiceAmount', 'totalPay'].includes(name)) {
+
+      if (name === 'totalPay') {
+          const totalAbonos = (updatedForm.pass || []).reduce((sum, abono) => sum + Number.parseFloat(abono.cantidad || 0), 0);
+          const totalPagoNum = Number.parseFloat(value || 0);
+          updatedForm.remaining = (totalPagoNum - totalAbonos).toFixed(0);
+      } else {
+         
+          if (name === 'numberPeople') {
+              const tieneDecoracion = updatedForm.servicios.some(s => isDecorationService(s.label));
+              const esCumpleanos = updatedForm.evenType && updatedForm.evenType.toLowerCase().includes("cumpleaños");
+              
+              if (tieneDecoracion && !esCumpleanos) {
+                  updatedForm.decorationAmount = calculateDecorationAmount(value);
+              }
+          }
+          
+          if (name === "evenType") {
+              const tieneDecoracion = updatedForm.servicios.some((s) => isDecorationService(s.label));
+              const esCumpleanos = value && value.toLowerCase().includes("cumpleaños");
+              if (tieneDecoracion) {
+                  setShowDecorationAmountInput(!esCumpleanos);
+                  if (esCumpleanos) {
+                      updatedForm.decorationAmount = "0";
+                  }
+              }
+          }
+        
+          updatedForm = calculateTotalAndRemaining(updatedForm);
       }
     }
-    
-    // Llamamos a la función central para que actualice totalPay y remaining
-    updatedForm = calculateTotalAndRemaining(updatedForm);
-  }
 
-    setForm(updatedForm)
+    setForm(updatedForm);
 
-    if (name === "totalPay" || name === "numberPeople" || name === "evenType") {
-      updateRestante(updatedForm.totalPay, updatedForm.pass)
-    }
-
+   
     if (name !== "idCustomers") {
-      const error = validateField(name, updatedForm[name])
-      setErrors((prevErrors) => ({ ...prevErrors, [name]: error }))
+      const error = validateField(name, updatedForm[name]);
+      setErrors((prevErrors) => ({ ...prevErrors, [name]: error }));
     } else {
       setErrors((prevErrors) => {
-        const newErrors = { ...prevErrors }
-        delete newErrors.idCustomers
-        return newErrors
-      })
+        const newErrors = { ...prevErrors };
+        delete newErrors.idCustomers;
+        return newErrors;
+      });
     }
-  }
+  };
 
   const updateDurationOnly = useCallback(async (id, duration) => {
     try {
@@ -2915,7 +2908,7 @@ const handleRescheduleSubmit = async () => {
                     <Label for="totalPay" style={{ fontWeight: "bold" }}>
                       Total a Pagar
                     </Label>
-                    <Input
+               <Input
                       type="number"
                       name="totalPay"
                       id="totalPay"
@@ -3071,8 +3064,8 @@ const handleRescheduleSubmit = async () => {
                               id: String(item.idReservations),
                             },
                           }
-                          handleEventClick(eventInfo)
-                          setListModalOpen(false)
+                          openEditModal(eventInfo); 
+                          setListModalOpen(false); 
                         }}
                       >
                         <Edit size={16} />

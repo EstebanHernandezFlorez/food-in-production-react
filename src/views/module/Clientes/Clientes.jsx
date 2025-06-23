@@ -273,9 +273,9 @@ const handleChange = useCallback((e) => {
         const celularAValidar = String(form.Celular ?? '').trim();
 
         // Validar que el celular no pertenezca a OTRO cliente
-        const celularExistente = data.some(c => 
-            c.id !== currentId && c.Celular === celularAValidar
-        );
+       const celularExistente = data.some(c => 
+    String(c.id) !== currentId && c.Celular === celularAValidar
+);
         if (celularExistente) {
            toast.error("Este número de celular ya está registrado por otro cliente.", { duration: 4000 });
            setFormErrors(prev => ({ ...prev, Celular: true }));
@@ -674,6 +674,7 @@ const handleChange = useCallback((e) => {
                                                             id="modalNombreCompleto" 
                                                             type="text" 
                                                             name="NombreCompleto" 
+
                                                             value={form.NombreCompleto} 
                                                             onChange={handleChange} 
                                                             invalid={formErrors.NombreCompleto} 
