@@ -1,11 +1,13 @@
-import axiosInstance from './axiosConfig'; // <- CAMBIO 1: Importar la instancia central
+// services/productService.js
+// --- VERSIÓN COMPLETA Y FINAL ---
 
-const API_ENDPOINT = '/product'; // <- CAMBIO 2: Definir solo el endpoint relativo
+import axiosInstance from './axiosConfig';
+
+const API_ENDPOINT = '/product';
 
 const productService = {
     getAllProducts: async (params = {}) => {
         try {
-            // CAMBIO 3: Usar axiosInstance y el endpoint
             const response = await axiosInstance.get(API_ENDPOINT, { params });
             return response.data;
         } catch (error) {
@@ -54,9 +56,42 @@ const productService = {
         }
     },
 
-    changeProductStatus: async (idProduct, status) => {
+    adjustStock: async (idProduct, data) => {
         try {
-            const response = await axiosInstance.patch(`${API_ENDPOINT}/${idProduct}/status`, { status });
+            const response = await axiosInstance.post(`${API_ENDPOINT}/${idProduct}/adjust-stock`, data);
+            return response.data;
+        } catch (error) {
+            console.error(`Error adjusting supply stock for product ID ${idProduct}:`, error.response?.data || error.message);
+            throw error.response?.data || error;
+        }
+    },
+    
+    // --- NUEVA FUNCIÓN PARA AJUSTAR STOCK DE VENTA ---
+    adjustStockBySale: async (idProduct, data) => {
+        try {
+            const response = await axiosInstance.post(`${API_ENDPOINT}/${idProduct}/adjust-sale-stock`, data);
+            return response.data;
+        } catch (error) {
+            console.error(`Error adjusting sale stock for product ID ${idProduct}:`, error.response?.data || error.message);
+            throw error.response?.data || error;
+        }
+    },
+
+    // Ajustar stock producido (cuando finaliza una orden de producción)
+    adjustProducedStock: async (idProduct, data) => {
+        try {
+            const response = await axiosInstance.post(`${API_ENDPOINT}/${idProduct}/adjust-produced-stock`, data);
+            return response.data;
+        } catch (error) {
+            console.error(`Error adjusting produced stock for product ID ${idProduct}:`, error.response?.data || error.message);
+            throw error.response?.data || error;
+        }
+    },
+
+    // Corregido: El nombre de la función para coincidir con el componente
+    changeStateProduct: async (idProduct, newStatus) => {
+        try {
+            const response = await axiosInstance.patch(`${API_ENDPOINT}/${idProduct}/status`, { status: newStatus });
             return response.data;
         } catch (error) {
             console.error(`Error changing status for product ID ${idProduct}:`, error.response?.data || error.message);

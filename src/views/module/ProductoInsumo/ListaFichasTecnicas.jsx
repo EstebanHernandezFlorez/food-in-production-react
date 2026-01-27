@@ -6,7 +6,7 @@ import {
     Modal, ModalHeader, ModalBody, ModalFooter, Spinner, Alert,
     Row, Col, Card, CardBody, CardTitle, ListGroup, ListGroupItem
 } from 'reactstrap';
-import { Trash2, Edit, Plus, AlertTriangle, CheckCircle, XCircle, ArrowLeft, Info, Eye } from 'lucide-react';
+import { Trash2, Edit, Plus, AlertTriangle, ArrowLeft, Info, Eye } from 'lucide-react';
 import specSheetService from '../../services/specSheetService';
 import productService from '../../services/productService';
 import toast, { Toaster } from "react-hot-toast";
@@ -23,12 +23,13 @@ const ConfirmationModal = ({ isOpen, toggle, title, children, onConfirm, confirm
 // --- Detail Modal Component para Ficha Técnica ---
 const FichaDetailModal = ({ isOpen, toggle, ficha }) => {
     if (!ficha) return null;
-    // Asegurarse que los arrays existen antes de mapear
-    const supplies = ficha.specSheetSupplies || ficha.SpecSheetSupplies || [];
-    const processes = ficha.specSheetProcesses || ficha.SpecSheetProcesses || [];
+
+    const productInfo = ficha.product || ficha.Product;
+    const supplies = ficha.specSheetSupplies || [];
+    const processes = ficha.specSheetProcesses || [];
 
     return (
-        <Modal isOpen={isOpen} toggle={toggle} centered size="xl" scrollable> {/* XL para más espacio */}
+        <Modal isOpen={isOpen} toggle={toggle} centered size="xl" scrollable>
             <ModalHeader toggle={toggle}>
                 <div className="d-flex align-items-center">
                     <Eye size={24} className="me-2 text-info" />
@@ -42,10 +43,10 @@ const FichaDetailModal = ({ isOpen, toggle, ficha }) => {
                             <CardBody>
                                 <CardTitle tag="h5" className="text-primary border-bottom pb-2 mb-3">Información General</CardTitle>
                                 <ListGroup flush>
-                                    <ListGroupItem><strong>Producto:</strong> {ficha.Product?.productName || ficha.product?.productName || `ID ${ficha.idProduct}`}</ListGroupItem>
-                                    <ListGroupItem><strong>Fecha Efectiva:</strong> {ficha.dateEffective ? new Date(ficha.dateEffective).toLocaleDateString() : '-'}</ListGroupItem>
+                                    <ListGroupItem><strong>Producto:</strong> {productInfo?.productName || `ID ${ficha.idProduct}`}</ListGroupItem>
+                                    <ListGroupItem><strong>Fecha Efectiva:</strong> {ficha.dateEffective ? new Date(ficha.dateEffective).toLocaleDateString() : '-'}</ListGroupItem> {/* <-- CORREGIDO */}
                                     <ListGroupItem><strong>Fin Vigencia:</strong> {ficha.endDate ? new Date(ficha.endDate).toLocaleDateString() : 'N/A'}</ListGroupItem>
-                                    <ListGroupItem><strong>Cant. Base:</strong> {ficha.quantityBase} {ficha.unitOfMeasure || ficha.Product?.unitOfMeasure}</ListGroupItem>
+                                    <ListGroupItem><strong>Cant. Base:</strong> {ficha.quantityBase} {ficha.unitOfMeasure || productInfo?.unitOfMeasure}</ListGroupItem> {/* <-- CORREGIDO */}
                                     <ListGroupItem><strong>Estado:</strong> <span className={`badge bg-${ficha.status ? 'success' : 'secondary'}`}>{ficha.status ? "Activa" : "Inactiva"}</span></ListGroupItem>
                                     {ficha.versionName && <ListGroupItem><strong>Versión:</strong> {ficha.versionName}</ListGroupItem>}
                                     {ficha.description && <ListGroupItem><strong>Descripción:</strong> {ficha.description}</ListGroupItem>}
@@ -59,12 +60,14 @@ const FichaDetailModal = ({ isOpen, toggle, ficha }) => {
                                 <CardTitle tag="h5" className="text-success border-bottom pb-2 mb-3">Insumos / Ingredientes</CardTitle>
                                 {supplies.length > 0 ? (
                                     <ListGroup flush>
-                                        {supplies.map((supplyItem, index) => (
+                                        {supplies.map((supplyItem, index) => {
+                                            const supplyInfo = supplyItem.supply || supplyItem.Supply;
+                                            return(
                                             <ListGroupItem key={supplyItem.idSpecSheetSupply || `supply-${index}`}>
-                                                <strong>{supplyItem.Supply?.supplyName || supplyItem.supply?.supplyName || `Insumo ID ${supplyItem.idSupply}`}:</strong> {supplyItem.quantity} {supplyItem.unitOfMeasure}
+                                                <strong>{supplyInfo?.supplyName || `Insumo ID ${supplyItem.idSupply}`}:</strong> {supplyItem.quantity} {supplyItem.unitOfMeasure}
                                                 {supplyItem.notes && <div className="text-muted x-small ps-2">- {supplyItem.notes}</div>}
                                             </ListGroupItem>
-                                        ))}
+                                        )})}
                                     </ListGroup>
                                 ) : (
                                     <p className="text-muted fst-italic">No hay insumos asociados a esta ficha.</p>
@@ -76,13 +79,15 @@ const FichaDetailModal = ({ isOpen, toggle, ficha }) => {
                                 <CardTitle tag="h5" className="text-info border-bottom pb-2 mb-3">Pasos de Elaboración</CardTitle>
                                 {processes.length > 0 ? (
                                     <ListGroup flush>
-                                        {processes.sort((a,b) => (a.processOrder || 0) - (b.processOrder || 0)).map((processItem, index) => (
+                                        {processes.sort((a,b) => (a.processOrder || 0) - (b.processOrder || 0)).map((processItem, index) => {
+                                            const processInfo = processItem.masterProcess || processItem.MasterProcess;
+                                            return(
                                             <ListGroupItem key={processItem.idSpecSheetProcess || `proc-${index}`}>
-                                                <strong>Paso {processItem.processOrder || (index + 1)}: {processItem.processNameOverride || processItem.MasterProcess?.processName || 'Nombre no especificado'}</strong>
+                                                <strong>Paso {processItem.processOrder || (index + 1)}: {processItem.processNameOverride || processInfo?.processName || 'Nombre no especificado'}</strong>
                                                 {processItem.processDescriptionOverride && <div className="text-muted small ps-2">{processItem.processDescriptionOverride}</div>}
                                                 {processItem.estimatedTimeMinutes && <div className="text-muted x-small ps-2">Tiempo Estimado: {processItem.estimatedTimeMinutes} min.</div>}
                                             </ListGroupItem>
-                                        ))}
+                                        )})}
                                     </ListGroup>
                                 ) : (
                                     <p className="text-muted fst-italic">No hay procesos definidos para esta ficha.</p>
@@ -115,13 +120,7 @@ const ListaFichasTecnicas = () => {
     const handleNavigateToProductList = useCallback(() => navigate('/home/produccion/producto-insumo'), [navigate]);
     const handleNavigateToEditFicha = useCallback((idSpecSheet) => { if (idSpecSheet) navigate(`/home/fichas-tecnicas/editar/${idSpecSheet}`); else toast.error("ID de ficha inválido."); }, [navigate]);
     const handleNavigateToCrearFicha = useCallback(() => {
-        // En lugar de navegar a una ruta genérica...
-        // navigate(`/home/fichas-tecnicas/crear`); 
-
-        // ...navegamos a la misma ruta pero añadiendo el ID del producto actual.
-        // Esto le dirá al siguiente componente qué producto pre-seleccionar.
         navigate(`/home/fichas-tecnicas/crear?idProducto=${idProduct}`);
-
     }, [navigate, idProduct]);
 
     const cargarFichasYProducto = useCallback(async (showToastOnLoad = false) => {
@@ -136,13 +135,9 @@ const ListaFichasTecnicas = () => {
             ]);
             setProductName(productDetails?.productName || productDetails?.name || `Producto ID: ${idProduct}`);
             
-            // Asumiendo que el backend devuelve un array directamente, o un objeto con una propiedad 'data' o el nombre del modelo
             const fichasArray = Array.isArray(fichasDataResponse) ? fichasDataResponse : 
                                 (fichasDataResponse?.data || fichasDataResponse?.specSheets || fichasDataResponse?.fichas || []);
             
-            console.log('ListaFichasTecnicas - cargarFichasYProducto: Fichas recibidas del backend:', fichasDataResponse);
-            console.log('ListaFichasTecnicas - cargarFichasYProducto: Fichas procesadas (fichasArray):', fichasArray);
-
             setFichas(fichasArray);
             if (showToastOnLoad && fichasArray.length > 0) toast.success(`Se encontraron ${fichasArray.length} fichas.`);
             else if (fichasArray.length === 0 && !showToastOnLoad) toast("No hay fichas para este producto.", { icon: <Info/> });
@@ -158,14 +153,15 @@ const ListaFichasTecnicas = () => {
 
     const toggleConfirmModal = useCallback(() => { if (isConfirmActionLoading) return; setConfirmModalOpen(p => !p); }, [isConfirmActionLoading]);
     useEffect(() => { if (!confirmModalOpen && !isConfirmActionLoading) { setConfirmModalProps({}); confirmActionRef.current = null; } }, [confirmModalOpen, isConfirmActionLoading]);
-    const prepareConfirmation = useCallback((actionFn, props) => { confirmActionRef.current = () => actionFn(props.itemDetails); setConfirmModalProps(props); setConfirmModalOpen(true); }, [toggleConfirmModal]);
+    const prepareConfirmation = useCallback((actionFn, props) => { confirmActionRef.current = () => actionFn(props.itemDetails); setConfirmModalProps(props); setConfirmModalOpen(true); }, []);
     
     const toggleDetailModal = useCallback(() => { setDetailModalOpen(p => !p); if (detailModalOpen) setSelectedFichaForDetail(null); }, [detailModalOpen]);
     const handleViewDetails = useCallback(async (idSpecSheet) => {
         if (!idSpecSheet) { toast.error("ID de ficha inválido."); return; }
         const toastId = toast.loading("Cargando detalles...");
         try {
-            const fichaCompleta = await specSheetService.getSpecSheetById(idSpecSheet); // Fetchea la ficha completa
+            const fichaCompleta = await specSheetService.getSpecSheetById(idSpecSheet);
+            
             if (fichaCompleta) {
                 setSelectedFichaForDetail(fichaCompleta);
                 setDetailModalOpen(true);
@@ -235,8 +231,8 @@ const ListaFichasTecnicas = () => {
                         {(Array.isArray(fichas) ? fichas : []).map(ficha => (
                             <tr key={ficha.idSpecSheet}>
                                 <td>{ficha.idSpecSheet}</td>
-                                <td>{ficha.dateEffective ? new Date(ficha.dateEffective).toLocaleDateString() : '-'}</td>
-                                <td>{ficha.quantityBase}</td>
+                                <td>{ficha.dateEffective ? new Date(ficha.dateEffective).toLocaleDateString() : '-'}</td> {/* <-- CORREGIDO */}
+                                <td>{ficha.quantityBase}</td> {/* <-- CORREGIDO */}
                                 <td>{ficha.unitOfMeasure || ficha.Product?.unitOfMeasure || '-'}</td>
                                 <td className="text-center"><Button size="sm" className={`status-button ${ficha.status ? 'status-active' : 'status-inactive'}`} onClick={() => requestChangeStatusConfirmation(ficha)} disabled={isConfirmActionLoading}>{ficha.status ? "Activa" : "Inactiva"}</Button></td>
                                 <td className="text-center">{ficha.endDate ? new Date(ficha.endDate).toLocaleDateString() : (ficha.status === false ? 'N/A' : '-')}</td>

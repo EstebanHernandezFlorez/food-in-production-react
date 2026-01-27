@@ -130,6 +130,16 @@ body {
   gap: 1.5rem;
   margin-bottom: 1.5rem;
 }
+.kpi-grid-5-cols {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+/* Media query para que en pantallas pequeñas se apilen */
+@media (max-width: 1200px) {
+  .kpi-grid-5-cols {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+}
 
 .kpi-card-finance {
   background-color: var(--bg-card-finance);
@@ -274,3 +284,35 @@ body {
 /* Animación Global */
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 .animate-fadeIn { animation: fadeIn 0.4s ease-out forwards; }
+
+/* Estilos para el Tooltip Personalizado de los Gráficos */
+.custom-tooltip-finance {
+  background-color: rgba(30, 41, 59, 0.9); /* slate-800 con transparencia */
+  border-radius: 0.5rem; /* 8px */
+  padding: 0.75rem 1rem; /* 12px 16px */
+  border: 1px solid rgba(71, 85, 105, 0.5); /* slate-600 */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  color: #f8fafc; /* slate-50 */
+}
+
+.custom-tooltip-finance .label {
+  font-weight: 600; /* semibold */
+  margin-bottom: 0.25rem; /* 4px */
+  color: #cbd5e1; /* slate-300 */
+}
+
+.custom-tooltip-finance .intro {
+  font-size: 0.875rem; /* 14px */
+  color: #f8fafc; /* slate-50 */
+}
+
+.custom-tooltip-finance .desc {
+  font-size: 0.75rem; /* 12px */
+  color: #94a3b8; /* slate-400 */
+  margin-top: 0.25rem;
+}
+
+/* Ajustes para el texto de la leyenda en los gráficos */
+.recharts-legend-item-text {
+  color: #4b5563; /* gray-600, ajusta a tu tema */
+}

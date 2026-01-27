@@ -1,603 +1,524 @@
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useRef,
-  useMemo,
-} from "react";
+// src/views/module/ProductoInsumo/ProductoInsumo.jsx
+import React, { useState, useEffect, useCallback, useRef, useMemo, useContext } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../../../assets/css/App.css";
 import {
-  Table, Button, Container, Row, Col, Form, FormGroup, Input, Label,
-  Modal, ModalHeader, ModalBody, ModalFooter, Spinner, Alert, FormFeedback,
+    Table, Button, Container, Row, Col, Form, FormGroup, Input, Label,
+    Modal, ModalHeader, ModalBody, ModalFooter, Spinner, InputGroup, InputGroupText, Alert
 } from "reactstrap";
-import {
-  Trash2, Edit, Plus, AlertTriangle, CheckCircle, XCircle, ListChecks, FileText, Package,
+import { 
+    Trash2, Edit, Plus, AlertTriangle, ListChecks, FileText, 
+    Package, Loader, Settings2, DollarSign, CheckCircle, XCircle 
 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-
 import productService from "../../services/productService";
 import CustomPagination from "../../General/CustomPagination";
+import { ActiveOrdersContext } from "../OrdenProduccion/ActiveOrdersContext";
 
+// Helper para formatear moneda
+const formatCurrency = (value) => {
+    return new Intl.NumberFormat('es-CO', {
+        style: 'currency',
+        currency: 'COP',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(Number(value) || 0);
+};
 
-const ConfirmationModal = ({
-  isOpen, toggle, title, children, onConfirm, confirmText = "Confirmar",
-  confirmColor = "primary", isConfirming = false,
-}) => (
-  <Modal isOpen={isOpen} toggle={!isConfirming ? toggle : undefined} centered backdrop="static" keyboard={!isConfirming}>
-    <ModalHeader toggle={!isConfirming ? toggle : undefined}>
-      <div className="d-flex align-items-center">
-        <AlertTriangle size={24} className={`text-${confirmColor === "danger" ? "danger" : confirmColor === "warning" ? "warning" : "primary"} me-2`}/>
-        <span className="fw-bold">{title}</span>
-      </div>
-    </ModalHeader>
-    <ModalBody>{children}</ModalBody>
-    <ModalFooter>
-      <Button color="secondary" outline onClick={toggle} disabled={isConfirming}>Cancelar</Button>
-      <Button color={confirmColor} onClick={onConfirm} disabled={isConfirming}>
-        {isConfirming ? (<><Spinner size="sm" className="me-1" /> Procesando...</>) : (confirmText)}
-      </Button>
-    </ModalFooter>
-  </Modal>
+// Componente de Modal de Confirmación (Genérico)
+const ConfirmationModal = ({ isOpen, toggle, title, children, onConfirm, confirmText = "Confirmar", confirmColor = "primary", isConfirming = false }) => (
+    <Modal isOpen={isOpen} toggle={!isConfirming ? toggle : undefined} centered backdrop="static">
+        <ModalHeader toggle={!isConfirming ? toggle : undefined}>
+            <div className="d-flex align-items-center">
+                <AlertTriangle size={24} className={`text-${confirmColor} me-2`} />
+                <span className="fw-bold">{title}</span>
+            </div>
+        </ModalHeader>
+        <ModalBody>{children}</ModalBody>
+        <ModalFooter>
+            <Button color="secondary" outline onClick={toggle} disabled={isConfirming}>Cancelar</Button>
+            <Button color={confirmColor} onClick={onConfirm} disabled={isConfirming}>
+                {isConfirming ? <Spinner size="sm" /> : confirmText}
+            </Button>
+        </ModalFooter>
+    </Modal>
 );
 
-// --- Constants ---
-const LOG_PREFIX = "[ProductoInsumo]";
-// --- MODIFICACIÓN: Añadido 'currentStock' al estado inicial del formulario ---
-const INITIAL_FORM_STATE = { idProduct: "", productName: "", minStock: "", maxStock: "", currentStock: 0, status: true };
-// --- MODIFICACIÓN: Añadido 'currentStock' al estado inicial de errores ---
-const INITIAL_FORM_ERRORS = { productName: false, minStock: false, maxStock: false, currentStock: false, general: "" };
-const INITIAL_CONFIRM_PROPS = { title: "", message: null, confirmText: "Confirmar", confirmColor: "primary", itemDetails: null };
+const INITIAL_FORM_STATE = { idProduct: "", productName: "", minStock: 0, maxStock: 0, currentStock: 0, status: true, sellingPrice: 0 };
 const ITEMS_PER_PAGE = 5;
 
-// --- Main Component ---
 const ProductoInsumo = () => {
-  const [data, setData] = useState([]);
-  const [form, setForm] = useState(INITIAL_FORM_STATE);
-  const [isEditing, setIsEditing] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [tableSearchText, setTableSearchText] = useState("");
-  const [isLoadingData, setIsLoadingData] = useState(true);
-  const [formErrors, setFormErrors] = useState(INITIAL_FORM_ERRORS);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
-  const [confirmModalProps, setConfirmModalProps] = useState(INITIAL_CONFIRM_PROPS);
-  const [isConfirmActionLoading, setIsConfirmActionLoading] = useState(false);
-  const [isSavingForm, setIsSavingForm] = useState(false);
-
-  const navigate = useNavigate();
-  const confirmActionRef = useRef(null);
-  
-  const fetchData = useCallback(async (showLoadingSpinner = true) => {
-      if (showLoadingSpinner) setIsLoadingData(true);
-      console.log(`${LOG_PREFIX} [FETCH] Fetching productos/insumos...`);
-      try {
-        const response = await productService.getAllProducts();
-        const fetchedData = Array.isArray(response) ? response : response?.data || [];
-        setData(fetchedData);
-        console.log(`${LOG_PREFIX} [FETCH] Data received:`, fetchedData);
-      } catch (error) {
-        console.error(`${LOG_PREFIX} [FETCH ERROR]`, error);
-        toast.error("Error al cargar productos/insumos.");
-        setData([]);
-      } finally {
-        if (showLoadingSpinner) setIsLoadingData(false);
-      }
-  }, []);
-
-  useEffect(() => {
-      fetchData();
-  }, [fetchData]);
-
-  const handleNavigateToProductFichas = (productId) => {
-      if (!productId) {
-          console.error("ID de producto no proporcionado para ver fichas.");
-          toast.error("No se pudo obtener el ID del producto.");
-          return;
-      }
-      navigate(`/home/producto/${productId}/fichas`);
-  };
-
-  const resetForm = useCallback(() => setForm(INITIAL_FORM_STATE), []);
-  const clearFormErrors = useCallback(() => setFormErrors(INITIAL_FORM_ERRORS), []);
-  
-  // --- MODIFICACIÓN: La función de validación ahora incluye 'currentStock' y depende de 'isEditing' ---
-  const validateForm = useCallback(() => {
-      let errors = { ...INITIAL_FORM_ERRORS };
-      let isValid = true;
-      errors.general = "";
+    // --- ESTADOS ---
+    const [data, setData] = useState([]);
+    const [isLoadingData, setIsLoadingData] = useState(true);
+    const [tableSearchText, setTableSearchText] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
     
-      const trimmedName = String(form.productName ?? "").trim();
-      if (!trimmedName || trimmedName.length < 3 || !/^[a-zA-Z0-9\sñÑáéíóúÁÉÍÓÚüÜ]+$/.test(trimmedName)) {
-          errors.productName = true;
-          isValid = false;
-      }
-    
-      const minStock = form.minStock !== "" ? Number(form.minStock) : null;
-      const maxStock = form.maxStock !== "" ? Number(form.maxStock) : null;
-      const currentStock = form.currentStock !== "" ? Number(form.currentStock) : null;
-  
-      // Validamos el stock inicial solo si estamos creando un nuevo producto
-      if (!isEditing && (currentStock === null || isNaN(currentStock) || currentStock < 0)) {
-          errors.currentStock = true;
-          isValid = false;
-      }
-    
-      if (minStock !== null && (isNaN(minStock) || minStock < 0)) {
-          errors.minStock = true;
-          isValid = false;
-      }
-      if (maxStock !== null && (isNaN(maxStock) || maxStock < 0)) {
-          errors.maxStock = true;
-          isValid = false;
-      }
-    
-      if (minStock !== null && maxStock !== null && maxStock > 0 && minStock > maxStock) {
-          errors.minStock = true;
-          errors.maxStock = true;
-          errors.general = "El stock máximo no puede ser menor que el mínimo.";
-          isValid = false;
-      }
-    
-      setFormErrors(errors);
-      return isValid;
-  }, [form, isEditing]);
+    // Modales de Formulario (Crear/Editar)
+    const [modalOpen, setModalOpen] = useState(false);
+    const [form, setForm] = useState(INITIAL_FORM_STATE);
+    const [isEditing, setIsEditing] = useState(false);
+    const [isSavingForm, setIsSavingForm] = useState(false);
 
-  const handleChange = useCallback((e) => {
-      const { name, value, type } = e.target;
-      const val = type === 'number' && value === '' ? '' : value;
-      
-      setForm((prev) => ({ ...prev, [name]: val }));
-      
-      if (formErrors[name] || formErrors.general) {
-          setFormErrors((prevErr) => ({
-              ...prevErr,
-              [name]: false,
-              general: "", 
-          }));
-      }
-  }, [formErrors]);
+    // Modal de Ajuste de Inventario
+    const [adjustModalOpen, setAdjustModalOpen] = useState(false);
+    const [productToAdjust, setProductToAdjust] = useState(null);
+    const [adjustmentForm, setAdjustmentForm] = useState({ quantity: '', type: 'entrada', reason: '' });
+    const [isAdjustingStock, setIsAdjustingStock] = useState(false);
 
-  const handleTableSearch = useCallback((e) => {
-      setTableSearchText(e.target.value.toLowerCase());
-      setCurrentPage(1);
-  }, []);
+    // Modal de Confirmación (Eliminar/Estado)
+    const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+    const [confirmProps, setConfirmProps] = useState({ title: "", message: "", color: "primary", action: null });
 
-  const toggleMainModal = useCallback(() => {
-      const closing = modalOpen;
-      setModalOpen((prev) => !prev);
-      if (closing) {
-          resetForm();
-          clearFormErrors();
-          setIsEditing(false);
-      }
-  }, [modalOpen, resetForm, clearFormErrors]);
-
-  const toggleConfirmModal = useCallback(() => {
-      if (isConfirmActionLoading) return;
-      setConfirmModalOpen((prev) => !prev);
-  }, [isConfirmActionLoading]);
-
-  useEffect(() => {
-      if (!confirmModalOpen && !isConfirmActionLoading) {
-          setConfirmModalProps(INITIAL_CONFIRM_PROPS);
-          confirmActionRef.current = null;
-      }
-  }, [confirmModalOpen, isConfirmActionLoading]);
-  
-  const prepareConfirmation = useCallback((actionFn, props) => {
-      const detailsToPass = props.itemDetails;
-        confirmActionRef.current = () => {
-          if (actionFn) {
-            actionFn(detailsToPass);
-          } else {
-            toast.error("Error interno al ejecutar la acción.");
-            toggleConfirmModal(); 
-          }
-        };
-        setConfirmModalProps(props);
-        setConfirmModalOpen(true);
-  }, [toggleConfirmModal]);
-
-  // --- MODIFICACIÓN: 'handleSubmit' ahora maneja 'currentStock' al crear y lo omite al editar ---
-  const handleSubmit = useCallback(async () => {
-      if (!validateForm()) {
-          toast.error(formErrors.general || "Revise los campos marcados.");
-          return;
-      }
-      setIsSavingForm(true);
-      const actionText = isEditing ? "Actualizando" : "Agregando";
-      const toastId = toast.loading(`${actionText} producto/insumo...`);
-      
-      const dataToSend = {
-          ...form,
-          productName: form.productName.trim(),
-          minStock: form.minStock === '' ? 0 : Number(form.minStock),
-          maxStock: form.maxStock === '' ? 0 : Number(form.maxStock),
-          // Aseguramos que el stock inicial se envíe como número
-          currentStock: form.currentStock === '' ? 0 : Number(form.currentStock),
-      };
-      
-      if (isEditing) {
-          // Al editar, no queremos sobreescribir el stock actual desde este formulario.
-          delete dataToSend.currentStock;
-          delete dataToSend.idProduct; // Se pasa como parámetro en la URL, no en el body.
-      } else {
-          // Al crear, no enviamos el idProduct porque es autoincremental.
-          delete dataToSend.idProduct;
-      }
-
-      try {
-          if (isEditing) {
-              if (!form.idProduct) throw new Error("ID no válido para actualizar.");
-              // Nota: se excluye idProduct del body, va en la URL
-              const { idProduct, ...updateData } = dataToSend;
-              await productService.updateProduct(form.idProduct, updateData);
-          } else {
-              await productService.createProduct(dataToSend);
-          }
-          toast.success(
-              `Producto/Insumo ${isEditing ? "actualizado" : "agregado"}!`,
-              { id: toastId }
-          );
-          toggleMainModal();
-          await fetchData(false);
-          setCurrentPage(1);
-      } catch (error) {
-          const errorMsg = error.response?.data?.message || error.response?.data?.errors?.[0]?.msg || error.message || "Error desconocido";
-          setFormErrors((prev) => ({ ...prev, general: `Error: ${errorMsg}` }));
-          toast.error(`Error al ${actionText.toLowerCase()}: ${errorMsg}`, {
-              id: toastId,
-              duration: 5000,
-          });
-      } finally {
-          setIsSavingForm(false);
-      }
-  }, [form, isEditing, validateForm, toggleMainModal, fetchData, formErrors.general]);
-
-  const requestChangeStatusConfirmation = useCallback((product) => {
-      if (!product || !product.idProduct) return;
-        const { idProduct, status: currentStatus, productName } = product;
-        const actionText = currentStatus ? "desactivar" : "activar";
-        const futureStatusText = currentStatus ? "Inactivo" : "Activo";
-        const confirmColor = currentStatus ? "warning" : "success";
-        prepareConfirmation(executeChangeStatus, {
-          title: `Confirmar ${actionText.charAt(0).toUpperCase() + actionText.slice(1)}`,
-          message: ( <p> ¿<strong>{actionText}</strong> el producto/insumo{" "} <strong>{productName || "seleccionado"}</strong>? <br /> Estado será: <strong>{futureStatusText}</strong>. </p> ),
-          confirmText: `Sí, ${actionText}`,
-          confirmColor,
-          itemDetails: { idProduct, currentStatus, productName },
-        });
-    }, [prepareConfirmation]);
-
-  const executeChangeStatus = useCallback(async (details) => {
-      if (!details || !details.idProduct) {
-          toast.error("Error interno: Detalles del producto no encontrados.");
-          toggleConfirmModal();
-          return;
-        }
-        const { idProduct, currentStatus, productName } = details;
-        const newStatus = !currentStatus;
-        const actionText = newStatus ? "activado" : "desactivado";
-        setIsConfirmActionLoading(true);
-        const toastId = toast.loading( `${currentStatus ? "Desactivando" : "Activando"} "${productName || ""}"...` );
+    const navigate = useNavigate();
+    // Tomamos órdenes activas para calcular porciones que están "en producción"
+    const { activeOrders } = useContext(ActiveOrdersContext) || {};
+    // --- CARGA DE DATOS ---
+    const fetchData = useCallback(async (showLoading = true) => {
+        if (showLoading) setIsLoadingData(true);
         try {
-          await productService.changeStateProduct(idProduct, newStatus);
-          setData((prevData) =>
-            prevData.map((item) =>
-              item.idProduct === idProduct ? { ...item, status: newStatus } : item
-            )
-          );
-          toast.success(`Producto/Insumo "${productName || ""}" ${actionText}.`, { id: toastId });
-          toggleConfirmModal();
+            const response = await productService.getAllProducts();
+            setData(Array.isArray(response) ? response : []);
         } catch (error) {
-          const errorMsg = error.response?.data?.message || error.message || "Error desconocido.";
-          toast.error(`Error al ${currentStatus ? "desactivar" : "activar"}: ${errorMsg}`,{ id: toastId });
-          toggleConfirmModal();
+            toast.error("Error al cargar productos.");
         } finally {
-          setIsConfirmActionLoading(false);
+            setIsLoadingData(false);
         }
-  }, [toggleConfirmModal]);
+    }, []);
 
-  const requestDeleteConfirmation = useCallback((product) => {
-      if (!product || !product.idProduct) return;
-        prepareConfirmation(executeDelete, {
-          title: "Confirmar Eliminación",
-          message: ( <> <p>¿Eliminar permanentemente <strong>{product.productName || "este producto/insumo"}</strong>?</p> <p><strong className="text-danger">¡Acción irreversible!</strong></p> </> ),
-          confirmText: "Eliminar Definitivamente",
-          confirmColor: "danger",
-          itemDetails: { idProduct: product.idProduct, productName: product.productName },
+    useEffect(() => { fetchData(); }, [fetchData]);
+
+    // Helpers para extraer valores de 'details' con varios nombres posibles
+    const extractNumericField = (detail, candidates) => {
+        if (!detail) return null;
+        for (const key of candidates) {
+            if (detail.hasOwnProperty(key) && detail[key] !== null && detail[key] !== undefined && detail[key] !== '') {
+                const val = detail[key];
+                const n = Number(val);
+                if (!isNaN(n)) return n;
+                return val;
+            }
+        }
+        // fallback: buscar la primera propiedad numérica
+        for (const k of Object.keys(detail)) {
+            const v = detail[k];
+            const n = Number(v);
+            if (!isNaN(n)) return n;
+        }
+        return null;
+    };
+
+    const getNeededFromDetail = (detail) => {
+        const candidates = ['needed','quantityNeeded','required','need','neededQty','requiredQuantity','quantityRequired','neededQuantity','quantity','requiredQty'];
+        const v = extractNumericField(detail, candidates);
+        return v !== null ? v : null;
+    };
+
+    const getAvailableFromDetail = (detail) => {
+        const candidates = ['available','quantityAvailable','stock','availableQuantity','quantityAvailable','qtyAvailable','stockAvailable'];
+        const v = extractNumericField(detail, candidates);
+        return v !== null ? v : null;
+    };
+
+    const FINAL_STATUSES = useMemo(() => new Set(['COMPLETED', 'ALL_STEPS_COMPLETED', 'CANCELLED']), []);
+
+    // Map de porciones en producción: sólo contamos órdenes que están efectivamente en proceso
+    const enProduccionMap = useMemo(() => {
+        if (!activeOrders) return {};
+        // Depuración: mostrar resumen de órdenes activas al calcular el mapa
+        try { console.debug('enProduccionMap: activeOrders snapshot', Object.values(activeOrders).map(o => ({ id: o.id, status: o.localOrderStatus, initialAmount: o.formOrder?.initialAmount, finalQuantity: o.formOrder?.finalQuantityProduct, idProduct: o.formOrder?.idProduct }))); } catch(e) {}
+        const map = {};
+        Object.values(activeOrders).forEach(order => {
+            const form = order?.formOrder;
+            if (!form) return;
+            const pid = form.idProduct;
+            if (!pid) return;
+            const status = String(order?.localOrderStatus || '').toUpperCase();
+            // Contar únicamente órdenes iniciadas (en proceso)
+            if (status !== 'IN_PROGRESS') return;
+            const portions = Number(form.initialAmount) || 0; // porciones previstas al iniciar
+            if (!portions) return;
+            map[pid] = (map[pid] || 0) + portions;
         });
-  }, [prepareConfirmation]);
+        return map;
+    }, [activeOrders]);
 
-  const executeDelete = useCallback(async (productToDelete) => {
-    if (!productToDelete || !productToDelete.idProduct) {
-        toast.error("Error interno.");
-        toggleConfirmModal();
-        return;
-      }
-      setIsConfirmActionLoading(true);
-      const toastId = toast.loading(`Eliminando "${productToDelete.productName || ""}"...`);
-      try {
-        await productService.deleteProduct(productToDelete.idProduct);
-        toast.success(`Producto/Insumo "${productToDelete.productName || ""}" eliminado.`, { id: toastId, icon: <CheckCircle className="text-success" /> });
-        toggleConfirmModal();
-        setData((prevData) => prevData.filter((item) => item.idProduct !== productToDelete.idProduct));
-      } catch (error) {
-        console.error("Error completo al eliminar:", error);
-        let rawErrorMessage = "Error desconocido.";
-        if (error.response && error.response.data && error.response.data.message) {
-          rawErrorMessage = error.response.data.message;
-        } else if (error.message) {
-          rawErrorMessage = error.message;
-        }
-        let displayErrorMessage = `Error al eliminar: ${rawErrorMessage}`;
-        let toastIcon = <XCircle className="text-danger" />;
-        let toastDuration = 3500;
-        const lowerCaseError = rawErrorMessage.toLowerCase();
-        if (lowerCaseError.includes('foreign key constraint fails') && 
-            (lowerCaseError.includes('specsheets') || lowerCaseError.includes('specsheets_ibfk_1'))) {
-          displayErrorMessage = `El producto "${productToDelete.productName || ""}" no puede ser eliminado porque está referenciado en una o más fichas técnicas. Por favor, elimine o desasocie primero las fichas técnicas correspondientes, o desactive el producto en lugar de eliminarlo.`;
-          toastIcon = <AlertTriangle className="text-warning" />;
-          toastDuration = 8000;
-        }
-        toast.error(displayErrorMessage, { 
-          id: toastId, 
-          icon: toastIcon,
-          duration: toastDuration
+    // Cuando una orden pasa a COMPLETED o cambia su `finalQuantityProduct`, refrescamos productos
+    const prevActiveOrdersRef = useRef({});
+    useEffect(() => {
+        const prev = prevActiveOrdersRef.current || {};
+        let needRefresh = false;
+        try { console.debug('prevActiveOrders keys', Object.keys(prev).length, 'current keys', Object.keys(activeOrders || {}).length); } catch(e) {}
+        Object.keys(activeOrders || {}).forEach(id => {
+            const prevOrder = prev[id];
+            const curOrder = activeOrders[id];
+            const prevStatus = String(prevOrder?.localOrderStatus || '').toUpperCase();
+            const curStatus = String(curOrder?.localOrderStatus || '').toUpperCase();
+            // Si pasó de un estado NO final a un estado final -> refrescar
+            if (!FINAL_STATUSES.has(prevStatus) && FINAL_STATUSES.has(curStatus)) {
+                needRefresh = true; // orden finalizó o llegó a 'procesos finalizados' -> el stock puede haber cambiado
+            }
+            const prevFinal = prevOrder?.formOrder?.finalQuantityProduct;
+            const curFinal = curOrder?.formOrder?.finalQuantityProduct;
+            if (FINAL_STATUSES.has(curStatus) && prevFinal !== curFinal) {
+                needRefresh = true; // cantidad final modificada -> refrescar stock
+            }
         });
-        toggleConfirmModal();
-      } finally {
-        setIsConfirmActionLoading(false);
-      }
-  }, [toggleConfirmModal]);
-  
-  const openAddModal = useCallback(() => {
-    resetForm();
-    clearFormErrors();
-    setIsEditing(false);
-    setModalOpen(true);
-  }, [resetForm, clearFormErrors]);
+        try { if (needRefresh) console.debug('ProductoInsumo: needRefresh=true debido a cambio en activeOrders'); } catch(e) {}
+        // También detectar órdenes que fueron removidas (pasaron a COMPLETED y el provider las eliminó)
+        Object.keys(prev).forEach(id => { if (!activeOrders || !activeOrders[id]) { const was = prev[id]; if (was && !FINAL_STATUSES.has(String(was.localOrderStatus).toUpperCase())) { needRefresh = true; } } });
+        if (needRefresh) fetchData(false);
+        prevActiveOrdersRef.current = activeOrders || {};
+    }, [activeOrders, fetchData]);
 
-  const openEditModal = useCallback((item) => {
-    setForm({
-        idProduct: item.idProduct || "",
-        productName: item.productName || "",
-        minStock: item.minStock ?? '',
-        maxStock: item.maxStock ?? '',
-        status: item.status !== undefined ? item.status : true,
-        // No establecemos currentStock aquí, ya que no se edita desde este modal.
-        // Al resetear, tomará el valor de INITIAL_FORM_STATE si es necesario.
-      });
-      setIsEditing(true);
-      clearFormErrors();
-      setModalOpen(true);
-  }, [clearFormErrors]);
+    
 
-  const filteredData = useMemo(() => {
-    const baseData = !tableSearchText
-      ? [...data]
-      : data.filter(
-          (item) =>
-            (item?.productName?.toLowerCase() ?? "").includes(tableSearchText) ||
-            String(item?.idProduct ?? "").toLowerCase().includes(tableSearchText)
-        );
-    return baseData.sort((a, b) => (a.idProduct || 0) - (b.idProduct || 0));
-  }, [data, tableSearchText]);
+    // --- LÓGICA DE FORMULARIO (CREAR/EDITAR) ---
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setForm(prev => ({ ...prev, [name]: value }));
+    };
 
-  const totalItems = useMemo(() => filteredData.length, [filteredData]);
-  const totalPages = useMemo(() => Math.ceil(totalItems / ITEMS_PER_PAGE), [totalItems]);
-  const validCurrentPage = useMemo(() => Math.max(1, Math.min(currentPage, totalPages || 1)), [currentPage, totalPages]);
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (form.productName.length < 3) return toast.error("Nombre demasiado corto");
+        
+        setIsSavingForm(true);
+        const toastId = toast.loading("Guardando...");
+        try {
+            if (isEditing) {
+                await productService.updateProduct(form.idProduct, form);
+                toast.success("Producto actualizado", { id: toastId });
+            } else {
+                await productService.createProduct(form);
+                toast.success("Producto creado", { id: toastId });
+            }
+            setModalOpen(false);
+            fetchData(false);
+        } catch (error) {
+            toast.error("Error al procesar", { id: toastId });
+        } finally {
+            setIsSavingForm(false);
+        }
+    };
 
-  const currentItems = useMemo(() => {
-    const startIndex = (validCurrentPage - 1) * ITEMS_PER_PAGE;
-    return filteredData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredData, validCurrentPage]);
+    // --- LÓGICA DE AJUSTE DE INVENTARIO ---
+    const openAdjustModal = (product) => {
+        setProductToAdjust(product);
+        setAdjustmentForm({ quantity: '', type: 'entrada', reason: '' });
+        setAdjustModalOpen(true);
+    };
 
-  useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(totalPages);
-    }
-  }, [totalPages, currentPage]);
+    const handleAdjustSubmit = async (e) => {
+        e.preventDefault();
+        const { quantity, type, reason } = adjustmentForm;
+        if (!quantity || quantity <= 0) return toast.error("Cantidad inválida");
 
-  const handlePageChange = useCallback((pageNumber) => {
-    const newPage = Math.max(1, Math.min(pageNumber, totalPages || 1));
-    setCurrentPage(newPage);
-  }, [totalPages]);
-  
-  const getStockIndicatorClass = (item) => {
-    const { currentStock, minStock, maxStock } = item;
-    if (currentStock == null) return '';
-    if (minStock > 0 && currentStock <= minStock) return 'text-danger fw-bold';
-    if (maxStock > 0 && currentStock >= maxStock) return 'text-warning fw-bold';
-    return 'text-success';
-  };
+        setIsAdjustingStock(true);
+        const toastId = toast.loading("Aplicando ajuste...");
+        
+        // El signo depende del tipo de ajuste
+        const factor = (type === 'consumo' || type === 'merma') ? -1 : 1;
+        const finalQuantity = Number(quantity) * factor;
 
+        try {
+            await productService.adjustStock(productToAdjust.idProduct, {
+                quantity: finalQuantity,
+                reason: `${type.toUpperCase()}: ${reason}`
+            });
+            toast.success("Inventario ajustado correctamente", { id: toastId });
+            setAdjustModalOpen(false);
+            fetchData(false);
+        } catch (error) {
+            toast.error("Error al ajustar stock", { id: toastId });
+        } finally {
+            setIsAdjustingStock(false);
+        }
+    };
 
-  const modalTitle = isEditing ? `Editar Producto/Insumo` : "Agregar Producto/Insumo";
-  const submitButtonText = isSavingForm ? (<><Spinner size="sm" className="me-1" /> Guardando...</>) : isEditing ? (<><Edit size={18} className="me-1" /> Actualizar</>) : (<><Plus size={18} className="me-1" /> Guardar</>);
-  const canSubmitForm = !isSavingForm;
+    // --- ACCIONES (ESTADO Y ELIMINAR) ---
+    const toggleStatus = (product) => {
+        setConfirmProps({
+            title: "Cambiar Estado",
+            message: `¿Desea ${product.status ? 'desactivar' : 'activar'} el producto ${product.productName}?`,
+            color: product.status ? "warning" : "success",
+            action: async () => {
+                await productService.changeStateProduct(product.idProduct, !product.status);
+                fetchData(false);
+            }
+        });
+        setConfirmModalOpen(true);
+    };
 
-  return (
-    <Container fluid className="p-4 main-content">
-      <Toaster position="top-center" toastOptions={{ duration: 3500 }} />
-      <h2 className="mb-4">Gestión de Productos e Insumos</h2>
+    const deleteProduct = (product) => {
+        setConfirmProps({
+            title: "Eliminar Producto",
+            message: `¿Está seguro de eliminar ${product.productName}? Esta acción es irreversible.`,
+            color: "danger",
+            action: async () => {
+                await productService.deleteProduct(product.idProduct);
+                fetchData(false);
+            }
+        });
+        setConfirmModalOpen(true);
+    };
 
-      <Row className="mb-3 align-items-center">
-        <Col md={5} lg={4}>
-          <Input
-            type="text" bsSize="sm" placeholder="Buscar por nombre o ID..."
-            value={tableSearchText} onChange={handleTableSearch}
-            disabled={isLoadingData && data.length === 0}
-            style={{ borderRadius: "0.25rem" }}
-            aria-label="Buscar productos o insumos"
-          />
-        </Col>
-        <Col md={7} lg={8} className="text-md-end mt-2 mt-md-0">
-          <Button color="success" size="sm" onClick={openAddModal} className="me-2 button-add">
-            <Plus size={18} className="me-1" /> Agregar Producto/Insumo
-          </Button>
-          <Button color="primary" size="sm" onClick={() => navigate("/home/fichas-tecnicas/crear")} className="button-add-ficha">
-            <FileText size={18} className="me-1" /> Crear Ficha Técnica
-          </Button>
-        </Col>
-      </Row>
+    // --- FILTRADO Y PAGINACIÓN ---
+    const filteredData = useMemo(() => {
+        return data.filter(item => 
+            item.productName?.toLowerCase().includes(tableSearchText.toLowerCase()) || 
+            String(item.idProduct).includes(tableSearchText)
+        ).sort((a, b) => b.idProduct - a.idProduct);
+    }, [data, tableSearchText]);
 
-      <div className="table-responsive shadow-sm custom-table-container mb-3">
-        <Table hover striped size="sm" className="mb-0 custom-table align-middle">
-          <thead className="table-light">
-            <tr>
-              <th scope="col" className="text-center" style={{ width: "6%" }}>ID</th>
-              <th scope="col" style={{ width: "26%" }}>Nombre Producto/Insumo</th>
-              <th scope="col" className="text-center" style={{ width: "12%" }}>Stock Actual</th>
-              <th scope="col" className="text-center" style={{ width: "10%" }}>Stock Mín.</th>
-              <th scope="col" className="text-center" style={{ width: "10%" }}>Stock Máx.</th>
-              <th scope="col" className="text-center" style={{ width: "12%" }}>Estado</th>
-              <th scope="col" className="text-center" style={{ width: "24%" }}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoadingData && data.length === 0 ? (
-              <tr><td colSpan="7" className="text-center p-5"><Spinner color="primary" /> Cargando...</td></tr>
-            ) : currentItems.length > 0 ? (
-              currentItems.map((item) => (
-                <tr key={item.idProduct}>
-                  <th scope="row" className="text-center">{item.idProduct}</th>
-                  <td>{item.productName || "-"}</td>
-                  <td className={`text-center ${getStockIndicatorClass(item)}`}>
-                    <div className="d-flex align-items-center justify-content-center">
-                      <Package size={16} className="me-2" />
-                      <span>{item.currentStock ?? 0}</span>
-                    </div>
-                  </td>
-                  <td className="text-center">{item.minStock ?? 'N/A'}</td>
-                  <td className="text-center">{item.maxStock ?? 'N/A'}</td>
-                  <td className="text-center">
-                    <Button
-                      size="sm"
-                      className={`status-button ${item.status ? "status-active" : "status-inactive"}`}
-                      onClick={() => requestChangeStatusConfirmation(item)}
-                      disabled={isConfirmActionLoading}
-                      title={item.status ? "Activo (Clic para Desactivar)" : "Inactivo (Clic para Activar)"}
-                    >
-                      {item.status ? "Activo" : "Inactivo"}
+    const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
+    const currentItems = filteredData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+    return (
+        <Container fluid className="p-4 main-content">
+            <Toaster position="top-center" />
+            <h2 className="mb-4 fw-bold">Gestión de Productos e Insumos</h2>
+
+            {/* BARRA SUPERIOR */}
+            <Row className="mb-3 align-items-center">
+                <Col md={5}>
+                    <Input 
+                        placeholder="Buscar por nombre o ID..." 
+                        value={tableSearchText} 
+                        onChange={(e) => { setTableSearchText(e.target.value); setCurrentPage(1); }} 
+                    />
+                </Col>
+                <Col className="text-end">
+                    <Button color="success" onClick={() => { setForm(INITIAL_FORM_STATE); setIsEditing(false); setModalOpen(true); }}>
+                        <Plus size={18} className="me-1" /> Nuevo Producto
                     </Button>
-                  </td>
-                  <td className="text-center">
-                    <div className="d-inline-flex gap-1 action-cell-content">
-                      <Button
-                        size="sm" color="info" outline
-                        onClick={() => handleNavigateToProductFichas(item.idProduct)}
-                        title="Ver Fichas Técnicas"
-                        className="action-button action-view"
-                      >
-                        <ListChecks size={18} />
-                      </Button>
-                      <Button
-                        size="sm" color="secondary" outline onClick={() => openEditModal(item)}
-                        title="Editar" className="action-button action-edit"
-                        disabled={isConfirmActionLoading}
-                      >
-                        <Edit size={18} />
-                      </Button>
-                      <Button
-                        size="sm" color="danger" outline onClick={() => requestDeleteConfirmation(item)}
-                        title="Eliminar" className="action-button action-delete"
-                        disabled={isConfirmActionLoading}
-                      >
-                        <Trash2 size={18} />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="7" className="text-center fst-italic p-4">
-                  {tableSearchText ? `No se encontraron coincidencias para "${tableSearchText}".` : "No hay productos/insumos registrados."}
-                </td>
-              </tr>
+                </Col>
+            </Row>
+
+            {/* TABLA PRINCIPAL */}
+            <div className="table-responsive shadow-sm bg-white rounded">
+                <Table hover striped className="align-middle mb-0">
+                    <thead className="table-light">
+                        <tr>
+                            <th className="ps-3">ID</th>
+                            <th>Nombre</th>
+                            <th className="text-center">Precio</th>
+                            <th className="text-center">Stock Actual</th>
+                            <th className="text-center">En Producción</th>
+                            <th className="text-center">Total Final</th>
+                            <th className="text-center">Min/Max</th>
+                            <th className="text-center">Estado</th>
+                            <th className="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {isLoadingData ? (
+                            <tr><td colSpan="9" className="text-center py-5"><Spinner color="primary" /></td></tr>
+                        ) : currentItems.map((item) => {
+                            const stockActual = Number(item.currentStock ?? 0);
+                            const enProduccionFromOrders = Number(enProduccionMap[item.idProduct] ?? 0);
+                            const enProduccionBackend = Number(item.stockInProduction ?? 0);
+                            // Preferir el valor calculado desde órdenes activas cuando exista, si no usar el backend
+                            const enProduccion = enProduccionFromOrders > 0 ? enProduccionFromOrders : enProduccionBackend;
+                            const totalFinal = stockActual + (enProduccion || 0);
+
+                            return (
+                                <tr key={item.idProduct}>
+                                    <td className="ps-3">{item.idProduct}</td>
+                                    <td className="fw-bold text-dark">{item.productName}</td>
+                                    <td className="text-center text-success fw-bold">{formatCurrency(item.sellingPrice)}</td>
+                                    
+                                    {/* STOCK ACTUAL: Inventario Real */}
+                                    <td className="text-center bg-light fw-bold text-primary">
+                                        <Package size={14} className="me-1" />
+                                        {stockActual}
+                                    </td>
+
+                                    {/* EN PRODUCCIÓN */}
+                                    <td className="text-center">
+                                        {enProduccion > 0 ? (
+                                            <span className="text-warning fw-bold">
+                                                <Loader size={14} className="me-1 lucide-spin" /> {enProduccion}
+                                            </span>
+                                        ) : (
+                                            <span className="text-muted fw-bold">0</span>
+                                        )}
+                                    </td>
+
+                                    {/* TOTAL FINAL: Calculado */}
+                                    <td className="text-center fw-bold bg-primary bg-opacity-10 text-primary">
+                                        <ListChecks size={16} className="me-1" />
+                                        {totalFinal}
+                                    </td>
+
+                                    <td className="text-center small text-muted">
+                                        {item.minStock} / {item.maxStock}
+                                    </td>
+
+                                    <td className="text-center">
+                                        <Button 
+                                            size="sm" 
+                                            color={item.status ? "success" : "secondary"} 
+                                            outline 
+                                            className="rounded-pill"
+                                            onClick={() => toggleStatus(item)}
+                                        >
+                                            {item.status ? "Activo" : "Inactivo"}
+                                        </Button>
+                                    </td>
+
+                                    <td className="text-center pe-3">
+                                        <div className="d-flex gap-1 justify-content-center">
+                                            {/* AJUSTE DE INVENTARIO (NUEVO) */}
+                                            <Button size="sm" color="info" outline title="Ajuste de Inventario" onClick={() => openAdjustModal(item)}>
+                                                <Settings2 size={16} />
+                                            </Button>
+                                            
+                                            <Button size="sm" color="primary" outline title="Fichas Técnicas" onClick={() => navigate(`/home/producto/${item.idProduct}/fichas`)}>
+                                                <FileText size={16} />
+                                            </Button>
+                                            
+                                            <Button size="sm" color="warning" outline title="Editar" onClick={() => { setForm(item); setIsEditing(true); setModalOpen(true); }}>
+                                                <Edit size={16} />
+                                            </Button>
+
+                                            <Button size="sm" color="danger" outline title="Eliminar" onClick={() => deleteProduct(item)}>
+                                                <Trash2 size={16} />
+                                            </Button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </Table>
+            </div>
+
+            {/* PAGINACIÓN */}
+            {!isLoadingData && totalPages > 1 && (
+                <div className="mt-3">
+                    <CustomPagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                </div>
             )}
-            {isLoadingData && data.length > 0 && (
-              <tr><td colSpan="7" className="text-center p-2"><Spinner size="sm" color="secondary" /> Actualizando...</td></tr>
-            )}
-          </tbody>
-        </Table>
-      </div>
 
-      {totalPages > 1 && !isLoadingData && (
-        <CustomPagination currentPage={validCurrentPage} totalPages={totalPages} onPageChange={handlePageChange}/>
-      )}
+            {/* MODAL CREAR / EDITAR */}
+            <Modal isOpen={modalOpen} toggle={() => setModalOpen(false)} centered>
+                <ModalHeader toggle={() => setModalOpen(false)}>
+                    {isEditing ? <Edit size={20} className="me-2"/> : <Plus size={20} className="me-2"/>}
+                    {isEditing ? "Editar Producto" : "Nuevo Producto"}
+                </ModalHeader>
+                <Form onSubmit={handleSubmit}>
+                    <ModalBody>
+                        <FormGroup>
+                            <Label className="fw-bold">Nombre del Producto/Insumo</Label>
+                            <Input name="productName" value={form.productName} onChange={handleInputChange} required />
+                        </FormGroup>
+                        <Row>
+                            <Col md={6}>
+                                <FormGroup>
+                                    <Label className="fw-bold">Stock Mínimo</Label>
+                                    <Input type="number" name="minStock" value={form.minStock} onChange={handleInputChange} />
+                                </FormGroup>
+                            </Col>
+                            <Col md={6}>
+                                <FormGroup>
+                                    <Label className="fw-bold">Stock Máximo</Label>
+                                    <Input type="number" name="maxStock" value={form.maxStock} onChange={handleInputChange} />
+                                </FormGroup>
+                            </Col>
+                        </Row>
+                        {isEditing && (
+                            <FormGroup>
+                                <Label className="fw-bold text-muted">Precio Sugerido (Ficha Técnica)</Label>
+                                <InputGroup>
+                                    <InputGroupText><DollarSign size={16}/></InputGroupText>
+                                    <Input value={formatCurrency(form.sellingPrice)} disabled />
+                                </InputGroup>
+                            </FormGroup>
+                        )}
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button color="secondary" outline onClick={() => setModalOpen(false)}>Cancelar</Button>
+                        <Button color="primary" type="submit" disabled={isSavingForm}>
+                            {isSavingForm ? <Spinner size="sm" /> : "Guardar Producto"}
+                        </Button>
+                    </ModalFooter>
+                </Form>
+            </Modal>
 
-      <Modal isOpen={modalOpen} toggle={!isSavingForm ? toggleMainModal : undefined} centered size="md" backdrop="static" keyboard={!isSavingForm} aria-labelledby="productoInsumoModalTitle">
-          <ModalHeader toggle={!isSavingForm ? toggleMainModal : undefined} id="productoInsumoModalTitle"> <div className="d-flex align-items-center"> {isEditing ? <Edit size={20} className="me-2" /> : <Plus size={20} className="me-2" />} {modalTitle} </div> </ModalHeader>
-          <ModalBody>
-              {formErrors.general && ( <Alert color="danger" fade={false} className="d-flex align-items-center py-2 mb-3"> <AlertTriangle size={18} className="me-2" /> {formErrors.general} </Alert> )}
-              <Form id="productoInsumoForm" noValidate onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
-                  <FormGroup>
-                      <Label for="modalProductName" className="form-label fw-bold">Nombre Producto/Insumo <span className="text-danger">*</span></Label>
-                      <Input id="modalProductName" type="text" name="productName" value={form.productName} onChange={handleChange} invalid={formErrors.productName} required aria-describedby="productNameFeedback" disabled={isSavingForm} placeholder="Ej: Harina de Trigo Superior" />
-                      <FormFeedback id="productNameFeedback">El nombre es requerido (mín. 3 caracteres, solo letras/números/espacios/ñ/acentos).</FormFeedback>
-                  </FormGroup>
+            {/* MODAL AJUSTE DE INVENTARIO */}
+            <Modal isOpen={adjustModalOpen} toggle={() => !isAdjustingStock && setAdjustModalOpen(false)} centered>
+                <ModalHeader>Ajuste Manual de Inventario</ModalHeader>
+                <Form onSubmit={handleAdjustSubmit}>
+                    <ModalBody>
+                        <div className="mb-3 p-3 bg-light rounded border">
+                            <h6 className="mb-1 text-muted">Producto:</h6>
+                            <p className="mb-0 fw-bold fs-5">{productToAdjust?.productName}</p>
+                            <hr className="my-2" />
+                            <div className="d-flex justify-content-between">
+                                <span>Stock Actual Real:</span>
+                                <strong className="text-primary">{productToAdjust?.currentStock} unidades</strong>
+                            </div>
+                        </div>
 
-                  {/* --- MODIFICACIÓN: Campo de Stock Inicial condicional --- */}
-                  {/* Este campo solo aparecerá si NO estamos editando (isEditing es false) */}
-                  {!isEditing && (
-                      <FormGroup>
-                          <Label for="modalCurrentStock" className="form-label fw-bold">Stock Inicial <span className="text-danger">*</span></Label>
-                          <Input
-                              id="modalCurrentStock"
-                              type="number"
-                              name="currentStock"
-                              value={form.currentStock}
-                              onChange={handleChange}
-                              invalid={formErrors.currentStock}
-                              disabled={isSavingForm}
-                              placeholder="Ej: 50"
-                              min="0"
-                              required
-                          />
-                          <FormFeedback>El stock inicial es requerido y debe ser un número positivo (o cero).</FormFeedback>
-                      </FormGroup>
-                  )}
-                  {/* --- Fin de la modificación --- */}
+                        <FormGroup>
+                            <Label className="fw-bold">Tipo de Ajuste</Label>
+                            <Input type="select" value={adjustmentForm.type} 
+                                onChange={(e) => setAdjustmentForm({...adjustmentForm, type: e.target.value})}>
+                                <option value="entrada">Entrada (+) - Compra / Devolución</option>
+                                <option value="consumo">Consumo (-) - Uso interno</option>
+                                <option value="merma">Merma (-) - Desperdicio / Daño</option>
+                                <option value="correccion">Corrección (+/-) - Ajuste de conteo</option>
+                            </Input>
+                        </FormGroup>
 
-                  <Row>
-                      <Col md={6}>
-                          <FormGroup>
-                              <Label for="modalMinStock" className="form-label fw-bold">Stock Mínimo</Label>
-                              <Input id="modalMinStock" type="number" name="minStock" value={form.minStock} onChange={handleChange} invalid={formErrors.minStock} disabled={isSavingForm} placeholder="Ej: 10" min="0" />
-                              <FormFeedback>Debe ser un número positivo.</FormFeedback>
-                          </FormGroup>
-                      </Col>
-                      
-                      <Col md={6}>
-                          <FormGroup>
-                              <Label for="modalMaxStock" className="form-label fw-bold">Stock Máximo</Label>
-                              <Input id="modalMaxStock" type="number" name="maxStock" value={form.maxStock} onChange={handleChange} invalid={formErrors.maxStock} disabled={isSavingForm} placeholder="Ej: 100" min="0" />
-                              <FormFeedback>Debe ser un número positivo y mayor o igual al mínimo.</FormFeedback>
-                          </FormGroup>
-                      </Col>
-                  </Row>
-              </Form>
-          </ModalBody>
-          <ModalFooter className="border-top pt-3">
-              <Button color="secondary" outline onClick={toggleMainModal} disabled={isSavingForm}>Cancelar</Button>
-              <Button type="submit" form="productoInsumoForm" color="primary" disabled={!canSubmitForm}>{submitButtonText}</Button>
-          </ModalFooter>
-      </Modal>
-      
-      <ConfirmationModal
-        isOpen={confirmModalOpen} toggle={toggleConfirmModal} title={confirmModalProps.title}
-        onConfirm={() => confirmActionRef.current && confirmActionRef.current()}
-        confirmText={confirmModalProps.confirmText} confirmColor={confirmModalProps.confirmColor}
-        isConfirming={isConfirmActionLoading}
-      >
-        {confirmModalProps.message}
-      </ConfirmationModal>
-    </Container>
-  );
+                        <FormGroup>
+                            <Label className="fw-bold">Cantidad</Label>
+                            <Input type="number" min="0.01" step="any" required 
+                                value={adjustmentForm.quantity}
+                                onChange={(e) => setAdjustmentForm({...adjustmentForm, quantity: e.target.value})} 
+                            />
+                        </FormGroup>
+
+                        <FormGroup>
+                            <Label className="fw-bold">Motivo del Ajuste</Label>
+                            <Input type="textarea" placeholder="Explique por qué realiza este cambio..." required
+                                value={adjustmentForm.reason}
+                                onChange={(e) => setAdjustmentForm({...adjustmentForm, reason: e.target.value})} 
+                            />
+                        </FormGroup>
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button color="secondary" outline onClick={() => setAdjustModalOpen(false)} disabled={isAdjustingStock}>Cancelar</Button>
+                        <Button color="primary" type="submit" disabled={isAdjustingStock}>
+                            {isAdjustingStock ? <Spinner size="sm" /> : "Aplicar Ajuste"}
+                        </Button>
+                    </ModalFooter>
+                </Form>
+            </Modal>
+
+            {/* MODAL CONFIRMACIÓN (ESTADO/ELIMINAR) */}
+            <ConfirmationModal 
+                isOpen={confirmModalOpen} 
+                toggle={() => setConfirmModalOpen(false)}
+                title={confirmProps.title}
+                confirmColor={confirmProps.color}
+                onConfirm={async () => {
+                    try {
+                        await confirmProps.action();
+                        toast.success("Operación exitosa");
+                    } catch (e) {
+                        toast.error("No se pudo realizar la acción");
+                    } finally {
+                        setConfirmModalOpen(false);
+                    }
+                }}
+            >
+                {confirmProps.message}
+            </ConfirmationModal>
+        </Container>
+    );
 };
 
 export default ProductoInsumo;

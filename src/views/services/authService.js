@@ -1,20 +1,22 @@
-// src/services/authService.js (FRONTEND)
+// src/services/authService.js
+
 import axiosInstance from './axiosConfig';
 
 export const AUTH_STORAGE_KEYS = {
-  token: 'token', // O 'authToken' si prefieres ser más explícito
+  token: 'token',
   user: 'authUser',
   permissions: 'effectivePermissions'
 };
 
-const LOGIN_ENDPOINT = '/auth/login'; // Ajusta si tu endpoint es diferente, ej. /api/auth/login
-const LOGOUT_ENDPOINT = '/auth/logout'; // Ajusta si es diferente
+const LOGIN_ENDPOINT = '/auth/login';
+const LOGOUT_ENDPOINT = '/auth/logout';
+const FORGOT_PASSWORD_ENDPOINT = '/auth/forgot-password'; // <-- Nuevo
+const VERIFY_CODE_ENDPOINT = '/auth/verify-code';         // <-- Nuevo
 
 export const authService = {
   login: async ({ email, password }) => {
     try {
       console.log("[Frontend authService] Attempting login with:", email);
-      // Esperamos que la respuesta del backend sea { token, user, effectivePermissions }
       const response = await axiosInstance.post(LOGIN_ENDPOINT, { email, password });
 
       if (!response.data || !response.data.token || !response.data.user || typeof response.data.effectivePermissions === 'undefined') {
@@ -25,22 +27,41 @@ export const authService = {
 
       const { token, user, effectivePermissions } = response.data;
 
-      // Guardar todo en localStorage
       localStorage.setItem(AUTH_STORAGE_KEYS.token, token);
       localStorage.setItem(AUTH_STORAGE_KEYS.user, JSON.stringify(user));
       localStorage.setItem(AUTH_STORAGE_KEYS.permissions, JSON.stringify(effectivePermissions));
 
-      // Configurar el token en la instancia de Axios para futuras peticiones
       axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
       console.log("[Frontend authService] Login successful. Token, user, and permissions stored.");
-      return { token, user, effectivePermissions }; // Devolver el objeto completo
+      return { token, user, effectivePermissions };
 
     } catch (error) {
       console.error("Error during login (authService):", error.response?.data?.message || error.message);
-      // Limpiar cualquier dato parcial que se haya podido guardar antes del error.
-      authService.clearClientSession(); // Asegura que no queden restos de una sesión fallida
-      throw error; // Re-lanzar para que el componente que llama (AuthProvider) pueda manejarlo
+      authService.clearClientSession();
+      throw error;
+    }
+  },
+
+  forgotPassword: async ({ email }) => {
+    try {
+      console.log("[Frontend authService] Requesting password reset for:", email);
+      const response = await axiosInstance.post(FORGOT_PASSWORD_ENDPOINT, { email });
+      return response.data; // Esperamos { message: '...' }
+    } catch (error) {
+      console.error("Error during forgotPassword (authService):", error.response?.data?.message || error.message);
+      throw error;
+    }
+  },
+
+  verifyCodeAndResetPassword: async ({ email, code, newPassword }) => {
+    try {
+      console.log("[Frontend authService] Verifying code and resetting password for:", email);
+      const response = await axiosInstance.post(VERIFY_CODE_ENDPOINT, { email, code, newPassword });
+      return response.data; // Esperamos { message: '...' }
+    } catch (error) {
+      console.error("Error during verifyCode (authService):", error.response?.data?.message || error.message);
+      throw error;
     }
   },
 
@@ -52,10 +73,6 @@ export const authService = {
       console.error("authService: Error en la petición de logout al backend (ignorado, limpieza local procederá):", error.response?.data?.message || error.message);
     }
   },
-
-  // setToken ya no es necesaria externamente si login y clearClientSession manejan el token
-  // pero la mantenemos por si se usa en otro lado o para claridad interna.
-  // _setTokenInternal: (accessToken) => { ... } // Podría ser interna
 
   getAccessToken: () => {
     return localStorage.getItem(AUTH_STORAGE_KEYS.token);
@@ -70,6 +87,6 @@ export const authService = {
     localStorage.removeItem(AUTH_STORAGE_KEYS.token);
     localStorage.removeItem(AUTH_STORAGE_KEYS.user);
     localStorage.removeItem(AUTH_STORAGE_KEYS.permissions);
-    delete axiosInstance.defaults.headers.common['Authorization']; // Muy importante
+    delete axiosInstance.defaults.headers.common['Authorization'];
   }
 };

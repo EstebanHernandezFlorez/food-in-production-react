@@ -1,152 +1,245 @@
 // RUTA: src/views/Dashboard/sections/ProveedoresSection.jsx
 
 import React, { useCallback } from 'react';
-import { Truck, ListChecks, DollarSign, Award, Repeat, UserCheck } from 'lucide-react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell } from 'recharts';
+// Se usa el icono BarChart3 para el nuevo gráfico
+import { Truck, DollarSign, Award, CheckSquare, Repeat, BarChart3 } from 'lucide-react';
+import {
+    ResponsiveContainer,
+    AreaChart,
+    Area,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend,
+    PieChart,
+    Pie,
+    Cell,
+    BarChart,
+    Bar,
+} from 'recharts';
+import { subMonths, startOfMonth, endOfMonth } from 'date-fns';
+
 import { useDashboardSection } from '../hooks/useDashboardSection';
 import StatCard from '../components/StatCard';
 import ChartPlaceholder from '../components/ChartPlaceholder';
-import { formatCurrency, formatNumber, getRandomColor } from '../utils/formatters';
+import { formatCurrency, getRandomColor, formatNumber } from '../utils/formatters';
+
 import proveedorService from '../../../services/proveedorSevice';
 import registerPurchaseService from '../../../services/registroCompraService';
+import specSheetService from '../../../services/specSheetService';
+
+// Tooltip para el gráfico de Área (sin cambios)
+const CustomAreaTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+        return (
+            <div className="custom-tooltip-finance">
+                <p className="label">{`Mes: ${label}`}</p>
+                <p className="intro" style={{ color: payload[0].color }}>
+                    {`${payload[0].name}: ${formatCurrency(payload[0].value)}`}
+                </p>
+            </div>
+        );
+    }
+    return null;
+};
 
 const ProveedoresSection = ({ selectedYear, selectedMonth }) => {
-  const fetchProviderData = useCallback(async () => {
-    const yearNum = parseInt(selectedYear);
-    const monthNum = parseInt(selectedMonth);
+    const fetchProviderData = useCallback(async () => {
+        const yearNum = parseInt(selectedYear);
+        const monthNum = parseInt(selectedMonth);
+        const currentDate = new Date(yearNum, monthNum - 1, 1);
 
-    const [providersResult, purchasesResult] = await Promise.all([
-      proveedorService.getAllProveedores(),
-      registerPurchaseService.getAllRegisterPurchasesWithDetails(),
-    ]);
+        const [
+            allPurchases,
+            allSpecSheets
+        ] = await Promise.all([
+            registerPurchaseService.getAllRegisterPurchasesWithDetails(),
+            specSheetService.getAllSpecSheets(),
+        ]);
 
-    // --- KPI 1: Total Compras del Mes ---
-    const purchasesInMonth = (Array.isArray(purchasesResult) ? purchasesResult : []).filter(p => {
-        const pDate = new Date(p.date);
-        return pDate.getFullYear() === yearNum && (pDate.getMonth() + 1) === monthNum;
-    });
-    const totalComprasMes = purchasesInMonth.reduce((sum, p) => sum + (Number(p.totalAmount) || 0), 0);
-    
-    // --- Lógica para Insumos compartidos y Proveedor principal ---
-    const allProviders = Array.isArray(providersResult) ? providersResult : [];
-    const allPurchases = Array.isArray(purchasesResult) ? purchasesResult : [];
+        const purchasesInMonth = (allPurchases || []).filter(p => {
+            if (!p.purchaseDate) return false;
+            const pDate = new Date(p.purchaseDate);
+            return pDate.getFullYear() === yearNum && (pDate.getMonth() + 1) === monthNum;
+        });
 
-    // Mapeo para contar insumos por proveedor y por insumo
-    const supplyByProviderCount = {}; // { providerName: Set(supplyName1, supplyName2), ... }
-    const providersBySupplyCount = {}; // { supplyName: Set(providerName1, providerName2), ... }
+        const totalComprasMes = purchasesInMonth.reduce((sum, p) => sum + (Number(p.totalAmount) || 0), 0);
+        
+        const purchaseCountByProvider = purchasesInMonth.reduce((acc, purchase) => {
+            const providerName = purchase.provider?.company || 'Desconocido';
+            acc[providerName] = (acc[providerName] || 0) + 1;
+            return acc;
+        }, {});
+        
+        const proveedorPrincipal = Object.keys(purchaseCountByProvider).length > 0
+            ? Object.entries(purchaseCountByProvider).sort((a, b) => b[1] - a[1])[0][0]
+            : "N/A";
+        
+        const supplyUsageCount = (allSpecSheets || []).reduce((acc, sheet) => {
+            (sheet.specSheetSupplies || []).forEach(supplyItem => {
+                const supplyName = supplyItem.supply?.supplyName;
+                if (supplyName) {
+                    acc[supplyName] = (acc[supplyName] || 0) + 1;
+                }
+            });
+            return acc;
+        }, {});
+        const insumosEstrategicosCount = Object.values(supplyUsageCount).filter(count => count >= 2).length;
 
-    allPurchases.forEach(purchase => {
-      const providerName = purchase.provider?.providerName || 'Proveedor Desconocido';
-      if (!supplyByProviderCount[providerName]) {
-        supplyByProviderCount[providerName] = new Set();
-      }
+        const monthlyPurchases = Array.from({ length: 6 }).map((_, i) => {
+            const d = subMonths(currentDate, i);
+            const monthStart = startOfMonth(d);
+            const monthEnd = endOfMonth(d);
+            const monthName = d.toLocaleString('es-ES', { month: 'short' });
+            const yearShort = d.getFullYear().toString().slice(-2);
+            
+            const total = (allPurchases || [])
+                .filter(p => {
+                    if (!p.purchaseDate) return false;
+                    const pDate = new Date(p.purchaseDate);
+                    return pDate >= monthStart && pDate <= monthEnd;
+                })
+                .reduce((sum, p) => sum + (Number(p.totalAmount) || 0), 0);
 
-      purchase.purchaseDetails?.forEach(detail => {
-        const supplyName = detail.insumo?.supplierName;
-        if (supplyName) {
-          supplyByProviderCount[providerName].add(supplyName);
+            return { name: `${monthName.charAt(0).toUpperCase() + monthName.slice(1)}. '${yearShort}`, 'Total Compras': total };
+        }).reverse();
+        
+        const spendingByProvider = purchasesInMonth.reduce((acc, purchase) => {
+            const providerName = purchase.provider?.company || 'Desconocido';
+            acc[providerName] = (acc[providerName] || 0) + (Number(purchase.totalAmount) || 0);
+            return acc;
+        }, {});
+        
+        const spendingDistributionChart = Object.entries(spendingByProvider)
+            .map(([name, value]) => ({ name, value, fill: getRandomColor() }))
+            .sort((a,b) => b.value - a.value);
 
-          if (!providersBySupplyCount[supplyName]) {
-            providersBySupplyCount[supplyName] = new Set();
-          }
-          providersBySupplyCount[supplyName].add(providerName);
-        }
-      });
-    });
+        const spendingBySupply = purchasesInMonth.reduce((acc, purchase) => {
+            (purchase.details || []).forEach(detail => {
+                const supplyName = detail.supply?.supplyName || 'Insumo Desconocido';
+                const detailCost = Number(detail.subtotal) || (Number(detail.price) * Number(detail.quantity));
+                if (supplyName && !isNaN(detailCost)) {
+                    acc[supplyName] = (acc[supplyName] || 0) + detailCost;
+                }
+            });
+            return acc;
+        }, {});
+        
+        const topSpendingSuppliesChart = Object.entries(spendingBySupply)
+            .map(([name, total]) => ({ name, 'Gasto en Insumo': total }))
+            .sort((a, b) => b['Gasto en Insumo'] - a['Gasto en Insumo'])
+            .slice(0, 10);
 
-    // KPI 2: Insumos compartidos por 2 o más proveedores
-    const insumosCompartidosCount = Object.values(providersBySupplyCount).filter(providersSet => providersSet.size >= 2).length;
+        return {
+            totalComprasMes,
+            proveedorPrincipal,
+            insumosEstrategicosCount,
+            monthlyPurchases,
+            spendingDistributionChart,
+            topSpendingSuppliesChart
+        };
+    }, [selectedYear, selectedMonth]);
 
-    // KPI 3: Proveedor con más insumos únicos comprados
-    let proveedorPrincipal = "N/A";
-    let maxSupplies = 0;
-    Object.entries(supplyByProviderCount).forEach(([providerName, suppliesSet]) => {
-      if (suppliesSet.size > maxSupplies) {
-        maxSupplies = suppliesSet.size;
-        proveedorPrincipal = providerName;
-      }
-    });
+    const { data, isLoading, error } = useDashboardSection(fetchProviderData, [selectedYear, selectedMonth]);
 
-    // Gráfico: Top Proveedores por Gasto Total (Histórico)
-    const providerTotalSpending = allPurchases.reduce((acc, purchase) => {
-        const providerName = purchase.provider?.providerName || 'Desconocido';
-        acc[providerName] = (acc[providerName] || 0) + (Number(purchase.totalAmount) || 0);
-        return acc;
-    }, {});
-    
-    const topSpendingProvidersChart = Object.entries(providerTotalSpending)
-        .map(([name, total]) => ({ name, 'Gasto Total': total, fill: getRandomColor() }))
-        .sort((a,b) => b['Gasto Total'] - a['Gasto Total'])
-        .slice(0, 10);
+    const {
+        totalComprasMes = 0,
+        proveedorPrincipal = "N/A",
+        insumosEstrategicosCount = 0,
+        monthlyPurchases = [],
+        spendingDistributionChart = [],
+        topSpendingSuppliesChart = []
+    } = data || {};
 
-    // Gráfico: Top Insumos comprados por múltiples proveedores
-     const sharedSuppliesChart = Object.entries(providersBySupplyCount)
-        .filter(([, providersSet]) => providersSet.size >= 2)
-        .map(([name, providersSet]) => ({ name, 'Nº Proveedores': providersSet.size, fill: getRandomColor() }))
-        .sort((a, b) => b['Nº Proveedores'] - a['Nº Proveedores'])
-        .slice(0, 10);
+    if (isLoading) return <div className="loading-state-finance"><Truck size={32} className="lucide-spin" /><p>Cargando Datos de Proveedores...</p></div>;
+    if (error) return <div className="error-state-finance">{error?.message || "No se pudieron cargar los datos de proveedores."}</div>;
 
+    return (
+        <div className="animate-fadeIn">
+            <div className="kpi-grid-finance kpi-grid-cols-3-finance">
+                <StatCard title="Total Compras (Mes)" value={formatCurrency(totalComprasMes)} icon={DollarSign} />
+                <StatCard title="Proveedor Principal (Mes)" value={proveedorPrincipal} icon={Award} info="Proveedor con más órdenes de compra" />
+                <StatCard title="Insumos Estratégicos" value={formatNumber(insumosEstrategicosCount)} icon={Repeat} info="Insumos usados en 2+ recetas" />
+            </div>
+            
+            <div className="content-card-finance" style={{ marginBottom: '1.5rem' }}>
+                <h3 className="card-title-main">Evolución de Compras (Últimos 6 Meses)</h3>
+                {monthlyPurchases.some(d => d['Total Compras'] > 0) ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                        <AreaChart data={monthlyPurchases}>
+                            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                            <YAxis tickFormatter={(value) => formatCurrency(value, 0)} tick={{ fontSize: 11 }} />
+                            <Tooltip content={<CustomAreaTooltip />} />
+                            <Legend />
+                            <Area type="monotone" dataKey="Total Compras" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                ) : <ChartPlaceholder text="No hay datos de compras para mostrar la tendencia." icon={CheckSquare} />}
+            </div>
 
-    return {
-      totalComprasMes,
-      insumosCompartidosCount,
-      proveedorPrincipal,
-      proveedoresActivos: allProviders.filter(p => p.status === true).length,
-      topSpendingProvidersChart,
-      sharedSuppliesChart,
-    };
-  }, [selectedYear, selectedMonth]);
+            <div className="charts-section-finance" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' }}>
+                <div className="content-card-finance">
+                    <h3 className="card-title-main">Distribución de Gasto por Proveedor (Mes Actual)</h3>
+                    {spendingDistributionChart.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={350}>
+                            <PieChart>
+                                <Pie
+                                    data={spendingDistributionChart}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    outerRadius={120}
+                                    fill="#8884d8"
+                                    dataKey="value"
+                                    nameKey="name"
+                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                >
+                                    {spendingDistributionChart.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
+                                </Pie>
+                                <Tooltip formatter={(value) => formatCurrency(value)} />
+                                <Legend />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    ) : <ChartPlaceholder text="No hay compras registradas este mes." icon={DollarSign} />}
+                </div>
 
-  const { data, isLoading, error } = useDashboardSection(fetchProviderData, [selectedYear, selectedMonth]);
-
-  if (isLoading) return <div className="loading-state-finance"><Truck size={32} className="lucide-spin" /><p>Cargando Proveedores...</p></div>;
-  if (error || !data) return <div className="error-state-finance">{error || "No se pudieron cargar los datos de proveedores."}</div>;
-
-  return (
-    <div className="animate-fadeIn">
-      <div className="kpi-grid-finance">
-         <StatCard title="Proveedores Activos" value={formatNumber(data.proveedoresActivos)} icon={UserCheck} />
-         <StatCard title="Total Compras (Mes)" value={formatCurrency(data.totalComprasMes)} icon={ListChecks}/>
-         <StatCard title="Insumos Compartidos" value={formatNumber(data.insumosCompartidosCount)} icon={Repeat} info="Insumos ofrecidos por 2+ proveedores"/>
-         <StatCard title="Proveedor Principal" value={data.proveedorPrincipal} icon={Award} info="Con más variedad de insumos comprados"/>
-      </div>
-      
-      <div className="charts-section-finance" style={{gridTemplateColumns: '1fr 1fr', gap: '1.5rem'}}>
-        <div className="content-card-finance">
-            <h3 className="card-title-main">Top 10 Proveedores por Gasto Histórico</h3>
-            {data.topSpendingProvidersChart.length > 0 ? (
-                <ResponsiveContainer width="100%" height={350}>
-                    <BarChart data={data.topSpendingProvidersChart} layout="vertical" margin={{ left: 120 }}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false}/>
-                        <XAxis type="number" tickFormatter={(value) => formatCurrency(value, 0).replace('$', '')} />
-                        <YAxis type="category" dataKey="name" width={110} tick={{fontSize: 11}}/>
-                        <Tooltip formatter={(value) => formatCurrency(value)} />
-                        <Bar dataKey="Gasto Total" barSize={20}>
-                            {data.topSpendingProvidersChart.map((entry) => <Cell key={entry.name} fill={entry.fill} />)}
-                        </Bar>
-                    </BarChart>
-                </ResponsiveContainer>
-            ) : <ChartPlaceholder text="No hay datos de compras para mostrar." icon={DollarSign}/>}
+                {/* --- GRÁFICO ACTUALIZADO A BARRAS VERTICALES CON GRADIENTE --- */}
+                <div className="content-card-finance">
+                    <h3 className="card-title-main">Top 10 Insumos por Gasto (Mes Actual)</h3>
+                    {topSpendingSuppliesChart.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={350}>
+                            <BarChart data={topSpendingSuppliesChart} margin={{ top: 20, right: 30, left: 20, bottom: 95 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis 
+                                    dataKey="name" 
+                                    angle={-45} 
+                                    textAnchor="end"
+                                    interval={0}
+                                    tick={{ fontSize: 11 }}
+                                />
+                                <YAxis 
+                                    tickFormatter={(value) => formatCurrency(value, 0)} 
+                                    tick={{ fontSize: 11 }} 
+                                />
+                                <Tooltip 
+                                    formatter={(value) => [formatCurrency(value), "Gasto"]}
+                                    cursor={{ fill: 'rgba(206, 206, 206, 0.2)' }}
+                                />
+                                <Bar dataKey="Gasto en Insumo">
+                                    {topSpendingSuppliesChart.map((entry, index) => (
+                                        // Crea un gradiente de color azul
+                                        <Cell key={`cell-${index}`} fill={`hsl(210, 80%, ${75 - index * 4}%)`} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    ) : <ChartPlaceholder text="No hay detalles de compras para mostrar." icon={BarChart3} />}
+                </div>
+            </div>
         </div>
-        <div className="content-card-finance">
-            <h3 className="card-title-main">Insumos Más Compartidos entre Proveedores</h3>
-            {data.sharedSuppliesChart.length > 0 ? (
-                <ResponsiveContainer width="100%" height={350}>
-                    <BarChart data={data.sharedSuppliesChart} layout="vertical" margin={{ left: 120 }}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false}/>
-                        <XAxis type="number" allowDecimals={false} domain={[0, dataMax => Math.max(2, dataMax)]} />
-                        <YAxis type="category" dataKey="name" width={110} tick={{fontSize: 11}}/>
-                        <Tooltip formatter={(value) => [`Ofrecido por ${value} proveedores`]}/>
-                        <Bar dataKey="Nº Proveedores" barSize={20}>
-                            {data.sharedSuppliesChart.map((entry) => <Cell key={entry.name} fill={entry.fill} />)}
-                        </Bar>
-                    </BarChart>
-                </ResponsiveContainer>
-            ) : <ChartPlaceholder text="No hay insumos compartidos entre proveedores." icon={Repeat}/>}
-        </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default ProveedoresSection;

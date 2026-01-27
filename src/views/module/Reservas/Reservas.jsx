@@ -131,355 +131,243 @@ const headerTextColorMap = {
 };
 // Modificar los estilos CSS personalizados para el calendario
 const customCalendarStyles = `
-  /* Estilos generales para el calendario */
+  /* --- CONTENEDOR Y CABECERA --- */
   .fc {
-    --fc-border-color: #e5e7eb;
-    --fc-page-bg-color: #fff;
-    --fc-neutral-bg-color: #f9fafb;
-    --fc-event-selected-box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    height: 100% !important; /* Asegura que FC tome toda la altura de su contenedor directo */
-    width: 100% !important;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  }
-  
-  /* Estilos para la barra de herramientas */
-  .fc .fc-toolbar {
-    margin-bottom: 0.25rem !important; /* Reducido */
-    padding: 0.25rem 0.5rem; /* Reducido */
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    align-items: center;
-  }
-  
-  .fc .fc-toolbar-title {
-    font-size: 1rem !important; /* Reducido */
-    font-weight: 600;
-    color: #111827;
-  }
-  
-  /* Estilos para los botones */
-  .fc .fc-button {
-    padding: 0.2rem 0.5rem !important; /* Reducido */
-    font-size: 0.75rem !important; /* Reducido */
-    border-radius: 4px !important; /* Reducido */
-    background-color: #fff;
-    border: 1px solid #e5e7eb;
-    color: #374151;
-    font-weight: 500;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    transition: all 0.15s ease;
-  }
-  
-  .fc .fc-button:hover {
-    background-color: #f9fafb;
-    border-color: #d1d5db;
-  }
-  
-  .fc .fc-button-primary:not(:disabled).fc-button-active,
-  .fc .fc-button-primary:not(:disabled):active {
-    background-color: #f3f4f6;
-    border-color: #d1d5db;
-    color: #111827;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
-  }
-  
-  /* Estilos para los encabezados de día */
-  .fc .fc-col-header-cell {
-    padding: 0.2rem 0; /* Reducido */
-    background-color: #fff;
-    border-bottom: 1px solid #e5e7eb;
-  }
-  
-  .fc .fc-col-header-cell-cushion {
-    padding: 0.2rem; /* Reducido */
-    font-weight: 500;
-    color: #6b7280;
-    font-size: 0.7rem; /* Reducido */
-    text-decoration: none !important;
-  }
-  
-  /* Estilos para las celdas de día */
-  .fc .fc-daygrid-day {
-    min-height: 3.5rem; /* Reducido significativamente para filas más cortas */
-    /* Alternativa: min-height: unset; si se quiere que la altura sea completamente flexible */
-  }
-  
-  .fc .fc-daygrid-day-frame {
-    padding: 2px; /* Reducido */
-    display: flex;
-    flex-direction: column;
-    height: 100%; /* Para que el contenido se distribuya en la celda */
-  }
-  
-  .fc .fc-daygrid-day-top {
-    justify-content: flex-start;
-    padding: 2px; /* Reducido */
-    flex-shrink: 0; /* Para que el número del día no se encoja demasiado */
-  }
-  
-  .fc .fc-daygrid-day-number {
-    font-size: 0.7rem; /* Reducido */
-    font-weight: 500;
-    color: #374151;
-    text-decoration: none !important;
-    margin: 2px; /* Reducido */
-    padding: 1px 2px; /* Ajustado */
-  }
-  
-  /* Estilos para eventos - FullCalendar manejará el fondo con eventContent */
-  .fc-event {
+    font-family: 'Inter', sans-serif;
     border: none !important;
-    background: transparent !important; /* Dejar que eventContent maneje el fondo */
-    margin: 1px 0 !important; /* Reducido */
   }
-  
-  .fc-event-main {
-    padding: 0 !important;
+
+  /* Quitar azul de los botones y poner Vinotinto sutil */
+  .fc .fc-button-primary {
+    background-color: transparent !important;
+    border: 1px solid #e0e0e0 !important;
+    color: #444 !important;
+    font-weight: 500 !important;
+    font-size: 0.85rem !important;
+    padding: 0.4rem 0.8rem !important;
+    text-transform: capitalize !important;
   }
-  
-  /* Estilo para el día actual */
+
+  .fc .fc-button-primary:hover {
+    background-color: #f8f8f8 !important;
+    border-color: #ccc !important;
+  }
+
+  /* Estado activo de los botones (ej: botón 'Mes') */
+  .fc .fc-button-primary:not(:disabled).fc-button-active {
+    background-color: #9e3535 !important;
+    border-color: #9e3535 !important;
+    color: white !important;
+  }
+
+  .fc .fc-toolbar-title {
+    font-size: 1.2rem !important;
+    font-weight: 700 !important;
+    color: #333;
+    text-transform: capitalize;
+  }
+
+  /* --- CUERPO DEL CALENDARIO --- */
+  /* Quitar el color azul de los números/links */
+  .fc a {
+    color: #444 !important;
+    text-decoration: none !important;
+  }
+
+  /* Encabezados de los días (LUN, MAR...) */
+  .fc .fc-col-header-cell {
+    padding: 10px 0 !important;
+    background-color: #fdfdfd;
+    border: 1px solid #f0f0f0 !important;
+  }
+
+  .fc .fc-col-header-cell-cushion {
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    color: #888 !important;
+    text-transform: uppercase;
+  }
+
+  /* Hoy (Sin azul, fondo crema muy suave) */
   .fc .fc-day-today {
-    background-color: rgba(239, 246, 255, 0.6) !important;
-  }
-  
-  /* Estilos para días de otros meses */
-  .fc .fc-day-other .fc-daygrid-day-top {
-    opacity: 0.5;
-  }
-  
-  /* Estilos para el contenedor de eventos */
-  .fc .fc-daygrid-day-events {
-    margin-top: 1px; /* Reducido */
-    padding: 0 1px; /* Reducido */
-    flex-grow: 1; /* Permite que el contenedor de eventos ocupe espacio disponible */
-    overflow: hidden; /* Para manejar el desbordamiento de eventos */
-    min-height: 1.5em; /* Un mínimo para que se vea algo si hay muchos eventos */
-  }
-    
-  /* Estilos para eventos personalizados - NUEVO ESTILO */
-  .custom-event-container {
-    display: block;
-    margin: 1px 0; /* Coincide con .fc-event margin */
-    padding: 1px 3px; /* Reducido */
-    border-radius: 4px; /* Reducido */
-    font-size: 0.65rem; /* Reducido */
-    line-height: 1.2; 
-    cursor: pointer;
-    box-shadow: 0 1px 1px rgba(0,0,0,0.08); /* Sombra más sutil */
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    transition: all 0.15s ease;
-    border: 1px solid rgba(0,0,0,0.05); 
-  }
-  
-  .custom-event-container:hover {
-    box-shadow: 0 2px 3px rgba(0,0,0,0.1);
-    transform: translateY(-1px);
-  }
-  
-  .custom-event-title {
-    font-weight: 500; /* Reducido */
-  }
-  
-  .custom-event-time {
-    font-weight: 400; 
-    margin-left: 4px; 
-    opacity: 0.9;
-    font-size: 0.6rem; /* Ligeramente más pequeño si es necesario */
-  }
-  
-  /* Ajustes para vista móvil (ya presentes, podrían necesitar revisión si la vista es muy pequeña) */
-  @media (max-width: 768px) {
-    .fc .fc-toolbar {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-    
-    .fc .fc-toolbar-chunk {
-      margin-bottom: 0.5rem;
-    }
-    
-    .fc .fc-daygrid-day {
-      min-height: 3rem; /* Ajustar si es necesario para móviles */
-    }
-    .custom-event-container {
-      padding: 2px 5px; /* Ajustar para móviles */
-      font-size: 0.6rem; /* Ajustar para móviles */
-    }
+    background-color: rgba(158, 53, 53, 0.04) !important;
   }
 
-  /* --- INICIO: ESTILOS PARA EL FORMULARIO POR PASOS --- */
-  .step-wizard-list {
-    display: flex;
-    justify-content: space-around;
-    padding: 0;
-    margin: 0 0 20px 0;
-    list-style-type: none;
-    position: relative;
-  }
-  
-  .step-wizard-item {
-    flex: 1;
-    text-align: center;
-    position: relative;
-  }
-
-  .step-wizard-item:not(:first-child)::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: -50%;
-    height: 2px;
-    width: 100%;
-    background-color: #ced4da;
-    transform: translateY(-50%);
-    z-index: 1;
-  }
-
-  .step-wizard-item.completed:not(:first-child)::before,
-  .step-wizard-item.current:not(:first-child)::before {
-    background-color: #9e3535;
-  }
-  
-  .progress-count {
-    height: 40px;
-    width: 40px;
+  /* Número del día de hoy en círculo Vinotinto */
+  .fc .fc-day-today .fc-daygrid-day-number {
+    background-color: #9e3535 !important;
+    color: white !important;
     border-radius: 50%;
-    background-color: #f8f9fa;
-    border: 2px solid #ced4da;
-    color: #ced4da;
+    width: 22px;
+    height: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: bold;
-    margin: 0 auto 5px;
-    position: relative;
-    z-index: 2;
+    margin: 4px;
   }
-  
-  .step-wizard-item.completed .progress-count {
-    background-color: #9e3535;
-    border-color: #9e3535;
-    color: white;
+
+  /* --- MODAL LIMPIO Y ELEGANTE --- */
+  .modal-reserva .modal-content {
+    border-radius: 12px !important;
+    border: none !important;
   }
-  
+
+  .modal-reserva .modal-header {
+    background-color: #ffffff !important; /* Fondo blanco */
+    border-bottom: 1px solid #f0f0f0 !important;
+    padding: 1.2rem !important;
+  }
+
+  .modal-reserva .modal-title {
+    color: #333 !important; /* Texto oscuro */
+    font-weight: 600 !important;
+  }
+
+  .modal-reserva .btn-close {
+    filter: none !important; /* X en color original */
+  }
+
+  /* --- PASOS (WIZARD) HORIZONTAL --- */
+  .step-wizard-list {
+    display: flex;
+    padding: 0;
+    margin: 0 0 1.5rem 0;
+    list-style: none; /* Elimina los puntos de lista */
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .step-wizard-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .progress-count {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background-color: #eee;
+    color: #999;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .step-wizard-item.current .progress-count {
-    border-color: #9e3535;
-    color: #9e3535;
+    background-color: #9e3535;
+    color: white;
   }
 
   .progress-label {
     font-size: 0.8rem;
+    color: #777;
     font-weight: 500;
-    color: #ced4da;
+  }
+
+  /* Línea divisoria entre pasos */
+  .step-wizard-item:not(:last-child)::after {
+    content: "";
+    width: 20px;
+    height: 1px;
+    background-color: #ddd;
+    margin-left: 5px;
+  }
+
+  /* --- FORMULARIO COMPACTO --- */
+  .form-control, .form-select {
+    font-size: 0.85rem !important;
+    border-radius: 6px !important;
+    border: 1px solid #e0e0e0 !important;
+    padding: 0.4rem 0.7rem !important;
+  }
+
+  .form-label {
+    font-weight: 600 !important;
+    font-size: 0.75rem !important;
+    color: #555;
+    margin-bottom: 3px !important;
   }
   
-  .step-wizard-item.completed .progress-label,
-  .step-wizard-item.current .progress-label {
-    color: #495057;
-  }
-  /* --- FIN: ESTILOS PARA EL FORMULARIO POR PASOS --- */
-  .google-calendar-popover .popover-header {
-    background-color: white !important;
-    border-bottom: 1px solid #e0e0e0;
-    padding: 12px 16px;
-    font-size: 1.1rem;
-    font-weight: 500;
-    display: flex; /* Asegura que el botón de cierre esté bien alineado */
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .google-calendar-popover .popover-body {
-    padding: 16px;
-    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    color: #3c4043;
-  }
-
-  .google-calendar-popover.popover { /* Aumenta la especificidad para anular estilos de reactstrap */
+  .google-calendar-popover.popover {
     border: none !important;
     border-radius: 12px !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
-    max-width: 350px;
-    min-width: 320px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.12) !important;
+    min-width: 300px;
+    overflow: hidden;
   }
 
-  .detail-item {
+  .google-calendar-popover .popover-header {
+    background-color: #ffffff !important;
+    border-bottom: 1px solid #f0f0f0;
+    padding: 12px 16px;
+  }
+
+  .popover-detail-item {
     display: flex;
     align-items: flex-start;
-    margin-bottom: 16px;
-    gap: 16px;
+    margin-bottom: 12px;
+    gap: 12px;
   }
 
-  .detail-item-icon {
-    flex-shrink: 0;
-    color: #5f6368;
-    margin-top: 2px; /* Pequeño ajuste para alinear mejor con el texto */
+  .detail-icon-wrapper {
+    color: #9e3535; /* Color vinotinto sutil en iconos */
+    margin-top: 2px;
   }
 
-  .detail-item-content {
+  .detail-text-wrapper {
     display: flex;
     flex-direction: column;
-    flex-grow: 1; /* Para que ocupe el espacio restante */
   }
 
-  .detail-item-content strong {
-    font-weight: 500;
+  .detail-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: #888;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+  }
+
+  .detail-value {
     font-size: 0.9rem;
-    line-height: 1.3;
+    color: #333;
+    font-weight: 600;
   }
 
-  .detail-item-content small {
-    font-size: 0.8rem;
-    color: #5f6368;
+  .popover-status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    margin-top: 4px;
   }
 
-  .popover-actions {
+  .popover-footer-actions {
     display: flex;
-    justify-content: flex-end;
-    border-top: 1px solid #e0e0e0;
+    gap: 8px;
     padding-top: 12px;
+    border-top: 1px solid #f0f0f0;
     margin-top: 8px;
-
-      /* Estilo para el header de CUALQUIER modal de reserva */
-  .modal-reserva .modal-header {
-    background-color: #9e3535 !important; /* El color vinotinto */
-    color: white !important; /* Texto blanco */
-    border-bottom: none !important; /* Quita el borde inferior si lo hubiera */
   }
 
-  /* Estilo para el título dentro del header */
-  .modal-reserva .modal-title {
-    color: white !important;
-    font-weight: bold;
+  /* Botones pequeños del popup */
+  .btn-popover {
+    font-size: 0.8rem !important;
+    padding: 0.4rem 0.8rem !important;
+    border-radius: 6px !important;
+    flex: 1; /* Para que midan lo mismo */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
   }
+`;
 
-  /* Estilo para el botón de cierre (la 'X') */
-  .modal-reserva .modal-header .btn-close {
-    filter: invert(1) grayscale(100%) brightness(200%); /* Invierte el color del SVG del botón a blanco */
-  }
-  }
-
-  .modal-reserva .modal-header {
-    background-color: #9e3535 !important;
-    color: white !important;
-    border-bottom: none;
-  }
-
-  .modal-reserva .modal-header .modal-title {
-    color: white !important;
-    font-weight: bold;
-  }
-
-  .modal-reserva .modal-header .btn-close {
-    filter: invert(1) grayscale(100%) brightness(200%);
-  }
-
-`
 const calculateTotalAndRemaining = (currentForm) => {
   let servicePrice = 0;
   if (currentForm.numberPeople && currentForm.servicios && currentForm.servicios.length > 0) {
@@ -495,18 +383,19 @@ const calculateTotalAndRemaining = (currentForm) => {
 
   const decorationPrice = Number.parseFloat(currentForm.decorationAmount || 0);
   const additionalPrice = Number.parseFloat(currentForm.additionalServiceAmount || 0);
-  const total = servicePrice + decorationPrice + additionalPrice;
+  
+  // Este es el total "sugerido" por el sistema
+  const totalCalculado = servicePrice + decorationPrice + additionalPrice;
+  
   const totalAbonos = (currentForm.pass || []).reduce(
     (sum, abono) => sum + Number.parseFloat(abono.cantidad || 0),
     0
   );
 
-  const restante = total - totalAbonos;
-
   return {
     ...currentForm,
-    totalPay: total.toString(),
-    remaining: restante.toFixed(0),
+    totalPay: totalCalculado.toString(),
+    remaining: (totalCalculado - totalAbonos).toFixed(0),
   };
 };
 
@@ -650,20 +539,18 @@ const [isRescheduling, setIsRescheduling] = useState(false);
 
 
   const calculateDecorationAmount = (numPeople) => {
-    if (!numPeople || isNaN(Number(numPeople))) return ""
+    if (!numPeople || isNaN(Number(numPeople))) return "0";
 
-    const people = Number(numPeople)
+    const people = Number(numPeople);
 
     if (people >= 2 && people <= 15) {
-      return "70000" 
-    } else if (people >= 16 && people <= 40) {
-      return "90000" 
-    } else if (people > 40) {
-      return "90000" 
+      return "70000"; 
+    } else if (people >= 16) { // Aquí simplificamos: 16 o más son 90.000
+      return "90000"; 
     } else {
-      return "" 
+      return "0"; 
     }
-  }
+  };
 
   const isDecorationService = (serviceName) => {
     return serviceName && serviceName.toLowerCase().includes("decoracion")
@@ -910,28 +797,53 @@ const loadInitialData = useCallback(async () => {
 
  
   const handleDateClick = (arg) => {
+        if (arg && arg.date) {
+        const clickedDate = new Date(arg.date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); 
+
+        if (clickedDate < today) {
+            toast.error("No se pueden agregar reservas en fechas pasadas.");
+            return; 
+        }
+    }
+
     console.log("[handleDateClick] Iniciando. Argumento:", arg)
     setCurrentStep(1); 
 
-    setSelectedReserva(null)
-    setAdditionalAmountLabel("Monto Decoración")
-    setShowDecorationAmountInput(false)
-    setShowAdditionalServiceAmountInput(false) 
+    setSelectedReserva(null);
+    setAdditionalAmountLabel("Monto Decoración");
+    setShowDecorationAmountInput(false);
+    setShowAdditionalServiceAmountInput(false); 
 
+    // --- LÓGICA PARA CAPTURAR LA FECHA SELECCIONADA ---
+    // arg.date es un objeto Date de JS. 
+    // Si haces clic en la vista de mes, arg.dateStr suele ser "YYYY-MM-DD"
+    // Debemos añadirle una hora por defecto (ej. 12:00) para que el input datetime-local lo reconozca
     
+    const selectedDate = arg.date;
+    const year = selectedDate.getFullYear();
+    const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
+    const day = String(selectedDate.getDate()).padStart(2, "0");
+    
+    // Definimos una hora por defecto, por ejemplo las 12:00 PM (ya que tu negocio abre a esa hora)
+    const defaultHours = "12";
+    const defaultMinutes = "00";
+    
+    const formattedDateTime = `${year}-${month}-${day}T${defaultHours}:${defaultMinutes}`;
+
     setForm({
       ...emptyForm,
-      dateTime: "", 
+      dateTime: formattedDateTime, // <--- Aquí ya no viene vacío
       pass: [{ fecha: new Date().toISOString().split("T")[0], cantidad: "50000" }],
-    })
+    });
 
-    setErrors({})
-    setClientSearchText("")
-    setClientSearchResults([])
-    setShowClientSearch(false)
-    console.log("[handleDateClick] Abriendo modal con fecha y hora vacías...")
-    setModalOpen(true)
-  }
+    setErrors({});
+    setClientSearchText("");
+    setClientSearchResults([]);
+    setShowClientSearch(false);
+    setModalOpen(true);
+  };
 
 
 
@@ -969,6 +881,9 @@ const openEditModalFromPopover = () => {
 
 // 3. Tu antigua handleEventClick, ahora RENOMBRADA a openEditModal (larga, para abrir el modal de edición)
 const openEditModal = (info) => {
+    if (popoverOpen) {
+        setPopoverOpen(false);
+    }
   const idReservations = Number.parseInt(info.event.id, 10);
   if (isNaN(idReservations)) {
     console.error("ID de reserva inválido:", info.event.id);
@@ -1261,25 +1176,20 @@ const handleClientSearch = async (searchValue) => {
     }
   }
 
-  const handleAbonoChange = (index, field, value) => {
-    // Validar monto mínimo para abonos
-    if (field === "cantidad") {
-      const numValue = Number.parseFloat(value)
-      if (!isNaN(numValue) && numValue < 50000) {
-        setErrors((prevErrors) => ({
-          ...prevErrors,
-          [`pass-${index}-${field}`]: "El monto mínimo debe ser de $50.000",
-        }))
-      }
-    }
-
-    const updatedAbonos = form.pass.map((abono, i) => (i === index ? { ...abono, [field]: value } : abono))
-    setForm((prevForm) => ({ ...prevForm, pass: updatedAbonos }))
-    if (field === "cantidad") {
-      updateRestante(form.totalPay, updatedAbonos)
-    }
-    setErrors((prevErrors) => ({ ...prevErrors, [`pass-${index}-${field}`]: validateAbonoField(field, value,form) }))
-  }
+    const handleAbonoChange = (index, field, value) => {
+    const updatedAbonos = form.pass.map((abono, i) => (i === index ? { ...abono, [field]: value } : abono));
+    
+    const totalAbonos = updatedAbonos.reduce((sum, abono) => sum + Number.parseFloat(abono.cantidad || 0), 0);
+    const totalPagoNum = Number.parseFloat(form.totalPay || 0);
+    
+    setForm(prevForm => ({
+        ...prevForm,
+        pass: updatedAbonos,
+        remaining: (totalPagoNum - totalAbonos).toFixed(0)
+    }));
+    
+    setErrors((prevErrors) => ({ ...prevErrors, [`pass-${index}-${field}`]: validateAbonoField(field, value,form) }));
+  };
 
   const addAbono = () => {
     // Añadir abono con fecha actual por defecto y monto mínimo
@@ -1307,58 +1217,62 @@ const handleClientSearch = async (searchValue) => {
   }
 
   const updateRestante = useCallback((totalPay, pass) => {
-    const totalAbonosNum = (pass || []).reduce((sum, abono) => sum + Number.parseFloat(abono.cantidad || 0), 0)
-    const totalPagoNum = Number.parseFloat(totalPay || 0)
-    const restanteNum = totalPagoNum - totalAbonosNum
-    const restanteFormatted = isNaN(restanteNum) ? "" : restanteNum.toFixed(0)
-    setForm(prevForm => calculateTotalAndRemaining(prevForm));
-  }, [])
+    const totalAbonosNum = (pass || []).reduce(
+      (sum, abono) => sum + Number.parseFloat(abono.cantidad || 0), 
+      0
+    );
+    const totalPagoNum = Number.parseFloat(totalPay || 0);
+    const restanteNum = totalPagoNum - totalAbonosNum;
+    
+    setForm(prevForm => ({
+      ...prevForm,
+      totalPay: totalPay.toString(), // Mantiene el total que estás escribiendo
+      remaining: isNaN(restanteNum) ? "0" : restanteNum.toFixed(0)
+    }));
+  }, []);
 
-  // --- MODIFICADO: handleMultiServiceChange para manejar servicios adicionales ---
   const handleMultiServiceChange = (selectedOptions) => {
-    const currentServices = selectedOptions || []
-    const updatedForm = { ...form, servicios: currentServices }
+    const currentServices = selectedOptions || [];
+    let updatedForm = { ...form, servicios: currentServices };
 
-    // --- LÓGICA MODIFICADA PARA MONTO DECORACIÓN Y SERVICIOS ADICIONALES ---
-    const tieneDecoracion = currentServices.some((s) => isDecorationService(s.label))
-    const tieneOtrosServicios = currentServices.some((s) => !isDecorationService(s.label))
-    const esCumpleanos = form.evenType && form.evenType.toLowerCase().includes("cumpleaños")
+    const tieneDecoracion = currentServices.some((s) => isDecorationService(s.label));
+    const tieneOtrosServicios = currentServices.some((s) => !isDecorationService(s.label));
+    const esCumpleanos = updatedForm.evenType && updatedForm.evenType.toLowerCase().includes("cumpleaños");
 
     // Lógica para decoración
     if (tieneDecoracion) {
-      setAdditionalAmountLabel("Monto Decoración")
+      setAdditionalAmountLabel("Monto Decoración");
       if (esCumpleanos) {
-        setShowDecorationAmountInput(false)
-        updatedForm.decorationAmount = "0"
+        setShowDecorationAmountInput(false);
+        updatedForm.decorationAmount = "0";
       } else {
-        setShowDecorationAmountInput(true)
-        const numPeople = updatedForm.numberPeople || form.numberPeople
-        updatedForm.decorationAmount = numPeople
-          ? calculateDecorationAmount(numPeople)
-          : updatedForm.decorationAmount || ""
+        setShowDecorationAmountInput(true);
+        // Calculamos basado en el número de personas que ya esté en el input
+        updatedForm.decorationAmount = calculateDecorationAmount(updatedForm.numberPeople);
       }
     } else {
-      setShowDecorationAmountInput(false)
-      updatedForm.decorationAmount = "0"
+      setShowDecorationAmountInput(false);
+      updatedForm.decorationAmount = "0";
     }
 
+    // Lógica para otros servicios
     if (tieneOtrosServicios) {
-      setShowAdditionalServiceAmountInput(true)
-      if (!updatedForm.additionalServiceAmount) {
-        updatedForm.additionalServiceAmount = ""
-      }
+      setShowAdditionalServiceAmountInput(true);
     } else {
-      setShowAdditionalServiceAmountInput(false)
-      updatedForm.additionalServiceAmount = "0"
+      setShowAdditionalServiceAmountInput(false);
+      updatedForm.additionalServiceAmount = "0";
     }
-    
 
-    const finalForm = calculateTotalAndRemaining(updatedForm);
-    setForm(finalForm)
-    setForm(updatedForm)
-    setErrors((prevErrors) => ({ ...prevErrors, servicios: validateField("servicios", currentServices) }))
-    updateRestante(updatedForm.totalPay, updatedForm.pass) 
-  }
+    // RECALCULAR TOTALES
+    updatedForm = calculateTotalAndRemaining(updatedForm);
+    
+    setForm(updatedForm);
+    setErrors((prevErrors) => ({ 
+      ...prevErrors, 
+      servicios: validateField("servicios", currentServices) 
+    }));
+  };
+
 
   const validateAbonoField = useCallback((fieldName, value,form) => {
      if (fieldName === "fecha") {
@@ -1558,76 +1472,58 @@ const handleClientSearch = async (searchValue) => {
   }, [form, validateAbonoField, validateField, showDecorationAmountInput, showAdditionalServiceAmountInput])
 
   const handleChange = (e) => {
-    const { name, value } = e.target
-    console.log(`Cambiando ${name} a: ${value}`) 
-
+    const { name, value } = e.target;
     let updatedForm = { ...form, [name]: value };
 
-    
-    if (name === "dateTime") {
+    // --- LÓGICA DE RECALCULO AUTOMÁTICO ---
+    if (name === "numberPeople") {
+      const tieneDecoracion = updatedForm.servicios.some((s) => isDecorationService(s.label));
+      const esCumpleanos = updatedForm.evenType && updatedForm.evenType.toLowerCase().includes("cumpleaños");
+
+      // Si hay decoración y NO es cumpleaños, calcular monto por personas
+      if (tieneDecoracion && !esCumpleanos) {
+        updatedForm.decorationAmount = calculateDecorationAmount(value);
+      }
       
-      const hasTimeConflict = checkTimeConflict(value, selectedReserva?.idReservations)
-      if (hasTimeConflict) {
-        console.log("Conflicto de hora detectado:", value)
-        setErrors((prevErrors) => ({
-          ...prevErrors,
-          [name]: "Ya existe una reserva en esta hora. Por favor, seleccione otra hora.",
-        }))
-      } else {
-        
-        setErrors((prevErrors) => {
-          const newErrors = { ...prevErrors }
-          delete newErrors[name]
-          return newErrors
-        })
-      }
-
-     
-      if (form.idCustomers && checkDuplicateReservation(form.idCustomers, value, selectedReserva?.idReservations)) {
-        setErrors((prevErrors) => ({
-          ...prevErrors,
-          [name]:
-            "Este cliente ya tiene una reserva en esta fecha. No se permiten múltiples reservas para el mismo cliente en un día.",
-        }))
-      }
-    }
-
+      // Recalcular totales siempre que cambie el número de personas
+      updatedForm = calculateTotalAndRemaining(updatedForm);
+    } 
     
- if (["numberPeople", "evenType", "decorationAmount", "additionalServiceAmount"].includes(name)) {
-    
-    // Si cambia el tipo de evento, ajustamos la visibilidad del monto de decoración
-    if (name === "evenType") {
+    else if (name === "evenType") {
       const tieneDecoracion = updatedForm.servicios.some((s) => isDecorationService(s.label));
       const esCumpleanos = value && value.toLowerCase().includes("cumpleaños");
+      
       if (tieneDecoracion) {
         setShowDecorationAmountInput(!esCumpleanos);
         if (esCumpleanos) {
-          updatedForm.decorationAmount = "0"; 
+          updatedForm.decorationAmount = "0";
+        } else {
+          updatedForm.decorationAmount = calculateDecorationAmount(updatedForm.numberPeople);
         }
       }
-    }
-    
-    // Llamamos a la función central para que actualice totalPay y remaining
-    updatedForm = calculateTotalAndRemaining(updatedForm);
-  }
-
-    setForm(updatedForm)
-
-    if (name === "totalPay" || name === "numberPeople" || name === "evenType") {
-      updateRestante(updatedForm.totalPay, updatedForm.pass)
+      updatedForm = calculateTotalAndRemaining(updatedForm);
     }
 
-    if (name !== "idCustomers") {
-      const error = validateField(name, updatedForm[name])
-      setErrors((prevErrors) => ({ ...prevErrors, [name]: error }))
-    } else {
-      setErrors((prevErrors) => {
-        const newErrors = { ...prevErrors }
-        delete newErrors.idCustomers
-        return newErrors
-      })
+    else if (name === "decorationAmount" || name === "additionalServiceAmount") {
+      updatedForm = calculateTotalAndRemaining(updatedForm);
     }
-  }
+
+    else if (name === "totalPay") {
+      // Si edita el total manualmente, solo actualizamos el restante
+      setForm(updatedForm);
+      updateRestante(value, updatedForm.pass);
+      const error = validateField(name, value);
+      setErrors((prevErrors) => ({ ...prevErrors, [name]: error }));
+      return; // Salimos para evitar el setForm doble abajo
+    }
+
+    // Actualizar el estado con el formulario procesado
+    setForm(updatedForm);
+
+    // Validaciones de errores
+    const error = validateField(name, value);
+    setErrors((prevErrors) => ({ ...prevErrors, [name]: error }));
+  };
 
   const updateDurationOnly = useCallback(async (id, duration) => {
     try {
@@ -2444,45 +2340,38 @@ const handleRescheduleSubmit = async () => {
               eventClick={handleEventClick}
               eventDrop={handleEventDrop}
               editable={true}
-              height="100%"
+              height="auto"
+              aspectRatio={1.8}
               contentHeight="auto"
               eventContent={(arg) => {
-                const event = arg.event
-                const status = event.extendedProps.status || "default"
-                const time = arg.timeText
-                const title = event.title
-                let bgColor, textColor
-                switch (status) {
-                  case "terminada":
-                    bgColor = "rgba(76, 175, 80, 0.7)"
-                    textColor = "#1B5E20"
-                    break
-                  case "anulada":
-                    bgColor = "rgba(244, 67, 54, 0.7)"
-                    textColor = "#FFFFFF"
-                    break
-                  case "pendiente":
-                    bgColor = "rgba(255, 152, 0, 0.7)"
-                    textColor = "#FFFFFF"
-                    break
-                  case "en_proceso":
-                    bgColor = "rgba(255, 235, 59, 0.7)"
-                    textColor = "#5C460A"
-                    break
-                  case "confirmada":
-                    bgColor = "rgba(33, 150, 243, 0.7)"
-                    textColor = "#FFFFFF"
-                    break
-                  default:
-                    bgColor = "rgba(158, 158, 158, 0.7)"
-                    textColor = "#FFFFFF"
-                }
+                const { event } = arg;
+                const status = event.extendedProps.status || "default";
+                
+                // Colores de fondo más suaves (pasteles) para que el texto sea legible
+                const statusColors = {
+                  terminada: { bg: '#E8F5E9', text: '#1B5E20', border: '#4CAF50' },
+                  anulada: { bg: '#FFEBEE', text: '#B71C1C', border: '#F44336' },
+                  pendiente: { bg: '#FFF8E1', text: '#E65100', border: '#FF9800' },
+                  en_proceso: { bg: '#FFFDE7', text: '#827717', border: '#FBC02D' },
+                  confirmada: { bg: '#E3F2FD', text: '#0D47A1', border: '#2196F3' },
+                  default: { bg: '#F5F5F5', text: '#424242', border: '#9E9E9E' }
+                };
+
+                const style = statusColors[status] || statusColors.default;
+
                 return (
-                  <div className="custom-event-container" style={{ backgroundColor: bgColor, color: textColor }}>
-                    <span className="custom-event-title">{title}</span>
-                    {time && <span className="custom-event-time">{time}</span>}
+                  <div 
+                    className="custom-event-container" 
+                    style={{ 
+                      backgroundColor: style.bg, 
+                      color: style.text,
+                      borderLeftColor: style.border 
+                    }}
+                  >
+                    <div className="custom-event-title">{event.title}</div>
+                    {arg.timeText && <div className="custom-event-time">{arg.timeText}</div>}
                   </div>
-                )
+                );
               }}
               dayCellContent={(arg) => <div style={{ padding: "2px" }}>{arg.dayNumberText}</div>}
 
@@ -2521,72 +2410,78 @@ const handleRescheduleSubmit = async () => {
     </PopoverHeader>
 
     <PopoverBody>
-      {/* Detalle de Fecha y Hora */}
-      <div className="detail-item">
-        <Calendar size={20} className="detail-item-icon mt-1" />
-        <div className="detail-item-content">
-          <strong>{new Date(popoverReserva.dateTime).toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong>
-          <small>{new Date(popoverReserva.dateTime).toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit', hour12: true })}</small>
+    {/* Fecha y Hora */}
+    <div className="popover-detail-item">
+      <div className="detail-icon-wrapper"><Calendar size={18} /></div>
+      <div className="detail-text-wrapper">
+        <span className="detail-label">Fecha y Hora</span>
+        <span className="detail-value">
+          {new Date(popoverReserva.dateTime).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })}
+          <br />
+          {new Date(popoverReserva.dateTime).toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit', hour12: true })}
+        </span>
+      </div>
+    </div>
+
+    {/* Cliente */}
+    <div className="popover-detail-item">
+      <div className="detail-icon-wrapper"><User size={18} /></div>
+      <div className="detail-text-wrapper">
+        <span className="detail-label">Cliente</span>
+        <span className="detail-value">{popoverReserva.fullName}</span>
+      </div>
+    </div>
+
+    {/* Personas y Estado */}
+    <div className="popover-detail-item">
+      <div className="detail-icon-wrapper"><Users size={18} /></div>
+      <div className="detail-text-wrapper">
+        <span className="detail-label">Asistentes</span>
+        <span className="detail-value">{popoverReserva.numberPeople} personas</span>
+        <div 
+          className="popover-status-badge" 
+          style={{ 
+            backgroundColor: colorMap[popoverReserva.status] || '#eee',
+            color: headerTextColorMap[popoverReserva.status] || '#333'
+          }}
+        >
+          {popoverReserva.status?.replace("_", " ")}
         </div>
       </div>
+    </div>
 
-      {/* Detalle del Cliente */}
-      <div className="detail-item">
-        <User size={20} className="detail-item-icon mt-1" />
-        <div className="detail-item-content">
-          <small>Cliente</small>
-          <strong>{popoverReserva.fullName}</strong>
-        </div>
+    {/* Pagos */}
+    <div className="popover-detail-item">
+      <div className="detail-icon-wrapper"><DollarSign size={18} /></div>
+      <div className="detail-text-wrapper">
+        <span className="detail-label">Información de Pago</span>
+        <span className="detail-value">Total: {formatCurrency(popoverReserva.totalPay)}</span>
+        <span className="detail-value text-success" style={{ fontSize: '0.85rem' }}>
+          Restan: {formatCurrency(popoverReserva.remaining)}
+        </span>
       </div>
-
-      {/* Detalle de Personas */}
-      <div className="detail-item">
-        <Users size={20} className="detail-item-icon mt-1" />
-        <div className="detail-item-content">
-          <small>Personas</small>
-          <strong>{popoverReserva.numberPeople}</strong>
-        </div>
-      </div>
-
-      {/* Detalle del Estado */}
-      <div className="detail-item">
-         <div style={styles.statusBadge(popoverReserva.status)}>
-            {popoverReserva.status?.replace("_", " ")}
-          </div>
-      </div>
-
-      {/* Detalle de Pagos */}
-      <div className="detail-item">
-        <DollarSign size={20} className="detail-item-icon mt-1" />
-        <div className="detail-item-content">
-          <small>Pagos</small>
-          <strong>Total: {formatCurrency(popoverReserva.totalPay)} / <span className="text-success">Restan: {formatCurrency(popoverReserva.remaining)}</span></strong>
-        </div>
-      </div>
-      
-      {/* Botones de Acción */}
-<div className="popover-actions">
-  <Button 
-    style={{
-        backgroundColor: headerTextColorMap[popoverReserva.status] || headerTextColorMap['default'],
-      
-        border: 'none'
-    }}
-    onClick={openEditModalFromPopover}
-  >
-    <Edit size={16} className="me-2" /> Editar
-  </Button>
-   <Button 
-    color="secondary"
-    outline
-    className="ms-2"
-    onClick={handleOpenRescheduleModal}
-  >
-    <Calendar size={16} className="me-2" /> Reprogramar
-  </Button>
-  
-</div>
-    </PopoverBody>
+    </div>
+    
+    {/* Botones de Acción en el Footer del Popover */}
+    <div className="popover-footer-actions">
+      <Button 
+        color="primary"
+        className="btn-popover"
+        style={{ backgroundColor: '#9e3535', border: 'none' }}
+        onClick={openEditModalFromPopover}
+      >
+        <Edit size={14} /> Editar
+      </Button>
+      <Button 
+        color="secondary"
+        outline
+        className="btn-popover"
+        onClick={handleOpenRescheduleModal}
+      >
+        <Calendar size={14} /> Reprogramar
+      </Button>
+    </div>
+  </PopoverBody>
   </Popover>
 )}
 
@@ -2598,13 +2493,14 @@ const handleRescheduleSubmit = async () => {
       <Modal 
         isOpen={modalOpen} 
         toggle={() => setModalOpen(!modalOpen)} 
-        onClosed={() => setCurrentStep(1)} 
-        size="lg" 
+        size="lg" // Cambiado de 'lg' a 'md' para que sea más estrecho y elegante
         centered 
-        backdrop="static"
+        className="modal-reserva"
       >
-        <ModalHeader toggle={() => setModalOpen(!modalOpen)} style={styles.modalHeader}>
-          {selectedReserva ? "Editar Reserva" : "Nueva Reserva"}
+        <ModalHeader toggle={() => setModalOpen(!modalOpen)} style={{ background: 'white', borderBottom: '1px solid #eee' }}>
+          <span style={{ color: '#333', fontWeight: '600' }}>
+            {selectedReserva ? "Editar Reserva" : "Nueva Reserva"}
+          </span>
         </ModalHeader>
         <ModalBody>
           {/* --- Indicador de Progreso --- */}
@@ -2811,7 +2707,7 @@ const handleRescheduleSubmit = async () => {
                       type="datetime-local"
                       name="dateTime"
                       id="dateTime"
-                      value={form.dateTime || ""}
+                      value={form.dateTime || ""} // Esto tomará el valor que pusimos en handleDateClick
                       onChange={handleChange}
                       invalid={!!errors.dateTime}
                       style={{ borderColor: "#9e3535" }}
@@ -2915,12 +2811,12 @@ const handleRescheduleSubmit = async () => {
                     <Label for="totalPay" style={{ fontWeight: "bold" }}>
                       Total a Pagar
                     </Label>
-                    <Input
+               <Input
                       type="number"
                       name="totalPay"
                       id="totalPay"
                       value={form.totalPay || ""}
-                      onChange={handleChange}
+                      onChange={handleChange} // <--- Importante
                       invalid={!!errors.totalPay}
                       style={{ borderColor: "#9e3535" }}
                     />
@@ -2987,35 +2883,33 @@ const handleRescheduleSubmit = async () => {
           )}
 
         </ModalBody>
-        <ModalFooter>
-          <Button color="secondary" outline onClick={() => setModalOpen(false)}>
+        <ModalFooter style={{ borderTop: '1px solid #f0f0f0', padding: '1rem' }}>
+          <Button 
+            color="link" 
+            className="text-decoration-none text-muted btn-sm-custom" 
+            onClick={() => setModalOpen(false)}
+          >
             Cancelar
           </Button>
 
-          {/* Botón "Anterior" */}
           {currentStep > 1 && (
-             <Button color="secondary" onClick={handlePrevious}>
-                Anterior
-             </Button>
-          )}
-
-          {/* Botón "Siguiente" */}
-          {currentStep < totalSteps && (
-            <Button color="primary" onClick={handleNext}>
-                Siguiente
+            <Button color="secondary" outline className="btn-sm-custom" onClick={handlePrevious}>
+              Anterior
             </Button>
           )}
 
-          {/* Botón "Guardar/Crear" en el último paso */}
-          {currentStep === totalSteps && (
-             <Button
-                color="primary"
-                onClick={() => {
-                  clearDateTimeError()
-                  requestSaveConfirmation()
-                }}
-             >
-                {selectedReserva ? "Guardar Cambios" : "Crear Reserva"}
+          {currentStep < totalSteps ? (
+            <Button color="primary" className="btn-sm-custom" onClick={handleNext} style={{ backgroundColor: '#9e3535', border: 'none' }}>
+              Siguiente
+            </Button>
+          ) : (
+            <Button 
+              color="primary" 
+              className="btn-sm-custom" 
+              onClick={requestSaveConfirmation}
+              style={{ backgroundColor: '#9e3535', border: 'none' }}
+            >
+              {selectedReserva ? "Guardar" : "Crear"}
             </Button>
           )}
         </ModalFooter>
@@ -3071,8 +2965,8 @@ const handleRescheduleSubmit = async () => {
                               id: String(item.idReservations),
                             },
                           }
-                          handleEventClick(eventInfo)
-                          setListModalOpen(false)
+                          openEditModal(eventInfo); 
+                          setListModalOpen(false); 
                         }}
                       >
                         <Edit size={16} />

@@ -55,9 +55,22 @@ const Usuario = () => {
     const [initialDataLoaded, setInitialDataLoaded] = useState(false);
     const confirmActionCallbackRef = useRef(null);
 
-    // ... (Todas las funciones useCallback y useMemo hasta el return se mantienen igual)
     const mapUsersWithRoleNames = useCallback((users, roles) => { if (!Array.isArray(users) || !Array.isArray(roles)) return []; return users.map(user => { const role = roles.find(r => r.idRole === user.idRole); return { ...user, roleName: role ? role.roleName : (user.idRole ? `Rol ID: ${user.idRole}` : 'Sin rol') }; }); }, []);
-    const fetchAndSetRoles = useCallback(async (isMountedRef) => { try { const rolesResponse = await roleService.getAllRoles(); const fetchedRoles = Array.isArray(rolesResponse) ? rolesResponse : (rolesResponse?.data || []); if (isMountedRef.current) { setRolesList(fetchedRoles.filter(role => role.status)); return fetchedRoles; } } catch (error) { if (isMountedRef.current) setRolesList([]); toast.error(`Error al cargar roles: ${error.response?.data?.message || error.message}`); } return []; }, []);
+    const fetchAndSetRoles = useCallback(async (isMountedRef) => {
+        try {
+            const rolesResponse = await roleService.getAllRoles();
+            const fetchedRoles = Array.isArray(rolesResponse) ? rolesResponse : (rolesResponse?.data || []);
+            if (isMountedRef.current) {
+                // ELIMINA EL .filter(role => role.status)
+                setRolesList(fetchedRoles); 
+                return fetchedRoles;
+            }
+        } catch (error) {
+            if (isMountedRef.current) setRolesList([]);
+            toast.error(`Error al cargar roles: ${error.response?.data?.message || error.message}`);
+        }
+        return [];
+    }, []);
     const fetchAndSetUsers = useCallback(async (currentRoles, isMountedRef) => { try { const usersResponse = await userService.getAllUsers(); const fetchedUsers = Array.isArray(usersResponse) ? usersResponse : (usersResponse?.data || []); if (isMountedRef.current) { setData(mapUsersWithRoleNames(fetchedUsers, currentRoles)); } } catch (error) { if (isMountedRef.current) setData([]); toast.error(`Error al cargar usuarios: ${error.response?.data?.message || error.message}`); } }, [mapUsersWithRoleNames]);
     useEffect(() => { const isMountedRef = { current: true }; const loadInitialData = async () => { setIsLoading(true); const loadedRoles = await fetchAndSetRoles(isMountedRef); if (isMountedRef.current) { await fetchAndSetUsers(loadedRoles, isMountedRef); setInitialDataLoaded(true); setIsLoading(false); } }; loadInitialData(); return () => { isMountedRef.current = false; }; }, [fetchAndSetRoles, fetchAndSetUsers]);
     const refreshData = useCallback(async (showSpinner = true) => { const isMountedRef = { current: true }; if (showSpinner) setIsLoading(true); const currentRoles = await fetchAndSetRoles(isMountedRef); if (isMountedRef.current) { await fetchAndSetUsers(currentRoles, isMountedRef); } if (showSpinner && isMountedRef.current) setIsLoading(false); return () => { isMountedRef.current = false; }; }, [fetchAndSetRoles, fetchAndSetUsers]);
@@ -77,7 +90,40 @@ const Usuario = () => {
     const handlePageChange = useCallback((page) => { setCurrentPage(page); }, []);
     const sortedItems = useMemo(() => { return [...currentItems].sort((a, b) => (a.idUser || 0) - (b.idUser || 0)); }, [currentItems]);
     const handleFormSubmit = async () => { if (isEditing && originalForm) { const { password, confirmPassword, ...currentForm } = form; const { password: origPassword, confirmPassword: origConfirmPassword, ...originalFormToCompare } = originalForm; if (JSON.stringify(currentForm) === JSON.stringify(originalFormToCompare) && !form.password) { toast('No se realizaron cambios.', { icon: 'ℹ️' }); toggleMainModal(); return; } } if (!validateFullForm()) { toast.error(formErrors.general || "Por favor, revise los campos marcados."); return; } setIsSubmitting(true); const toastId = toast.loading(isEditing ? 'Actualizando usuario...' : 'Agregando usuario...'); const { idUser, confirmPassword, ...formData } = form; const payload = { ...formData, idRole: parseInt(formData.idRole, 10), status: formData.status === "true", }; if (!isEditing) { payload.password = formData.password; } else if (isEditing && formData.password) { payload.password = formData.password; } else { delete payload.password; } try { let response; if (isEditing) { response = await userService.updateUser(idUser, payload); } else { response = await userService.createUser(payload); } toast.success(isEditing ? 'Usuario actualizado!' : 'Usuario agregado!', { id: toastId }); toggleMainModal(); await refreshData(false); setCurrentPage(isEditing ? validCurrentPage : 1); } catch (error) { const errorData = error.response?.data; let serverErrorMsg = "Error desconocido."; const newFormErrors = { ...INITIAL_FORM_ERRORS, general: '' }; if (errorData?.errors && Array.isArray(errorData.errors)) { serverErrorMsg = errorData.errors[0]?.msg || "Error de validación del servidor."; errorData.errors.forEach(err => { if (err.path && !newFormErrors[err.path]) { newFormErrors[err.path] = err.msg; } }); } else if (errorData?.message) { serverErrorMsg = errorData.message; } else if (error.message) { serverErrorMsg = error.message; } newFormErrors.general = serverErrorMsg; setFormErrors(newFormErrors); toast.error(`Error: ${newFormErrors.general || serverErrorMsg}`, { id: toastId, duration: 5000 }); } finally { setIsSubmitting(false); } };
-    const executeChangeStatus = useCallback(async (user) => { const { idUser, status: currentStatus, full_name } = user; const newStatus = !currentStatus; const actionText = newStatus ? "activado" : "desactivado"; const toastId = toast.loading(`${newStatus ? 'Activando' : 'Desactivando'} "${full_name || ''}"...`); try { await userService.changeStateUser(idUser, {status: newStatus}); toast.success(`Usuario "${full_name || ''}" ${actionText}.`, { id: toastId }); await refreshData(false); } catch (error) { toast.error(`Error: ${error.response?.data?.message || error.message}`, { id: toastId }); throw error; } }, [refreshData]);
+    const executeChangeStatus = useCallback(async (user) => {
+        const { idUser, status: currentStatus, full_name, idRole } = user;
+        const newStatus = !currentStatus;
+
+        // --- NUEVA VALIDACIÓN ---
+        // Si intentamos ACTIVAR (newStatus === true)
+        if (newStatus === true) {
+            // Buscamos si el rol del usuario está en nuestra lista de roles ACTIVOS
+            const isRoleActive = rolesList.some(r => String(r.idRole) === String(idRole));
+
+            if (!isRoleActive) {
+                toast.error(
+                    `No se puede activar a "${full_name}". El rol asignado está INACTIVO. Active el rol primero en la gestión de roles.`,
+                    { duration: 5000, icon: '🚫' }
+                );
+                return; // Detenemos la ejecución aquí
+            }
+        }
+        // ------------------------
+
+        const actionText = newStatus ? "activado" : "desactivado";
+        const toastId = toast.loading(`${newStatus ? 'Activando' : 'Desactivando'} "${full_name || ''}"...`);
+        
+        try {
+            const payload = { status: newStatus };
+            await userService.changeStateUser(idUser, payload);
+            toast.success(`Usuario "${full_name || ''}" ${actionText}.`, { id: toastId });
+            await refreshData(false);
+        } catch (error) {
+            const serverError = error.response?.data?.message || error.message;
+            toast.error(`Error: ${serverError}`, { id: toastId });
+        }
+    }, [refreshData, rolesList]); // Asegúrate de agregar rolesList a las dependencias
+
     const requestChangeStatusConfirmation = useCallback((user) => { prepareActionConfirmation(() => executeChangeStatus(user), { title: `Confirmar ${user.status ? "Desactivación" : "Activación"}`, message: <p>¿Desea {user.status ? "desactivar" : "activar"} al usuario <strong>{user.full_name}</strong>?</p>, confirmText: user.status ? "Sí, desactivar" : "Sí, activar", confirmColor: user.status ? "warning" : "success", }); }, [prepareActionConfirmation, executeChangeStatus]);
     const executeDelete = useCallback(async (user) => { const { idUser, full_name } = user; const toastId = toast.loading(`Eliminando "${full_name || ''}"...`); try { await userService.deleteUser(idUser); toast.success(`Usuario "${full_name || ''}" eliminado.`, { id: toastId }); const newTotalItemsAfterDelete = totalItems - 1; const newTotalPagesAfterDelete = Math.ceil(newTotalItemsAfterDelete / ITEMS_PER_PAGE) || 1; if (currentItems.length === 1 && currentPage > 1 && newTotalItemsAfterDelete > 0) { setCurrentPage(prev => Math.max(1, prev - 1)); } else if (currentPage > newTotalPagesAfterDelete) { setCurrentPage(newTotalPagesAfterDelete); } await refreshData(false); } catch (error) { toast.error(`Error: ${error.response?.data?.message || error.message}`, { id: toastId }); throw error; } }, [refreshData, currentPage, currentItems, totalItems]);
     const requestDeleteConfirmation = useCallback((user) => { prepareActionConfirmation(() => executeDelete(user), { title: "Confirmar Eliminación", message: <><p>¿Eliminar permanentemente a <strong>{user.full_name || 'este usuario'}</strong>?</p><p><strong className="text-danger">¡Esta acción es irreversible!</strong></p></>, confirmText: "Eliminar Definitivamente", confirmColor: "danger", }); }, [prepareActionConfirmation, executeDelete]);
@@ -145,14 +191,47 @@ const Usuario = () => {
                                     <td>{item.cellphone || '-'}</td>
                                     <td>{item.roleName || 'Desconocido'}</td>
                                     <td className="text-center">
-                                        <Button size="sm" className={`status-button ${item.status ? 'status-active' : 'status-inactive'}`} onClick={() => requestChangeStatusConfirmation(item)} disabled={isConfirmActionLoading || isSubmitting} title={item.status ? "Activo (Click para desactivar)" : "Inactivo (Click para activar)"}>
+                                        <Button 
+                                            size="sm" 
+                                            className={`status-button ${item.status ? 'status-active' : 'status-inactive'}`} 
+                                            onClick={() => requestChangeStatusConfirmation(item)} 
+                                            // Modificación aquí:
+                                            disabled={isConfirmActionLoading || isSubmitting || item.roleName === 'Administrador'} 
+                                            title={
+                                                item.roleName === 'Administrador' 
+                                                ? "No se puede cambiar el estado de un Administrador" 
+                                                : (item.status ? "Activo (Click para desactivar)" : "Inactivo (Click para activar)")
+                                            }
+                                        >
                                             {item.status ? "Activo" : "Inactivo"}
                                         </Button>
                                     </td>
                                     <td className="text-center">
                                         <div className="d-inline-flex gap-1">
-                                            <Button size="sm" color="info" outline onClick={() => openEditModal(item)} title="Editar" className="action-button" disabled={isConfirmActionLoading || isSubmitting}><Edit size={18} /></Button>
-                                            <Button size="sm" color="danger" outline onClick={() => requestDeleteConfirmation(item)} title="Eliminar" className="action-button" disabled={isConfirmActionLoading || isSubmitting}><Trash2 size={18} /></Button>
+                                            <Button 
+                                                size="sm" 
+                                                color="info" 
+                                                outline 
+                                                onClick={() => openEditModal(item)} 
+                                                title="Editar" 
+                                                className="action-button" 
+                                                disabled={isConfirmActionLoading || isSubmitting}
+                                            >
+                                                <Edit size={18} />
+                                            </Button>
+
+                                            <Button 
+                                                size="sm" 
+                                                color="danger" 
+                                                outline 
+                                                onClick={() => requestDeleteConfirmation(item)} 
+                                                // Modificación aquí:
+                                                title={item.roleName === 'Administrador' ? "No se puede eliminar un Administrador" : "Eliminar"} 
+                                                className="action-button" 
+                                                disabled={isConfirmActionLoading || isSubmitting || item.roleName === 'Administrador'}
+                                            >
+                                                <Trash2 size={18} />
+                                            </Button>
                                         </div>
                                     </td>
                                 </tr>  
@@ -180,7 +259,34 @@ const Usuario = () => {
                             <Col md={4}><FormGroup><Label for="document_type_modal">Tipo Documento <span className="text-danger">*</span></Label><Input id="document_type_modal" name="document_type" type="select" value={form.document_type} onChange={handleInputChange} invalid={!!formErrors.document_type} autoComplete="off"><option value="" disabled>Seleccione...</option>{TIPOS_DOCUMENTOS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}</Input><FormFeedback>{formErrors.document_type}</FormFeedback></FormGroup></Col>
                             <Col md={4}><FormGroup><Label for="document_modal">Documento <span className="text-danger">*</span></Label><Input id="document_modal" name="document" value={form.document} onChange={handleInputChange} invalid={!!formErrors.document} autoComplete="off"/><FormFeedback>{formErrors.document}</FormFeedback></FormGroup></Col>
                              <Col md={4}><FormGroup><Label for="cellphone_modal">Celular <span className="text-danger">*</span></Label><Input id="cellphone_modal" name="cellphone" type="tel" value={form.cellphone} onChange={handleInputChange} invalid={!!formErrors.cellphone} autoComplete="tel"/><FormFeedback>{formErrors.cellphone}</FormFeedback></FormGroup></Col>
-                            <Col md={isEditing && !form.password && !form.confirmPassword ? 12 : 6}><FormGroup><Label for="idRole_modal">Rol <span className="text-danger">*</span></Label><Input id="idRole_modal" name="idRole" type="select" value={form.idRole} onChange={handleInputChange} invalid={!!formErrors.idRole} disabled={rolesList.length === 0} autoComplete="off"><option value="" disabled>{rolesList.length === 0 ? "Cargando roles..." : "Seleccione..."}</option>{rolesList.map(r => (<option key={r.idRole} value={r.idRole}>{r.roleName}</option>))}</Input><FormFeedback>{formErrors.idRole}</FormFeedback></FormGroup></Col>
+                            <Col md={isEditing && !form.password && !form.confirmPassword ? 12 : 6}><FormGroup><Label for="idRole_modal">Rol <span className="text-danger">*</span></Label><Input 
+                                    id="idRole_modal" 
+                                    name="idRole" 
+                                    type="select" 
+                                    value={form.idRole} 
+                                    onChange={handleInputChange} 
+                                    invalid={!!formErrors.idRole} 
+                                    disabled={rolesList.length === 0} 
+                                    autoComplete="off"
+                                >
+                                    <option value="" disabled>
+                                        {rolesList.length === 0 ? "Cargando roles..." : "Seleccione..."}
+                                    </option>
+                                    {rolesList.map(r => (
+                                        <option 
+                                            key={r.idRole} 
+                                            value={r.idRole}
+                                            /* 
+                                            Deshabilitamos la opción si:
+                                            1. El rol está inactivo (r.status === false)
+                                            2. Y NO es el rol que el usuario ya tiene asignado actualmente
+                                            */
+                                            disabled={!r.status && String(r.idRole) !== String(originalForm?.idRole)}
+                                        >
+                                            {r.roleName} {!r.status ? '(Inactivo)' : ''}
+                                        </option>
+                                    ))}
+                                </Input><FormFeedback>{formErrors.idRole}</FormFeedback></FormGroup></Col>
                             
                             {/* === INICIO CAMBIOS: OPTIMIZACIÓN VISUAL DE LA SECCIÓN DE CONTRASEÑA === */}
                             {!isEditing && (

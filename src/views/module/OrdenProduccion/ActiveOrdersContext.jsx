@@ -116,6 +116,21 @@ export const ActiveOrdersProvider = ({ children }) => {
             default: localStatus = status || 'UNKNOWN'; localStatusDisplay = status || 'Desconocido';
         }
 
+        const mapStatusToDisplay = (st) => {
+            const s = String(st || '').toUpperCase();
+            switch (s) {
+                case 'PENDING': return 'Pendiente';
+                case 'SETUP': return 'En Configuración';
+                case 'SETUP_COMPLETED': return 'Config. Validada';
+                case 'IN_PROGRESS': return 'En Proceso';
+                case 'PAUSED': return 'Pausada';
+                case 'ALL_STEPS_COMPLETED': return 'Procesos Finalizados';
+                case 'COMPLETED': return 'Completado';
+                case 'CANCELLED': return 'Cancelado';
+                default: return st || 'Desconocido';
+            }
+        };
+
         const processStepsFormatted = (productionOrderDetails || []).map(detail => {
             const processInfo = detail.processDetails || detail.Process;
             return {
@@ -127,8 +142,8 @@ export const ActiveOrdersProvider = ({ children }) => {
                 idEmployee: String(detail.idEmployeeAssigned || detail.idEmployee || ''),
                 startDate: detail.startDate ? new Date(detail.startDate).toISOString() : '',
                 endDate: detail.endDate ? new Date(detail.endDate).toISOString() : '',
-                status: detail.status || 'PENDING',
-                statusDisplay: detail.status || 'Pendiente',
+                status: (detail.status || 'PENDING').toUpperCase(),
+                statusDisplay: mapStatusToDisplay(detail.status),
                 observations: detail.observations || '',
                 estimatedTimeMinutes: processInfo?.estimatedTimeMinutes || detail.estimatedTimeMinutes || null,
                 isNewStep: !detail.idProductionOrderDetail,

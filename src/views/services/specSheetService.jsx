@@ -75,6 +75,17 @@ const specSheetService = {
             console.error(`Error fetching spec sheets for product ID ${idProduct}:`, error.response?.data || error.message);
             throw error.response?.data || error;
         }
+    },
+
+    getAllSpecSheetsWithCosts: async () => {
+        try {
+            // Esta URL debe coincidir con la que definiste en tus rutas del backend
+            const response = await axiosInstance.get(`${API_ENDPOINT}/with-costs`); 
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching spec sheets with costs:', error.response?.data || error.message);
+            throw error.response?.data || error;
+        }
     }
 };
 
