@@ -109,7 +109,11 @@ const PurchaseDetailsModal = ({ isOpen, toggle, purchase }) => {
                                             <span className="text-muted small">Cantidad Total Acumulada</span>
                                         </div>
                                         <div className="text-end">
-                                            <strong className="d-block fs-5">{item.totalQuantity.toFixed(2)} {item.unit}</strong>
+                                            <strong className="d-block fs-5">
+                                                {item.unit.toLowerCase() === 'g' && item.totalQuantity >= 1000 
+                                                    ? `${(item.totalQuantity / 1000).toFixed(2)} kg` 
+                                                    : `${item.totalQuantity.toFixed(2)} ${item.unit}`}
+                                            </strong>
                                             <span className="text-muted small">{formatCurrencyCOP(item.totalValue)}</span>
                                         </div>
                                     </div>
@@ -252,6 +256,13 @@ const GestionComprasPage = () => {
         fetchCompras();
         fetchSuppliesStock();
     }, [fetchCompras, fetchSuppliesStock]);
+
+    // Escuchar eventos globales cuando otra parte de la app actualice el inventario
+    useEffect(() => {
+        const onInventoryUpdated = () => { fetchSuppliesStock(); };
+        window.addEventListener('inventory:updated', onInventoryUpdated);
+        return () => window.removeEventListener('inventory:updated', onInventoryUpdated);
+    }, [fetchSuppliesStock]);
 
     // Manejadores de eventos y lógica de la UI
     const toggleStockModal = () => setIsStockModalOpen(prev => !prev);

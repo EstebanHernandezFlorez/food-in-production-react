@@ -3,7 +3,8 @@
 /* Paleta de Colores Inspirada en tu menu.css */
 :root {
   --produccion-text-base: #5C4033; /* Marrón oscuro */
-  --produccion-accent-bg: #7e2d2d;  /* Vino Tinto */
+  --produccion-accent-bg: #a13333; 
+  --produccion-accent-hover: #b93d3d;
   --produccion-accent-text: #FFFFFF; /* Blanco */
   --produccion-sider-bg: #f0e6d2; /* Un beige más claro para el sidebar de pasos, similar a #d0b88e pero más suave */
   --produccion-card-bg: #FFFFFF;
@@ -123,124 +124,101 @@
 
 
 /* --- SIDEBAR DE PASOS (ProcessManagementSection) --- */
+/* Fondo del sidebar más limpio */
 .process-steps-sidebar-col {
-  background-color: var(--produccion-sider-bg); 
-  transition: width 0.2s ease-out, opacity 0.2s ease-out; /* Transición más rápida */
-  border-right: 1px solid #c5b69f; /* Borde un poco más oscuro que el fondo del sidebar */
-}
-.process-steps-sidebar-col.visually-hidden.d-md-block {
-    /* Asegura que no haya padding o margen que cause un pequeño espacio cuando está 'cerrado' en desktop */
-    padding: 0 !important;
-    margin: 0 !important;
+    background-color: #fdfaf5; /* Beige ultra claro para contraste */
+    border-right: 1px solid rgba(92, 64, 51, 0.1);
 }
 
-
-.process-steps-list-container {
-  /* max-height: calc(100vh - 350px); Altura dinámica puede ser mejor con flex */
-  height: 100%; /* Para que el scroll funcione dentro del div */
-  overflow-y: auto;
-}
-.process-steps-list-container::-webkit-scrollbar { width: 5px; }
-.process-steps-list-container::-webkit-scrollbar-thumb {
-  background-color: var(--produccion-accent-bg); 
-  border-radius: 10px;
-  border: 1px solid var(--produccion-sider-bg);
-}
-.process-steps-list-container::-webkit-scrollbar-track {
-  background-color: rgba(92, 64, 51, 0.08); 
-}
-
+/* Item de la lista: Menos pesado, más moderno */
 .process-step-item {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  padding: 0.6rem 0.9rem !important; 
-  font-size: 0.875rem !important;    /* 14px */
-  color: var(--produccion-text-base) !important;
-  background-color: transparent !important;
-  border: none !important;
-  border-bottom: 1px solid rgba(92, 64, 51, 0.1) !important; 
-  transition: background-color 0.15s ease, color 0.15s ease;
-  cursor: pointer;
-  height: auto !important; /* Altura automática basada en contenido */
-  line-height: 1.4 !important; 
-}
-.process-step-item:last-child {
-  border-bottom: none !important;
+    padding: 0.6rem 1rem !important; /* Más compacto */
+    border-left: 3px solid transparent !important;
 }
 
-.process-step-item .process-step-item-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex-grow: 1; /* Para que el texto ocupe espacio disponible */
-  margin-right: 0.5rem; /* Espacio antes del badge */
+/* Hover: Fondo sutil en lugar de vino sólido */
+.process-step-item:hover:not(.process-step-item-selected) {
+    background-color: rgba(126, 45, 45, 0.03) !important; /* Vino muy clarito */
+    border-left-color: rgba(126, 45, 45, 0.2) !important;
 }
 
-.process-step-item:not(.process-step-item-disabled):not(.process-step-item-selected):hover {
-  background-color: var(--produccion-accent-bg) !important;
-  color: var(--produccion-accent-text) !important;
-}
-.process-step-item:not(.process-step-item-disabled):not(.process-step-item-selected):hover .process-step-item-badge {
-  background-color: var(--produccion-accent-text) !important;
-  color: var(--produccion-accent-bg) !important;
-  border: 1px solid var(--produccion-accent-bg);
-}
-
+/* Seleccionado: El estilo "SaaS" elegante */
 .process-step-item.process-step-item-selected {
-  background-color: var(--produccion-accent-bg) !important;
-  color: var(--produccion-accent-text) !important;
-  font-weight: 500; 
-}
-.process-step-item.process-step-item-selected .process-step-item-badge {
-  background-color: var(--produccion-accent-text) !important;
-  color: var(--produccion-accent-bg) !important;
-  border: 1px solid var(--produccion-accent-bg);
+    background-color: #ffffff !important; /* Resalta sobre el beige del sidebar */
+    border-left-color: var(--produccion-accent-bg) !important; /* Borde Vino */
+    box-shadow: 2px 0 10px rgba(0,0,0,0.03);
 }
 
-.process-step-item.process-step-item-disabled {
-  color: #a08c7d !important; 
-  background-color: transparent !important; 
-  cursor: not-allowed !important;
-  opacity: 0.6;
-}
-.process-step-item.process-step-item-disabled .process-step-item-badge {
-  background-color: #c5b69f !important; 
-  color: var(--produccion-text-base) !important;
+.step-number-sub {
+    font-size: 0.6rem; /* Más pequeño */
+    letter-spacing: 0.03em;
 }
 
-.process-step-item-badge {
-  font-size: 0.65rem !important;
-  padding: 0.2em 0.5em !important;
-  font-weight: 500;
-  border-radius: 8px; 
-  flex-shrink: 0; /* Evitar que el badge se encoja */
-}
-.badge-status-completed { background-color: #198754 !important; color: white !important; }
-.badge-status-in_progress { background-color: #ffc107 !important; color: var(--produccion-text-base) !important; }
-.badge-status-paused { background-color: #6c757d !important; color: white !important; }
-.badge-status-pending {
-  background-color: #e9ecef !important; 
-  color: var(--produccion-text-base) !important;
-  border: 1px solid #ced4da;
+.step-name-text {
+    font-size: 0.85rem; /* Texto principal más ajustado */
+    line-height: 1.2;
 }
 
-/* Contenido del paso enfocado */
 .process-step-content {
-  /* background-color: #fff; O un blanco hueso si el fondo general es muy brillante */
-}
-.process-step-content h6 { 
-    color: var(--produccion-text-base);
-    font-weight: 600;
-    font-size: 1rem;
-}
-.process-step-content .text-muted {
-    color: var(--produccion-text-muted) !important;
-    font-size: 0.85rem;
+    padding: 1rem !important;
 }
 
-/* Estilos para el Collapse (Sidebar de pasos) */
-.process-steps-sidebar-col .collapse,
-.process-steps-sidebar-col .collapsing {
-    height: 100% !important; /* Asegurar que el collapse ocupe toda la altura de la columna */
+/* Quitar espacios excesivos en labels */
+.compact-label {
+    font-size: 0.65rem !important;
+    margin-bottom: 0.2rem !important;
+    display: block;
+}
+
+/* Estado de Tarea más compacto */
+.status-display-box {
+    padding: 0.4rem 0.7rem;
+    background-color: #f8fafc;
+    border-radius: 6px;
+    border-left: 3px solid #e2e8f0;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.process-step-item.process-step-item-selected .step-number-sub {
+    color: var(--produccion-accent-bg); /* El número pasa a vino */
+}
+
+/* Status Pills Modernas con tu paleta */
+.step-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.status-pending { background-color: #f3f4f6; color: #4b5563; }
+.status-in-progress { background-color: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; }
+.status-completed { background-color: #f0fdf4; color: #15803d; }
+
+/* El punto pulsante con tu color Vino */
+.pulsating-dot {
+    width: 8px;
+    height: 8px;
+    background-color: var(--produccion-accent-bg);
+    border-radius: 50%;
+    position: relative;
+}
+
+.pulsating-dot::after {
+    content: '';
+    width: 100%;
+    height: 100%;
+    background-color: var(--produccion-accent-bg);
+    border-radius: 50%;
+    position: absolute;
+    animation: pulse-wine 2s infinite;
+}
+
+@keyframes pulse-wine {
+    0% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(3); opacity: 0; }
 }

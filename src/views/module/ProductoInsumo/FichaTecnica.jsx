@@ -1,4 +1,4 @@
-// Copia y pega este archivo completo. Contiene la corrección final de los nombres de campo.
+// Copia y pega este archivo completo. Contiene todas las correcciones y mejoras.
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import Select from 'react-select';
@@ -9,7 +9,7 @@ import {
     Pagination, PaginationItem, PaginationLink,
     InputGroup, InputGroupText
 } from "reactstrap";
-import { Plus, Trash2, Save, X, AlertTriangle, Edit, Hash, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Plus, Trash2, Save, X, AlertTriangle, Edit, Info, Hash, ToggleLeft, ToggleRight, ChevronsRight, Clock } from 'lucide-react';
 import toast, { Toaster } from "react-hot-toast";
 
 // --- Servicios ---
@@ -34,56 +34,37 @@ const formatCurrency = (value) => {
 };
 
 // --- Constantes y Helpers ---
-const getInitialFichaFormState = () => ({ idProduct: '', dateEffective: new Date().toISOString().slice(0, 10), endDate: '', quantityBase: '', unitOfMeasure: '', status: true });
-const getInitialIngredienteFormState = () => ({ key: `ing-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`, selectedPurchaseDetailOption: null, idPurchaseDetail: '', idSupply: '', quantity: '', unitOfMeasure: '', stockDisponible: 0, error: '' });
-const getInitialProcesoFormState = () => ({ key: `proc-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`, idProcess: null, selectedProcess: null, processOrder: 1, processNameOverride: '', processDescriptionOverride: '' });
-const getInitialFormErrors = () => ({ idProduct: '', dateEffective: '', endDate: '', quantityBase: '', unitOfMeasure: '', ingredientes: '', procesos: '', general: "" });
+// --- CAMBIO 1: Añadido 'portions' al estado inicial ---
+const getInitialFichaFormState = () => ({ idProduct: '', dateEffective: new Date().toISOString().slice(0, 10), endDate: '', quantityBase: '', unitOfMeasure: '', portions: '', status: true });
+const getInitialIngredienteFormState = (isNew = false) => ({ key: `ing-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`, selectedPurchaseDetailOption: null, idPurchaseDetail: '', idSupply: '', quantity: '', unitOfMeasure: '', stockDisponible: 0, error: '', isNew });
+const getInitialProcesoFormState = () => ({ key: `proc-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`, idProcess: null, selectedProcess: null, processOrder: 1, processNameOverride: '', processDescriptionOverride: '', estimatedTimeMinutes: '' });
+const getInitialFormErrors = () => ({ idProduct: '', dateEffective: '', endDate: '', quantityBase: '', unitOfMeasure: '', portions: '', ingredientes: '', procesos: '', general: "" });
 const unitOfMeasures = [ { value: 'kg', label: 'Kilogramos (kg)' }, { value: 'g', label: 'Gramos (g)' }, { value: 'mg', label: 'Miligramos (mg)' }, { value: 'lb', label: 'Libras (lb)' }, { value: 'oz', label: 'Onzas (oz)' }, { value: 'L', label: 'Litros (L)' }, { value: 'mL', label: 'Mililitros (mL)' }, { value: 'gal', label: 'Galones (gal)' }, { value: 'm', label: 'Metros (m)' }, { value: 'cm', label: 'Centímetros (cm)' }, { value: 'mm', label: 'Milímetros (mm)' }, { value: 'unidad', label: 'Unidad(es)' }, { value: 'docena', label: 'Docena(s)' }, ];
 const PROCESOS_PER_PAGE = 5;
 
 const convertToBaseUnit = (quantity, unit) => {
+    // ... (sin cambios en esta función)
     const qty = parseFloat(quantity);
     if (isNaN(qty)) return 0;
-    
-    let u = String(unit)?.toLowerCase() || 'g';
-    u = u.split('(')[0];
-    u = u.trim();
-
+    let u = String(unit)?.toLowerCase() || 'g'; u = u.split('(')[0]; u = u.trim();
     switch (u) {
-        case 'kg': case 'kilogramo': case 'kilogramos':
-        case 'l':  case 'litro':     case 'litros':
-            return qty * 1000;
-        case 'lb': case 'libra': case 'libras':
-            return qty * 453.592;
-        case 'oz': case 'onza': case 'onzas':
-            return qty * 28.3495;
-        case 'mg': case 'miligramo': case 'miligramos':
-            return qty / 1000;
-        case 'g':  case 'gramo':    case 'gramos':
-        case 'ml': case 'mililitro': case 'mililitros':
-        case 'cm': case 'centimetro': case 'centimetros':
-        case 'mm': case 'milimetro': case 'milimetros':
-        case 'unidad': case 'unidades':
-        default:
-            return qty;
+        case 'kg': case 'kilogramo': case 'kilogramos': case 'l':  case 'litro':     case 'litros': return qty * 1000;
+        case 'lb': case 'libra': case 'libras': return qty * 453.592;
+        case 'oz': case 'onza': case 'onzas': return qty * 28.3495;
+        case 'mg': case 'miligramo': case 'miligramos': return qty / 1000;
+        case 'g':  case 'gramo':    case 'gramos': case 'ml': case 'mililitro': case 'mililitros': case 'cm': case 'centimetro': case 'centimetros': case 'mm': case 'milimetro': case 'milimetros': case 'unidad': case 'unidades': default: return qty;
     }
 };
 
 const ConfirmationModalComponent = ({ isOpen, toggle, title, children, onConfirm, confirmText, confirmColor, isConfirming }) => (
     <Modal isOpen={isOpen} toggle={!isConfirming ? toggle : undefined} centered backdrop="static" keyboard={!isConfirming}>
-        <ModalHeader toggle={!isConfirming ? toggle : undefined}>
-            <div className="d-flex align-items-center"><AlertTriangle size={24} className={`text-${confirmColor === "danger" ? "danger" : "primary"} me-2`} /><span className="fw-bold">{title}</span></div>
-        </ModalHeader>
+        <ModalHeader toggle={!isConfirming ? toggle : undefined}><div className="d-flex align-items-center"><AlertTriangle size={24} className={`text-${confirmColor === "danger" ? "danger" : "primary"} me-2`} /><span className="fw-bold">{title}</span></div></ModalHeader>
         <ModalBody>{children}</ModalBody>
-        <ModalFooter>
-            <Button color="secondary" outline onClick={toggle} disabled={isConfirming}>Cancelar</Button>
-            <Button color={confirmColor || "primary"} onClick={onConfirm} disabled={isConfirming}>{isConfirming ? <Spinner size="sm" /> : (confirmText || "Confirmar")}</Button>
-        </ModalFooter>
+        <ModalFooter><Button color="secondary" outline onClick={toggle} disabled={isConfirming}>Cancelar</Button><Button color={confirmColor || "primary"} onClick={onConfirm} disabled={isConfirming}>{isConfirming ? <Spinner size="sm" /> : (confirmText || "Confirmar")}</Button></ModalFooter>
     </Modal>
 );
 
 const FichaTecnica = () => {
-    // ... (hooks y estados sin cambios) ...
     const navigate = useNavigate();
     const { idSpecsheet: idSpecsheetFromUrl } = useParams();
     const location = useLocation();
@@ -107,10 +88,13 @@ const FichaTecnica = () => {
     const confirmActionRef = useRef(null);
     const itemToRemoveRef = useRef({ type: null, keyToRemove: null });
     const [originalIdProductOnLoad, setOriginalIdProductOnLoad] = useState(null);
-    const ingredientesEndRef = useRef(null);
+    const newIngredientRef = useRef(null); // --- CAMBIO 3: Ref para el nuevo ingrediente
     const idProductoFromUrl = new URLSearchParams(location.search).get('idProducto');
+    const [templateModalOpen, setTemplateModalOpen] = useState(false);
+    const [latestFicha, setLatestFicha] = useState(null);
+    const [isApplyingTemplate, setIsApplyingTemplate] = useState(false);
 
-    // ... (useEffect y funciones sin cambios hasta executeSave) ...
+    // ... (useEffect de isEditing y fetchOptionsData sin cambios importantes)
     useEffect(() => {
         const editingMode = !!idSpecsheetFromUrl;
         setIsEditing(editingMode);
@@ -126,6 +110,25 @@ const FichaTecnica = () => {
             setIsDataInitialized(true);
         }
     }, [idSpecsheetFromUrl, idProductoFromUrl]);
+
+    useEffect(() => {
+        const checkForExistingFicha = async () => {
+            if (!isEditing && idProductoFromUrl && isDataInitialized) {
+                try {
+                    const fichas = await fichaTecnicaService.getSpecSheetsByProductId(idProductoFromUrl);
+                    if (fichas && fichas.length > 0) {
+                        // Buscamos la activa o la más reciente
+                        const fActive = fichas.find(f => f.status === true) || fichas[0];
+                        setLatestFicha(fActive);
+                        setTemplateModalOpen(true); // Abrimos el modal para sugerir la plantilla
+                    }
+                } catch (error) {
+                    console.error("Error al buscar fichas previas:", error);
+                }
+            }
+        };
+        checkForExistingFicha();
+    }, [isEditing, idProductoFromUrl, isDataInitialized]);
     
     useEffect(() => {
         let isMounted = true;
@@ -157,7 +160,7 @@ const FichaTecnica = () => {
                     });
                 });
                 setPurchaseDetailOptions(purchaseOptions);
-                const mappedProcesses = (Array.isArray(processesRes) ? processesRes : []).map(p => ({ value: p.idProcess, label: p.processName, description: p.description || '' })).sort((a, b) => a.label.localeCompare(b.label));
+                const mappedProcesses = (Array.isArray(processesRes) ? processesRes : []).map(p => ({ value: p.idProcess, label: p.processName, description: p.description || '', estimatedTimeMinutes: p.estimatedTimeMinutes || '' })).sort((a, b) => a.label.localeCompare(b.label));
                 setMasterProcessOptions(mappedProcesses);
             } catch (error) { if (isMounted) toast.error("Error cargando datos para la ficha."); } 
             finally { if (isMounted) setIsLoadingPageData(false); }
@@ -165,7 +168,7 @@ const FichaTecnica = () => {
         fetchOptionsData();
         return () => { isMounted = false; };
     }, [isEditing, idProductoFromUrl]);
-    
+
     useEffect(() => {
         let isMounted = true;
         if (isEditing && idSpecsheetFromUrl && !isLoadingPageData && !isDataInitialized && masterProcessOptions.length > 0) {
@@ -175,7 +178,8 @@ const FichaTecnica = () => {
                     const fichaFromApi = await fichaTecnicaService.getSpecSheetById(idSpecsheetFromUrl);
                     if (isMounted && fichaFromApi) {
                         setOriginalIdProductOnLoad(fichaFromApi.idProduct?.toString() || null);
-                        setFormFicha({ idProduct: fichaFromApi.idProduct?.toString() || '', dateEffective: (fichaFromApi.dateEffective || '').slice(0, 10), endDate: (fichaFromApi.endDate || '').slice(0, 10), quantityBase: (fichaFromApi.quantityBase || '')?.toString(), unitOfMeasure: fichaFromApi.unitOfMeasure || '', status: fichaFromApi.status !== undefined ? fichaFromApi.status : true });
+                        // --- CAMBIO 1: Cargar 'portions' desde la API ---
+                        setFormFicha({ idProduct: fichaFromApi.idProduct?.toString() || '', dateEffective: (fichaFromApi.dateEffective || '').slice(0, 10), endDate: (fichaFromApi.endDate || '').slice(0, 10), quantityBase: (fichaFromApi.quantityBase || '')?.toString(), unitOfMeasure: fichaFromApi.unitOfMeasure || '', portions: (fichaFromApi.portions || '')?.toString(), status: fichaFromApi.status !== undefined ? fichaFromApi.status : true });
                         const backendSupplies = Array.isArray(fichaFromApi.specSheetSupplies) ? fichaFromApi.specSheetSupplies : [];
                         const mappedIngredientes = backendSupplies.map(ing => { const purchaseOpt = purchaseDetailOptions.find(opt => opt.value === ing.idPurchaseDetail); return { ...getInitialIngredienteFormState(), key: ing.idSpecSheetSupply, selectedPurchaseDetailOption: purchaseOpt || null, idPurchaseDetail: ing.idPurchaseDetail, idSupply: ing.idSupply, quantity: ing.quantity?.toString() || '', unitOfMeasure: ing.unitOfMeasure || purchaseOpt?.unitOfMeasure || '', stockDisponible: purchaseOpt?.stock || 0 }; });
                         setFormIngredientes(mappedIngredientes.length > 0 ? mappedIngredientes : [getInitialIngredienteFormState()]);
@@ -211,24 +215,34 @@ const FichaTecnica = () => {
         calcularCostoTotal();
     }, [formIngredientes]);
 
-    useEffect(() => { if (formIngredientes.length > 1) { ingredientesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); } }, [formIngredientes.length]);
+    // --- CAMBIO 3: Efecto para enfocar el nuevo ingrediente ---
+    useEffect(() => {
+        if (newIngredientRef.current) {
+            newIngredientRef.current.focus();
+        }
+    }, [formIngredientes]);
     
     const procesosTotalPages = useMemo(() => Math.ceil(formProcesos.length / PROCESOS_PER_PAGE), [formProcesos]);
     const currentProcesos = useMemo(() => { const startIndex = (procesosCurrentPage - 1) * PROCESOS_PER_PAGE; return formProcesos.slice(startIndex, startIndex + PROCESOS_PER_PAGE); }, [formProcesos, procesosCurrentPage]);
     const handleProcesoPageChange = useCallback((e, pageNumber) => { e.preventDefault(); setProcesosCurrentPage(pageNumber); }, []);
     const clearSpecificFormErrors = useCallback((fields) => { setFormErrors(prev => { const newErrors = { ...prev };(Array.isArray(fields) ? fields : [fields]).forEach(field => { newErrors[field] = ''; }); if (!Object.values(newErrors).some(err => err && err !== prev.general) && newErrors.general) newErrors.general = ''; return newErrors;}); }, []);
     const handleFichaChange = useCallback((e) => { const { name, value, type, checked } = e.target; const val = type === 'checkbox' ? checked : value; setFormFicha(prev => { const newState = { ...prev, [name]: val }; if (name === 'idProduct' && val) { const selectedProd = productOptions.find(p => p.value.toString() === val.toString()); newState.unitOfMeasure = selectedProd?.unitOfMeasure || ''; } return newState; }); if (formErrors[name] || formErrors.general) clearSpecificFormErrors([name, 'general']); }, [formErrors, clearSpecificFormErrors, productOptions]);
-    const handleIngredienteChange = useCallback((index, field, value) => { setFormIngredientes(prev => prev.map((ing, i) => { if (i === index) { const updatedIng = { ...ing, error: '' }; if (field === 'selectedPurchaseDetailOption') { updatedIng.selectedPurchaseDetailOption = value; updatedIng.idPurchaseDetail = value?.value || ''; updatedIng.idSupply = value?.idSupply || ''; updatedIng.unitOfMeasure = value?.unitOfMeasure || ''; updatedIng.stockDisponible = value?.stock || 0; } else { updatedIng[field] = value; } if ((field === 'quantity' || field === 'selectedPurchaseDetailOption') && updatedIng.idPurchaseDetail) { const cantidadRequerida = parseFloat(updatedIng.quantity); const stockDisponible = parseFloat(updatedIng.stockDisponible); if (!isNaN(cantidadRequerida) && !isNaN(stockDisponible) && cantidadRequerida > stockDisponible) { updatedIng.error = `Insuficiente. Disp: ${stockDisponible} ${updatedIng.unitOfMeasure}`; toast.error(`Stock insuficiente para "${updatedIng.selectedPurchaseDetailOption?.label.split(' (')[0]}"`); } } return updatedIng; } return ing; })); clearSpecificFormErrors([`ingrediente_${index}_idPurchaseDetail`, 'ingredientes', 'general']); }, [clearSpecificFormErrors]);
-    const handleProcesoChange = useCallback((index, field, value) => { setFormProcesos(prev => prev.map((p, i) => { if (i === index) { const updatedProcess = { ...p }; if (field === 'selectedProcess') { updatedProcess.selectedProcess = value; updatedProcess.idProcess = value?.value || null; updatedProcess.processNameOverride = value?.label || ''; updatedProcess.processDescriptionOverride = value?.description || ''; } else if (field === 'processOrder') { const parsedOrder = parseInt(value, 10); updatedProcess.processOrder = (isNaN(parsedOrder) || parsedOrder < 1) ? p.processOrder : parsedOrder; } else { updatedProcess[field] = value; } return updatedProcess; } return p; })); clearSpecificFormErrors([`proceso_${index}_processOrder`, `proceso_${index}_processNameOverride`, 'procesos', 'general']); }, [clearSpecificFormErrors]);
-    const addIngrediente = useCallback(() => setFormIngredientes(prev => [...prev, getInitialIngredienteFormState()]), []);
+    const handleIngredienteChange = useCallback((index, field, value) => { setFormIngredientes(prev => prev.map((ing, i) => { if (i === index) { const updatedIng = { ...ing, error: '', isNew: false }; if (field === 'selectedPurchaseDetailOption') { updatedIng.selectedPurchaseDetailOption = value; updatedIng.idPurchaseDetail = value?.value || ''; updatedIng.idSupply = value?.idSupply || ''; updatedIng.unitOfMeasure = value?.unitOfMeasure || ''; updatedIng.stockDisponible = value?.stock || 0; } else { updatedIng[field] = value; } if ((field === 'quantity' || field === 'selectedPurchaseDetailOption') && updatedIng.idPurchaseDetail) { const cantidadRequerida = parseFloat(updatedIng.quantity); const stockDisponible = parseFloat(updatedIng.stockDisponible); if (!isNaN(cantidadRequerida) && !isNaN(stockDisponible) && cantidadRequerida > stockDisponible) { updatedIng.error = `Insuficiente. Disp: ${stockDisponible} ${updatedIng.unitOfMeasure}`; toast.error(`Stock insuficiente para "${updatedIng.selectedPurchaseDetailOption?.label.split(' (')[0]}"`); } } return updatedIng; } return ing; })); clearSpecificFormErrors([`ingrediente_${index}_idPurchaseDetail`, 'ingredientes', 'general']); }, [clearSpecificFormErrors]);
+    const handleProcesoChange = useCallback((index, field, value) => { setFormProcesos(prev => prev.map((p, i) => { if (i === index) { const updatedProcess = { ...p }; if (field === 'selectedProcess') { updatedProcess.selectedProcess = value; updatedProcess.idProcess = value?.value || null; updatedProcess.processNameOverride = value?.label || ''; updatedProcess.processDescriptionOverride = value?.description || ''; updatedProcess.estimatedTimeMinutes = value?.estimatedTimeMinutes || ''; } else if (field === 'processOrder') { const parsedOrder = parseInt(value, 10); updatedProcess.processOrder = (isNaN(parsedOrder) || parsedOrder < 1) ? p.processOrder : parsedOrder; } else { updatedProcess[field] = value; } return updatedProcess; } return p; })); clearSpecificFormErrors([`proceso_${index}_processOrder`, `proceso_${index}_processNameOverride`, 'procesos', 'general']); }, [clearSpecificFormErrors]);
+    
+    // --- CAMBIO 3: Modificar addIngrediente para marcar el nuevo ---
+    const addIngrediente = useCallback(() => setFormIngredientes(prev => [...prev, getInitialIngredienteFormState(true)]), []);
     const addProceso = useCallback(() => { setFormProcesos(prev => { const nextOrder = prev.length > 0 ? Math.max(0, ...prev.map(p => p.processOrder || 0)) + 1 : 1; const newProcesos = [...prev, { ...getInitialProcesoFormState(), processOrder: nextOrder }]; const newTotalPages = Math.ceil(newProcesos.length / PROCESOS_PER_PAGE); setProcesosCurrentPage(newTotalPages); return newProcesos; }); }, []);
+    
     const validateFichaTecnicaForm = useCallback(() => {
         const errors = { ...getInitialFormErrors() }; let isValid = true;
         if (!formFicha.idProduct) { errors.idProduct = "Producto requerido."; isValid = false; }
         if (!formFicha.dateEffective) { errors.dateEffective = "Fecha efectiva requerida."; isValid = false; }
         if (formFicha.endDate && formFicha.dateEffective && new Date(formFicha.endDate) < new Date(formFicha.dateEffective)) { errors.endDate = "Fin no puede ser anterior."; isValid = false; }
-        if (!formFicha.quantityBase || parseFloat(formFicha.quantityBase) <= 0) { errors.quantityBase = "Cant. base > 0."; isValid = false; }
+        if (!formFicha.quantityBase || parseFloat(formFicha.quantityBase) <= 0) { errors.quantityBase = "Cant. final > 0."; isValid = false; }
         if (!formFicha.unitOfMeasure) { errors.unitOfMeasure = "Unidad requerida."; isValid = false; }
+        // --- CAMBIO 1: Validación para porciones ---
+        if (!formFicha.portions || parseInt(formFicha.portions, 10) <= 0) { errors.portions = "Porciones > 0."; isValid = false; }
         let ingSectionError = false;
         formIngredientes.forEach((ing, idx) => {
             if (!ing.idPurchaseDetail) { errors[`ingrediente_${idx}_idPurchaseDetail`] = "Lote de compra requerido."; ingSectionError = true; }
@@ -243,6 +257,10 @@ const FichaTecnica = () => {
             formProcesos.forEach((proc, idx) => {
                 if (!proc.processNameOverride?.trim()) { errors[`proceso_${idx}_processNameOverride`] = "Nombre del paso requerido."; procSectionError = true; }
                 const orderVal = parseInt(proc.processOrder, 10);
+                if (proc.estimatedTimeMinutes && parseInt(proc.estimatedTimeMinutes) < 0) {
+                    errors[`proceso_${idx}_time`] = "Mínimo 0.";
+                    procSectionError = true;
+                }
                 if (isNaN(orderVal) || orderVal < 1) { errors[`proceso_${idx}_processOrder`] = "Orden inválido."; procSectionError = true;}
                 else if (orders.has(orderVal)) { errors[`proceso_${idx}_processOrder`] = `Orden duplicado.`; procSectionError = true;}
                 else orders.add(orderVal);
@@ -253,154 +271,210 @@ const FichaTecnica = () => {
         setFormErrors(errors);
         return isValid;
     }, [formFicha, formIngredientes, formProcesos]);
+    
+    // ... (toggleConfirmModal y prepareActionConfirmation sin cambios)
     const toggleConfirmModal = useCallback(() => { if (!isConfirmActionLoading) setConfirmModalOpen(p => !p); }, [isConfirmActionLoading]);
     const prepareActionConfirmation = useCallback((actionFn, props) => { confirmActionRef.current = actionFn; setConfirmModalProps(props); setConfirmModalOpen(true); }, []);
     const executeRemoveItem = useCallback(() => { const { type, keyToRemove } = itemToRemoveRef.current; if (type === 'ingrediente') { setFormIngredientes(prev => prev.filter(item => item.key !== keyToRemove)); } else if (type === 'proceso') { if (currentProcesos.length === 1 && procesosCurrentPage > 1) setProcesosCurrentPage(p => p - 1); setFormProcesos(prev => prev.filter(item => item.key !== keyToRemove).map((p, idx) => ({ ...p, processOrder: idx + 1 }))); } toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} eliminado.`); toggleConfirmModal(); }, [toggleConfirmModal, currentProcesos.length, procesosCurrentPage]);
     const requestRemoveItemConfirmation = useCallback((type, index, itemKey) => { itemToRemoveRef.current = { type, keyToRemove: itemKey }; const itemArray = type === 'ingrediente' ? formIngredientes : formProcesos; const itemActual = itemArray.find(item => item.key === itemKey); const itemName = type === 'ingrediente' ? (itemActual?.selectedPurchaseDetailOption?.label || `Ingrediente #${index + 1}`) : (itemActual?.processNameOverride || `Paso #${itemActual?.processOrder || index + 1}`); prepareActionConfirmation(executeRemoveItem, { title: `Confirmar Eliminación`, message: `¿Está seguro de que desea eliminar "${itemName}"?`, confirmText: "Sí, Eliminar", confirmColor: "danger" }); }, [formIngredientes, formProcesos, prepareActionConfirmation, executeRemoveItem]);
     
     const executeSave = async () => {
-        setIsSaving(true);
-        setIsConfirmActionLoading(true);
-        const actionText = isEditing ? "actualizando" : "creando";
-        const toastId = toast.loading(`${actionText.charAt(0).toUpperCase() + actionText.slice(1)} ficha...`);
-    
-        // ✅ --- CORRECCIÓN FINAL: Alineación de Nombres de Campo ---
-        // Cambiamos `quantityBase` a `quantity` y `dateEffective` a `startDate` para que coincidan con el backend.
-        const fichaPayload = {
-            idProduct: parseInt(formFicha.idProduct, 10),
-            startDate: formFicha.dateEffective, // <-- CORREGIDO
-            endDate: formFicha.endDate || null,
-            quantity: parseFloat(formFicha.quantityBase), // <-- CORREGIDO
-            unitOfMeasure: formFicha.unitOfMeasure,
-            status: formFicha.status,
-            specSheetSupplies: formIngredientes
-                .filter(ing => ing.idPurchaseDetail && ing.quantity)
-                .map(ing => ({
-                    idPurchaseDetail: parseInt(ing.idPurchaseDetail, 10),
-                    idSupply: parseInt(ing.idSupply, 10),
-                    quantity: parseFloat(ing.quantity),
-                    unitOfMeasure: ing.unitOfMeasure,
-                })),
-            specSheetProcesses: formProcesos
-                .filter(proc => proc.processNameOverride?.trim())
-                .map((proc, index) => ({
-                    ...(proc.idProcess && { idProcess: proc.idProcess }),
-                    processOrder: proc.processOrder || (index + 1),
-                    processNameOverride: proc.processNameOverride.trim(),
-                    processDescriptionOverride: proc.processDescriptionOverride?.trim() || null,
-                }))
-        };
-    
-        try {
-            if (isEditing && idSpecsheetFromUrl) {
-                await fichaTecnicaService.updateSpecSheet(idSpecsheetFromUrl, fichaPayload);
-            } else {
-                await fichaTecnicaService.createSpecSheet(fichaPayload);
-            }
-            toast.success(`Ficha ${isEditing ? 'actualizada' : 'creada'} con éxito.`, { id: toastId });
-            toggleConfirmModal();
-            setTimeout(() => {
-                const destination = isEditing ? `/home/producto/${formFicha.idProduct}/fichas` : (idProductoFromUrl ? `/home/producto/${idProductoFromUrl}/fichas` : '/home/produccion/producto-insumo');
-                navigate(destination);
-            }, 1200);
-        } catch (error) {
-            const backendErrors = error.response?.data?.errors;
-            let newFormErrors = {};
-            let generalErrorMsg = error.response?.data?.message || error.message || `Error al ${actionText} la ficha técnica.`;
+    setIsSaving(true);
+    setIsConfirmActionLoading(true);
+    const actionText = isEditing ? "actualizando" : "creando";
+    const toastId = toast.loading(`${actionText.charAt(0).toUpperCase() + actionText.slice(1)} ficha...`);
 
-            // Mapeamos los nombres de los campos del backend a los del frontend para los errores.
-            const fieldNameMapping = {
-                startDate: 'dateEffective',
-                quantity: 'quantityBase'
-            };
-
-            if (Array.isArray(backendErrors)) {
-                generalErrorMsg = "Se encontraron errores de validación. Por favor, revise los campos marcados.";
-                backendErrors.forEach(err => {
-                    const frontendFieldName = fieldNameMapping[err.path] || err.path;
-                    newFormErrors[frontendFieldName] = err.msg;
-                });
-                setFormErrors(prev => ({ ...prev, ...newFormErrors, general: generalErrorMsg }));
-                toast.error(<div><strong>Error:</strong><br/>{generalErrorMsg}</div>, { id: toastId, duration: 6000 });
-            } else {
-                setFormErrors(prev => ({ ...prev, general: generalErrorMsg }));
-                toast.error(<div><strong>Error:</strong><br/>{generalErrorMsg}</div>, { id: toastId, duration: 8000 });
-            }
-
-            if (confirmModalOpen) toggleConfirmModal();
-        } finally {
-            setIsSaving(false);
-            setIsConfirmActionLoading(false);
-        }
+    // El payload final y correcto para el nuevo backend
+    const fichaPayload = {
+        idProduct: parseInt(formFicha.idProduct, 10),
+        dateEffective: formFicha.dateEffective,
+        endDate: formFicha.endDate || null,
+        quantityBase: parseFloat(formFicha.quantityBase),
+        unitOfMeasure: formFicha.unitOfMeasure,
+        portions: parseInt(formFicha.portions, 10),
+        status: formFicha.status,
+        specSheetSupplies: formIngredientes
+            .filter(ing => ing.idPurchaseDetail && ing.quantity)
+            .map(ing => ({
+                idPurchaseDetail: parseInt(ing.idPurchaseDetail, 10),
+                idSupply: parseInt(ing.idSupply, 10),
+                quantity: parseFloat(ing.quantity),
+                unitOfMeasure: ing.unitOfMeasure,
+            })),
+        specSheetProcesses: formProcesos
+            .filter(proc => proc.processNameOverride?.trim())
+            .map((proc, index) => ({
+                ...(proc.idProcess && { idProcess: proc.idProcess }),
+                processOrder: proc.processOrder || (index + 1),
+                processNameOverride: proc.processNameOverride.trim(),
+                processDescriptionOverride: proc.processDescriptionOverride?.trim() || null,
+                estimatedTimeMinutes: parseInt(proc.estimatedTimeMinutes, 10) || null,
+            }))
     };
 
+    try {
+        if (isEditing && idSpecsheetFromUrl) {
+            await fichaTecnicaService.updateSpecSheet(idSpecsheetFromUrl, fichaPayload);
+        } else {
+            await fichaTecnicaService.createSpecSheet(fichaPayload);
+        }
+        toast.success(`Ficha ${isEditing ? 'actualizada' : 'creada'} con éxito.`, { id: toastId });
+        toggleConfirmModal();
+        setTimeout(() => {
+            const destination = isEditing ? `/home/producto/${formFicha.idProduct}/fichas` : (idProductoFromUrl ? `/home/producto/${idProductoFromUrl}/fichas` : '/home/produccion/producto-insumo');
+            navigate(destination);
+        }, 1200);
+    } catch (error) {
+        const backendErrors = error.response?.data?.errors;
+        let newFormErrors = {};
+        let generalErrorMsg = error.response?.data?.message || error.message || `Error al ${actionText} la ficha técnica.`;
+
+        if (Array.isArray(backendErrors)) {
+            generalErrorMsg = "Se encontraron errores de validación. Por favor, revise los campos marcados.";
+            backendErrors.forEach(err => { newFormErrors[err.path] = err.msg; });
+            setFormErrors(prev => ({ ...prev, ...newFormErrors, general: generalErrorMsg }));
+            toast.error(<div><strong>Error:</strong><br/>{generalErrorMsg}</div>, { id: toastId, duration: 6000 });
+        } else {
+            setFormErrors(prev => ({ ...prev, general: generalErrorMsg }));
+            toast.error(<div><strong>Error:</strong><br/>{generalErrorMsg}</div>, { id: toastId, duration: 8000 });
+        }
+
+        if (confirmModalOpen) toggleConfirmModal();
+    } finally {
+        setIsSaving(false);
+        setIsConfirmActionLoading(false);
+    }
+};
+
+const applyTemplate = useCallback(async () => {
+    if (!latestFicha) return;
+    setIsApplyingTemplate(true);
+    const toastId = toast.loading("Cargando datos de la ficha anterior...");
+    
+    try {
+        const fullFicha = await fichaTecnicaService.getSpecSheetById(latestFicha.idSpecSheet);
+        
+        // 1. Mapear Datos Generales (mantenemos unidad y porciones, pero fecha actual)
+        setFormFicha(prev => ({
+            ...prev,
+            quantityBase: fullFicha.quantityBase?.toString() || '',
+            unitOfMeasure: fullFicha.unitOfMeasure || '',
+            portions: fullFicha.portions?.toString() || '',
+            status: true // La nueva siempre inicia activa o según prefieras
+        }));
+
+        // 2. Mapear Ingredientes (Generamos nuevas Keys para React)
+        if (fullFicha.specSheetSupplies && fullFicha.specSheetSupplies.length > 0) {
+            const mappedIngredientes = fullFicha.specSheetSupplies.map(ing => {
+                const purchaseOpt = purchaseDetailOptions.find(opt => opt.value === ing.idPurchaseDetail);
+                return {
+                    ...getInitialIngredienteFormState(),
+                    selectedPurchaseDetailOption: purchaseOpt || null,
+                    idPurchaseDetail: ing.idPurchaseDetail,
+                    idSupply: ing.idSupply,
+                    quantity: ing.quantity?.toString() || '',
+                    unitOfMeasure: ing.unitOfMeasure || '',
+                    stockDisponible: purchaseOpt?.stock || 0
+                };
+            });
+            setFormIngredientes(mappedIngredientes);
+        }
+
+        // 3. Mapear Procesos
+        if (fullFicha.specSheetProcesses && fullFicha.specSheetProcesses.length > 0) {
+            const mappedProcesos = fullFicha.specSheetProcesses.map((proc, index) => {
+                const masterProcess = masterProcessOptions.find(opt => opt.value === proc.idProcess);
+                return {
+                    key: `proc-template-${Date.now()}-${index}`,
+                    idProcess: proc.idProcess,
+                    selectedProcess: masterProcess || null,
+                    processOrder: proc.processOrder,
+                    processNameOverride: proc.processNameOverride || '',
+                    processDescriptionOverride: proc.processDescriptionOverride || '',
+                    estimatedTimeMinutes: proc.estimatedTimeMinutes || ''
+                };
+            });
+            setFormProcesos(mappedProcesos.sort((a, b) => a.processOrder - b.processOrder));
+        }
+
+        toast.success("Plantilla aplicada con éxito.", { id: toastId });
+    } catch (error) {
+        toast.error("Error al aplicar la plantilla.", { id: toastId });
+    } finally {
+        setIsApplyingTemplate(false);
+        setTemplateModalOpen(false);
+    }
+}, [latestFicha, purchaseDetailOptions, masterProcessOptions]);
+
+    // ... (el resto de las funciones sin cambios)
     const requestSaveConfirmation = useCallback(() => { if (!validateFichaTecnicaForm()) return; prepareActionConfirmation(executeSave, { title: `Confirmar ${isEditing ? 'Actualización' : 'Creación'}`, message: `¿Desea ${isEditing ? 'guardar los cambios en' : 'crear esta nueva'} la ficha técnica?`, confirmText: `Sí, ${isEditing ? 'Actualizar' : 'Guardar'}`, confirmColor: isEditing ? "primary" : "success" }); }, [validateFichaTecnicaForm, isEditing, executeSave, prepareActionConfirmation]);
     const handleCancel = () => { const destination = isEditing && originalIdProductOnLoad ? `/home/producto/${originalIdProductOnLoad}/fichas` : (idProductoFromUrl ? `/home/producto/${idProductoFromUrl}/fichas` : '/home/produccion/producto-insumo'); navigate(destination); };
     const getSelectStyles = (hasError) => ({ control: (base, state) => ({ ...base, borderColor: hasError ? '#dc3545' : '#ced4da', '&:hover': { borderColor: hasError ? '#dc3545' : '#adb5bd' }, boxShadow: state.isFocused ? (hasError ? '0 0 0 0.25rem rgba(220, 53, 69, 0.25)' : '0 0 0 0.25rem rgba(13, 110, 253, 0.25)') : 'none', }), option: (base, { isFocused, isSelected }) => ({ ...base, backgroundColor: isSelected ? '#0d6efd' : isFocused ? '#dee2e6' : 'white', color: isSelected ? 'white' : '#212529', }), });
-    
-    if (isLoadingPageData) { 
-        return ( <Container fluid className="text-center py-5"><Spinner /><p className="mt-2">Cargando datos maestros...</p></Container> ); 
-    }
+    if (isLoadingPageData) return ( <Container fluid className="text-center py-5"><Spinner /><p className="mt-2">Cargando datos maestros...</p></Container> );
 
     return (
         <React.Fragment>
+            {/* --- CAMBIO 4: CSS mejorado para los pasos de elaboración --- */}
             <style>
                 {`
                     .process-list-container {
                       display: flex;
                       flex-direction: column;
-                      gap: 1rem;
+                      gap: 1.25rem; /* Más espacio entre pasos */
                     }
-                    .process-item-grid {
+                    .process-item-card {
                       display: grid;
                       grid-template-columns: auto 1fr auto;
-                      gap: 0.75rem;
-                      align-items: center;
-                      padding: 1rem;
-                      border: 1px solid #e9ecef;
-                      border-radius: 0.375rem;
-                      background-color: #fdfdfd;
+                      gap: 1rem;
+                      align-items: start;
+                      padding: 1rem 1.25rem;
+                      border: 1px solid #dee2e6;
+                      border-radius: 0.5rem;
+                      background-color: #f8f9fa;
                       transition: box-shadow 0.2s ease-in-out;
                     }
-                    .process-item-grid:hover {
-                      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
+                    .process-item-card:hover {
+                      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+                      border-color: #ced4da;
                     }
-                    .process-order .form-control {
-                      width: 60px;
-                      text-align: center;
-                      font-weight: bold;
-                      font-size: 1.1rem;
-                      background-color: #f8f9fa;
-                    }
-                    .process-main {
+                    .process-order-display {
                       display: flex;
                       flex-direction: column;
-                      gap: 0.5rem;
+                      align-items: center;
+                      padding-top: 0.25rem;
                     }
-                    .process-main textarea.form-control {
-                      font-size: 0.85rem;
+                    .process-order-display .order-number {
+                      font-size: 1.5rem;
+                      font-weight: 700;
+                      color: #0d6efd;
+                      line-height: 1;
+                    }
+                    .process-order-display .order-label {
+                      font-size: 0.75rem;
+                      text-transform: uppercase;
                       color: #6c757d;
-                      resize: vertical;
-                      min-height: 40px;
+                      letter-spacing: 0.5px;
+                    }
+                    .process-main-content {
+                      display: flex;
+                      flex-direction: column;
+                      gap: 0.75rem;
+                    }
+                    .process-main-content .form-control, .process-main-content .Select {
+                      background-color: #fff;
+                    }
+                    .process-action-button {
+                      padding-top: 0.25rem;
                     }
                     @media (max-width: 768px) {
-                      .process-item-grid {
+                      .process-item-card {
                         grid-template-columns: 1fr;
-                        grid-template-areas:
-                          "order"
-                          "main"
-                          "action";
-                        gap: 0.75rem;
+                        grid-template-areas: "order" "main" "action";
+                        gap: 1rem;
                       }
-                      .process-order { grid-area: order; }
-                      .process-main { grid-area: main; }
-                      .process-action { 
-                        grid-area: action;
-                        justify-self: end;
-                      }
-                      .process-order .form-control {
-                        width: 100%;
-                      }
+                      .process-order-display { grid-area: order; flex-direction: row; gap: 0.5rem; align-items: baseline; }
+                      .process-main-content { grid-area: main; }
+                      .process-action-button { grid-area: action; justify-self: end; padding-top: 0; }
                     }
                 `}
             </style>
@@ -422,9 +496,11 @@ const FichaTecnica = () => {
                             <Col md={3}><FormGroup><Label for="endDate">Fecha de Fin (Opcional)</Label><Input type="date" name="endDate" id="endDate" bsSize="sm" value={formFicha.endDate} onChange={handleFichaChange} invalid={!!formErrors.endDate} disabled={isSaving}/><FormFeedback className="x-small">{formErrors.endDate}</FormFeedback></FormGroup></Col>
                         </Row>
                         <Row>
-                            <Col md={4}><FormGroup><Label for="quantityBase">Peso Base</Label><InputGroup size="sm"><InputGroupText><Hash size={14}/></InputGroupText><Input type="number" name="quantityBase" id="quantityBase" min="0.01" step="any" value={formFicha.quantityBase} onChange={handleFichaChange} invalid={!!formErrors.quantityBase} disabled={isSaving} placeholder="Ej: 1000"/></InputGroup><FormFeedback className="x-small">{formErrors.quantityBase}</FormFeedback></FormGroup></Col>
-                            <Col md={4}><FormGroup><Label for="unitOfMeasure">Unidad de Medida (del Peso Base)</Label><Input type="select" bsSize="sm" name="unitOfMeasure" id="unitOfMeasure" value={formFicha.unitOfMeasure} onChange={handleFichaChange} invalid={!!formErrors.unitOfMeasure} disabled={isSaving}><option value="">Seleccione unidad...</option>{unitOfMeasures.map(u => (<option key={u.value} value={u.value}>{u.label}</option>))}</Input><FormFeedback className="x-small">{formErrors.unitOfMeasure}</FormFeedback></FormGroup></Col>
-                            <Col md={4}><FormGroup><Label>Estado de la Ficha</Label><div className="d-flex align-items-center"><Button color={formFicha.status ? 'success' : 'secondary'} outline size="sm" onClick={() => handleFichaChange({ target: { name: 'status', type: 'checkbox', checked: !formFicha.status }})} disabled={isSaving}>{formFicha.status ? <ToggleRight size={18}/> : <ToggleLeft size={18}/>}<span className="ms-2">{formFicha.status ? 'Activa' : 'Inactiva'}</span></Button></div></FormGroup></Col>
+                            {/* --- CAMBIO 1: Modificaciones de campos Peso y Porciones --- */}
+                            <Col md={3}><FormGroup><Label for="quantityBase">Peso Final</Label><InputGroup size="sm"><InputGroupText><Hash size={14}/></InputGroupText><Input type="number" name="quantityBase" id="quantityBase" min="0.01" step="any" value={formFicha.quantityBase} onChange={handleFichaChange} invalid={!!formErrors.quantityBase} disabled={isSaving} placeholder="Ej: 1000"/></InputGroup><FormFeedback className="x-small">{formErrors.quantityBase}</FormFeedback></FormGroup></Col>
+                            <Col md={3}><FormGroup><Label for="unitOfMeasure">Unidad (del Peso Final)</Label><Input type="select" bsSize="sm" name="unitOfMeasure" id="unitOfMeasure" value={formFicha.unitOfMeasure} onChange={handleFichaChange} invalid={!!formErrors.unitOfMeasure} disabled={isSaving}><option value="">Seleccione unidad...</option>{unitOfMeasures.map(u => (<option key={u.value} value={u.value}>{u.label}</option>))}</Input><FormFeedback className="x-small">{formErrors.unitOfMeasure}</FormFeedback></FormGroup></Col>
+                            <Col md={3}><FormGroup><Label for="portions">Rendimiento (Porciones)</Label><InputGroup size="sm"><InputGroupText><ChevronsRight size={14}/></InputGroupText><Input type="number" name="portions" id="portions" min="1" step="1" value={formFicha.portions} onChange={handleFichaChange} invalid={!!formErrors.portions} disabled={isSaving} placeholder="Ej: 10"/></InputGroup><FormFeedback className="x-small">{formErrors.portions}</FormFeedback></FormGroup></Col>
+                            <Col md={3}><FormGroup><Label>Estado de la Ficha</Label><div className="d-flex align-items-center"><Button color={formFicha.status ? 'success' : 'secondary'} outline size="sm" onClick={() => handleFichaChange({ target: { name: 'status', type: 'checkbox', checked: !formFicha.status }})} disabled={isSaving}>{formFicha.status ? <ToggleRight size={18}/> : <ToggleLeft size={18}/>}<span className="ms-2">{formFicha.status ? 'Activa' : 'Inactiva'}</span></Button></div></FormGroup></Col>
                         </Row>
                     </section>
                     
@@ -436,28 +512,29 @@ const FichaTecnica = () => {
                             let costoItem = 0;
                             const lote = ing.selectedPurchaseDetailOption;
                             if (lote && ing.quantity) {
-                                const precioPorUnidadDeCompra = parseFloat(lote.pricePerUnit || 0);
-                                const unidadDeCompra = lote.unitOfMeasure;
-                                const cantidadEnReceta = parseFloat(ing.quantity);
-                                const unidadEnReceta = ing.unitOfMeasure;
-                                if (!isNaN(precioPorUnidadDeCompra) && !isNaN(cantidadEnReceta) && unidadDeCompra && unidadEnReceta) {
-                                    const cantidadRecetaEnUnidadDeCompra = convertToBaseUnit(cantidadEnReceta, unidadEnReceta) / convertToBaseUnit(1, unidadDeCompra);
-                                    costoItem = precioPorUnidadDeCompra * cantidadRecetaEnUnidadDeCompra;
-                                }
+                                // ... (cálculo de costo sin cambios)
+                                const precioPorUnidadDeCompra = parseFloat(lote.pricePerUnit || 0); const unidadDeCompra = lote.unitOfMeasure; const cantidadEnReceta = parseFloat(ing.quantity); const unidadEnReceta = ing.unitOfMeasure;
+                                if (!isNaN(precioPorUnidadDeCompra) && !isNaN(cantidadEnReceta) && unidadDeCompra && unidadEnReceta) { const cantidadRecetaEnUnidadDeCompra = convertToBaseUnit(cantidadEnReceta, unidadEnReceta) / convertToBaseUnit(1, unidadDeCompra); costoItem = precioPorUnidadDeCompra * cantidadRecetaEnUnidadDeCompra; }
                             }
                             return (
                                 <Row key={ing.key} className="g-2 align-items-center dynamic-item-row">
-                                    <Col sm={12} md={5}><FormGroup className="mb-2 mb-md-0"><Select options={purchaseDetailOptions} value={ing.selectedPurchaseDetailOption} onChange={opt => handleIngredienteChange(index, 'selectedPurchaseDetailOption', opt)} placeholder="Seleccione lote de insumo..." isDisabled={isSaving || purchaseDetailOptions.length === 0} styles={getSelectStyles(!!formErrors[`ingrediente_${index}_idPurchaseDetail`])} noOptionsMessage={() => "No hay lotes con stock"} menuPlacement="auto"/>{formErrors[`ingrediente_${index}_idPurchaseDetail`] && (<div className="invalid-feedback d-block x-small mt-1">{formErrors[`ingrediente_${index}_idPurchaseDetail`]}</div>)}</FormGroup></Col>
-                                    <Col sm={4} md={2}><FormGroup className="mb-2 mb-md-0"><Input type="number" bsSize="sm" min="0.001" step="any" name="quantity" value={ing.quantity} onChange={e => handleIngredienteChange(index, 'quantity', e.target.value)} invalid={!!formErrors[`ingrediente_${index}_quantity`] || !!ing.error} disabled={isSaving} placeholder="Cantidad"/><FormFeedback className="x-small">{formErrors[`ingrediente_${index}_quantity`] || ing.error}</FormFeedback></FormGroup></Col>
-                                    <Col sm={5} md={2}><FormGroup className="mb-2 mb-md-0"><Input type="select" bsSize="sm" name="unitOfMeasure" value={ing.unitOfMeasure} onChange={e => handleIngredienteChange(index, 'unitOfMeasure', e.target.value)} invalid={!!formErrors[`ingrediente_${index}_unitOfMeasure`]} disabled={isSaving}><option value="">Unidad...</option>{unitOfMeasures.map(u=>(<option key={u.value} value={u.value}>{u.label}</option>))}</Input>{formErrors[`ingrediente_${index}_unitOfMeasure`] && (<FormFeedback className="x-small">{formErrors[`ingrediente_${index}_unitOfMeasure`]}</FormFeedback>)}</FormGroup></Col>
+                                    <Col sm={12} md={5}><FormGroup className="mb-2 mb-md-0">
+                                        {/* --- CAMBIO 3: Asignar la ref al nuevo 'Select' --- */}
+                                        <Select ref={ing.isNew ? newIngredientRef : null} options={purchaseDetailOptions} value={ing.selectedPurchaseDetailOption} onChange={opt => handleIngredienteChange(index, 'selectedPurchaseDetailOption', opt)} placeholder="Seleccione lote de insumo..." isDisabled={isSaving || purchaseDetailOptions.length === 0} styles={getSelectStyles(!!formErrors[`ingrediente_${index}_idPurchaseDetail`])} noOptionsMessage={() => "No hay lotes con stock"} menuPlacement="auto"/>
+                                        {formErrors[`ingrediente_${index}_idPurchaseDetail`] && (<div className="invalid-feedback d-block x-small mt-1">{formErrors[`ingrediente_${index}_idPurchaseDetail`]}</div>)}
+                                        {/* --- CAMBIO 2: Mostrar precio del lote para claridad --- */}
+                                        {lote?.pricePerUnit > 0 && <small className="text-muted d-block mt-1">Precio Lote: {formatCurrency(lote.pricePerUnit)} / {lote.unitOfMeasure}</small>}
+                                    </FormGroup></Col>
+                                    <Col xs={7} sm={4} md={2}><FormGroup className="mb-2 mb-md-0"><Input type="number" bsSize="sm" min="0.001" step="any" name="quantity" value={ing.quantity} onChange={e => handleIngredienteChange(index, 'quantity', e.target.value)} invalid={!!formErrors[`ingrediente_${index}_quantity`] || !!ing.error} disabled={isSaving} placeholder="Cantidad"/><FormFeedback className="x-small">{formErrors[`ingrediente_${index}_quantity`] || ing.error}</FormFeedback></FormGroup></Col>
+                                    <Col xs={5} sm={4} md={2}><FormGroup className="mb-2 mb-md-0"><Input type="select" bsSize="sm" name="unitOfMeasure" value={ing.unitOfMeasure} onChange={e => handleIngredienteChange(index, 'unitOfMeasure', e.target.value)} invalid={!!formErrors[`ingrediente_${index}_unitOfMeasure`]} disabled={isSaving}><option value="">Unidad...</option>{unitOfMeasures.map(u=>(<option key={u.value} value={u.value}>{u.label}</option>))}</Input>{formErrors[`ingrediente_${index}_unitOfMeasure`] && (<FormFeedback className="x-small">{formErrors[`ingrediente_${index}_unitOfMeasure`]}</FormFeedback>)}</FormGroup></Col>
                                     <Col sm={4} md={2}><div className="cost-display text-center text-md-start"><Label for={`costo-${index}`} className="d-block x-small text-muted mb-0">Costo del Ítem</Label><span id={`costo-${index}`} className="fw-bold">{formatCurrency(costoItem)}</span></div></Col>
-                                    <Col sm={3} md={1} className="text-end"><Button color="danger" outline size="sm" onClick={() => requestRemoveItemConfirmation('ingrediente', index, ing.key)} disabled={isSaving || formIngredientes.length <= 1} title="Eliminar Ingrediente"><Trash2 size={16}/></Button></Col>
+                                    <Col sm={12} md={1} className="text-end"><Button color="danger" outline size="sm" onClick={() => requestRemoveItemConfirmation('ingrediente', index, ing.key)} disabled={isSaving || formIngredientes.length <= 1} title="Eliminar Ingrediente"><Trash2 size={16}/></Button></Col>
                                 </Row>
                             );
                         })}
-                        <div ref={ingredientesEndRef} />
+                        
                         {formIngredientes.length >= 3 && <Row className="mt-3"><Col className="text-end"><Button color="success" outline size="sm" onClick={addIngrediente} disabled={isSaving}><Plus size={16}/> Añadir Otro Ingrediente</Button></Col></Row>}
-                        {formIngredientes.some(ing => ing.idPurchaseDetail) && (<div className="total-cost-section mt-4 pt-3 border-top"><Row className="align-items-center"><Col md={8} className="text-md-end"><h5 className="mb-0">Costo Total de la Receta:</h5><small className="text-muted">Calculado para una base de {formFicha.quantityBase || 0} {formFicha.unitOfMeasure || ''}</small></Col><Col md={4} className="text-md-end mt-2 mt-md-0"><h4 className="fw-bolder text-success mb-0">{formatCurrency(costoTotal)}</h4></Col></Row></div>)}
+                        {formIngredientes.some(ing => ing.idPurchaseDetail) && (<div className="total-cost-section mt-4 pt-3 border-top"><Row className="align-items-center"><Col md={8} className="text-md-end"><h5 className="mb-0">Costo Total de la Receta:</h5><small className="text-muted">Calculado para un rendimiento de {formFicha.quantityBase || 0} {formFicha.unitOfMeasure || ''} ({formFicha.portions || 0} porciones)</small></Col><Col md={4} className="text-md-end mt-2 mt-md-0"><h4 className="fw-bolder text-success mb-0">{formatCurrency(costoTotal)}</h4></Col></Row></div>)}
                         {purchaseDetailOptions.length === 0 && !isLoadingPageData && <Alert color="info" className="mt-3">No hay compras de insumos disponibles. Registre una nueva compra primero.</Alert>}
                     </section>
                     
@@ -465,28 +542,43 @@ const FichaTecnica = () => {
                         <Row className="align-items-center mb-3"><Col><h4 className="mb-0 section-title">Pasos de Elaboración</h4></Col><Col className="text-end"><Button color="info" outline size="sm" onClick={addProceso} disabled={isSaving}><Plus size={16}/> Añadir Paso</Button></Col></Row>
                         {formErrors.procesos && <Alert color="warning" className="py-1 px-2 x-small mb-2"><small>{formErrors.procesos}</small></Alert>}
                         
+                        {/* --- CAMBIO 4: Nueva estructura HTML para los pasos --- */}
                         <div className="process-list-container">
                             {currentProcesos.map((proc, procIndex) => {
                                 const globalIndex = (procesosCurrentPage - 1) * PROCESOS_PER_PAGE + procIndex;
-                                
                                 return (
-                                    <div key={proc.key} className="process-item-grid">
-                                        <div className="process-order">
-                                            <Input type="number" bsSize="sm" name="processOrder" value={proc.processOrder} onChange={e => handleProcesoChange(globalIndex, 'processOrder', e.target.value)} invalid={!!formErrors[`proceso_${globalIndex}_processOrder`]} disabled={isSaving} title={`Orden del paso ${proc.processOrder}`} />
-                                            {formErrors[`proceso_${globalIndex}_processOrder`] && <div className="invalid-feedback d-block x-small mt-1">{formErrors[`proceso_${globalIndex}_processOrder`]}</div>}
+                                    <div key={proc.key} className="process-item-card">
+                                        <div className="process-order-display">
+                                            <span className="order-number">{proc.processOrder}</span>
+                                            <span className="order-label">Paso</span>
                                         </div>
 
-                                        <div className="process-main">
-                                            <Select options={masterProcessOptions} value={proc.selectedProcess} onChange={opt => handleProcesoChange(globalIndex, 'selectedProcess', opt)} placeholder="Seleccione un proceso maestro para autocompletar..." isDisabled={isSaving} styles={getSelectStyles(!!formErrors[`proceso_${globalIndex}_processNameOverride`])} isClearable />
-                                            <Input type="text" bsSize="sm" name="processNameOverride" value={proc.processNameOverride} onChange={e => handleProcesoChange(globalIndex, 'processNameOverride', e.target.value)} invalid={!!formErrors[`proceso_${globalIndex}_processNameOverride`]} placeholder="O escriba un nombre de paso personalizado" className="mt-1" />
+                                        <div className="process-main-content">
+                                            <Select options={masterProcessOptions} value={proc.selectedProcess} onChange={opt => handleProcesoChange(globalIndex, 'selectedProcess', opt)} placeholder="Seleccione un proceso para autocompletar..." isDisabled={isSaving} styles={getSelectStyles(!!formErrors[`proceso_${globalIndex}_processNameOverride`])} isClearable noOptionsMessage={() => "No hay procesos maestros"}/>
+                                            <Row className="g-2"> {/* Usamos Row para poner Nombre y Tiempo en la misma línea */}
+                                                <Col md={9}>
+                                                    <Input bsSize="sm" type="text" name="processNameOverride" 
+                                                        value={proc.processNameOverride} 
+                                                        onChange={e => handleProcesoChange(globalIndex, 'processNameOverride', e.target.value)} 
+                                                        invalid={!!formErrors[`proceso_${globalIndex}_processNameOverride`]} 
+                                                        placeholder="Nombre del paso personalizado" />
+                                                </Col>
+                                                <Col md={3}>
+                                                    <InputGroup size="sm">
+                                                        <InputGroupText><Clock size={14} /></InputGroupText>
+                                                        <Input type="number" name="estimatedTimeMinutes" 
+                                                            value={proc.estimatedTimeMinutes} 
+                                                            onChange={e => handleProcesoChange(globalIndex, 'estimatedTimeMinutes', e.target.value)} 
+                                                            placeholder="Minutos" min="0" />
+                                                    </InputGroup>
+                                                </Col>
+                                            </Row>
                                             {formErrors[`proceso_${globalIndex}_processNameOverride`] && <FormFeedback className="x-small">{formErrors[`proceso_${globalIndex}_processNameOverride`]}</FormFeedback>}
-                                            <Input type="textarea" bsSize="sm" name="processDescriptionOverride" value={proc.processDescriptionOverride} onChange={e => handleProcesoChange(globalIndex, 'processDescriptionOverride', e.target.value)} placeholder="Descripción detallada del paso (opcional)" disabled={isSaving} rows={2} />
+                                            <Input bsSize="sm" type="textarea" name="processDescriptionOverride" value={proc.processDescriptionOverride} onChange={e => handleProcesoChange(globalIndex, 'processDescriptionOverride', e.target.value)} placeholder="Descripción detallada del paso (opcional)" disabled={isSaving} rows={2} />
                                         </div>
 
-                                        <div className="process-action">
-                                            <Button color="danger" outline size="sm" onClick={() => requestRemoveItemConfirmation('proceso', globalIndex, proc.key)} disabled={isSaving || formProcesos.length <= 1} title="Eliminar Paso">
-                                                <Trash2 size={16}/>
-                                            </Button>
+                                        <div className="process-action-button">
+                                            <Button color="danger" outline size="sm" onClick={() => requestRemoveItemConfirmation('proceso', globalIndex, proc.key)} disabled={isSaving || formProcesos.length <= 1} title="Eliminar Paso"><Trash2 size={16}/></Button>
                                         </div>
                                     </div>
                                 );
@@ -494,13 +586,7 @@ const FichaTecnica = () => {
                         </div>
                         {procesosTotalPages > 1 && (
                             <Pagination size="sm" listClassName="justify-content-center mt-3">
-                                {[...Array(procesosTotalPages).keys()].map(page => (
-                                    <PaginationItem key={page + 1} active={procesosCurrentPage === page + 1}>
-                                        <PaginationLink href="#" onClick={(e) => handleProcesoPageChange(e, page + 1)}>
-                                            {page + 1}
-                                        </PaginationLink>
-                                    </PaginationItem>
-                                ))}
+                                {[...Array(procesosTotalPages).keys()].map(page => ( <PaginationItem key={page + 1} active={procesosCurrentPage === page + 1}><PaginationLink href="#" onClick={(e) => handleProcesoPageChange(e, page + 1)}>{page + 1}</PaginationLink></PaginationItem>))}
                             </Pagination>
                         )}
                     </section>
@@ -515,7 +601,29 @@ const FichaTecnica = () => {
                     {confirmModalProps.message}
                 </ConfirmationModalComponent>
             </Container>
+            <Modal isOpen={templateModalOpen} toggle={() => setTemplateModalOpen(false)} centered>
+                <ModalHeader className="bg-info text-white">
+                    <div className="d-flex align-items-center">
+                        <Info size={20} className="me-2" />
+                        Ficha anterior detectada
+                    </div>
+                </ModalHeader>
+                <ModalBody>
+                    <p>Hemos encontrado una ficha técnica anterior para este producto.</p>
+                    <p className="text-muted">¿Deseas cargar los ingredientes y procesos de la ficha <strong>ID: {latestFicha?.idSpecSheet}</strong> para usarlos como base?</p>
+                    <small className="text-info">* Esto te ahorrará tiempo al no tener que reescribir todo.</small>
+                </ModalBody>
+                <ModalFooter>
+                    <Button color="secondary" outline onClick={() => setTemplateModalOpen(false)}>
+                        No, empezar de cero
+                    </Button>
+                    <Button color="info" onClick={applyTemplate} disabled={isApplyingTemplate}>
+                        {isApplyingTemplate ? <Spinner size="sm" /> : "Sí, usar como plantilla"}
+                    </Button>
+                </ModalFooter>
+            </Modal>
         </React.Fragment>
+        
     );
 };
 
