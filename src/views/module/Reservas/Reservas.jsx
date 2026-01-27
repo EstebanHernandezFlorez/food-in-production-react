@@ -797,7 +797,18 @@ const loadInitialData = useCallback(async () => {
 
  
   const handleDateClick = (arg) => {
-    console.log("[handleDateClick] Fecha seleccionada:", arg.dateStr);
+        if (arg && arg.date) {
+        const clickedDate = new Date(arg.date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); 
+
+        if (clickedDate < today) {
+            toast.error("No se pueden agregar reservas en fechas pasadas.");
+            return; 
+        }
+    }
+
+    console.log("[handleDateClick] Iniciando. Argumento:", arg)
     setCurrentStep(1); 
 
     setSelectedReserva(null);
@@ -870,6 +881,9 @@ const openEditModalFromPopover = () => {
 
 // 3. Tu antigua handleEventClick, ahora RENOMBRADA a openEditModal (larga, para abrir el modal de edición)
 const openEditModal = (info) => {
+    if (popoverOpen) {
+        setPopoverOpen(false);
+    }
   const idReservations = Number.parseInt(info.event.id, 10);
   if (isNaN(idReservations)) {
     console.error("ID de reserva inválido:", info.event.id);
@@ -1162,25 +1176,20 @@ const handleClientSearch = async (searchValue) => {
     }
   }
 
-  const handleAbonoChange = (index, field, value) => {
-    // Validar monto mínimo para abonos
-    if (field === "cantidad") {
-      const numValue = Number.parseFloat(value)
-      if (!isNaN(numValue) && numValue < 50000) {
-        setErrors((prevErrors) => ({
-          ...prevErrors,
-          [`pass-${index}-${field}`]: "El monto mínimo debe ser de $50.000",
-        }))
-      }
-    }
-
-    const updatedAbonos = form.pass.map((abono, i) => (i === index ? { ...abono, [field]: value } : abono))
-    setForm((prevForm) => ({ ...prevForm, pass: updatedAbonos }))
-    if (field === "cantidad") {
-      updateRestante(form.totalPay, updatedAbonos)
-    }
-    setErrors((prevErrors) => ({ ...prevErrors, [`pass-${index}-${field}`]: validateAbonoField(field, value,form) }))
-  }
+    const handleAbonoChange = (index, field, value) => {
+    const updatedAbonos = form.pass.map((abono, i) => (i === index ? { ...abono, [field]: value } : abono));
+    
+    const totalAbonos = updatedAbonos.reduce((sum, abono) => sum + Number.parseFloat(abono.cantidad || 0), 0);
+    const totalPagoNum = Number.parseFloat(form.totalPay || 0);
+    
+    setForm(prevForm => ({
+        ...prevForm,
+        pass: updatedAbonos,
+        remaining: (totalPagoNum - totalAbonos).toFixed(0)
+    }));
+    
+    setErrors((prevErrors) => ({ ...prevErrors, [`pass-${index}-${field}`]: validateAbonoField(field, value,form) }));
+  };
 
   const addAbono = () => {
     // Añadir abono con fecha actual por defecto y monto mínimo
@@ -2802,7 +2811,7 @@ const handleRescheduleSubmit = async () => {
                     <Label for="totalPay" style={{ fontWeight: "bold" }}>
                       Total a Pagar
                     </Label>
-                    <Input
+               <Input
                       type="number"
                       name="totalPay"
                       id="totalPay"
@@ -2956,8 +2965,8 @@ const handleRescheduleSubmit = async () => {
                               id: String(item.idReservations),
                             },
                           }
-                          handleEventClick(eventInfo)
-                          setListModalOpen(false)
+                          openEditModal(eventInfo); 
+                          setListModalOpen(false); 
                         }}
                       >
                         <Edit size={16} />
