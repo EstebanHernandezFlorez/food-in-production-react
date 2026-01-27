@@ -162,7 +162,7 @@ const ProduccionPageContent = () => {
     }
 
     return (
-        <Container fluid className="vh-100 d-flex flex-column p-0 production-module">
+        <Container fluid className=" d-flex flex-column p-0 production-module">
             <Row className="g-0 flex-grow-1" style={{ maxHeight: `calc(100vh - ${NAVBAR_HEIGHT})`, overflow: 'hidden' }}>
                 <Col
                     xs={12} md={8} lg={9}

@@ -8,7 +8,7 @@ import {
 } from 'reactstrap';
 import { 
     Eye, Plus, FileDown, CheckCircle, XCircle, Package, Calendar, User, Hash, 
-    Clock, Timer, AlertCircle 
+    Clock, Timer, AlertCircle, Scale, ChevronRight, ArrowRight, Gauge
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import toast, { Toaster } from 'react-hot-toast';
@@ -21,7 +21,7 @@ import productionOrderService from '../../services/productionOrderService';
 // CONSTANTES Y HELPERS (Fuera del componente para evitar re-creación)
 // =================================================================================
 
-const ITEMS_PER_PAGE = 5; // <-- CAMBIO APLICADO: Paginación a 5 ítems
+const ITEMS_PER_PAGE = 5;
 const STEPS_PER_PAGE_MODAL = 5;
 
 const formatDateTime = (dateTimeString) => {
@@ -80,7 +80,6 @@ const HistorialTable = ({ orders, onShowDetails }) => (
         <Table hover size="sm" className="mb-0 custom-table">
             <thead>
                 <tr>
-                    {/* <-- CAMBIO APLICADO: Columna ID eliminada --> */}
                     <th scope="col" style={{width: '20%'}}>Fecha Creación</th>
                     <th scope="col">Producto</th>
                     <th scope="col" className="text-center" style={{width: '15%'}}>Cantidad</th>
@@ -93,7 +92,6 @@ const HistorialTable = ({ orders, onShowDetails }) => (
                     const statusInfo = getOrderStatusBadgeInfo(order.status);
                     return (
                         <tr key={order.idProductionOrder} style={{ verticalAlign: 'middle' }}>
-                            {/* <-- CAMBIO APLICADO: Celda ID eliminada --> */}
                             <td>{formatDateTime(order.dateTimeCreation || order.createdAt)}</td>
                             <td>{order.productNameSnapshot || order.Product?.productName || 'N/A'}</td>
                             <td className="text-center">{order.initialAmount || '-'}</td>
@@ -125,64 +123,147 @@ const DetailItem = ({ icon, label, value }) => (
     </Col>
 );
 
-const DetalleOrdenModal = ({ isOpen, toggle, order, currentPage, totalPages, onPageChange }) => (
-    <Modal isOpen={isOpen} toggle={toggle} centered size="lg" backdrop="static">
-        <ModalHeader toggle={toggle}>
-            Detalles de la Orden de Producción #{order?.idProductionOrder}
-        </ModalHeader>
-        <ModalBody>
-            {!order ? (
-                <div className="text-center p-4"><Spinner /></div>
-            ) : (
-                <>
-                    <Row className="mb-3 border-bottom pb-3">
-                        <DetailItem icon={<Package />} label="Producto" value={order.productNameSnapshot || order.Product?.productName ||'N/A'} />
-                        <DetailItem icon={<Calendar />} label="Fecha Creación" value={formatDateTime(order.dateTimeCreation || order.createdAt)} />
-                        <DetailItem icon={<Hash />} label="Cantidad Inicial" value={order.initialAmount} />
-                    </Row>
-                    
-                    {order.status === 'CANCELLED' && (
-                        <Alert color="danger" className="mb-3">
-                            <h6 className="alert-heading d-flex align-items-center"><XCircle size={20} className="me-2"/>Orden Cancelada</h6>
-                            <p className="mb-0"><strong>Motivo:</strong> {order.cancellationReason || 'No se especificó un motivo.'}</p>
-                        </Alert>
-                    )}
+const DetalleOrdenModal = ({ isOpen, toggle, order, currentPage, totalPages, onPageChange }) => {
+    // Helper para determinar la fecha de fin (si no existe dateTimeCompleted, usamos updatedAt cuando está completada)
+    const endDateTime = order?.status === 'COMPLETED' ? (order.dateTimeCompleted || order.updatedAt) : null;
 
-                    <h6 className="mb-3">Registro de Pasos y Empleados</h6>
-                    {order.paginatedSteps && order.paginatedSteps.length > 0 ? (
-                        <>
-                            <ListGroup flush>
-                                {order.paginatedSteps.map(detail => (
-                                    <ListGroupItem key={detail.idProductionOrderDetail} className="px-0 py-2">
-                                        <div className="d-flex justify-content-between align-items-center">
-                                            <div className="fw-bold">Paso {detail.processOrder}: {detail.processNameSnapshot}</div>
-                                            <Badge color={getOrderStatusBadgeInfo(detail.status).color} pill>{getOrderStatusBadgeInfo(detail.status).text}</Badge>
+    return (
+        <Modal isOpen={isOpen} toggle={toggle} centered size="lg" backdrop="static"  scrollable={true}>
+            <ModalHeader toggle={toggle} className="bg-light">
+                <div className="d-flex align-items-center">
+                    <Gauge size={20} className="me-2 text-primary" />
+                    <span>Análisis Detallado: Orden de Producción #{order?.idProductionOrder}</span>
+                </div>
+            </ModalHeader>
+            <ModalBody className="p-4">
+                {!order ? (
+                    <div className="text-center p-4"><Spinner color="primary" /></div>
+                ) : (
+                    <>
+                        {/* SECCIÓN 1: INFORMACIÓN GENERAL Y TIEMPOS */}
+                        <div className="mb-4">
+                            <h6 className="text-uppercase text-muted fw-bold small border-bottom pb-2 mb-3">Cronología de la Orden</h6>
+                            <Row>
+                                <DetailItem icon={<Package />} label="Producto" value={order.productNameSnapshot || order.Product?.productName} />
+                                <DetailItem icon={<Clock />} label="Inicio (Creación)" value={formatDateTime(order.dateTimeCreation || order.createdAt)} />
+                                <DetailItem icon={<CheckCircle />} label="Finalización" value={order.status === 'COMPLETED' ? formatDateTime(endDateTime) : 'En curso / Cancelada'} />
+                            </Row>
+                        </div>
+
+                        {/* SECCIÓN 2: MÉTRICAS DE RENDIMIENTO (COMPARATIVA REAL) */}
+                        <div className="mb-4 bg-light p-3 rounded border">
+                            <h6 className="text-uppercase text-muted fw-bold small mb-3">Rendimiento y Producción Real</h6>
+                            <Row className="g-3">
+                                {/* Comparativa de Porciones */}
+                                <Col md={6}>
+                                    <div className="p-2 bg-white border rounded">
+                                        <div className="small text-muted mb-1"><Hash size={14} className="me-1"/> Porciones (Unidades)</div>
+                                        <div className="d-flex align-items-center justify-content-between">
+                                            <div className="text-center flex-grow-1">
+                                                <small className="d-block text-muted">Inicial</small>
+                                                <span className="fw-bold fs-5">{order.initialAmount}</span>
+                                            </div>
+                                            <ArrowRight size={18} className="text-muted mx-2" />
+                                            <div className="text-center flex-grow-1 text-primary">
+                                                <small className="d-block text-muted">Final Real</small>
+                                                <span className="fw-bold fs-5">{order.finalQuantityProduct || '--'}</span>
+                                            </div>
                                         </div>
-                                        <div className="d-flex flex-column flex-sm-row justify-content-between mt-1 small">
-                                            <div className="d-flex align-items-center text-muted"><User size={14} className="me-2" /><span>Empleado: <strong>{detail.employeeAssigned?.fullName || 'No Asignado'}</strong></span></div>
-                                            {calculateDuration(detail.startDate, detail.endDate) && (
-                                                <div className="d-flex align-items-center text-muted mt-1 mt-sm-0"><Timer size={14} className="me-2" /><span>Duración: <strong>{calculateDuration(detail.startDate, detail.endDate)}</strong></span></div>
+                                    </div>
+                                </Col>
+                                
+                                {/* Comparativa de Pesos */}
+                                <Col md={6}>
+                                    <div className="p-2 bg-white border rounded">
+                                        <div className="small text-muted mb-1"><Scale size={14} className="me-1"/> Peso Total</div>
+                                        <div className="d-flex align-items-center justify-content-between">
+                                            <div className="text-center flex-grow-1">
+                                                <small className="d-block text-muted">Entrada ({order.inputInitialWeightUnit})</small>
+                                                <span className="fw-bold fs-5">{order.inputInitialWeight || '--'}</span>
+                                            </div>
+                                            <ArrowRight size={18} className="text-muted mx-2" />
+                                            <div className="text-center flex-grow-1 text-success">
+                                                <small className="d-block text-muted">Salida ({order.finishedProductWeightUnit || order.inputInitialWeightUnit})</small>
+                                                <span className="fw-bold fs-5">{order.finishedProductWeight || '--'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Col>
+                            </Row>
+                        </div>
+
+                        {order.status === 'CANCELLED' && (
+                            <Alert color="danger" className="mb-4 py-2">
+                                <div className="d-flex align-items-center small">
+                                    <XCircle size={18} className="me-2" />
+                                    <strong>Motivo de Cancelación:</strong> <span className="ms-1">{order.cancellationReason || 'No especificado'}</span>
+                                </div>
+                            </Alert>
+                        )}
+
+                        {/* SECCIÓN 3: REGISTRO DE PASOS Y TIEMPOS POR EMPLEADO */}
+                        <h6 className="text-uppercase text-muted fw-bold small border-bottom pb-2 mb-3">Detalle de Ejecución por Paso</h6>
+                        {order.paginatedSteps && order.paginatedSteps.length > 0 ? (
+                            <>
+                                <div className="timeline-container">
+                                    {order.paginatedSteps.map(detail => (
+                                        <div key={detail.idProductionOrderDetail} className="mb-3 p-3 border rounded position-relative bg-white shadow-sm">
+                                            <div className="d-flex justify-content-between align-items-start mb-2">
+                                                <div>
+                                                    <Badge color="dark" className="me-2">Paso {detail.processOrder}</Badge>
+                                                    <span className="fw-bold">{detail.processNameSnapshot}</span>
+                                                </div>
+                                                <Badge color={getOrderStatusBadgeInfo(detail.status).color} pill>
+                                                    {getOrderStatusBadgeInfo(detail.status).text}
+                                                </Badge>
+                                            </div>
+
+                                            <Row className="small">
+                                                <Col sm={6}>
+                                                    <div className="d-flex align-items-center text-secondary mb-1">
+                                                        <User size={14} className="me-2" />
+                                                        <span>Responsable: <strong className="text-dark">{detail.employeeAssigned?.fullName || 'No Registrado'}</strong></span>
+                                                    </div>
+                                                </Col>
+                                                <Col sm={6} className="text-sm-end">
+                                                    {detail.startDate && detail.endDate ? (
+                                                        <div className="d-flex align-items-center justify-content-sm-end text-primary fw-bold">
+                                                            <Timer size={14} className="me-1" />
+                                                            <span>Duración Real: {calculateDuration(detail.startDate, detail.endDate)}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-muted italic small">Tiempo no registrado</span>
+                                                    )}
+                                                </Col>
+                                            </Row>
+                                            
+                                            {/* Línea de tiempo interna del paso */}
+                                            {detail.startDate && (
+                                                <div className="mt-2 pt-2 border-top x-small text-muted d-flex gap-3">
+                                                    <span>Inició: {formatDateTime(detail.startDate)}</span>
+                                                    {detail.endDate && <span>Terminó: {formatDateTime(detail.endDate)}</span>}
+                                                </div>
                                             )}
                                         </div>
-                                    </ListGroupItem>
-                                ))}
-                            </ListGroup>
-                            
-                            {totalPages > 1 && (
-                                <CustomPagination currentPage={currentPage} totalPages={totalPages} onPageChange={onPageChange} size="sm" className="mt-3 justify-content-center" />
-                            )}
-                        </>
-                    ) : (
-                        <Alert color="secondary" className="text-center">Esta orden no tiene pasos detallados registrados.</Alert>
-                    )}
-                </>
-            )}
-        </ModalBody>
-        <ModalFooter>
-            <Button color="secondary" outline onClick={toggle}>Cerrar</Button>
-        </ModalFooter>
-    </Modal>
-);
+                                    ))}
+                                </div>
+                                
+                                {totalPages > 1 && (
+                                    <CustomPagination currentPage={currentPage} totalPages={totalPages} onPageChange={onPageChange} size="sm" className="mt-3 justify-content-center" />
+                                )}
+                            </>
+                        ) : (
+                            <Alert color="secondary" className="text-center small">No hay registro detallado de pasos para esta orden.</Alert>
+                        )}
+                    </>
+                )}
+            </ModalBody>
+            <ModalFooter className="bg-light">
+                <Button color="secondary" outline onClick={toggle} size="sm">Cerrar Detalle</Button>
+            </ModalFooter>
+        </Modal>
+    );
+};
 
 // =================================================================================
 // COMPONENTE PRINCIPAL
@@ -282,13 +363,53 @@ const HistorialProduccion = () => {
 
     const toggleViewModal = () => {
         setViewModalOpen(prev => !prev);
-        if (viewModalOpen) { // Se va a cerrar
+        if (viewModalOpen) {
             setSelectedOrder(null);
         }
     };
     
+    // <-- CAMBIO APLICADO: Lógica de exportación implementada -->
     const handleDownloadExcel = useCallback(() => {
-        // ... (Tu lógica de exportación, sin cambios)
+        if (filteredOrdersData.length === 0) {
+            toast.error("No hay datos para exportar.");
+            return;
+        }
+
+        try {
+            const dataForExcel = filteredOrdersData.map(order => ({
+                'ID Orden': order.idProductionOrder,
+                'Producto': order.productNameSnapshot || order.Product?.productName || 'N/A',
+                'Cantidad Inicial': order.initialAmount,
+                'Estado': getOrderStatusBadgeInfo(order.status).text,
+                'Fecha Creación': formatDateTime(order.dateTimeCreation || order.createdAt),
+                'Fecha Finalización': formatDateTime(order.dateTimeCompleted),
+                'Motivo Cancelación': order.status === 'CANCELLED' ? (order.cancellationReason || 'No especificado') : '',
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'HistorialProduccion');
+
+            // Ajustar anchos de columna (opcional, pero mejora la legibilidad)
+            worksheet['!cols'] = [
+                { wch: 10 }, // ID Orden
+                { wch: 30 }, // Producto
+                { wch: 15 }, // Cantidad Inicial
+                { wch: 15 }, // Estado
+                { wch: 20 }, // Fecha Creación
+                { wch: 20 }, // Fecha Finalización
+                { wch: 40 }, // Motivo Cancelación
+            ];
+
+            const today = new Date().toISOString().slice(0, 10);
+            XLSX.writeFile(workbook, `Historial_Produccion_${today}.xlsx`);
+
+            toast.success("Exportación a Excel exitosa.");
+        } catch (error) {
+            toast.error("Ocurrió un error al generar el archivo Excel.");
+            console.error("Excel export error:", error);
+        }
+
     }, [filteredOrdersData]);
     
     const handleCreateNewOrder = () => {
@@ -298,10 +419,28 @@ const HistorialProduccion = () => {
     
     return (
         <>
+            {/* <-- CAMBIO APLICADO: Estilo para el botón de ver (color negro) --> */}
             <style>
                 {`.filter-button { border: 1px solid #dee2e6; color: #495057; font-size: 0.875rem; border-radius: 50px; transition: all 0.2s; }
                   .filter-button.active { background-color: #0d6efd; color: white; border-color: #0d6efd; box-shadow: 0 2px 5px rgba(13, 110, 253, 0.3); }
-                  .action-button.action-view:hover { color: #0d6efd; background-color: #e9ecef; }`}
+                  
+                  .action-button { background-color: transparent; border: none; padding: 0.25rem 0.5rem; }
+                  .action-button.action-view { color: #212529; }
+                  .action-button.action-view:hover { color: #0d6efd; background-color: #e9ecef; } 
+                  .x-small { font-size: 0.75rem; }
+                  .fs-5 { font-size: 1.1rem !important; }
+                  .timeline-container { border-left: 2px solid #e9ecef; padding-left: 15px; margin-left: 10px; }
+                  .timeline-container > div::before {
+                        content: '';
+                        position: absolute;
+                        left: -21px;
+                        top: 20px;
+                        width: 10px;
+                        height: 10px;
+                        background-color: #0d6efd;
+                        border-radius: 50%;
+                    }`
+                  }
             </style>
         
             <Container fluid className="p-4 main-content">
@@ -331,8 +470,7 @@ const HistorialProduccion = () => {
                 ) : currentOrdersOnPage.length > 0 ? (
                     <HistorialTable orders={currentOrdersOnPage} onShowDetails={handleViewOrder} />
                 ) : (
-                    // Corregido colSpan a 5 después de eliminar la columna ID
-                    <div className="text-center fst-italic p-4 border rounded bg-light">{tableSearchText ? "No se encontraron órdenes." : "No hay órdenes registradas."}</div>
+                    <div className="text-center fst-italic p-4 border rounded bg-light">{tableSearchText ? "No se encontraron órdenes que coincidan con la búsqueda." : "No hay órdenes registradas."}</div>
                 )}
                 
                 {totalPages > 1 && !isLoading && (

@@ -1,6 +1,7 @@
 // ForgotPasswordModal.jsx
+
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { authService } from '../../services/authService'; // <-- IMPORTANTE
 
 // Función simple de validación de email
 const isValidEmail = (email) => {
@@ -8,22 +9,15 @@ const isValidEmail = (email) => {
   return emailRegex.test(email);
 };
 
-
-
-
-
-// Función de validación de contraseña (ajusta según tus reglas exactas si es necesario)
+// Función de validación de contraseña
 const validatePassword = (password) => {
     const passwordRegex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{10,}$/;
-    if (!password) return false; // Añadido para evitar error si está vacío
+    if (!password) return false;
     return passwordRegex.test(password);
 };
 
-// Asegúrate que esta URL base coincida con tu configuración de backend
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'; // Ajusta si es necesario
-
 export default function ForgotPasswordModal({ isOpen, onClose }) {
-  const [step, setStep] = useState(1); // 1: Email, 2: Code + New Password
+  const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -33,8 +27,6 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
   const [loading, setLoading] = useState(false);
   const [passwordValidationError, setPasswordValidationError] = useState('');
 
-
-  // Resetear estado completo cuando el modal se cierra o reabre
   useEffect(() => {
     if (isOpen) {
       setStep(1);
@@ -49,23 +41,20 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
     }
   }, [isOpen]);
 
-  // Handlers para los inputs
   const handleEmailChange = (e) => setEmail(e.target.value);
   const handleCodeChange = (e) => setCode(e.target.value);
 
-  // Handler para nueva contraseña con validación instantánea
-    const handleNewPasswordChange = (e) => {
-        const value = e.target.value;
-        setNewPassword(value);
-        if (value && !validatePassword(value)) {
-            setPasswordValidationError('Mínimo 10 caracteres, con mayúscula, minúscula, número y símbolo (@$!%*?&).');
-        } else {
-            setPasswordValidationError('');
-        }
-    };
+  const handleNewPasswordChange = (e) => {
+    const value = e.target.value;
+    setNewPassword(value);
+    if (value && !validatePassword(value)) {
+        setPasswordValidationError('Mínimo 10 caracteres, con mayúscula, minúscula, número y símbolo (@$!%*?&).');
+    } else {
+        setPasswordValidationError('');
+    }
+  };
   const handleConfirmPasswordChange = (e) => setConfirmPassword(e.target.value);
 
-  // --- Paso 1: Enviar solicitud de código ---
   const handleRequestCodeSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -78,17 +67,15 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
 
     setLoading(true);
     try {
-      // --- LLAMADA AL BACKEND (forgotPassword) ---
-      // !!! Asegúrate que la ruta '/auth/forgot-password' existe en tu backend y apunta a tu función `forgotPassword` !!!
-      const response = await axios.post(`${API_BASE_URL}/auth/forgot-password`, { email });
+      const response = await authService.forgotPassword({ email });
 
-      setSuccessMessage(response.data.message || 'Código de verificación enviado. Revise su correo.');
+      setSuccessMessage(response.message || 'Código de verificación enviado. Revise su correo.');
       setError('');
       setLoading(false);
-      // Esperar un poco para mostrar el mensaje y luego pasar al paso 2
+      
       setTimeout(() => {
-          setSuccessMessage(''); // Limpiar mensaje para el siguiente paso
-          setStep(2); // Cambiar al paso de ingresar código y contraseña
+          setSuccessMessage('');
+          setStep(2);
       }, 2500);
 
     } catch (err) {
@@ -99,52 +86,48 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
     }
   };
 
-  // --- Paso 2: Verificar código y establecer nueva contraseña ---
   const handleVerifyCodeSubmit = async (e) => {
-      e.preventDefault();
-      setError('');
-      setSuccessMessage('');
-      setPasswordValidationError(''); // Limpiar validación específica de contraseña
+    e.preventDefault();
+    setError('');
+    setSuccessMessage('');
+    setPasswordValidationError('');
 
-      // Validaciones
-      if (!code || code.length !== 6 || !/^\d{6}$/.test(code)) { // Asume código de 6 dígitos numéricos
-          setError('Ingrese un código de verificación válido (6 dígitos).');
-          return;
-      }
-       if (!validatePassword(newPassword)) {
-            setError('La nueva contraseña no cumple los requisitos.');
-            setPasswordValidationError('Mínimo 10 caracteres, con mayúscula, minúscula, número y símbolo (@$!%*?&).'); // Muestra el error específico también
-            return;
-       }
-      if (newPassword !== confirmPassword) {
-        setError('Las contraseñas no coinciden.');
+    if (!code || code.length !== 6 || !/^\d{6}$/.test(code)) {
+        setError('Ingrese un código de verificación válido (6 dígitos).');
         return;
-      }
+    }
+    if (!validatePassword(newPassword)) {
+        setError('La nueva contraseña no cumple los requisitos.');
+        setPasswordValidationError('Mínimo 10 caracteres, con mayúscula, minúscula, número y símbolo (@$!%*?&).');
+        return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('Las contraseñas no coinciden.');
+      return;
+    }
 
-      setLoading(true);
-      try {
-        // --- LLAMADA AL BACKEND (verifyCode) ---
-        // !!! Asegúrate que la ruta '/auth/verify-code' existe en tu backend y apunta a tu función `verifyCode` !!!
-         const response = await axios.post(`${API_BASE_URL}/auth/verify-code`, {
-              email: email, // Necesitamos el email original
-              code: code,
-              newPassword: newPassword
-          });
+    setLoading(true);
+    try {
+      const response = await authService.verifyCodeAndResetPassword({
+            email,
+            code,
+            newPassword
+        });
 
-          setSuccessMessage(response.data.message || 'Contraseña actualizada con éxito.');
-          setError('');
-          setLoading(false);
-          // Cerrar modal después de mostrar éxito
-          setTimeout(() => {
-              onClose();
-          }, 3000);
+        setSuccessMessage(response.message || 'Contraseña actualizada con éxito.');
+        setError('');
+        setLoading(false);
+        
+        setTimeout(() => {
+            onClose();
+        }, 3000);
 
-      } catch (err) {
-           const backendError = err?.response?.data?.message || 'Error al verificar el código o actualizar la contraseña.';
-           setError(backendError);
-           setSuccessMessage('');
-           setLoading(false);
-      }
+    } catch (err) {
+         const backendError = err?.response?.data?.message || 'Error al verificar el código o actualizar la contraseña.';
+         setError(backendError);
+         setSuccessMessage('');
+         setLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -163,8 +146,7 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
             {error && <div className="alert alert-danger py-2">{error}</div>}
             {successMessage && <div className="alert alert-success py-2">{successMessage}</div>}
 
-            {/* --- Formulario Paso 1: Ingresar Email --- */}
-            {step === 1 && !successMessage && ( // Ocultar form si hay mensaje de éxito
+            {step === 1 && !successMessage && (
               <form onSubmit={handleRequestCodeSubmit}>
                 <div className="mb-3">
                   <label htmlFor="recoverEmail" className="form-label">Correo Electrónico</label>
@@ -186,8 +168,7 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
               </form>
             )}
 
-            {/* --- Formulario Paso 2: Ingresar Código y Nueva Contraseña --- */}
-            {step === 2 && !successMessage && ( // Ocultar form si hay mensaje de éxito
+            {step === 2 && !successMessage && (
               <form onSubmit={handleVerifyCodeSubmit}>
                  <div className="mb-3">
                     <p>Se envió un código al correo: <strong>{email}</strong>. Ingréselo a continuación.</p>
@@ -195,14 +176,14 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
                 <div className="mb-3">
                     <label htmlFor="verificationCode" className="form-label">Código de Verificación</label>
                     <input
-                        type="text" // Usar text para permitir pegar fácilmente
-                        inputMode="numeric" // Sugiere teclado numérico en móviles
+                        type="text"
+                        inputMode="numeric"
                         className={`form-control ${error && error.toLowerCase().includes('código') ? 'is-invalid' : ''}`}
                         id="verificationCode"
                         placeholder="Ingrese el código de 6 dígitos"
                         value={code}
                         onChange={handleCodeChange}
-                        maxLength={6} // Limitar a 6 caracteres
+                        maxLength={6}
                         required
                         disabled={loading}
                     />
@@ -219,7 +200,6 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
                     required
                     disabled={loading}
                   />
-                   {/* Mostrar error específico de validación de contraseña */}
                    {passwordValidationError && <div className="invalid-feedback d-block">{passwordValidationError}</div>}
                    {!passwordValidationError && <div className="form-text">Mínimo 10 caracteres, mayúscula, minúscula, número y símbolo (@$!%*?&).</div>}
                 </div>
@@ -235,7 +215,6 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
                     required
                     disabled={loading}
                   />
-                  {/* Mensaje si no coinciden */}
                   {newPassword && confirmPassword && newPassword !== confirmPassword && (
                      <div className="invalid-feedback d-block">Las contraseñas no coinciden.</div>
                   )}
@@ -245,9 +224,9 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
                 </button>
               </form>
             )}
-          </div> {/* Fin modal-body */}
-        </div> {/* Fin modal-content */}
-      </div> {/* Fin modal-dialog */}
-    </div> // Fin modal container
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

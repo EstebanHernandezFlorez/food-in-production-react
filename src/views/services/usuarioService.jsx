@@ -68,12 +68,13 @@ const userService = {
         }
     },
 
-    changeStateUser: async (id, status) => {
+    changeStateUser: async (id, payload) => { // 1. Cambiamos el nombre del argumento a 'payload' para que sea más claro.
         try {
-            // *** CORRECCIÓN AQUÍ para que coincida con la ruta del backend ***
-            const response = await axiosInstance.patch(`${API_URL}/${id}/state`, { status });
+            // 2. Pasamos el 'payload' directamente, sin envolverlo en otro objeto.
+            const response = await axiosInstance.patch(`${API_URL}/${id}/state`, payload);
             return response.data;
         } catch (error) {
+            // Este log ahora será mucho más útil si algo más falla.
             console.error(`Error changing status for user with id ${id}:`, error.response?.data || error.message);
             throw error;
         }
